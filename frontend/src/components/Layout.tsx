@@ -2,9 +2,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  LogOut, Code2, Menu, X, ChevronDown, Landmark, Bell, ChevronLeft, ChevronRight, Power
+  LogOut, Menu, X, Landmark, Bell, ChevronLeft, ChevronRight, Power
 } from 'lucide-react';
-import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
 import WhatsNewBanner from './WhatsNewBanner';
@@ -63,7 +62,13 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('swiftpay.sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -73,6 +78,14 @@ export default function Layout({ children }: LayoutProps) {
 
   const permissions = user?.permissions;
   const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('swiftpay.sidebar-collapsed', String(sidebarCollapsed));
+    } catch {
+      // Sidebar preference is optional.
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -88,6 +101,11 @@ export default function Layout({ children }: LayoutProps) {
       document.body.style.overflow = '';
     };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setNotificationsOpen(false);
+  }, [location.pathname, location.search]);
 
   const loadNotifications = useCallback(async (showLoader = false) => {
     if (!isSuperAdmin) return;
@@ -236,7 +254,7 @@ export default function Layout({ children }: LayoutProps) {
               <X size={16} />
             </IconButton>
           )}
-          {!onClose && !collapsed && (
+          {!onClose && (
             <IconButton
               label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setSidebarCollapsed(!collapsed)}
@@ -249,7 +267,7 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-2 custom-scrollbar sm:px-3">
+        <nav aria-label="Dashboard navigation" className="scrollbar-thin scrollbar-dark min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-2 sm:px-3">
           {sections.map((section, si) => (
             <div key={section.label || `primary-${si}`}>
               {section.label && !collapsed && (
@@ -309,7 +327,9 @@ export default function Layout({ children }: LayoutProps) {
         <div
           className="fixed inset-0 z-50 flex lg:hidden mobile-backdrop-in print:hidden"
           onClick={() => setMobileOpen(false)}
-          aria-label="Navigation overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
         >
           <div onClick={e => e.stopPropagation()} className="h-[100dvh] w-[min(85vw,280px)] mobile-drawer-in overflow-hidden">
             <Sidebar onClose={() => setMobileOpen(false)} />
@@ -327,6 +347,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               aria-label="Toggle navigation menu"
+              aria-expanded={mobileOpen}
               className="app-touch-target -ml-2.5 flex items-center justify-center rounded-xl p-2.5 text-slate-600 hover:bg-slate-100 lg:hidden"
               onClick={() => setMobileOpen(true)}
             >
@@ -366,7 +387,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Notification Bell - Touch-friendly 44x44px */}
             {isSuperAdmin && (
-              <div className="relative">
+              <div className="relative" data-notification-menu>
                 <button
                   type="button"
                   aria-label={unreadNotificationCount ? `${unreadNotificationCount} unread notifications` : 'Notifications'}

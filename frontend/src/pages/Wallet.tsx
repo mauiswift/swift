@@ -244,7 +244,7 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
 type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance' | 'pending_balance'>;
 
 const getUsdtConversionSummary = (
-  collectionCurrency: string,
+  _collectionCurrency: string,
   phpBalance: WalletBalanceSnapshot | null,
   collectionBalance: WalletBalanceSnapshot | null,
   usdtPhpRate: number | null,
@@ -252,9 +252,8 @@ const getUsdtConversionSummary = (
   conversionFeeRate = 0.01,
   minimumPurchase = MIN_USDT_PURCHASE,
 ) => {
-  const requestedCurrency = String(collectionCurrency || 'PHP').toUpperCase();
-  const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
-  const sourceWallet = sourceCurrency === 'PHP' ? phpBalance : collectionBalance;
+  const sourceCurrency = 'PHP';
+  const sourceWallet = phpBalance;
   const availableSource = getAvailableBalance(sourceWallet);
   const retainedBalance = 0;
   const conversionRate = usdtPhpRate;
@@ -484,6 +483,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
+  const canTradeUsdtForPhp = selectedCollectionCurrency === 'PHP';
   const isKoreanWallet = language === 'ko';
   useEffect(() => {
     if (!user?.id) return;
@@ -598,8 +598,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   }, [collectionBalance, phpBalance, usdtBalance]);
 
   const openBuyUsdt = () => {
-    if (isKrwFlow && !krwBenefitsUnlocked) {
-      setAccountActivationDialogOpen(true);
+    if (!canTradeUsdtForPhp) {
+      toast.error(isKoreanWallet ? 'USDT 거래는 PHP 지갑에서만 사용할 수 있습니다.' : 'USDT trading is available from the PHP wallet only.');
       return;
     }
     if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
@@ -624,12 +624,12 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         client.apiCall.invoke({
           url: '/api/v1/wallet/quote',
           method: 'POST',
-          data: { from_currency: selectedCurrency, to_currency: 'USDT', from_amount: 1 },
+          data: { from_currency: 'PHP', to_currency: 'USDT', from_amount: 1 },
         }),
         client.apiCall.invoke({
           url: '/api/v1/wallet/quote',
           method: 'POST',
-          data: { from_currency: 'USDT', to_currency: selectedCurrency, from_amount: 1 },
+          data: { from_currency: 'USDT', to_currency: 'PHP', from_amount: 1 },
         }),
       ]);
 
@@ -797,7 +797,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       || amount <= 0
       || amount > availableUsdt
       || !sellUsdtRate
-      || !['PHP', 'KRW'].includes(selectedCollectionCurrency)
+      || !canTradeUsdtForPhp
       || buyUsdtLoading
     ) return;
     if (!ensureWalletIsOperational('USDT', 'Selling USDT') || !ensureWalletIsOperational(selectedCollectionCurrency, 'Selling USDT')) return;
@@ -809,7 +809,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         method: 'POST',
         data: {
           from_currency: 'USDT',
-          to_currency: selectedCollectionCurrency,
+          to_currency: 'PHP',
           from_amount: amount,
           passkey_credential: passkeyCredential,
         },
@@ -817,7 +817,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       if (!response?.data?.success) {
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
-      toast.success(`Converted ${fmtUsd(amount)} USDT to ${formatWalletCurrency(response.data.to_amount, selectedCollectionCurrency)}`);
+      toast.success(`Converted ${fmtUsd(amount)} USDT to ${formatWalletCurrency(response.data.to_amount, 'PHP')}`);
       setSellAmount('');
       await fetchData();
       setWalletAction(null);
@@ -1287,6 +1287,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       loading={buyUsdtLoading}
                       funding={fundingUsdtLoading}
                       onClick={openBuyUsdt}
+                      disabled={!canTradeUsdtForPhp}
                     />
                     <Button
                       type="button"
@@ -1297,7 +1298,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                         setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
                         setWalletAction('sell');
                       }}
-                      disabled={!['PHP', 'KRW'].includes(selectedCollectionCurrency)}
+                      disabled={!canTradeUsdtForPhp}
                       className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
                     >
                       <PaymentBrandLogo brand="USDT" size="sm" className="h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
@@ -1516,10 +1517,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <div className="border-b border-slate-200 pb-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">Wallet action</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Sell USDT</h2>
-                  <p className="mt-2 text-sm text-slate-600">Convert USDT into your {selectedCollectionCurrency} wallet at the current exchange rate.</p>
+                  <p className="mt-2 text-sm text-slate-600">Convert USDT into your PHP wallet at the current exchange rate.</p>
                 </div>
                 <ExchangeRulesTable
-                  sourceCurrency={selectedCollectionCurrency}
+                  sourceCurrency="PHP"
                   rate={sellUsdtRate}
                   showReserve={false}
                   mode="sell"
@@ -1560,14 +1561,14 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <div className="rounded-xl border border-orange-100 bg-orange-50 p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Estimated receive</p>
                 <p className="mt-1 text-lg font-bold text-slate-900">
-                  {formatWalletCurrency(Math.max((Number(sellAmount) || 0) * (sellUsdtRate || 0) * (1 - conversionFeeRate), 0), selectedCollectionCurrency)}
+                  {formatWalletCurrency(Math.max((Number(sellAmount) || 0) * (sellUsdtRate || 0) * (1 - conversionFeeRate), 0), 'PHP')}
                 </p>
                   </div>
                 </div>
                 <Button
                   type="button"
                   onClick={handleSellUsdt}
-                  disabled={buyUsdtLoading || !sellUsdtRate || !Number(sellAmount) || Number(sellAmount) > getWalletBalanceValue(usdtBalance, 'available_balance')}
+                  disabled={buyUsdtLoading || !canTradeUsdtForPhp || !sellUsdtRate || !Number(sellAmount) || Number(sellAmount) > getWalletBalanceValue(usdtBalance, 'available_balance')}
                   className="w-full rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"
                 >
                   {buyUsdtLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sell USDT'}

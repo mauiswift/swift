@@ -618,6 +618,8 @@ async def convert_wallet_balance(
 
 	normalized_from = "USD" if from_currency == "USDT" else from_currency
 	normalized_to = "USD" if to_currency == "USDT" else to_currency
+	if "USD" in {normalized_from, normalized_to} and {normalized_from, normalized_to} != {"PHP", "USD"}:
+		raise HTTPException(status_code=400, detail="USDT buy and sell are available against PHP only")
 	if normalized_from == normalized_to:
 		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
 
@@ -699,6 +701,10 @@ async def quote_wallet_conversion(
 	"""Return a directional wallet conversion quote without changing balances."""
 	from_currency = request.from_currency.strip().upper()
 	to_currency = request.to_currency.strip().upper()
+	normalized_from = "USD" if from_currency == "USDT" else from_currency
+	normalized_to = "USD" if to_currency == "USDT" else to_currency
+	if "USD" in {normalized_from, normalized_to} and {normalized_from, normalized_to} != {"PHP", "USD"}:
+		raise HTTPException(status_code=400, detail="USDT buy and sell are available against PHP only")
 	if not math.isfinite(request.from_amount) or request.from_amount <= 0:
 		raise HTTPException(status_code=400, detail="Conversion amount must be a positive finite number")
 	try:
