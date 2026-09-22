@@ -324,7 +324,13 @@ export default function AccountSecure() {
 
                 {/* Link Button */}
                 {telegramBotName && !linking ? (
-                  <TelegramLoginWidget botName={telegramBotName} onAuth={handleTelegramLink} />
+                  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+                    <TelegramLoginWidget botName={telegramBotName} onAuth={handleTelegramLink} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Continue with Telegram</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-slate-500">A Telegram window will open to verify your account.</p>
+                    </div>
+                  </div>
                 ) : linking ? (
                   <div className="flex items-center justify-center gap-2 py-3 text-[13px] text-slate-500">
                     <Loader2 size={16} className="animate-spin" /> Linking Telegram account...
@@ -370,7 +376,9 @@ export default function AccountSecure() {
                   <Loader2 size={16} className="animate-spin" /> Linking Google account...
                 </div>
               ) : (
-                <div ref={googleButtonRef} />
+                <div className="flex min-h-11 w-full max-w-full items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 sm:w-fit">
+                  <div ref={googleButtonRef} className="max-w-full" />
+                </div>
               )
             ) : (
               <p className="text-[12px] text-slate-500">Google account linking is not configured.</p>
