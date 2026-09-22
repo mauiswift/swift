@@ -54,7 +54,8 @@ export default function Login() {
   const [telegramBotUsername, setTelegramBotUsername] = useState(configuredTelegramBot || '');
   const passwordRef = useRef<HTMLInputElement>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
-  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const configuredGoogleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const [googleClientId, setGoogleClientId] = useState(configuredGoogleClientId || '');
   const verificationRequired = Boolean(turnstileSiteKey && !turnstileToken);
 
   const handleTurnstileSuccess = (token: string) => {
@@ -72,6 +73,23 @@ export default function Login() {
   useEffect(() => {
     if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
   }, [step]);
+
+  useEffect(() => {
+    if (configuredGoogleClientId) return;
+    let cancelled = false;
+    fetch('/api/v1/auth/google-config')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Google login is not configured');
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled && data?.client_id) {
+          setGoogleClientId(String(data.client_id).trim());
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [configuredGoogleClientId]);
 
   useEffect(() => {
     if (!googleClientId || !googleButtonRef.current) return;
