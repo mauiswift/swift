@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { buildAuthHeaders } from '@/lib/api';
 import { Clipboard, Loader2, Banknote, Landmark } from 'lucide-react';
 import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
 
@@ -72,7 +73,10 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   const [configuredDestinations, setConfiguredDestinations] = useState<DepositDestination[] | null>(destinations || null);
   React.useEffect(() => {
     if (destinations) return;
-    fetch('/api/v1/bank-deposits/accounts', { credentials: 'include' })
+    fetch('/api/v1/bank-deposits/accounts', {
+      credentials: 'include',
+      headers: buildAuthHeaders(),
+    })
       .then(response => response.ok ? response.json() : Promise.reject(new Error('Failed to load deposit accounts')))
       .then(data => setConfiguredDestinations((data.accounts || []).filter((item: DepositDestination & { currency?: string }) => (item.currency || 'PHP') === normalizedCurrency)))
       .catch(() => undefined);
@@ -175,6 +179,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
           method: 'POST',
           body: formData,
           credentials: 'include',
+          headers: buildAuthHeaders(),
         });
         data = await res.json().catch(() => ({}));
       }

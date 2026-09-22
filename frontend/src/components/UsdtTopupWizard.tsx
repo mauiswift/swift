@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { buildAuthHeaders } from '@/lib/api';
 
 type Props = {
   initialAmount?: string;
@@ -27,7 +28,10 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
 
   useEffect(() => {
     let active = true;
-    fetch('/api/v1/bitgo/my-address', { credentials: 'include' })
+    fetch('/api/v1/bitgo/my-address', {
+      credentials: 'include',
+      headers: buildAuthHeaders(),
+    })
       .then(async response => {
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
@@ -96,6 +100,7 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers: buildAuthHeaders(),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || 'Unable to submit the USDT top-up');

@@ -43,6 +43,8 @@ import {
   Palette,
 } from 'lucide-react';
 
+const authenticatedFetch = client.fetch;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface AdminUser {
@@ -166,7 +168,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/app-settings/payment-channels');
+      const response = await authenticatedFetch('/api/v1/app-settings/payment-channels');
       if (!response.ok) throw new Error(await response.text());
       setConfig((await response.json()).channels || {});
     } catch (error) {
@@ -210,7 +212,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
   const save = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/v1/app-settings/payment-channels', {
+      const response = await authenticatedFetch('/api/v1/app-settings/payment-channels', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channels: config }),
@@ -436,7 +438,7 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
   const [design, setDesign] = useState({ display_name: '', primary_color: '#071B3A', accent_color: '#1475D1', page_background: '#F9FAFB', heading_color: '#0F172A', body_text_color: '#475569', card_radius: 24, payment_layout: 'grid', payment_alignment: 'left', show_powered_by: true });
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    fetch('/api/v1/app-settings/checkout-design').then(async response => {
+    authenticatedFetch('/api/v1/app-settings/checkout-design').then(async response => {
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();
       setDesign(current => ({ ...current, ...(data.design || {}) }));
@@ -445,7 +447,7 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
   const save = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/v1/app-settings/checkout-design', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ design }) });
+      const response = await authenticatedFetch('/api/v1/app-settings/checkout-design', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ design }) });
       if (!response.ok) throw new Error(await response.text());
       setDesign((await response.json()).design);
     } catch (error) {
@@ -656,13 +658,13 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/app-settings/wallet-limits');
+      const response = await authenticatedFetch('/api/v1/app-settings/wallet-limits');
       if (!response.ok) throw new Error(await response.text());
       setLimits((await response.json()).limits || {});
-      const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules');
+      const rulesResponse = await authenticatedFetch('/api/v1/app-settings/deposit-rules');
       if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
       setDepositRules((await rulesResponse.json()).rules || depositRules);
-      const accountsResponse = await fetch('/api/v1/app-settings/deposit-accounts');
+      const accountsResponse = await authenticatedFetch('/api/v1/app-settings/deposit-accounts');
       if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
       setDepositAccounts((await accountsResponse.json()).accounts || []);
     } catch (error) {
@@ -692,21 +694,21 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   const save = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/v1/app-settings/wallet-limits', {
+      const response = await authenticatedFetch('/api/v1/app-settings/wallet-limits', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limits }),
       });
       if (!response.ok) throw new Error(await response.text());
       setLimits((await response.json()).limits || limits);
-      const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules', {
+      const rulesResponse = await authenticatedFetch('/api/v1/app-settings/deposit-rules', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rules: depositRules }),
       });
       if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
       setDepositRules((await rulesResponse.json()).rules || depositRules);
-      const accountsResponse = await fetch('/api/v1/app-settings/deposit-accounts', {
+      const accountsResponse = await authenticatedFetch('/api/v1/app-settings/deposit-accounts', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accounts: depositAccounts }),
@@ -1354,7 +1356,7 @@ function FeeSettingsModal({
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/v1/admin-users/${admin.id}`, {
+      const response = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1471,7 +1473,7 @@ function UserManagementTab({
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/team/members?include_inactive=true');
+      const res = await authenticatedFetch('/api/v1/team/members?include_inactive=true');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setUsers((data.members || []).map((member: RegisteredUser) => ({
@@ -1504,7 +1506,7 @@ function UserManagementTab({
     setSelectedUser(user);
     setDetailsLoading(true);
     try {
-      const res = await fetch(`/api/v1/users/${encodeURIComponent(user.id)}/activity`);
+      const res = await authenticatedFetch(`/api/v1/users/${encodeURIComponent(user.id)}/activity`);
       if (!res.ok) throw new Error(await res.text());
       setDetails(await res.json());
     } catch (e: unknown) {
@@ -1518,7 +1520,7 @@ function UserManagementTab({
   const handleVipGoldChange = async (member: RegisteredUser) => {
     if (!isSuperAdmin || !member.telegram_id) return;
     try {
-      const res = await fetch(`/api/v1/team/members/${encodeURIComponent(member.telegram_id)}/vip-gold`, {
+      const res = await authenticatedFetch(`/api/v1/team/members/${encodeURIComponent(member.telegram_id)}/vip-gold`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vip_gold: !member.vip_gold }),
@@ -1533,7 +1535,7 @@ function UserManagementTab({
   const handleUserStatusChange = async (member: RegisteredUser) => {
     if (!isSuperAdmin || !member.admin_id) return;
     try {
-      const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
+      const res = await authenticatedFetch(`/api/v1/admin-users/${member.admin_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !member.is_active }),
@@ -1548,7 +1550,7 @@ function UserManagementTab({
   const handleUserRoleChange = async (member: RegisteredUser, role: string) => {
     if (!isSuperAdmin || !member.admin_id || !role || String(member.telegram_id) === String(currentUser?.id)) return;
     try {
-      const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
+      const res = await authenticatedFetch(`/api/v1/admin-users/${member.admin_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role, is_super_admin: role === 'super_admin' }),
@@ -1826,7 +1828,7 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
       if (targetIdFilter) params.set('target_id', targetIdFilter);
       params.set('limit', '25');
 
-      const res = await fetch(`/api/v1/audit-logs?${params.toString()}`);
+      const res = await authenticatedFetch(`/api/v1/audit-logs?${params.toString()}`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setLogs(data.items || []);
@@ -1881,7 +1883,7 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
 
     try {
       setPurging(true);
-      const res = await fetch(`/api/v1/audit-logs/purge?days=${days}`, { method: 'DELETE' });
+      const res = await authenticatedFetch(`/api/v1/audit-logs/purge?days=${days}`, { method: 'DELETE' });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || 'Failed to purge audit logs');
@@ -2241,7 +2243,7 @@ function CryptoRequestsTab({
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/wallet/crypto-topup-requests');
+      const res = await authenticatedFetch('/api/v1/wallet/crypto-topup-requests');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setRequests(data.items || []);
@@ -2262,7 +2264,7 @@ function CryptoRequestsTab({
     if (!canApproveTopups) return;
     setActionId(id);
     try {
-      const res = await fetch(`/api/v1/wallet/crypto-topup-requests/${id}/${action}`, {
+      const res = await authenticatedFetch(`/api/v1/wallet/crypto-topup-requests/${id}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -2751,7 +2753,7 @@ function ApiKeysModal({
   const fetchKeys = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/admin/merchant/${admin.telegram_id}/api-keys`);
+      const res = await authenticatedFetch(`/api/v1/admin/merchant/${admin.telegram_id}/api-keys`);
       if (!res.ok) throw new Error(await res.text());
       setKeys(await res.json());
     } catch (e: any) { setError(e.message); }
@@ -2764,7 +2766,7 @@ function ApiKeysModal({
     if (!newKey || !newVal) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/admin/merchant/${admin.telegram_id}/api-keys`, {
+      const res = await authenticatedFetch(`/api/v1/admin/merchant/${admin.telegram_id}/api-keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2785,7 +2787,7 @@ function ApiKeysModal({
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this API key?')) return;
     try {
-      const res = await fetch(`/api/v1/admin/api-keys/${id}`, { method: 'DELETE' });
+      const res = await authenticatedFetch(`/api/v1/admin/api-keys/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       await fetchKeys();
     } catch (e: any) { setError(e.message); }
@@ -2883,7 +2885,7 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
 
   const load = useCallback(async () => {
     try {
-      const [configResponse, addressesResponse] = await Promise.all([fetch('/api/v1/tatum/config'), fetch('/api/v1/tatum/addresses')]);
+      const [configResponse, addressesResponse] = await Promise.all([authenticatedFetch('/api/v1/tatum/config'), authenticatedFetch('/api/v1/tatum/addresses')]);
       if (!configResponse.ok || !addressesResponse.ok) throw new Error('Unable to load BitGo settings');
       const nextConfig = await configResponse.json();
       const nextAddresses = await addressesResponse.json();
@@ -2916,7 +2918,7 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
     }
     setSaving(true);
     try {
-      const response = await fetch('/api/v1/tatum/config', {
+      const response = await authenticatedFetch('/api/v1/tatum/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...config, base_url: baseUrl, wallet_id: config.wallet_id.trim(), usdt_contract: config.usdt_contract.trim() }),
@@ -2935,7 +2937,7 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
   const runAction = async (path: string, label: string) => {
     setBusy(true);
     try {
-      const response = await fetch(path, { method: 'POST' });
+      const response = await authenticatedFetch(path, { method: 'POST' });
       if (!response.ok) throw new Error(await response.text());
       await load();
       window.alert(`${label} completed.`);
@@ -2949,7 +2951,7 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
   const checkEgressIp = async () => {
     setBusy(true);
     try {
-      const response = await fetch('/api/v1/admin/diagnostics/egress-ip');
+      const response = await authenticatedFetch('/api/v1/admin/diagnostics/egress-ip');
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ip) throw new Error(payload.detail || 'Unable to determine production egress IP');
       setEgressIp(payload.ip);
@@ -3028,7 +3030,7 @@ export default function AdminManagement() {
   const fetchAdmins = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/admin-users');
+      const res = await authenticatedFetch('/api/v1/admin-users');
       if (!res.ok) throw new Error(await res.text());
       setAdmins(await res.json());
     } catch (e: unknown) {
@@ -3041,7 +3043,7 @@ export default function AdminManagement() {
   const fetchMaintenanceMode = useCallback(async () => {
     try {
       setMaintenanceLoading(true);
-      const res = await fetch('/api/v1/app-settings/maintenance');
+      const res = await authenticatedFetch('/api/v1/app-settings/maintenance');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setMaintenanceMode(!!data.maintenance_mode);
@@ -3055,7 +3057,7 @@ export default function AdminManagement() {
   const fetchCollectionFee = useCallback(async () => {
     try {
       setFeeLoading(true);
-      const res = await fetch('/api/v1/app-settings/collection-fee');
+      const res = await authenticatedFetch('/api/v1/app-settings/collection-fee');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setSystemFeePercent(String(data.system_fee_percent ?? 0.4));
@@ -3073,7 +3075,7 @@ export default function AdminManagement() {
     if (!isSuperAdmin || maintenanceUpdating) return;
     setMaintenanceUpdating(true);
     try {
-      const res = await fetch('/api/v1/app-settings/maintenance', {
+      const res = await authenticatedFetch('/api/v1/app-settings/maintenance', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !maintenanceMode }),
@@ -3114,7 +3116,7 @@ export default function AdminManagement() {
     }
     setFeeSaving(true);
     try {
-      const res = await fetch('/api/v1/app-settings/collection-fee', {
+      const res = await authenticatedFetch('/api/v1/app-settings/collection-fee', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ system_fee_percent: systemValue, additional_fee_percent: value, vip_gold_fee_percent: vipValue }),
@@ -3139,7 +3141,7 @@ export default function AdminManagement() {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/admin-users', {
+      const res = await authenticatedFetch('/api/v1/admin-users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -3158,7 +3160,7 @@ export default function AdminManagement() {
   const handleToggleActive = async (admin: AdminUser) => {
     if (!isSuperAdmin) return;
     try {
-      const res = await fetch(`/api/v1/admin-users/${admin.id}`, {
+      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !admin.is_active }),
@@ -3173,7 +3175,7 @@ export default function AdminManagement() {
   const handleTogglePermission = async (admin: AdminUser, key: keyof AdminUser) => {
     if (!isSuperAdmin) return;
     try {
-      const res = await fetch(`/api/v1/admin-users/${admin.id}`, {
+      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [key]: !admin[key] }),
@@ -3193,7 +3195,7 @@ export default function AdminManagement() {
     if (!isSuperAdmin) return;
     if (!confirm(`Deactivate @${admin.telegram_username || admin.telegram_id}? Their wallet and history will be preserved.`)) return;
     try {
-      const res = await fetch(`/api/v1/admin-users/${admin.id}`, { method: 'DELETE' });
+      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       await fetchAdmins();
     } catch (e: unknown) {
@@ -3204,7 +3206,7 @@ export default function AdminManagement() {
   const handleSaveBank = async (data: Partial<AdminUser>) => {
     if (!editingBankAdmin) return;
     try {
-      const res = await fetch(`/api/v1/admin-users/${editingBankAdmin.id}`, {
+      const res = await authenticatedFetch(`/api/v1/admin-users/${editingBankAdmin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -3219,7 +3221,7 @@ export default function AdminManagement() {
 
   const handleSavePassword = async (password: string) => {
     if (!editingPasswordAdmin) return;
-    const res = await fetch(`/api/v1/admin-users/${editingPasswordAdmin.id}`, {
+    const res = await authenticatedFetch(`/api/v1/admin-users/${editingPasswordAdmin.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
