@@ -26,6 +26,7 @@
         "PUBLIC_CHECKOUT_HOST": "https://kr.swiftpay.site",
         "VITE_API_URL": "https://api.swiftpay.site",
         "VITE_TURNSTILE_SITE_KEY": "0x4AAAAAAEy2mGn-OGXXID21",
+        "VITE_GOOGLE_CLIENT_ID": "840780053380-sl5ukuvs63nt8u4d1kriblpbb9chohd4.apps.googleusercontent.com",
         "CLOUDFLARE_TURNSTILE_ALLOWED_HOSTNAMES": "swiftpay.site,kr.swiftpay.site",
         "SWIFTPAY_MODE": "production",
         "SWIFTPAY_BASE_URL": "https://api.pay.live.swiftpay.ph",
