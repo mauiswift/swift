@@ -24,11 +24,17 @@ class EmailService:
         resend_from_email_name = "".join(["resend", "_from_email"])
         resend_api_env = "".join(["RESEND", "_API_KEY"])
         resend_from_email_env = "".join(["RESEND", "_FROM_EMAIL"])
+        host = (os.getenv("SMTP_HOST") or getattr(settings, "smtp_host", "") or "").strip()
+        password = (os.getenv("SMTP_PASSWORD") or getattr(settings, "smtp_password", "") or "").strip()
+        # Google displays App Passwords in groups; ignore copied separators while
+        # preserving passwords for other SMTP providers exactly as configured.
+        if host.lower() in {"smtp.gmail.com", "smtp.googlemail.com"}:
+            password = "".join(password.split())
         return {
-            "host": (os.getenv("SMTP_HOST") or getattr(settings, "smtp_host", "") or "").strip(),
+            "host": host,
             "port": int((os.getenv("SMTP_PORT") or getattr(settings, "smtp_port", 587) or 587)),
             "username": (os.getenv("SMTP_USERNAME") or getattr(settings, "smtp_username", "") or "").strip(),
-            "password": (os.getenv("SMTP_PASSWORD") or getattr(settings, "smtp_password", "") or "").strip(),
+            "password": password,
             "from_email": (os.getenv("SMTP_FROM_EMAIL") or getattr(settings, "smtp_from_email", "") or "").strip(),
             "from_name": (os.getenv("SMTP_FROM_NAME") or getattr(settings, "smtp_from_name", "SwiftPay") or "SwiftPay").strip() or "SwiftPay",
             "frontend_url": (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/"),

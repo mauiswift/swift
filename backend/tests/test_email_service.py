@@ -3,6 +3,15 @@ import urllib.request
 from services.email_service import EmailService
 
 
+def test_gmail_app_password_removes_display_spaces(monkeypatch):
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "abcd efgh ijkl mnop")
+
+    config = EmailService._resolve_smtp_config()
+
+    assert config["password"] == "abcdefghijklmnop"
+
+
 def test_send_html_email_uses_bearer_token_for_resend(monkeypatch):
     monkeypatch.setenv("RESEND_API_KEY", "test-api-key")
     monkeypatch.setenv("RESEND_FROM_EMAIL", "noreply@example.com")
