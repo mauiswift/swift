@@ -22,22 +22,36 @@ class UsdtTradeService:
             return "coins.ph"
         return "internal"
 
-    async def buy_with_php(self, *, php_amount: float, user_id: str) -> Dict[str, Any]:
+    async def buy_with_php(
+        self,
+        *,
+        php_amount: float,
+        user_id: str,
+        client_order_id: str | None = None,
+    ) -> Dict[str, Any]:
         """Buy USDT with PHP and return the provider execution result."""
         return await self.execute(
             from_currency="PHP",
             to_currency="USDT",
             amount=php_amount,
             user_id=user_id,
+            client_order_id=client_order_id,
         )
 
-    async def sell_for_php(self, *, usdt_amount: float, user_id: str) -> Dict[str, Any]:
+    async def sell_for_php(
+        self,
+        *,
+        usdt_amount: float,
+        user_id: str,
+        client_order_id: str | None = None,
+    ) -> Dict[str, Any]:
         """Sell USDT for PHP and return the provider execution result."""
         return await self.execute(
             from_currency="USDT",
             to_currency="PHP",
             amount=usdt_amount,
             user_id=user_id,
+            client_order_id=client_order_id,
         )
 
     async def _execute_coins_trade(
@@ -78,6 +92,7 @@ class UsdtTradeService:
         to_currency: str,
         amount: float,
         user_id: str,
+        client_order_id: str | None = None,
     ) -> Dict[str, Any]:
         """Return the provider amount and order reference for a completed trade."""
         from_currency = from_currency.upper()
@@ -89,7 +104,7 @@ class UsdtTradeService:
         if provider != "coins.ph":
             return {"success": True, "provider": "internal", "amount": None, "order_id": None}
 
-        order_id = f"swiftpay-{user_id}-{uuid.uuid4().hex[:20]}"
+        order_id = client_order_id or f"swiftpay-{user_id}-{uuid.uuid4().hex[:20]}"
         return await self._execute_coins_trade(
             from_currency=from_currency,
             amount=amount,

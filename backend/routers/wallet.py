@@ -1,5 +1,6 @@
 import logging
 import math
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -17,6 +18,7 @@ from models.wallet_transactions import Wallet_transactions
 from models.transactions import Transactions
 from models.usdt_send_requests import UsdtSendRequest
 from models.crypto_topup import CryptoTopupRequest
+from models.usdt_trades import UsdtTrade
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
@@ -78,6 +80,7 @@ class WalletConversionRequest(BaseModel):
 	to_currency: str = "USDT"
 	from_amount: float
 	passkey_credential: Optional[dict] = None
+	idempotency_key: Optional[str] = None
 
 
 class DenyUsdtSendRequest(BaseModel):
@@ -637,6 +640,48 @@ async def convert_wallet_balance(
 	provider_order_id = None
 	provider_amount = None
 	request_rate = None
+	trade = None
+	if "USDT" in {from_currency, to_currency}:
+		trade_key = (request.idempotency_key or uuid.uuid4().hex).strip()
+		if len(trade_key) > 128:
+			raise HTTPException(status_code=400, detail="Idempotency key is too long")
+		trade = await db.scalar(
+			select(UsdtTrade).where(
+				UsdtTrade.user_id == owner_id,
+				UsdtTrade.idempotency_key == trade_key,
+			)
+		)
+		if trade:
+			if trade.status == "settled":
+				return {
+					"success": True,
+					"from_currency": public_currency(trade.source_currency),
+					"to_currency": public_currency(trade.target_currency),
+					"from_amount": float(trade.requested_amount),
+					"to_amount": float(trade.settled_amount or 0),
+					"rate": None,
+					"fee_amount": float(trade.fee or 0),
+					"fee_rate": 0,
+					"reference_id": f"usdt-trade-{trade.id}",
+					"provider": trade.provider,
+					"provider_order_id": trade.provider_order_id,
+					"provider_amount": float(trade.settled_amount or 0),
+					"execution_rate": None,
+				}
+			if trade.status in {"pending", "provider_pending", "settlement_pending"}:
+				raise HTTPException(status_code=409, detail="This USDT trade is already being processed.")
+		trade = UsdtTrade(
+			user_id=owner_id,
+			side="buy" if normalized_to == "USD" else "sell",
+			source_currency=normalized_from,
+			target_currency=normalized_to,
+			requested_amount=request.from_amount,
+			provider=provider_name,
+			idempotency_key=trade_key,
+			status="pending",
+		)
+		db.add(trade)
+		await db.flush()
 	try:
 		from_wallet = await service.get_or_create_wallet(owner_id, normalized_from, lock=True)
 		quote = await CurrencyService(db).get_conversion_quote(
@@ -649,26 +694,39 @@ async def convert_wallet_balance(
 		has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(owner_id)
 		if normalized_to == "USD" and not has_vip_gold_upline and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
 			raise ValueError(f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT")
+		if trade:
+			trade.quoted_amount = quote["to_amount"]
 
 		available = float(from_wallet.available_balance or from_wallet.balance or 0.0)
 		if available < request.from_amount:
 			raise ValueError(f"Insufficient balance: {available:.2f} {from_currency} available")
 
 		if provider_name == "coins.ph":
+			if trade:
+				trade.status = "provider_pending"
 			if normalized_from == "PHP" and normalized_to == "USD":
 				provider_result = await trade_service.buy_with_php(
 					php_amount=request.from_amount,
 					user_id=owner_id,
+					client_order_id=f"swiftpay-trade-{trade.id}" if trade else None,
 				)
 			else:
 				provider_result = await trade_service.sell_for_php(
 					usdt_amount=request.from_amount,
 					user_id=owner_id,
+					client_order_id=f"swiftpay-trade-{trade.id}" if trade else None,
 				)
 			provider_amount = float(provider_result.get("amount") or 0)
 			if not provider_result.get("success") or provider_amount <= 0:
+				if trade:
+					trade.status = "failed"
+					trade.failure_reason = provider_result.get("error", "Provider order was not filled")
+					await db.commit()
 				raise HTTPException(status_code=502, detail=provider_result.get("error", "Coins.ph order was not filled"))
 			provider_order_id = provider_result.get("order_id")
+			if trade:
+				trade.provider_order_id = provider_order_id
+				trade.status = "provider_filled"
 			fee_rate = float(quote.get("fee_rate") or 0.0)
 			request_rate = provider_amount / request.from_amount / max(1.0 - fee_rate, 0.000001)
 
@@ -681,6 +739,11 @@ async def convert_wallet_balance(
 			rate=request_rate or quote["rate"],
 		)
 		await db.commit()
+		if trade:
+			trade.settled_amount = conversion.to_amount
+			trade.fee = conversion.conversion_fee_amount
+			trade.status = "settled"
+			await db.commit()
 	except ValueError as exc:
 		await db.rollback()
 		raise HTTPException(status_code=400, detail=str(exc)) from exc

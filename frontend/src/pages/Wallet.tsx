@@ -1,5 +1,5 @@
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { authApi } from '@/lib/auth';
@@ -480,6 +480,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [conversionFeeRate, setConversionFeeRate] = useState(0.01);
   const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
+  const buyTradeKeyRef = useRef<string | null>(null);
+  const sellTradeKeyRef = useRef<string | null>(null);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
   const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; minimum_amount?: number }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
   const [assignedKrwAccount, setAssignedKrwAccount] = useState<typeof depositAccounts[number] | null>(null);
@@ -763,6 +765,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     setBuyUsdtLoading(true);
     try {
       const passkeyCredential = await authApi.verifyPasskey('usdt_trade');
+      const idempotencyKey = buyTradeKeyRef.current || crypto.randomUUID();
+      buyTradeKeyRef.current = idempotencyKey;
       const response = await client.apiCall.invoke({
         url: '/api/v1/wallet/convert',
         method: 'POST',
@@ -771,6 +775,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           to_currency: 'USDT',
           from_amount: usdtConversion.requiredSource,
           passkey_credential: passkeyCredential,
+          idempotency_key: idempotencyKey,
         },
       });
 
@@ -785,6 +790,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       toast.success(`Bought ${receivedLabel} USDT for ${formatWalletCurrency(usdtConversion.requiredSource, usdtConversion.sourceCurrency)}`);
       await fetchData();
       setWalletAction(null);
+      buyTradeKeyRef.current = null;
     } catch (err) {
       toast.error((err as Error)?.message || 'Unable to buy USDT');
     } finally {
@@ -807,6 +813,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     setBuyUsdtLoading(true);
     try {
       const passkeyCredential = await authApi.verifyPasskey('usdt_trade');
+      const idempotencyKey = sellTradeKeyRef.current || crypto.randomUUID();
+      sellTradeKeyRef.current = idempotencyKey;
       const response = await client.apiCall.invoke({
         url: '/api/v1/wallet/convert',
         method: 'POST',
@@ -815,6 +823,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           to_currency: 'PHP',
           from_amount: amount,
           passkey_credential: passkeyCredential,
+          idempotency_key: idempotencyKey,
         },
       });
       if (!response?.data?.success) {
@@ -824,6 +833,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       setSellAmount('');
       await fetchData();
       setWalletAction(null);
+      sellTradeKeyRef.current = null;
     } catch (err) {
       toast.error((err as Error)?.message || 'Unable to sell USDT');
     } finally {
