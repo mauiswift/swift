@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import httpx
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.constants import (
@@ -123,30 +124,64 @@ async def _bitgo_request(db: AsyncSession, method: str, path: str, **kwargs: Any
 
 
 async def assign_usdt_address(db: AsyncSession, user_id: str) -> UsdtDepositAddress:
-    existing = await db.scalar(select(UsdtDepositAddress).where(UsdtDepositAddress.user_id == str(user_id)))
+    user_id = str(user_id)
+    existing = await db.scalar(select(UsdtDepositAddress).where(UsdtDepositAddress.user_id == user_id))
     if existing:
         return existing
     config = await get_bitgo_config(db)
     if not config["enabled"] or not config["configured"]:
         raise BitGoConfigurationError("Configure and enable BitGo before assigning user addresses")
-    latest = await db.scalar(select(func.max(UsdtDepositAddress.derivation_index)))
-    index = int(latest or -1) + 1
-    result = await _bitgo_request(
-        db, "POST", f"/api/v2/{config['coin']}/wallet/{config['wallet_id']}/address",
-        json={"label": f"usdt-{user_id}-{index}", "address": str(index)},
-    )
-    if not isinstance(result, dict):
-        raise BitGoRequestError("BitGo returned an unexpected address response.")
-    wallet_address = result.get("walletAddress")
-    if wallet_address is not None and not isinstance(wallet_address, dict):
-        raise BitGoRequestError("BitGo returned an invalid wallet address response.")
-    address = str(result.get("address") or (wallet_address or {}).get("address") or "").strip()
-    if not is_valid_tron_address(address):
-        raise BitGoConfigurationError("BitGo returned an invalid TRON address")
-    record = UsdtDepositAddress(user_id=str(user_id), address=address, derivation_index=index, network="TRON", active=True)
-    db.add(record)
-    await db.flush()
-    return record
+
+    # Address assignment can be requested concurrently (for example, the admin
+    # bulk-assignment endpoint and a user's first dashboard request). Reserve the
+    # database row in a savepoint so a unique-index race can be retried safely.
+    for attempt in range(3):
+        latest = await db.scalar(select(func.max(UsdtDepositAddress.derivation_index)))
+        index = int(latest or -1) + 1
+        result = await _bitgo_request(
+            db, "POST", f"/api/v2/{config['coin']}/wallet/{config['wallet_id']}/address",
+            json={"label": f"usdt-{user_id}-{index}", "address": str(index)},
+        )
+        if not isinstance(result, dict):
+            raise BitGoRequestError("BitGo returned an unexpected address response.")
+        wallet_address = result.get("walletAddress")
+        if wallet_address is not None and not isinstance(wallet_address, dict):
+            raise BitGoRequestError("BitGo returned an invalid wallet address response.")
+        address = str(result.get("address") or (wallet_address or {}).get("address") or "").strip()
+        if not is_valid_tron_address(address):
+            raise BitGoConfigurationError("BitGo returned an invalid TRON address")
+
+        record = UsdtDepositAddress(
+            user_id=user_id,
+            address=address,
+            derivation_index=index,
+            network="TRON",
+            active=True,
+        )
+        try:
+            async with db.begin_nested():
+                db.add(record)
+                await db.flush()
+            return record
+        except IntegrityError:
+            concurrent_record = await db.scalar(
+                select(UsdtDepositAddress).where(UsdtDepositAddress.user_id == user_id)
+            )
+            if concurrent_record:
+                return concurrent_record
+            if attempt == 2:
+                logger.exception("Unable to reserve BitGo address index after concurrent assignment retries")
+                raise BitGoRequestError(
+                    "Unable to store the BitGo address because another assignment is in progress. "
+                    "Please retry the assignment."
+                )
+            logger.warning(
+                "BitGo address index %s was already reserved; retrying assignment (%s/3)",
+                index,
+                attempt + 1,
+            )
+
+    raise BitGoRequestError("Unable to store the BitGo address.")
 
 
 def _transfer_items(payload: Any) -> list[dict[str, Any]]:
