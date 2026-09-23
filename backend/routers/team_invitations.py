@@ -349,6 +349,12 @@ class SendInvitationRequest(BaseModel):
     permissions: Optional[dict] = None
     notes: Optional[str] = None
 
+
+class CompleteInvitationRequest(BaseModel):
+    password: str
+    confirm_password: str
+    full_name: Optional[str] = None
+
 class InvitationResponse(BaseModel):
     id: int
     email: str
@@ -1101,12 +1107,44 @@ async def set_vip_gold(
     return {"success": True, "user_id": admin.telegram_id, "vip_gold": admin.vip_gold}
 
 
+@router.get("/invitations/{token}")
+async def preview_invitation(token: str, db: AsyncSession = Depends(get_db)):
+    """Validate an invitation without consuming it."""
+    invitation = await db.scalar(
+        select(TeamInvitation).where(TeamInvitation.invitation_token == token)
+    )
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    if invitation.status == "revoked":
+        raise HTTPException(status_code=410, detail="This invitation has been revoked")
+    if invitation.status == "accepted":
+        existing = await db.scalar(
+            select(AdminUser).where(AdminUser.email.ilike(invitation.email))
+        )
+        if existing:
+            raise HTTPException(status_code=409, detail="Invitation already completed")
+    if invitation.expires_at and invitation.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        invitation.status = "expired"
+        await db.commit()
+        raise HTTPException(status_code=410, detail="Invitation has expired")
+    return {
+        "success": True,
+        "invitation": {
+            "id": invitation.id,
+            "email": invitation.email,
+            "role": invitation.role,
+            "organization_name": invitation.organization_name,
+        },
+    }
+
+
 @router.post("/invitations/accept/{token}")
 async def accept_invitation(
     token: str,
+    request: CompleteInvitationRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Accept a team invitation by token. Returns invitation details on success."""
+    """Create the invited team account after the invitee chooses a password."""
     inv_res = await db.execute(
         select(TeamInvitation).where(TeamInvitation.invitation_token == token)
     )
@@ -1118,25 +1156,64 @@ async def accept_invitation(
     if invitation.status == "revoked":
         raise HTTPException(status_code=410, detail="This invitation has been revoked")
 
-    if invitation.status == "accepted":
-        raise HTTPException(status_code=409, detail="Invitation already accepted")
-
     now = datetime.now(timezone.utc)
     if invitation.expires_at and invitation.expires_at.replace(tzinfo=timezone.utc) < now:
         invitation.status = "expired"
         await db.commit()
         raise HTTPException(status_code=410, detail="Invitation has expired")
 
+    password = request.password.strip()
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if password != request.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    existing = await db.scalar(
+        select(AdminUser).where(AdminUser.email.ilike(invitation.email))
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="An account already exists for this email")
+    # Invitations accepted by the previous link-only flow can still finish
+    # account creation once, as long as no account was created yet.
+
+    permissions = invitation.permissions if isinstance(invitation.permissions, dict) else {}
+    telegram_id = f"invite-{secrets.token_urlsafe(18)}"
+    admin_user = AdminUser(
+        telegram_id=telegram_id,
+        email=invitation.email.lower(),
+        name=(request.full_name or invitation.email.split("@", 1)[0]).strip(),
+        role=invitation.role,
+        team_permissions=permissions,
+        organization_id=invitation.organization_id,
+        organization_name=invitation.organization_name,
+        password_hash=hash_password(password),
+        must_change_password=False,
+        is_active=True,
+        is_super_admin=False,
+        can_manage_payments=bool(permissions.get("can_manage_payments")),
+        can_manage_disbursements=bool(permissions.get("can_manage_disbursements")),
+        can_view_reports=bool(permissions.get("can_view_reports")),
+        can_manage_wallet=bool(permissions.get("can_manage_wallet")),
+        can_manage_transactions=bool(permissions.get("can_manage_transactions")),
+        can_manage_bot=bool(permissions.get("can_manage_bot")),
+        can_approve_topups=bool(permissions.get("can_approve_topups")),
+        can_manage_team=bool(permissions.get("can_manage_team")),
+        can_credit_wallet=bool(permissions.get("can_credit_wallet")),
+        can_debit_wallet=bool(permissions.get("can_debit_wallet")),
+        can_freeze_wallet=bool(permissions.get("can_freeze_wallet")),
+        can_unfreeze_wallet=bool(permissions.get("can_unfreeze_wallet")),
+    )
+    db.add(admin_user)
     invitation.status = "accepted"
     invitation.accepted_at = now
     await db.commit()
-    await db.refresh(invitation)
+    await db.refresh(admin_user)
 
-    logger.info("Invitation %s accepted by %s", invitation.id, invitation.email)
+    logger.info("Invitation %s completed by %s", invitation.id, invitation.email)
 
     return {
         "success": True,
-        "message": "Invitation accepted successfully",
+        "message": "Account created successfully. You can now sign in.",
         "invitation": {
             "id": invitation.id,
             "email": invitation.email,
