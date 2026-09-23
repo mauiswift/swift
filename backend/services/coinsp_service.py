@@ -95,3 +95,50 @@ class CoinsPhService:
             return result
         data = result["data"]
         return {"success": True, "data": {**data, "received_php": float(data.get("cummulativeQuoteQty") or data.get("executedQuoteQty") or 0)}}
+
+    async def withdraw_usdt(
+        self,
+        *,
+        amount: float,
+        address: str,
+        withdraw_order_id: str,
+        network: str = "TRX",
+    ) -> Dict[str, Any]:
+        """Send purchased USDT to a whitelisted TRC20 address."""
+        if not self.is_configured():
+            return {"success": False, "error": "Coins.ph trading is not configured"}
+        if amount <= 0 or not address or len(withdraw_order_id) > 30:
+            return {"success": False, "error": "Invalid USDT withdrawal request"}
+
+        params: list[tuple[str, Any]] = [
+            ("coin", "USDT"),
+            ("network", network),
+            ("address", address),
+            ("amount", f"{amount:.8f}"),
+            ("withdrawOrderId", withdraw_order_id),
+            ("recvWindow", 5000),
+            ("timestamp", int(time.time() * 1000)),
+        ]
+        params.append(("signature", self._sign(params, self.api_secret)))
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/openapi/wallet/v1/withdraw/apply",
+                    headers={
+                        "Accept": "application/json",
+                        "X-COINS-APIKEY": self.api_key,
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    data=params,
+                )
+            payload = response.json() if response.text else {}
+            if response.status_code >= 400:
+                return {"success": False, "error": self._data(payload).get("msg", "Coins.ph withdrawal failed")}
+            data = self._data(payload)
+            withdrawal_id = str(data.get("id") or "").strip()
+            if not withdrawal_id:
+                return {"success": False, "error": "Coins.ph returned no withdrawal ID"}
+            return {"success": True, "withdrawal_id": withdrawal_id, "data": data}
+        except Exception:
+            logger.exception("Coins.ph USDT withdrawal request failed")
+            return {"success": False, "error": "Unable to reach Coins.ph withdrawal service"}

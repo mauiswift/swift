@@ -143,7 +143,6 @@ const getTransactionMeta = (txn: WalletTxn) => {
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 const PHP_USDT_RESERVE = 0;
-const MIN_USDT_PURCHASE = 100;
 const normalizeNumericValue = (value: unknown, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   const parsed = Number.parseFloat(String(value ?? fallback));
@@ -253,7 +252,7 @@ const getUsdtConversionSummary = (
   usdtPhpRate: number | null,
   requestedUsdtAmount: number,
   conversionFeeRate = 0.01,
-  minimumPurchase = MIN_USDT_PURCHASE,
+  minimumPurchase = 0,
 ) => {
   const sourceCurrency = 'PHP';
   const sourceWallet = phpBalance;
@@ -456,7 +455,6 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolean }) {
   const [vipGold, setVipGold] = useState(false);
-  const [vipGoldUpline, setVipGoldUpline] = useState(false);
   const { user, platformBranding, loading: authLoading } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
@@ -495,11 +493,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     client.get('/api/v1/team/vip-status')
       .then(response => {
         setVipGold(Boolean(response.data?.vip_gold));
-        setVipGoldUpline(Boolean(response.data?.vip_gold_upline));
       })
       .catch(() => {
         setVipGold(false);
-        setVipGoldUpline(false);
       });
   }, [user?.id]);
 
@@ -570,7 +566,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [walletFrozenDialogOpen, setWalletFrozenDialogOpen] = useState(false);
   const [accountActivationDialogOpen, setAccountActivationDialogOpen] = useState(false);
   const [krwBenefitsUnlocked, setKrwBenefitsUnlocked] = useState(false);
-  const [buyUsdtAmount, setBuyUsdtAmount] = useState(String(MIN_USDT_PURCHASE));
+  const [buyUsdtAmount, setBuyUsdtAmount] = useState('');
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, selectedCollectionCurrency, 'withdrawal', 'bank_transfer');
@@ -741,9 +737,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     buyUsdtRate,
     Number(buyUsdtAmount),
     conversionFeeRate,
-    vipGoldUpline ? 0 : MIN_USDT_PURCHASE,
+    0,
   );
-  const minimumUsdtPurchase = vipGoldUpline ? 0 : MIN_USDT_PURCHASE;
+  const minimumUsdtPurchase = 0;
 
   useEffect(() => {
     fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
@@ -753,7 +749,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     const requestedUsdtAmount = Number(buyUsdtAmount);
     if (
       !Number.isFinite(requestedUsdtAmount)
-      || requestedUsdtAmount < minimumUsdtPurchase
+      || requestedUsdtAmount <= 0
       || !usdtConversion.conversionRate
       || usdtConversion.requiredSource <= 0
       || usdtConversion.convertibleSource < usdtConversion.requiredSource
@@ -842,7 +838,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   };
 
   const handleFundUsdtShortfall = async () => {
-    if (!usdtConversion.conversionRate || usdtConversion.requestedUsdtAmount < minimumUsdtPurchase || fundingUsdtLoading || buyUsdtLoading) return;
+    if (!usdtConversion.conversionRate || usdtConversion.requestedUsdtAmount <= 0 || fundingUsdtLoading || buyUsdtLoading) return;
     const shortfall = usdtConversion.shortfallSource;
     if (shortfall <= 0) {
       await handleBuyUsdt();
@@ -1505,9 +1501,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                     aria-describedby="buy-usdt-amount-help"
                   />
                   <p id="buy-usdt-amount-help" className="text-xs text-slate-500">
-                    {minimumUsdtPurchase > 0
-                      ? (isKoreanWallet ? `최소 구매 금액: ${minimumUsdtPurchase} USDT. ` : `Minimum purchase: ${minimumUsdtPurchase} USDT. `)
-                      : (isKoreanWallet ? 'VIP Gold 하위 회원은 최소 구매 금액이 없습니다. ' : 'No minimum purchase for VIP Gold downlines. ')}
                     {isKoreanWallet
                       ? `필요한 ${conversionSourceCurrency} 금액에는 ${(conversionFeeRate * 100).toFixed(2)}% 환전 수수료가 포함됩니다.`
                       : `The required ${conversionSourceCurrency} amount includes the ${(conversionFeeRate * 100).toFixed(2)}% conversion fee.`}
@@ -1530,8 +1523,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 </div>
                 {!canConvertToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
-                    {Number(buyUsdtAmount) < minimumUsdtPurchase
-                      ? (isKoreanWallet ? `${minimumUsdtPurchase} USDT 이상 입력하세요.` : `Enter at least ${minimumUsdtPurchase} USDT.`)
+                    {Number(buyUsdtAmount) <= 0
+                      ? (isKoreanWallet ? '0보다 큰 USDT 금액을 입력하세요.' : 'Enter a USDT amount greater than 0.')
                       : convertibleSource > 0
                         ? (isKoreanWallet
                           ? `사용 가능한 잔액으로 최대 ${fmtUsd(usdtConversion.convertibleUsdt)} USDT를 구매할 수 있습니다. 구매를 완료하려면 ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)}를 더 입금하세요.`
@@ -1542,7 +1535,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <BuyUsdtButton
                   loading={buyUsdtLoading}
                   funding={fundingUsdtLoading}
-                  disabled={!conversionRate || Number(buyUsdtAmount) < minimumUsdtPurchase || !Number.isFinite(Number(buyUsdtAmount))}
+                  disabled={!conversionRate || Number(buyUsdtAmount) <= 0 || !Number.isFinite(Number(buyUsdtAmount))}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
                   label={canConvertToUsdt ? (isKoreanWallet ? 'USDT 구매' : 'Buy USDT') : (isKoreanWallet ? '입금' : 'Deposit')}
                 />

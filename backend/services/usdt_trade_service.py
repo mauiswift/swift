@@ -22,6 +22,13 @@ class UsdtTradeService:
             return "coins.ph"
         return "internal"
 
+    def require_real_provider(self, from_currency: str, to_currency: str) -> str:
+        """Return the provider for a supported USDT pair or reject a fake fallback."""
+        provider = self.provider_name(from_currency, to_currency)
+        if provider != "coins.ph":
+            raise RuntimeError("Real USDT trading is unavailable until Coins.ph is configured")
+        return provider
+
     async def buy_with_php(
         self,
         *,
@@ -52,6 +59,19 @@ class UsdtTradeService:
             amount=usdt_amount,
             user_id=user_id,
             client_order_id=client_order_id,
+        )
+
+    async def withdraw_to_bitgo(
+        self,
+        *,
+        usdt_amount: float,
+        address: str,
+        withdraw_order_id: str,
+    ) -> Dict[str, Any]:
+        return await self.coinsp.withdraw_usdt(
+            amount=usdt_amount,
+            address=address,
+            withdraw_order_id=withdraw_order_id,
         )
 
     async def _execute_coins_trade(
@@ -102,7 +122,13 @@ class UsdtTradeService:
 
         provider = self.provider_name(from_currency, to_currency)
         if provider != "coins.ph":
-            return {"success": True, "provider": "internal", "amount": None, "order_id": None}
+            return {
+                "success": False,
+                "provider": provider,
+                "amount": None,
+                "order_id": None,
+                "error": "Real USDT trading is unavailable until Coins.ph is configured",
+            }
 
         order_id = client_order_id or f"swiftpay-{user_id}-{uuid.uuid4().hex[:20]}"
         return await self._execute_coins_trade(

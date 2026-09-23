@@ -126,6 +126,28 @@ For Windows, run:
   - `cp -r frontend/dist/. backend/static/`
 - When using the backend Dockerfile's multi-stage build, this copy is handled automatically during image build.
 
+### Render production deployment
+This repository includes a Render blueprint at [render.yaml](./render.yaml). It configures a Docker-based web service for the FastAPI backend with a managed Postgres database and health checks.
+
+1. Push the branch to GitHub.
+2. Create a new Render Web Service from the repository and select "Blueprint".
+3. Render will create the app service and Postgres database using the values in [render.yaml](./render.yaml).
+4. Set the remaining production-only secrets in the Render dashboard before the first deploy:
+   - `JWT_SECRET_KEY`
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_BOT_USERNAME`
+   - `GOOGLE_CLIENT_ID`
+   - `SWIFTPAY_ACCESS_KEY`
+   - `SWIFTPAY_SECRET_KEY`
+   - `MAGPIE_API_KEY`
+   - `MAGPIE_SECRET_KEY`
+   - `XENDIT_SECRET_KEY`
+   - `XENDIT_WEBHOOK_SECRET`
+   - `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`
+5. Confirm the health check succeeds at `/api/v1/health`.
+
+Render reads `RENDER_EXTERNAL_URL` automatically and the app will derive the backend URL from it when present.
+
 ### Magpie Checkout cURL example
 Create a Magpie Checkout Session via the backend compatibility route and set the success URL to the frontend page:
 

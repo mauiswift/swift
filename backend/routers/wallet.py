@@ -19,13 +19,13 @@ from models.transactions import Transactions
 from models.usdt_send_requests import UsdtSendRequest
 from models.crypto_topup import CryptoTopupRequest
 from models.usdt_trades import UsdtTrade
+from models.usdt_deposit_addresses import UsdtDepositAddress
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
 from services.user_benefits import unlock_krw_benefits
-from services.downline import DownlineService
 from services.system_earnings import credit_system_earnings
 from services.currency_service import CurrencyService
 from services.magpie_service import MagpieService
@@ -87,6 +87,10 @@ class DenyUsdtSendRequest(BaseModel):
 	reason: str
 
 
+class RejectUsdtTradeRequest(BaseModel):
+	reason: str
+
+
 class CreateUsdtSendRequest(BaseModel):
 	amount: float
 	to_address: str
@@ -95,9 +99,6 @@ class CreateUsdtSendRequest(BaseModel):
 	passkey_credential: Optional[dict] = None
 	otp_reference: Optional[str] = None
 	otp_code: Optional[str] = None
-
-
-MIN_USDT_CONVERSION_AMOUNT = 100.0
 
 
 def _can_manage_withdrawals(user: UserResponse) -> bool:
@@ -637,6 +638,11 @@ async def convert_wallet_balance(
 	service = WalletsService(db)
 	trade_service = UsdtTradeService()
 	provider_name = trade_service.provider_name(normalized_from, normalized_to)
+	if "USDT" in {from_currency, to_currency}:
+		try:
+			provider_name = trade_service.require_real_provider(normalized_from, normalized_to)
+		except RuntimeError as exc:
+			raise HTTPException(status_code=503, detail=str(exc)) from exc
 	provider_order_id = None
 	provider_amount = None
 	request_rate = None
@@ -646,12 +652,20 @@ async def convert_wallet_balance(
 		if len(trade_key) > 128:
 			raise HTTPException(status_code=400, detail="Idempotency key is too long")
 		trade = await db.scalar(
-			select(UsdtTrade).where(
-				UsdtTrade.user_id == owner_id,
-				UsdtTrade.idempotency_key == trade_key,
-			)
+			select(UsdtTrade).where(UsdtTrade.idempotency_key == trade_key)
 		)
 		if trade:
+			if trade.user_id != owner_id:
+				raise HTTPException(status_code=409, detail="This idempotency key is already in use.")
+			if (
+				trade.source_currency != normalized_from
+				or trade.target_currency != normalized_to
+				or float(trade.requested_amount) != request.from_amount
+			):
+				raise HTTPException(
+					status_code=409,
+					detail="The idempotency key was already used for a different USDT trade.",
+				)
 			if trade.status == "settled":
 				return {
 					"success": True,
@@ -668,8 +682,12 @@ async def convert_wallet_balance(
 					"provider_amount": float(trade.settled_amount or 0),
 					"execution_rate": None,
 				}
-			if trade.status in {"pending", "provider_pending", "settlement_pending"}:
-				raise HTTPException(status_code=409, detail="This USDT trade is already being processed.")
+			if trade.status == "failed":
+				raise HTTPException(
+					status_code=409,
+					detail="This USDT trade failed. Use a new idempotency key to retry it.",
+				)
+			raise HTTPException(status_code=409, detail="This USDT trade is already being processed.")
 		trade = UsdtTrade(
 			user_id=owner_id,
 			side="buy" if normalized_to == "USD" else "sell",
@@ -691,15 +709,32 @@ async def convert_wallet_balance(
 			from_amount=request.from_amount,
 			user_id=owner_id,
 		)
-		has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(owner_id)
-		if normalized_to == "USD" and not has_vip_gold_upline and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
-			raise ValueError(f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT")
 		if trade:
 			trade.quoted_amount = quote["to_amount"]
 
 		available = float(from_wallet.available_balance or from_wallet.balance or 0.0)
 		if available < request.from_amount:
 			raise ValueError(f"Insufficient balance: {available:.2f} {from_currency} available")
+
+		# PHP purchases are real-money flows and must not touch a provider or wallet
+		# until a super admin has reviewed them.
+		if trade and normalized_from == "PHP" and normalized_to == "USD":
+			trade.status = "pending_approval"
+			await db.commit()
+			return {
+				"success": True,
+				"pending": True,
+				"status": trade.status,
+				"from_currency": "PHP",
+				"to_currency": "USDT",
+				"from_amount": request.from_amount,
+				"to_amount": quote["to_amount"],
+				"rate": quote["rate"],
+				"fee_amount": quote.get("conversion_fee_amount", 0),
+				"fee_rate": quote.get("fee_rate", 0),
+				"reference_id": f"usdt-trade-{trade.id}",
+				"provider": provider_name,
+			}
 
 		if provider_name == "coins.ph":
 			if trade:
@@ -730,6 +765,58 @@ async def convert_wallet_balance(
 			fee_rate = float(quote.get("fee_rate") or 0.0)
 			request_rate = provider_amount / request.from_amount / max(1.0 - fee_rate, 0.000001)
 
+		if trade and normalized_from == "PHP" and normalized_to == "USD" and provider_name == "coins.ph":
+			deposit_address = await db.scalar(
+				select(UsdtDepositAddress).where(
+					UsdtDepositAddress.user_id == owner_id,
+					UsdtDepositAddress.active.is_(True),
+				)
+			)
+			if not deposit_address:
+				from services.bitgo_service import assign_usdt_address
+				deposit_address = await assign_usdt_address(db, owner_id)
+			withdrawal_order_id = f"swiftpay-w-{trade.id}"
+			withdrawal_result = await trade_service.withdraw_to_bitgo(
+				usdt_amount=provider_amount,
+				address=deposit_address.address,
+				withdraw_order_id=withdrawal_order_id,
+			)
+			if not withdrawal_result.get("success"):
+				trade.status = "withdrawal_failed"
+				trade.failure_reason = withdrawal_result.get("error", "USDT withdrawal was not submitted")
+				await db.commit()
+				raise HTTPException(status_code=502, detail=trade.failure_reason)
+			await service.debit_wallet(
+				owner_id,
+				request.from_amount,
+				"PHP",
+				"usdt_purchase",
+				f"usdt-trade-{trade.id}",
+				note=f"PHP used to purchase USDT; sent to BitGo address {deposit_address.address}",
+			)
+			trade.destination_address = deposit_address.address
+			trade.provider_withdrawal_id = withdrawal_result["withdrawal_id"]
+			trade.withdrawal_status = "processing"
+			trade.settled_amount = provider_amount
+			trade.status = "withdrawal_submitted"
+			await db.commit()
+			return {
+				"success": True,
+				"from_currency": "PHP",
+				"to_currency": "USDT",
+				"from_amount": request.from_amount,
+				"to_amount": provider_amount,
+				"rate": request_rate,
+				"fee_amount": 0,
+				"fee_rate": 0,
+				"reference_id": f"usdt-trade-{trade.id}",
+				"provider": provider_name,
+				"provider_order_id": provider_order_id,
+				"provider_withdrawal_id": trade.provider_withdrawal_id,
+				"destination_address": deposit_address.address,
+				"pending": True,
+			}
+
 		to_wallet = await service.get_or_create_wallet(owner_id, normalized_to, lock=True)
 		conversion = await CurrencyService(db).convert_currency(
 			from_wallet=from_wallet,
@@ -738,15 +825,31 @@ async def convert_wallet_balance(
 			user_id=owner_id,
 			rate=request_rate or quote["rate"],
 		)
-		await db.commit()
 		if trade:
 			trade.settled_amount = conversion.to_amount
 			trade.fee = conversion.conversion_fee_amount
 			trade.status = "settled"
-			await db.commit()
+		await db.commit()
 	except ValueError as exc:
 		await db.rollback()
 		raise HTTPException(status_code=400, detail=str(exc)) from exc
+	except HTTPException:
+		await db.rollback()
+		raise
+	except Exception:
+		await db.rollback()
+		if trade and trade.provider_order_id:
+			manual_review_trade = await db.scalar(
+				select(UsdtTrade).where(UsdtTrade.id == trade.id)
+			)
+			if manual_review_trade and manual_review_trade.status not in {"settled", "failed"}:
+				manual_review_trade.status = "manual_review"
+				manual_review_trade.failure_reason = (
+					"Provider order filled but wallet settlement requires manual reconciliation"
+				)
+				await db.commit()
+		logger.exception("USDT conversion failed unexpectedly for user %s", owner_id)
+		raise HTTPException(status_code=500, detail="USDT conversion could not be completed")
 
 	return {
 		"success": True,
@@ -763,6 +866,166 @@ async def convert_wallet_balance(
 		"provider_amount": provider_amount,
 		"execution_rate": request_rate,
 	}
+
+
+@router.get("/admin/usdt-trades")
+async def list_admin_usdt_trades(
+	status_filter: Optional[str] = Query(None, alias="status"),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""List USDT trades for super-admin approval and audit."""
+	_require_super_admin(current_user)
+	stmt = select(UsdtTrade).order_by(UsdtTrade.id.desc()).limit(500)
+	if status_filter:
+		stmt = stmt.where(UsdtTrade.status == status_filter.strip().lower())
+	result = await db.execute(stmt)
+	return {
+		"trades": [
+			{
+				"id": item.id,
+				"user_id": item.user_id,
+				"side": item.side,
+				"source_currency": public_currency(item.source_currency),
+				"target_currency": public_currency(item.target_currency),
+				"requested_amount": float(item.requested_amount),
+				"quoted_amount": float(item.quoted_amount or 0),
+				"settled_amount": float(item.settled_amount or 0) if item.settled_amount is not None else None,
+				"provider": item.provider,
+				"status": item.status,
+				"failure_reason": item.failure_reason,
+				"rejection_reason": item.rejection_reason,
+				"reviewed_by": item.reviewed_by,
+				"reviewed_at": item.reviewed_at,
+				"created_at": item.created_at,
+			}
+			for item in result.scalars().all()
+		]
+	}
+
+
+@router.post("/admin/usdt-trades/{trade_id}/reject")
+async def reject_admin_usdt_trade(
+	trade_id: int,
+	body: RejectUsdtTradeRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	if not body.reason.strip():
+		raise HTTPException(status_code=400, detail="Rejection reason is required")
+	trade = await db.scalar(select(UsdtTrade).where(UsdtTrade.id == trade_id).with_for_update())
+	if not trade:
+		raise HTTPException(status_code=404, detail="USDT trade not found")
+	if trade.status != "pending_approval":
+		raise HTTPException(status_code=400, detail=f"Trade is already {trade.status}")
+	trade.status = "rejected"
+	trade.rejection_reason = body.reason.strip()
+	trade.reviewed_by = str(current_user.id)
+	trade.reviewed_at = datetime.now(timezone.utc)
+	await db.commit()
+	return {"success": True, "trade_id": trade.id, "status": trade.status}
+
+
+@router.post("/admin/usdt-trades/{trade_id}/approve")
+async def approve_admin_usdt_trade(
+	trade_id: int,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Execute a PHP→USDT trade only after super-admin approval."""
+	_require_super_admin(current_user)
+	trade = await db.scalar(select(UsdtTrade).where(UsdtTrade.id == trade_id).with_for_update())
+	if not trade:
+		raise HTTPException(status_code=404, detail="USDT trade not found")
+	if trade.status != "pending_approval":
+		raise HTTPException(status_code=400, detail=f"Trade is already {trade.status}")
+	if trade.side != "buy" or trade.source_currency != "PHP" or trade.target_currency != "USD":
+		raise HTTPException(status_code=400, detail="Only PHP to USDT trades require this approval flow")
+	if trade.provider != "coins.ph":
+		raise HTTPException(
+			status_code=400,
+			detail="Coins.ph must be configured before a real-money USDT purchase can be approved",
+		)
+
+	service = WalletsService(db)
+	trade_service = UsdtTradeService()
+	provider_started = False
+	try:
+		from_wallet = await service.get_or_create_wallet(trade.user_id, "PHP", lock=True)
+		quote = await CurrencyService(db).get_conversion_quote(
+			wallet_id=from_wallet.id,
+			from_currency="PHP",
+			to_currency="USD",
+			from_amount=float(trade.requested_amount),
+			user_id=trade.user_id,
+		)
+		if float(from_wallet.available_balance or from_wallet.balance or 0) < float(trade.requested_amount):
+			raise ValueError("Insufficient PHP balance to approve this trade")
+
+		await service.debit_wallet(
+			trade.user_id,
+			float(trade.requested_amount),
+			"PHP",
+			"usdt_purchase",
+			f"usdt-trade-{trade.id}",
+			note="PHP reserved for approved USDT purchase",
+		)
+		trade.reviewed_by = str(current_user.id)
+		trade.reviewed_at = datetime.now(timezone.utc)
+		trade.status = "provider_pending"
+		await db.commit()
+
+		provider_amount = None
+		if trade.provider == "coins.ph":
+			provider_started = True
+			provider_result = await trade_service.buy_with_php(
+				php_amount=float(trade.requested_amount),
+				user_id=trade.user_id,
+				client_order_id=f"swiftpay-trade-{trade.id}",
+			)
+			provider_amount = float(provider_result.get("amount") or 0)
+			if not provider_result.get("success") or provider_amount <= 0:
+				raise RuntimeError(provider_result.get("error", "Coins.ph order was not filled"))
+			trade.provider_order_id = provider_result.get("order_id")
+			trade.status = "provider_filled"
+			deposit_address = await db.scalar(
+				select(UsdtDepositAddress).where(
+					UsdtDepositAddress.user_id == trade.user_id,
+					UsdtDepositAddress.active.is_(True),
+				)
+			)
+			if not deposit_address:
+				from services.bitgo_service import assign_usdt_address
+				deposit_address = await assign_usdt_address(db, trade.user_id)
+			withdrawal_result = await trade_service.withdraw_to_bitgo(
+				usdt_amount=provider_amount,
+				address=deposit_address.address,
+				withdraw_order_id=f"swiftpay-w-{trade.id}",
+			)
+			if not withdrawal_result.get("success"):
+				raise RuntimeError(withdrawal_result.get("error", "USDT withdrawal was not submitted"))
+			trade.destination_address = deposit_address.address
+			trade.provider_withdrawal_id = withdrawal_result["withdrawal_id"]
+			trade.withdrawal_status = "processing"
+			trade.settled_amount = provider_amount
+			trade.status = "withdrawal_submitted"
+		await db.commit()
+	except (ValueError, RuntimeError) as exc:
+		await db.rollback()
+		trade = await db.scalar(select(UsdtTrade).where(UsdtTrade.id == trade_id))
+		if trade and trade.status in {"pending_approval", "provider_pending", "provider_filled"}:
+			trade.status = "manual_review" if provider_started else "failed"
+			trade.failure_reason = str(exc)
+			trade.reviewed_by = str(current_user.id)
+			trade.reviewed_at = datetime.now(timezone.utc)
+			await db.commit()
+		raise HTTPException(status_code=400 if isinstance(exc, ValueError) else 502, detail=str(exc)) from exc
+	except Exception:
+		await db.rollback()
+		logger.exception("Approved USDT trade %s failed", trade_id)
+		raise HTTPException(status_code=500, detail="Approved USDT trade could not be completed")
+	return {"success": True, "trade_id": trade.id, "status": trade.status, "provider": trade.provider}
 
 
 @router.post("/quote")

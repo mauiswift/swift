@@ -37,7 +37,7 @@ async def test_coinsph_is_selected_for_php_usdt_pair():
 
 
 @pytest.mark.asyncio
-async def test_unconfigured_coinsph_uses_internal_fallback():
+async def test_unconfigured_coinsph_rejects_real_trade():
     service = UsdtTradeService(UnconfiguredCoins())
 
     result = await service.execute(
@@ -47,12 +47,16 @@ async def test_unconfigured_coinsph_uses_internal_fallback():
         user_id="user-1",
     )
 
-    assert result == {
-        "success": True,
-        "provider": "internal",
-        "amount": None,
-        "order_id": None,
-    }
+    assert result["success"] is False
+    assert result["provider"] == "internal"
+    assert "configured" in result["error"]
+
+
+def test_require_real_provider_rejects_unconfigured_coinsph():
+    service = UsdtTradeService(UnconfiguredCoins())
+
+    with pytest.raises(RuntimeError, match="configured"):
+        service.require_real_provider("PHP", "USDT")
 
 
 @pytest.mark.asyncio

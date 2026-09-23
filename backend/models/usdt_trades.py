@@ -27,9 +27,15 @@ class UsdtTrade(Base):
     fee = Column(Numeric(24, 8), nullable=False, server_default="0")
     provider = Column(String(64), nullable=False)
     provider_order_id = Column(String(128), nullable=True)
+    provider_withdrawal_id = Column(String(128), nullable=True)
+    destination_address = Column(String(64), nullable=True)
+    withdrawal_status = Column(String(32), nullable=True)
     idempotency_key = Column(String(128), nullable=False)
     status = Column(String(32), nullable=False, server_default="pending")
     failure_reason = Column(String(512), nullable=True)
+    reviewed_by = Column(String(128), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    rejection_reason = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),

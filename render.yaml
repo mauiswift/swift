@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: swiftpay-api
+    runtime: docker
+    rootDir: .
+    dockerfilePath: ./backend/Dockerfile
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: 8000
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: LOG_LEVEL
+        value: info
+      - key: PYTHON_BACKEND_URL
+        value: https://swiftpay-api.onrender.com
+      - key: PUBLIC_CHECKOUT_HOST
+        value: https://swiftpay.site
+      - key: FRONTEND_URL
+        value: https://swiftpay.site
+      - key: TELEGRAM_MINI_APP_URL
+        value: https://swiftpay.site/mini-app
+      - key: SWIFTPAY_MODE
+        value: production
+      - key: SWIFTPAY_BASE_URL
+        value: https://api.pay.live.swiftpay.ph
+      - key: SWIFTPAY_CALLBACK_URL
+        value: https://swiftpay-api.onrender.com/api/v1/webhooks/swiftpay
+      - key: MAGPIE_MODE
+        value: production
+      - key: MAGPIE_BASE_URL
+        value: https://api.pay.magpie.im
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: swiftpay-postgres
+          property: connectionString
+      - key: DATABASE_PUBLIC_URL
+        fromDatabase:
+          name: swiftpay-postgres
+          property: connectionString
+
+databases:
+  - name: swiftpay-postgres
+    databaseName: swiftpay
+    user: swiftpay
+    plan: starter
