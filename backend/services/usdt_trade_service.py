@@ -14,10 +14,31 @@ class UsdtTradeService:
         self.coinsp = coinsp or CoinsPhService()
 
     def provider_name(self, from_currency: str, to_currency: str) -> str:
-        pair = (from_currency.upper(), to_currency.upper())
+        pair = tuple(
+            "USD" if currency.upper() == "USDT" else currency.upper()
+            for currency in (from_currency, to_currency)
+        )
         if pair in {("PHP", "USD"), ("USD", "PHP")} and self.coinsp.is_configured():
             return "coins.ph"
         return "internal"
+
+    async def buy_with_php(self, *, php_amount: float, user_id: str) -> Dict[str, Any]:
+        """Buy USDT with PHP and return the provider execution result."""
+        return await self.execute(
+            from_currency="PHP",
+            to_currency="USDT",
+            amount=php_amount,
+            user_id=user_id,
+        )
+
+    async def sell_for_php(self, *, usdt_amount: float, user_id: str) -> Dict[str, Any]:
+        """Sell USDT for PHP and return the provider execution result."""
+        return await self.execute(
+            from_currency="USDT",
+            to_currency="PHP",
+            amount=usdt_amount,
+            user_id=user_id,
+        )
 
     async def _execute_coins_trade(
         self,

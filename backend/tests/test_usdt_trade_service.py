@@ -53,3 +53,25 @@ async def test_unconfigured_coinsph_uses_internal_fallback():
         "amount": None,
         "order_id": None,
     }
+
+
+@pytest.mark.asyncio
+async def test_buy_with_php_uses_php_amount_for_usdt_order():
+    service = UsdtTradeService(ConfiguredCoins())
+
+    result = await service.buy_with_php(php_amount=500, user_id="user-1")
+
+    assert result["success"] is True
+    assert result["provider"] == "coins.ph"
+    assert result["amount"] == 10.25
+
+
+@pytest.mark.asyncio
+async def test_sell_for_php_uses_usdt_amount_for_php_order():
+    service = UsdtTradeService(ConfiguredCoins())
+
+    result = await service.sell_for_php(usdt_amount=10, user_id="user-1")
+
+    assert result["success"] is True
+    assert result["provider"] == "coins.ph"
+    assert result["amount"] == 575.0

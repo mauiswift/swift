@@ -655,12 +655,16 @@ async def convert_wallet_balance(
 			raise ValueError(f"Insufficient balance: {available:.2f} {from_currency} available")
 
 		if provider_name == "coins.ph":
-			provider_result = await trade_service.execute(
-				from_currency=normalized_from,
-				to_currency=normalized_to,
-				amount=request.from_amount,
-				user_id=owner_id,
-			)
+			if normalized_from == "PHP" and normalized_to == "USD":
+				provider_result = await trade_service.buy_with_php(
+					php_amount=request.from_amount,
+					user_id=owner_id,
+				)
+			else:
+				provider_result = await trade_service.sell_for_php(
+					usdt_amount=request.from_amount,
+					user_id=owner_id,
+				)
 			provider_amount = float(provider_result.get("amount") or 0)
 			if not provider_result.get("success") or provider_amount <= 0:
 				raise HTTPException(status_code=502, detail=provider_result.get("error", "Coins.ph order was not filled"))
