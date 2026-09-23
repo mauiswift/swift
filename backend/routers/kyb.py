@@ -291,6 +291,34 @@ async def approve_kyb_registration(
     if kyb.status not in ("pending_review", "in_progress", "rejected"):
         raise HTTPException(status_code=400, detail=f"Cannot approve a registration with status: {kyb.status}")
 
+    duplicate_identity_filters = [
+        AdminUser.telegram_id.in_(
+            {
+                str(value).strip()
+                for value in (kyb.chat_id, kyb.telegram_user_id)
+                if value and str(value).strip()
+            }
+        )
+    ]
+    if kyb.google_id:
+        duplicate_identity_filters.append(AdminUser.google_id == kyb.google_id)
+    registration_email = (kyb.email or "").strip().lower()
+    if registration_email:
+        duplicate_identity_filters.append(func.lower(AdminUser.email) == registration_email)
+    duplicate_admin = await db.scalar(
+        select(AdminUser)
+        .where(or_(*duplicate_identity_filters))
+        .order_by(AdminUser.id.asc())
+    )
+    if duplicate_admin:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This registration is already linked to an existing account. "
+                "Please sign in at /login instead of creating another account."
+            ),
+        )
+
     settlement_values = {
         "bank_name": (body.bank_name or kyb.bank_name or "").strip(),
         "bank_account_number": (body.bank_account_number or kyb.bank_account_number or "").strip(),
