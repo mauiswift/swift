@@ -2027,7 +2027,10 @@ async def register(
         google_id = google_claims["google_id"]
         existing_google = await db.scalar(select(AdminUser).where(AdminUser.google_id == google_id))
         if existing_google:
-            raise HTTPException(status_code=409, detail="This Google account is already linked.")
+            raise HTTPException(
+                status_code=409,
+                detail="This account is already registered. Please sign in at /login.",
+            )
     if body.telegram_auth:
         bot_token = _get_runtime_config_value("telegram_bot_token", "TELEGRAM_BOT_TOKEN")
         if not bot_token:
@@ -2044,7 +2047,10 @@ async def register(
     existing_kyb = existing.scalar_one_or_none()
     if existing_kyb:
         if existing_kyb.status == "approved":
-            raise HTTPException(status_code=400, detail="This email is already registered and approved.")
+            raise HTTPException(
+                status_code=409,
+                detail="This account is already registered and approved. Please sign in at /login.",
+            )
         if google_id and existing_kyb.google_id and existing_kyb.google_id != google_id:
             raise HTTPException(status_code=409, detail="This email is already linked to another Google account.")
         if body.telegram_user_id and existing_kyb.telegram_user_id and existing_kyb.telegram_user_id != body.telegram_user_id:
@@ -2058,6 +2064,15 @@ async def register(
             kyb_id=existing_kyb.id,
             reference_code=existing_kyb.reference_code,
             xendit_customer_id=None,
+        )
+
+    existing_account = await db.scalar(
+        select(AdminUser).where(func.lower(AdminUser.email) == body.email.lower())
+    )
+    if existing_account:
+        raise HTTPException(
+            status_code=409,
+            detail="This email is already registered. Please sign in at /login.",
         )
 
     reference_code = await _get_unique_reference_code(db)
