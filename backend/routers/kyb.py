@@ -14,7 +14,7 @@ from services.email_service import EmailService
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select, func
+from sqlalchemy import or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
@@ -276,7 +276,13 @@ async def approve_kyb_registration(
     """Approve a KYB registration and create an AdminUser for the applicant. Super admin only."""
     _require_super_admin(current_user)
 
-    result = await db.execute(select(KybRegistration).where(KybRegistration.id == kyb_id))
+    # Serialize approval requests for the same registration so double-clicks or
+    # concurrent admin sessions cannot create duplicate AdminUser rows.
+    result = await db.execute(
+        select(KybRegistration)
+        .where(KybRegistration.id == kyb_id)
+        .with_for_update()
+    )
     kyb = result.scalar_one_or_none()
     if not kyb:
         raise HTTPException(status_code=404, detail="KYB registration not found")
@@ -339,7 +345,10 @@ async def approve_kyb_registration(
             .where(
                 func.lower(TeamInvitation.email) == email,
                 TeamInvitation.status.in_(["pending", "accepted"]),
-                ~TeamInvitation.notes.like("Created from reusable referral%"),
+                or_(
+                    TeamInvitation.notes.is_(None),
+                    ~TeamInvitation.notes.like("Created from reusable referral%"),
+                ),
             )
             .order_by(TeamInvitation.created_at.desc())
         )
@@ -368,8 +377,24 @@ async def approve_kyb_registration(
     referral_role = invitation.role if is_invited_user and invitation else "owner"
 
     # Create or update AdminUser for approved registration with organization context.
-    existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == kyb.chat_id))
-    admin_user = existing.scalar_one_or_none()
+    # Older registrations stored the Telegram chat ID while newer ones store the
+    # Telegram user ID, so check both values before creating a new account.
+    telegram_ids = {
+        str(value).strip()
+        for value in (kyb.chat_id, kyb.telegram_user_id)
+        if value and str(value).strip()
+    }
+    identity_filters = [AdminUser.telegram_id.in_(telegram_ids)] if telegram_ids else []
+    if kyb.google_id:
+        identity_filters.append(AdminUser.google_id == kyb.google_id)
+    existing = await db.execute(
+        select(AdminUser)
+        .where(or_(*identity_filters))
+        .order_by(AdminUser.id.asc())
+        if identity_filters
+        else select(AdminUser).where(False)
+    )
+    admin_user = existing.scalars().first()
 
     await _ensure_unique_email(db, email, exclude_admin_id=admin_user.id if admin_user else None)
     await _ensure_unique_usdt_wallet_address(
@@ -508,12 +533,13 @@ async def approve_kyb_registration(
         invitation.accepted_at = datetime.utcnow()
 
     if is_invited_user and referrer:
-        existing_relation = await db.scalar(
-            select(Downline).where(
-                Downline.upline_user_id == str(referrer.telegram_id),
-                Downline.downline_user_id == str(admin_user.telegram_id),
+        with db.no_autoflush:
+            existing_relation = await db.scalar(
+                select(Downline).where(
+                    Downline.upline_user_id == str(referrer.telegram_id),
+                    Downline.downline_user_id == str(admin_user.telegram_id),
+                )
             )
-        )
         if not existing_relation:
             db.add(Downline(
                 upline_user_id=str(referrer.telegram_id),
@@ -523,12 +549,13 @@ async def approve_kyb_registration(
                 status="active",
             ))
         if not referrer.is_super_admin and referrer.added_by:
-            super_relation = await db.scalar(
-                select(Downline).where(
-                    Downline.upline_user_id == str(referrer.added_by),
-                    Downline.downline_user_id == str(admin_user.telegram_id),
+            with db.no_autoflush:
+                super_relation = await db.scalar(
+                    select(Downline).where(
+                        Downline.upline_user_id == str(referrer.added_by),
+                        Downline.downline_user_id == str(admin_user.telegram_id),
+                    )
                 )
-            )
             if not super_relation:
                 db.add(Downline(
                     upline_user_id=str(referrer.added_by),
@@ -538,12 +565,13 @@ async def approve_kyb_registration(
                     status="active",
                 ))
     elif kyb.referral_upline_id:
-        existing_relation = await db.scalar(
-            select(Downline).where(
-                Downline.upline_user_id == str(kyb.referral_upline_id),
-                Downline.downline_user_id == str(admin_user.telegram_id),
+        with db.no_autoflush:
+            existing_relation = await db.scalar(
+                select(Downline).where(
+                    Downline.upline_user_id == str(kyb.referral_upline_id),
+                    Downline.downline_user_id == str(admin_user.telegram_id),
+                )
             )
-        )
         if not existing_relation:
             db.add(Downline(
                 upline_user_id=str(kyb.referral_upline_id),
@@ -553,12 +581,13 @@ async def approve_kyb_registration(
                 status="active",
             ))
     elif current_user and getattr(current_user, "id", None):
-        default_root_relation = await db.scalar(
-            select(Downline).where(
-                Downline.upline_user_id == str(current_user.id),
-                Downline.downline_user_id == str(kyb.chat_id),
+        with db.no_autoflush:
+            default_root_relation = await db.scalar(
+                select(Downline).where(
+                    Downline.upline_user_id == str(current_user.id),
+                    Downline.downline_user_id == str(kyb.chat_id),
+                )
             )
-        )
         if not default_root_relation:
             db.add(Downline(
                 upline_user_id=str(current_user.id),
