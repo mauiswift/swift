@@ -137,7 +137,9 @@ async def assign_usdt_address(db: AsyncSession, user_id: str) -> UsdtDepositAddr
     # database row in a savepoint so a unique-index race can be retried safely.
     for attempt in range(3):
         latest = await db.scalar(select(func.max(UsdtDepositAddress.derivation_index)))
-        index = int(latest or -1) + 1
+        # Advance the candidate on every retry even if the current transaction's
+        # snapshot still reports the same max value after a concurrent conflict.
+        index = int(latest or -1) + attempt + 1
         result = await _bitgo_request(
             db, "POST", f"/api/v2/{config['coin']}/wallet/{config['wallet_id']}/address",
             json={"label": f"usdt-{user_id}-{index}", "address": str(index)},
