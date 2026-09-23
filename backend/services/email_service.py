@@ -111,6 +111,12 @@ class EmailService:
                 server.sendmail(smtp_from, to_email, msg.as_string())
 
             logger.info("Email sent to %s subject=%s", to_email, subject)
+        except smtplib.SMTPAuthenticationError as exc:
+            logger.error("SMTP authentication failed for %s subject=%s", to_email, subject)
+            raise RuntimeError(
+                "SMTP authentication failed. For Gmail, use a 16-character App Password "
+                "with 2-Step Verification enabled, not the normal Google account password."
+            ) from exc
         except Exception:
             logger.exception("Failed to send email to %s subject=%s", to_email, subject)
             raise
