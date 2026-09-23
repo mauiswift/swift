@@ -59,8 +59,7 @@ export default function DisbursementsPage() {
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const disbursementEnabled = isSuperAdmin
-    && collectionCurrency === 'PHP'
-    && isPaymentChannelEnabled(paymentChannels, 'PHP', 'disbursement', 'bank_transfer');
+    && isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'disbursement', 'bank_transfer');
 
   const fetchAll = useCallback(async () => {
     if (!user) return;

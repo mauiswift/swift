@@ -140,8 +140,8 @@ export default function SendSingleDisbursement() {
   }, []);
 
   const handleSubmit = async () => {
-    if (!isSuperAdmin || collectionCurrency !== 'PHP') {
-      toast.error('PHP disbursements are available to super admins only');
+    if (!isSuperAdmin) {
+      toast.error('Disbursements are available to super admins only');
       return;
     }
         if (!disbursementEnabled) {

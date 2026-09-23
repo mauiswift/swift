@@ -461,7 +461,7 @@ async def send_swiftpay_disbursement(
     db: AsyncSession = Depends(get_db),
 ):
     if not (current_user.permissions and current_user.permissions.is_super_admin):
-        raise HTTPException(status_code=403, detail="Super admin access required for PHP disbursements")
+        raise HTTPException(status_code=403, detail="Super admin access required for disbursements")
     from routers.auth import verify_transaction_passkey
     await verify_transaction_passkey(payload.passkey_credential or {}, "disbursement", request, current_user, db)
     service = SwiftPayService()
@@ -473,15 +473,16 @@ async def send_swiftpay_disbursement(
         raise HTTPException(status_code=400, detail="Reference number is required")
 
     currency = payload.currency.strip().upper()
-    if currency != "PHP":
-        raise HTTPException(status_code=400, detail="This provider disbursement flow supports PHP only.")
+    if currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="This provider disbursement flow supports PHP and KRW.")
     if not currency:
         raise HTTPException(status_code=400, detail="Disbursement currency is required")
-    try:
-        SwiftPayService.validate_external_bank_code(payload.bank_code)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    recipient_phone = SwiftPayService.normalize_philippine_mobile(payload.phone)
+    if currency == "PHP":
+        try:
+            SwiftPayService.validate_external_bank_code(payload.bank_code)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    recipient_phone = SwiftPayService.normalize_philippine_mobile(payload.phone) if currency == "PHP" else None
     if currency == "PHP" and not recipient_phone:
         raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")
 
