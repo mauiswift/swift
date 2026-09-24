@@ -742,36 +742,34 @@ async def set_deposit_rules(db: AsyncSession, rules: dict) -> dict:
     return normalized
 
 async def get_krw_bank_name(db: AsyncSession) -> str:
-    """Return the configured KRW bank name for virtual-account deposits.
+    """Return the configured KRW bank name when a real merchant account exists.
 
-    Priority: DB-stored value → DEFAULT_KRW_BANK_NAME.
+    SwiftPay's public API docs do not expose a provider-issued KRW account;
+    therefore we do not fabricate a fallback Korean bank name.
     """
     value = await _get_setting(db, KRW_BANK_NAME_KEY)
-    return value if value else DEFAULT_KRW_BANK_NAME
+    return value if value else ""
 
 
 async def set_krw_bank_name(db: AsyncSession, bank_name: str) -> str:
     """Update the KRW bank name."""
     cleaned_name = (bank_name or "").strip()
     if not cleaned_name:
-        cleaned_name = DEFAULT_KRW_BANK_NAME
+        cleaned_name = ""
     await _set_setting(db, KRW_BANK_NAME_KEY, cleaned_name)
     return cleaned_name
 
 
 async def get_krw_account_holder_name(db: AsyncSession) -> str:
-    """Return the configured KRW account holder name for bank transfers.
-
-    Priority: DB-stored value → DEFAULT_KRW_ACCOUNT_HOLDER_NAME.
-    """
+    """Return the configured KRW account holder name when a real merchant account exists."""
     value = await _get_setting(db, KRW_ACCOUNT_HOLDER_NAME_KEY)
-    return value if value else DEFAULT_KRW_ACCOUNT_HOLDER_NAME
+    return value if value else ""
 
 
 async def set_krw_account_holder_name(db: AsyncSession, holder_name: str) -> str:
     """Update the KRW account holder name."""
     cleaned_name = (holder_name or "").strip()
     if not cleaned_name:
-        cleaned_name = DEFAULT_KRW_ACCOUNT_HOLDER_NAME
+        cleaned_name = ""
     await _set_setting(db, KRW_ACCOUNT_HOLDER_NAME_KEY, cleaned_name)
     return cleaned_name

@@ -875,50 +875,41 @@ class TestTelegramWebhook:
 # ---------------------------------------------------------------------------
 # /deposit wizard (PHP wallet deposit flow)
 # ---------------------------------------------------------------------------
-def test_krw_manual_deposit_uses_generated_swiftpay_virtual_account():
-    """KRW fallback deposits should display a generated Korean virtual account under a real bank name."""
-    import re
+def test_krw_manual_deposit_requires_configured_bank_details():
+    """SwiftPay does not provide a real KRW account in the public API docs, so no fabricated fallback should be shown."""
     from routers.telegram import _generate_krw_virtual_account
 
     generated = _generate_krw_virtual_account()
-    real_korean_banks = {
-        "Toss Bank",
-        "Shinhan Bank",
-        "Hana Bank",
-        "Woori Bank",
-        "NH Nonghyup Bank",
-        "IBK Bank",
-        "Kookmin Bank",
-    }
 
-    assert generated["bank_name"] in real_korean_banks
-    assert generated["account_name"] == "SwiftPay Ventures Inc."
-    assert generated["name"] == "SwiftPay Ventures Inc."
-    assert re.fullmatch(r"\d{12,18}", generated["number"].replace("-", ""))
+    assert generated["bank_name"] is None
+    assert generated["number"] is None
+    assert generated["account_name"] is None
+    assert generated["name"] is None
 
 
-def test_krw_virtual_account_bank_name_is_stable():
-    """The KRW virtual account should use one consistent Korean bank name across repeated generations."""
+def test_krw_virtual_account_bank_name_is_not_fabricated():
+    """Repeated calls should not invent a stable bank name that is not actually configured."""
     from routers.telegram import _generate_krw_virtual_account
 
     first = _generate_krw_virtual_account()
     second = _generate_krw_virtual_account()
 
-    assert first["bank_name"] == "Toss Bank"
-    assert second["bank_name"] == "Toss Bank"
-    assert first["bank_name"] == second["bank_name"]
+    assert first["bank_name"] is None
+    assert second["bank_name"] is None
+    assert first == second
 
 
-def test_krw_virtual_account_number_is_stable_per_user():
-    """The KRW virtual account number should stay consistent for the same user and differ across users."""
+def test_krw_virtual_account_number_is_not_generated_without_configuration():
+    """A user-specific generated account number should never appear when the merchant has no configured KRW account."""
     from routers.telegram import _generate_krw_virtual_account
 
     alice_first = _generate_krw_virtual_account("user-123")
     alice_second = _generate_krw_virtual_account("user-123")
     bob = _generate_krw_virtual_account("user-456")
 
-    assert alice_first["number"] == alice_second["number"]
-    assert alice_first["number"] != bob["number"]
+    assert alice_first["number"] is None
+    assert alice_second["number"] is None
+    assert bob["number"] is None
 
 
 class TestDepositWizard:

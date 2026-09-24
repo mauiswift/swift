@@ -146,9 +146,9 @@ def test_krw_checkout_does_not_expose_security_bank():
 
         assert response.status_code == 200
         payload = response.json()
-        assert payload["bank_name"] == "Toss Bank"
-        assert payload["bank_account_number"] == "1908-1618-8260"
-        assert "security" not in payload["bank_name"].casefold()
+        assert payload["bank_name"] is None
+        assert payload["bank_account_number"] is None
+        assert payload["bank_account_name"] is None
 
 
 def test_usdt_checkout_includes_trc20_deposit_address():

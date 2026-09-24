@@ -93,19 +93,24 @@ def _usdt_static_qr_url() -> str:
 
 def _generate_krw_virtual_account(
     user_id: str = "swiftpay-krw-virtual-account",
-    bank_name: str = "Toss Bank",
-    account_holder_name: str = "SwiftPay Ventures Inc.",
-) -> Dict[str, str]:
-    """Return a deterministic KRW virtual-account payload using a stable Korean bank name."""
-    digest = hashlib.sha256(str(user_id).encode("utf-8")).hexdigest()
-    digits = "".join(ch for ch in digest if ch.isdigit())[:14]
-    if len(digits) < 14:
-        digits = (digits + "0" * 14)[:14]
-    account_number = f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
-    resolved_bank_name = bank_name or "Toss Bank"
+    bank_name: Optional[str] = None,
+    account_holder_name: Optional[str] = None,
+) -> Dict[str, Optional[str]]:
+    """Return configured KRW bank details only when a real merchant account exists.
+
+    SwiftPay's public API docs do not expose a provider-issued KRW transfer account,
+    so we intentionally avoid fabricating one here.
+    """
+    if not bank_name or not account_holder_name:
+        return {
+            "bank_name": None,
+            "number": None,
+            "name": None,
+            "account_name": None,
+        }
     return {
-        "bank_name": resolved_bank_name,
-        "number": account_number,
+        "bank_name": bank_name,
+        "number": None,
         "name": account_holder_name,
         "account_name": account_holder_name,
     }
@@ -116,15 +121,33 @@ async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -
     if target_currency == "KRW":
         account_holder_name = await get_krw_account_holder_name(db)
         bank_name = await get_krw_bank_name(db)
-        virtual = _generate_krw_virtual_account(
-            bank_name=bank_name,
-            account_holder_name=account_holder_name,
+        if not bank_name or not account_holder_name:
+            return (
+                "⚠️ <b>Receiving Korean bank account is not configured.</b>\n"
+                "Please contact the administrator before sending any money.\n\n"
+            )
+
+        result = await db.execute(
+            select(AdminUser)
+            .where(
+                AdminUser.is_active == True,
+                AdminUser.bank_account_number.is_not(None),
+            )
+            .order_by(AdminUser.id)
+            .limit(1)
         )
+        admin = _first_scalar(result)
+        if admin and admin.bank_account_number:
+            return (
+                "📥 <b>Send the money to this SwiftPay account:</b>\n"
+                f"🏦 Bank: <b>{_escape_html(bank_name)}</b>\n"
+                f"🔢 Account number: <code>{_escape_html(admin.bank_account_number)}</code>\n"
+                f"👤 Account name: <b>{_escape_html(account_holder_name)}</b>\n\n"
+            )
+
         return (
-            "📥 <b>Send the money to this SwiftPay account:</b>\n"
-            f"🏦 Bank: <b>{_escape_html(virtual['bank_name'])}</b>\n"
-            f"🔢 Account number: <code>{_escape_html(virtual['number'])}</code>\n"
-            f"👤 Account name: <b>{_escape_html(virtual['account_name'])}</b>\n\n"
+            "⚠️ <b>Receiving Korean bank account is not configured.</b>\n"
+            "Please contact the administrator before sending any money.\n\n"
         )
 
     result = await db.execute(

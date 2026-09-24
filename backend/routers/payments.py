@@ -29,7 +29,7 @@ import logging
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.magpie_services import CurrencyConverter, MagpieService
-from services.payment_gateway import gateway, _select_manual_transfer_account
+from services.payment_gateway import gateway, _select_manual_transfer_account, _is_security_bank_name
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.exchange_rate_service import get_rate
@@ -1297,9 +1297,15 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            bank_name = txn.bank_name or bank_name or "Toss Bank"
-            bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
-            bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
+            bank_name = txn.bank_name or bank_name
+            if _is_security_bank_name(bank_name):
+                bank_name = None
+            bank_account_number = txn.bank_account_number or bank_account_number
+            bank_account_name = txn.bank_account_name or bank_account_name
+            if not (bank_name and bank_account_number and bank_account_name):
+                bank_name = None
+                bank_account_number = None
+                bank_account_name = None
 
         usdt_deposit_address = None
         if (txn.currency or "").upper() == "USDT":

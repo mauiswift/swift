@@ -74,7 +74,7 @@ def test_krw_qr_uses_hosted_payload_instead_of_bank_details():
     assert "order-123" in result["qr_code_url"]
 
 
-def test_krw_qr_hides_account_number_and_uses_swiftpay_account_name():
+def test_krw_qr_hides_account_number_and_uses_configured_name():
     service = PaymentwallService()
 
     result = service.create_krw_bank_transfer_qr(
@@ -86,11 +86,10 @@ def test_krw_qr_hides_account_number_and_uses_swiftpay_account_name():
     )
 
     assert "Account Number:" not in result["qr_payload"]
-    assert "SwiftPay Ventures Inc." in result["qr_payload"]
-    assert "Different Name" not in result["qr_payload"]
+    assert "Different Name" in result["qr_payload"]
 
 
-def test_krw_qr_uses_toss_bank_account_details():
+def test_krw_qr_requires_configured_account_details():
     service = PaymentwallService()
 
     result = service.create_krw_bank_transfer_qr(
@@ -99,14 +98,8 @@ def test_krw_qr_uses_toss_bank_account_details():
         reference_id="order-789",
     )
 
-    assert result["bank_account"] == {
-        "bank_name": "Toss Bank",
-        "number": "1908-1618-8260",
-        "name": "SwiftPay Ventures Inc.",
-        "account_name": "SwiftPay Ventures Inc.",
-        "swift_code": "TVBKVVTTXXX",
-        "account_type": "virtual_account",
-    }
+    assert result["success"] is False
+    assert result["error"] == "KRW bank details are not configured"
 
 
 def test_pingback_signature_is_verified(monkeypatch):
