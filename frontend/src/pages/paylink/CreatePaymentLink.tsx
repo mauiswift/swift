@@ -35,6 +35,11 @@ export default function CreatePaymentLink() {
       return;
     }
 
+    if (currency.toUpperCase() === 'KRW' && numericAmount < 1000) {
+      setError(isKorean ? 'KRW 결제 금액은 ₩1,000 이상이어야 합니다.' : 'KRW payment links must be at least ₩1,000.');
+      return;
+    }
+
     if (!title.trim()) {
       setError(isKorean ? '제목을 입력하세요.' : 'Please enter a title.');
       return;
@@ -45,28 +50,29 @@ export default function CreatePaymentLink() {
     try {
       const reference_no = orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
       const normalizedCurrency = currency.toUpperCase();
-      const body = {
-        amount: numericAmount,
-        reference_no,
-        description: description.trim() || title.trim(),
-        customer_name: payor.trim() || undefined,
-        customer_email: undefined,
-        currency: normalizedCurrency,
-        details: {
-          title: title.trim(),
-        },
-      };
-
-      // Use the authenticated payment-link endpoint. The legacy generic
-      // `/payments/create` route is not available in every deployment.
-      const response = await client.post('/api/v1/xend/create-payment-link', {
-        amount: numericAmount,
-        description: description.trim() || title.trim(),
-        currency: normalizedCurrency,
-        external_id: reference_no,
-        customer_name: payor.trim() || '',
-        payment_methods: normalizedCurrency === 'KRW' ? ['bank_transfer'] : [],
-      });
+      const response = normalizedCurrency === 'KRW'
+        ? await client.post('/api/v1/krw/payment-links', {
+            amount: numericAmount,
+            reference_no,
+            description: description.trim() || title.trim(),
+            customer_name: payor.trim() || undefined,
+            payment_methods: ['bank_transfer'],
+            expiry_days: Math.max(
+              1,
+              Math.min(
+                90,
+                Math.ceil((new Date(`${validUntil}T23:59:59`).getTime() - Date.now()) / 86400000),
+              ),
+            ),
+          })
+        : await client.post('/api/v1/xend/create-payment-link', {
+            amount: numericAmount,
+            description: description.trim() || title.trim(),
+            currency: normalizedCurrency,
+            external_id: reference_no,
+            customer_name: payor.trim() || '',
+            payment_methods: [],
+          });
       const data = response.data as any;
 
       if (!response.ok || !data?.success) {
