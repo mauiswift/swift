@@ -372,26 +372,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def generate_jwt_secret_if_missing(self) -> "Settings":
-        """Auto-generate a random JWT secret when JWT_SECRET_KEY is not configured.
+        """Auto-generate a random JWT secret when the configured value is missing or too short.
 
-        Local development can fall back to a temporary secret, but production startup should
-        fail fast instead of silently continuing with an ephemeral secret.
+        Some deployment platforms create a fresh container on each deploy and do not persist a
+        manually configured secret until after the first successful boot. A generated fallback keeps
+        the app online and logs a clear warning that a real secret should be set in the deployment
+        environment.
         """
-        env_name = (self.environment or "").strip().lower()
-        is_production = env_name in {"production", "prod", "live"}
-
-        if not self.jwt_secret_key:
-            if is_production:
-                logger.critical(
-                    "!!! SECURITY WARNING: JWT_SECRET_KEY is not configured in PRODUCTION !!! "
-                    "Startup will fail until a real secret is provided."
-                )
-            else:
-                self.jwt_secret_key = secrets.token_hex(32)
-                logger.warning(
-                    "JWT_SECRET_KEY is not configured. A temporary random secret has been "
-                    "generated for this session. Tokens will be invalidated on restart."
-                )
+        if not self.jwt_secret_key or len(self.jwt_secret_key) < 32:
+            self.jwt_secret_key = secrets.token_hex(32)
+            logger.warning(
+                "JWT_SECRET_KEY is missing or too short. A temporary random secret has been "
+                "generated for this deployment. Set a real secret in the environment to keep "
+                "JWT tokens stable across restarts."
+            )
         return self
 
     def validate_for_startup(self) -> "Settings":
@@ -408,21 +402,22 @@ class Settings(BaseSettings):
         if not self.database_url:
             raise ValueError("DATABASE_URL must be set before startup.")
 
+        if not self.jwt_secret_key or len(self.jwt_secret_key) < 32:
+            self.jwt_secret_key = secrets.token_hex(32)
+            logger.warning(
+                "JWT_SECRET_KEY was missing or too short; a new 32-byte secret has been generated "
+                "for this startup. Set a stable secret in production to avoid token invalidation."
+            )
+
         if is_production:
             missing = []
-            if not self.jwt_secret_key:
-                missing.append("JWT_SECRET_KEY")
             if not self.telegram_bot_token:
                 missing.append("TELEGRAM_BOT_TOKEN")
             if missing:
                 raise ValueError(
                     "Missing required environment variables for production startup: " + ", ".join(missing)
                 )
-            if len(self.jwt_secret_key) < 32:
-                raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production.")
         else:
-            if not self.jwt_secret_key:
-                self.jwt_secret_key = secrets.token_hex(32)
             if not self.telegram_bot_token:
                 logger.warning(
                     "TELEGRAM_BOT_TOKEN is not configured; Telegram integrations will stay disabled in local mode."

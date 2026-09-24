@@ -71,7 +71,7 @@ class SwiftPayService:
         code = cls.normalize_external_bank_code(value)
         # SwiftPay accepts four-character bank identifiers. E-wallet identifiers
         # are provider-defined and remain unchanged for compatibility.
-        if code in {"GCASH", "MAYA", "GRAB", "SHOPEE", "PALAWAN"}:
+        if code in {"GCASH", "MAYA", "GRAB", "SHOPEE", "PALAWAN", "ALIPAY"}:
             return code
         if not re.fullmatch(r"[A-Z0-9]{4}", code):
             raise ValueError(

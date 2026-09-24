@@ -106,6 +106,7 @@ PAYMENT_CHANNELS = (
 PHP_CHECKOUT_INSTITUTIONS = (
     "GCASH",
     "MAYA",
+    "ALIPAY",
     "NK",
     "UNIONBANK",
     "RCBC",

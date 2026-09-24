@@ -155,6 +155,11 @@ async def get_checkout_institutions_compat(
             "id": "QRPH", "code": "QRPH", "name": "QR Ph",
             "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr",
         })
+    if "ALIPAY" not in returned_codes:
+        institutions.insert(0, {
+            "id": "ALIPAY", "code": "ALIPAY", "name": "Alipay",
+            "logoUrl": "/logos/alipay.png", "enabled": True, "loginMethod": "qr",
+        })
     if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
         institutions.append({
             "id": "NETBANK", "code": "NETBANK", "name": "NetBank",
@@ -179,7 +184,7 @@ async def select_checkout_institution_compat(
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
 
-    if institution_code in {"GCASH", "QRPH"}:
+    if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
@@ -187,13 +192,13 @@ async def select_checkout_institution_compat(
             qr_type="P2M",
         )
         if not qr_result.get("success"):
-            raise HTTPException(status_code=502, detail=qr_result.get("error", "Could not create QRPH checkout"))
+            raise HTTPException(status_code=502, detail=qr_result.get("error", "Could not create QR checkout"))
         data = qr_result.get("data") or {}
         qr_code = data.get("qrCode") or data.get("qr_code") or data.get("qrImage") or data.get("qr_image")
         qr_content = data.get("qrContent") or data.get("qr_content") or data.get("payload")
         deep_link = data.get("gcashDeepLink") or data.get("gcash_deep_link") or data.get("deepLink")
         if not qr_code and not qr_content and not deep_link:
-            raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
+            raise HTTPException(status_code=502, detail="SwiftPay did not return a QR payload")
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.transaction_type = "swiftpay_qr"
@@ -214,13 +219,14 @@ async def select_checkout_institution_compat(
                 bank_name = configured_account.get("label") or configured_account.get("value") or bank_name
                 bank_account_number = configured_account.get("account_number")
                 bank_account_name = configured_account.get("account_name")
+        payment_method = "gcash" if institution_code == "GCASH" else "qrph" if institution_code == "QRPH" else "alipay"
         return {
             "success": True,
-            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
+            "payment_method": payment_method,
             "qr_code": qr_code,
             "qr_content": qr_content,
             "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method={payment_method}",
         }
 
     order_result = await service.create_order(

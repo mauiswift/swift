@@ -60,19 +60,27 @@ def test_public_and_magpie_settings_are_explicit(monkeypatch):
     assert settings.magpie_base_url == "https://api.pay.magpie.im"
 
 
-def test_production_settings_fail_for_missing_critical_secrets(monkeypatch):
+def test_production_settings_auto_generate_missing_jwt_secret(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
-    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:token")
 
-    with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
-        Settings().validate_for_startup()
+    settings = Settings()
+    settings.validate_for_startup()
+
+    assert settings.jwt_secret_key
+    assert len(settings.jwt_secret_key) >= 32
 
 
-def test_production_settings_reject_short_jwt_secret(monkeypatch):
+def test_production_settings_auto_generate_short_jwt_secret(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
     monkeypatch.setenv("JWT_SECRET_KEY", "too-short")
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:token")
 
-    with pytest.raises(ValueError, match="at least 32 characters"):
-        Settings().validate_for_startup()
+    settings = Settings()
+    settings.validate_for_startup()
+
+    assert settings.jwt_secret_key
+    assert len(settings.jwt_secret_key) >= 32
