@@ -416,7 +416,21 @@ export default function Checkout() {
       setLoadingLoadingInstitutions(true);
       const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
-        setInstitutions(response.data.data);
+        const returnedInstitutions = response.data.data as Institution[];
+        const shouldShowAlipay = String(txn?.currency || '').toUpperCase() === 'PHP';
+        const hasAlipay = returnedInstitutions.some(item => institutionCode(item) === 'ALIPAY');
+        setInstitutions(
+          shouldShowAlipay && !hasAlipay
+            ? [...returnedInstitutions, {
+              id: 'ALIPAY',
+              code: 'ALIPAY',
+              name: 'Alipay',
+              logoUrl: '/logos/alipay.png',
+              enabled: true,
+              loginMethod: 'qr',
+            }]
+            : returnedInstitutions,
+        );
       }
     } catch (err) {
       console.error('Failed to fetch institutions:', err);
