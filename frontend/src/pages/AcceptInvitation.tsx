@@ -72,7 +72,7 @@ export default function AcceptInvitation() {
   return (
     <InvitationShell>
       <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-      <h1 className="mt-5 text-2xl font-semibold text-foreground">Invitation accepted</h1>
+      <h1 className="mt-5 text-2xl font-semibold text-foreground">Create your account</h1>
       <p className="mt-3 text-muted-foreground">
         You have been invited as <strong>{invitation.role}</strong>
         {invitation.organization_name ? <> to <strong>{invitation.organization_name}</strong></> : null}.

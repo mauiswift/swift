@@ -10,6 +10,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 from pydantic import BaseModel, EmailStr
 
@@ -397,6 +399,27 @@ class SMTPError(Exception):
     pass
 
 
+def _normalize_invitation_email(email: str) -> str:
+    return str(email).strip().lower()
+
+
+def _is_invitation_expired(expires_at: Optional[datetime], now: Optional[datetime] = None) -> bool:
+    if expires_at is None:
+        return False
+    current_time = now or datetime.now(timezone.utc)
+    normalized_expiry = (
+        expires_at.replace(tzinfo=timezone.utc)
+        if expires_at.tzinfo is None
+        else expires_at.astimezone(timezone.utc)
+    )
+    return normalized_expiry < current_time
+
+
+def _invitation_link(token: str) -> str:
+    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
+    return f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
+
+
 def _send_invitation_email(
     to_email: str,
     token: str,
@@ -417,8 +440,7 @@ def _send_invitation_email(
     Raises:
         SMTPError: If SMTP is not configured or email sending fails
     """
-    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
-    accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
+    accept_url = _invitation_link(token)
 
     config = EmailService._resolve_smtp_config()
     smtp_configured = bool(config["host"] and config["from_email"])
@@ -721,9 +743,11 @@ async def send_team_invitation(
     if admin and _is_org_admin(admin) and request.permissions:
         raise HTTPException(status_code=400, detail="Organization admin cannot set custom permissions")
 
-    # Check if email already invited or registered
+    invitation_email = _normalize_invitation_email(request.email)
+
+    # Check both invitation and account state using the same canonical email.
     existing_query = select(TeamInvitation).where(
-        TeamInvitation.email == request.email,
+        func.lower(TeamInvitation.email) == invitation_email,
         TeamInvitation.status.in_(["pending", "accepted"])
     )
     if admin and _is_org_admin(admin):
@@ -731,6 +755,14 @@ async def send_team_invitation(
     existing = await db.execute(existing_query)
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="User already invited or registered")
+
+    existing_user_query = select(AdminUser).where(func.lower(AdminUser.email) == invitation_email)
+    existing_user = await db.scalar(existing_user_query)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account already exists for this email. Ask the user to sign in.",
+        )
 
     # Generate invitation token
     token = secrets.token_urlsafe(32)
@@ -749,7 +781,7 @@ async def send_team_invitation(
 
     # Create invitation
     invitation = TeamInvitation(
-        email=request.email,
+        email=invitation_email,
         invitation_token=token,
         role=role_name,
         permissions=permissions,
@@ -767,8 +799,7 @@ async def send_team_invitation(
     logger.info(f"Team invitation created for {request.email} by {current_user.id}")
 
     # Build manual link for response
-    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
-    manual_link = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
+    manual_link = _invitation_link(token)
 
     # Send email notification
     email_error = None
@@ -886,10 +917,34 @@ async def update_invitation(
     if invitation.status != "pending":
         raise HTTPException(status_code=400, detail="Can only update pending invitations")
 
+    invitation_email = _normalize_invitation_email(request.email)
+    if invitation_email != _normalize_invitation_email(invitation.email):
+        duplicate_query = select(TeamInvitation.id).where(
+            func.lower(TeamInvitation.email) == invitation_email,
+            TeamInvitation.status.in_(["pending", "accepted"]),
+            TeamInvitation.id != invitation.id,
+        )
+        if _is_org_admin(admin):
+            duplicate_query = duplicate_query.where(
+                TeamInvitation.organization_id == admin.organization_id
+            )
+        if await db.scalar(duplicate_query):
+            raise HTTPException(status_code=400, detail="User already invited or registered")
+
+        existing_user_query = select(AdminUser.id).where(
+            func.lower(AdminUser.email) == invitation_email
+        )
+        if await db.scalar(existing_user_query):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account already exists for this email. Ask the user to sign in.",
+            )
+
     # Update permissions
     role_config = PREDEFINED_ROLES.get(role_name)
     permissions = request.permissions or (role_config["permissions"] if role_config else {})
 
+    invitation.email = invitation_email
     invitation.role = role_name
     invitation.permissions = permissions
     invitation.notes = request.notes
@@ -931,6 +986,9 @@ async def revoke_invitation(
 
     if _is_org_admin(admin) and invitation.organization_id != admin.organization_id:
         raise HTTPException(status_code=403, detail="Not authorized for this invitation")
+
+    if invitation.status != "pending":
+        raise HTTPException(status_code=400, detail="Only pending invitations can be revoked")
 
     invitation.status = "revoked"
     await db.commit()
@@ -1123,7 +1181,7 @@ async def preview_invitation(token: str, db: AsyncSession = Depends(get_db)):
         )
         if existing:
             raise HTTPException(status_code=409, detail="Invitation already completed")
-    if invitation.expires_at and invitation.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if _is_invitation_expired(invitation.expires_at):
         invitation.status = "expired"
         await db.commit()
         raise HTTPException(status_code=410, detail="Invitation has expired")
@@ -1146,7 +1204,9 @@ async def accept_invitation(
 ):
     """Create the invited team account after the invitee chooses a password."""
     inv_res = await db.execute(
-        select(TeamInvitation).where(TeamInvitation.invitation_token == token)
+        select(TeamInvitation)
+        .where(TeamInvitation.invitation_token == token)
+        .with_for_update()
     )
     invitation = inv_res.scalar_one_or_none()
 
@@ -1157,7 +1217,7 @@ async def accept_invitation(
         raise HTTPException(status_code=410, detail="This invitation has been revoked")
 
     now = datetime.now(timezone.utc)
-    if invitation.expires_at and invitation.expires_at.replace(tzinfo=timezone.utc) < now:
+    if _is_invitation_expired(invitation.expires_at, now):
         invitation.status = "expired"
         await db.commit()
         raise HTTPException(status_code=410, detail="Invitation has expired")
@@ -1168,11 +1228,15 @@ async def accept_invitation(
     if password != request.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
 
+    invitation_email = _normalize_invitation_email(invitation.email)
     existing = await db.scalar(
-        select(AdminUser).where(AdminUser.email.ilike(invitation.email))
+        select(AdminUser).where(func.lower(AdminUser.email) == invitation_email)
     )
     if existing:
-        raise HTTPException(status_code=409, detail="An account already exists for this email")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account already exists for this email. Please sign in.",
+        )
     # Invitations accepted by the previous link-only flow can still finish
     # account creation once, as long as no account was created yet.
 
@@ -1180,7 +1244,7 @@ async def accept_invitation(
     telegram_id = f"invite-{secrets.token_urlsafe(18)}"
     admin_user = AdminUser(
         telegram_id=telegram_id,
-        email=invitation.email.lower(),
+        email=invitation_email,
         name=(request.full_name or invitation.email.split("@", 1)[0]).strip(),
         role=invitation.role,
         team_permissions=permissions,
@@ -1206,7 +1270,15 @@ async def accept_invitation(
     db.add(admin_user)
     invitation.status = "accepted"
     invitation.accepted_at = now
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        logger.warning("Invitation %s acceptance conflicted with another account creation", invitation.id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This invitation was accepted already. Please sign in or request a new invitation.",
+        ) from exc
     await db.refresh(admin_user)
 
     logger.info("Invitation %s completed by %s", invitation.id, invitation.email)

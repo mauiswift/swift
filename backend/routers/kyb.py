@@ -36,6 +36,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/kyb", tags=["kyb"])
 
 
+def _registration_organization(kyb: KybRegistration) -> tuple[str, str]:
+    """Assign each merchant registration its own organization scope.
+
+    Team invitations do not use this path; they inherit the invitation's
+    organization so invited staff share the merchant workspace. A referral
+    registration is a separate merchant and therefore derives its scope from
+    the referred registrant, never from the upline.
+    """
+    stable_key = (kyb.chat_id or kyb.email or str(kyb.id)).strip().lower().encode()
+    organization_id = f"org-{hashlib.sha256(stable_key).hexdigest()[:16]}"
+    organization_name = (kyb.bank_name or kyb.full_name or "My Organization").strip()
+    return organization_id, organization_name
+
+
 # ---------- Schemas ----------
 
 class KybRegistrationOut(BaseModel):
@@ -385,15 +399,10 @@ async def approve_kyb_registration(
     if invitation and invitation.organization_id:
         org_id = invitation.organization_id
         org_name = invitation.organization_name or kyb.bank_name or kyb.full_name
-    elif kyb.referral_upline_id:
-        stable_key = (kyb.chat_id or email or str(kyb.id)).strip().lower().encode()
-        org_id = f"org-{hashlib.sha256(stable_key).hexdigest()[:16]}"
-        org_name = (kyb.bank_name or kyb.full_name or "My Organization").strip()
     else:
-        # Direct website registration: user becomes owner under their own organization.
-        stable_key = (kyb.chat_id or email or str(kyb.id)).strip().lower().encode()
-        org_id = f"org-{hashlib.sha256(stable_key).hexdigest()[:16]}"
-        org_name = (kyb.bank_name or kyb.full_name or "My Organization").strip()
+        # Direct and referral registrations are merchant owners with separate
+        # scopes; only explicit team invitations share an existing organization.
+        org_id, org_name = _registration_organization(kyb)
 
     invitation_permissions = invitation.permissions if invitation and isinstance(invitation.permissions, dict) else {}
     is_invited_user = invitation is not None and invitation.organization_id is not None
