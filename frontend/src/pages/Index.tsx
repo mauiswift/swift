@@ -282,17 +282,14 @@ function Navbar() {
   );
 }
 
-// Small hero image helper with skeleton and standardized animation
+// Reserve the hero space while the remote image loads to avoid layout shifts.
 function HeroImage() {
-  const [loaded, setLoaded] = useState(false);
   return (
-    <div className="relative z-10">
-      {!loaded && <div className="h-72 w-full rounded-2xl skeleton-shimmer" />}
+    <div className="relative z-10 aspect-[4/3]">
       <img
         src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
         alt="A smiling businesswoman managing payments on a tablet"
-        className={`relative z-[2] w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)] ${loaded ? 'animate-logo-entrance' : 'opacity-0'}`}
-        onLoad={() => setLoaded(true)}
+        className="relative z-[2] h-full w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
         fetchPriority="high"
       />
     </div>
@@ -434,10 +431,8 @@ function HomePage() {
         @keyframes ringFill { to { stroke-dashoffset: 0 } }
         .ring-fill-anim { stroke-dasharray:232; stroke-dashoffset:232; animation: ringFill 1.4s cubic-bezier(.16,1,.3,1) 1s forwards; }
         @keyframes floatSlow { 0%,100% { transform:translateY(0px) } 50% { transform:translateY(-10px) } }
-        @keyframes pulseGlow { 0%,100% { box-shadow:0 0 0 0 rgba(249,115,22,0.15); } 50% { box-shadow:0 0 0 14px rgba(249,115,22,0); } }
         @keyframes shimmer { 0% { transform:translateX(-120%);} 100% { transform:translateX(120%);} }
         .float-slow { animation: floatSlow 6s ease-in-out infinite; }
-        .pulse-glow { animation: pulseGlow 3.2s ease-in-out infinite; }
         .shine::after {
           content:'';
           position:absolute;
@@ -484,7 +479,7 @@ function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(22,22,22,0.12)] transition-transform duration-200 hover:scale-[1.01] animate-fade-in-scale">
+                <a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(22,22,22,0.12)] transition-transform duration-200 hover:scale-[1.01]">
                   Talk with a payments expert
                   <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b] transition-transform duration-300 group-hover:translate-x-1">
                     <ArrowRight className="h-[13px] w-[13px]" />
@@ -497,7 +492,7 @@ function HomePage() {
                 <div className="absolute inset-10 rounded-[2rem] bg-gradient-to-br from-[#fff7ed] via-white to-[#dbeafe] blur-2xl opacity-70" />
                 <HeroImage />
                 {/* Ring card */}
-                <div className="pulse-glow absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white/90 p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] backdrop-blur-sm text-center">
+                <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white/90 p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] backdrop-blur-sm text-center">
                   <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
                   <div className="flex items-center justify-center">
                     <div className="relative h-[94px] w-[94px] flex-none">
