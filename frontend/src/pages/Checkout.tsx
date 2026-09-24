@@ -697,7 +697,7 @@ export default function Checkout() {
             ...prev,
             payment_url: qrPayload,
             qr_code_url: qrPayload,
-            transaction_type: 'swiftpay_qr',
+            transaction_type: selectedInstitutionCode === 'ALIPAY' ? 'alipay_qr' : 'swiftpay_qr',
           } : null);
           if (selectedInstitutionCode === 'GCASH') {
             const gcashPageUrl = new URL(
@@ -1663,14 +1663,30 @@ export default function Checkout() {
                             </div>
                           </div>
                           <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 text-center">
-                            <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
-                            <p className="text-[12px] text-slate-500">{checkoutText('Open Alipay and scan the QR to confirm payment.', '알리페이를 열고 QR를 스캔한 뒤 결제를 확인하세요.')}</p>
+                            <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Pay with Alipay', '알리페이로 결제')}</p>
+                            <p className="text-[12px] text-slate-500">{checkoutText('Scan the QR code with Alipay, or open the secure checkout directly.', '알리페이로 QR 코드를 스캔하거나 안전한 결제 페이지를 직접 여세요.')}</p>
                             <div className="flex justify-center">
                               {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
                                 <img src={txn.qr_code_url} alt="Alipay payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
                               ) : (
                                 <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
                               )}
+                            </div>
+                            <div className="space-y-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (txn.payment_url) window.location.assign(txn.payment_url);
+                                }}
+                                disabled={!txn.payment_url}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0B57D0] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0949b0] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <ExternalLink size={16} />
+                                {checkoutText('Open secure checkout', '안전한 결제 페이지 열기')}
+                              </button>
+                              <p className="text-[11px] text-slate-400">
+                                {checkoutText('Your payment status will update automatically after confirmation.', '결제가 확인되면 결제 상태가 자동으로 업데이트됩니다.')}
+                              </p>
                             </div>
                           </div>
                         </div>

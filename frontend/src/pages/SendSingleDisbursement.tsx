@@ -151,6 +151,7 @@ export default function SendSingleDisbursement() {
     const amt = parseFloat(amount);
     if (!firstName.trim() || !lastName.trim()) return toast.error(isKrwFlow ? '이름과 성을 입력해주세요.' : 'First and last names are required');
     if (isNaN(amt) || amt <= 0) return toast.error(isKrwFlow ? '유효한 금액을 입력해주세요.' : 'Enter a valid amount');
+    if (isKrwFlow && amt < 1000) return toast.error('KRW 출금 금액은 ₩1,000 이상이어야 합니다.');
     if (!bankCode) return toast.error(isKrwFlow ? '수취인 은행을 선택해주세요.' : 'Select a recipient bank');
     if (!accountNo.trim()) return toast.error(isKrwFlow ? '계좌번호를 입력해주세요.' : 'Account number is required');
     const retainedBalance = REQUIRED_RETAINED_BALANCE[collectionCurrency] || 0;
@@ -164,32 +165,49 @@ export default function SendSingleDisbursement() {
 
     setLoading(true);
     try {
-      const passkeyCredential = await authApi.verifyPasskey('disbursement');
+      const passkeyCredential = isKrwFlow
+        ? undefined
+        : await authApi.verifyPasskey('disbursement');
       const res = await client.apiCall.invoke({
-        url: '/api/v1/swiftpay/disbursements/send',
+        url: isKrwFlow ? '/api/v1/krw/disbursements' : '/api/v1/swiftpay/disbursements/send',
         method: 'POST',
-        data: {
-          reference_no: refNo.trim() || `disb-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
-          currency: collectionCurrency,
-          amount: amt,
-          bank_code: bankCode,
-          account_number: accountNo.trim(),
-          first_name: firstName.trim(),
-          middle_name: middleName.trim() || undefined,
-          last_name: lastName.trim(),
-          phone: phone.trim() || undefined,
-          email: email.trim() || undefined,
-          line1: line1.trim() || 'N/A',
-          city: city.trim() || 'Manila',
-          province: province.trim() || 'Metro Manila',
-          postal_code: postalCode.trim() || '1000',
-          note: remarks.trim(),
-          passkey_credential: passkeyCredential,
-        }
+        data: isKrwFlow
+          ? {
+              reference_no: refNo.trim() || `krw-disb-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+              amount: amt,
+              description: remarks.trim() || 'KRW bank disbursement',
+              bank_info: {
+                bank_code: bankCode,
+                bank_name: banks.find(bank => bank.code === bankCode)?.name || bankCode,
+                account_number: accountNo.trim(),
+                account_name: [firstName.trim(), middleName.trim(), lastName.trim()]
+                  .filter(Boolean)
+                  .join(' '),
+              },
+              priority: 'normal',
+            }
+          : {
+              reference_no: refNo.trim() || `disb-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+              currency: collectionCurrency,
+              amount: amt,
+              bank_code: bankCode,
+              account_number: accountNo.trim(),
+              first_name: firstName.trim(),
+              middle_name: middleName.trim() || undefined,
+              last_name: lastName.trim(),
+              phone: phone.trim() || undefined,
+              email: email.trim() || undefined,
+              line1: line1.trim() || 'N/A',
+              city: city.trim() || 'Manila',
+              province: province.trim() || 'Metro Manila',
+              postal_code: postalCode.trim() || '1000',
+              note: remarks.trim(),
+              passkey_credential: passkeyCredential,
+            },
       });
 
-      if (res.data?.success) {
-        toast.success(isKrwFlow ? '출금 요청이 검토를 위해 제출되었습니다.' : 'Disbursement request submitted for review');
+      if (res.ok && res.data?.success) {
+        toast.success(isKrwFlow ? 'KRW 출금 요청이 처리되었습니다.' : 'Disbursement request submitted for review');
         navigate('/disbursements');
       } else {
         toast.error(res.data?.detail || res.data?.message || res.data?.error || (isKrwFlow ? '출금 전송에 실패했습니다.' : 'Failed to send disbursement'));

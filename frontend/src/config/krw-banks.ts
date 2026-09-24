@@ -9,18 +9,23 @@ export interface KrwBank {
 export const DEFAULT_KRW_BANK_NAME = 'Bank transfer';
 
 export const KRW_BANK_DEFINITIONS = [
-  ['KB', 'KB Kookmin Bank'],
-  ['SHINHAN', 'Shinhan Bank'],
-  ['HANA', 'Hana Bank'],
-  ['WOORI', 'Woori Bank'],
-  ['NH', 'NH NongHyup Bank'],
-  ['IBK', 'IBK'],
-  ['KDB', 'KDB Bank'],
-  ['SC', 'SC First Bank'],
-  ['K', 'K Bank'],
-  ['KAKAO', 'Kakao Bank'],
-  ['NAVER', 'Naver Bank'],
-  ['TOSS', 'Toss Bank'],
+  ['004', 'KB Kookmin Bank'],
+  ['011', 'NH Nonghyup Bank'],
+  ['020', 'Woori Bank'],
+  ['023', 'SC First Bank'],
+  ['027', 'KEB Hana Bank'],
+  ['032', 'Busan Bank'],
+  ['034', 'Gwangju Bank'],
+  ['035', 'Jeju Bank'],
+  ['037', 'Jeonbuk Bank'],
+  ['039', 'Jeongbuk Bank'],
+  ['040', 'Shinhan Bank'],
+  ['050', 'Jeju Bank'],
+  ['071', 'Post Office Bank'],
+  ['081', 'Hana Bank'],
+  ['088', 'National Bank'],
+  ['089', 'Bank of Korea'],
+  ['090', 'Nonghyup Bank'],
 ] as const;
 
 export const KRW_BANKS: KrwBank[] = KRW_BANK_DEFINITIONS.map(([code, name]) => ({

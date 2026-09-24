@@ -1440,6 +1440,18 @@ async def get_checkout_institutions(
                     res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "logoUrl": "/logos/netbank.png", "enabled": True, "loginMethod": "redirect"})
                 if "BDO" in enabled_codes and "BDO" not in returned_codes:
                     res["data"].append({"id": "BDO", "code": "BDO", "name": "BDO", "logoUrl": "/logos/bdo.svg", "enabled": True, "loginMethod": "redirect"})
+                # Alipay is exposed as a SwiftPay institution checkout. Some
+                # accounts do not include it in the provider catalog response,
+                # even though it is enabled in the merchant channel settings.
+                if "ALIPAY" in enabled_codes and "ALIPAY" not in returned_codes:
+                    res["data"].append({
+                        "id": "ALIPAY",
+                        "code": "ALIPAY",
+                        "name": "Alipay",
+                        "logoUrl": "/logos/alipay.png",
+                        "enabled": True,
+                        "loginMethod": "qr",
+                    })
         return res
     except HTTPException:
         raise
@@ -1506,7 +1518,7 @@ async def select_checkout_institution(
     # temporarily disabling it at the provider level. Do not send provider
     # orders unless the live catalog confirms that the institution is available.
     # NETBANK is a local/manual channel and is not a SwiftPay institution.
-    if institution_code not in {"GCASH", "QRPH", "NETBANK"}:
+    if institution_code not in {"GCASH", "QRPH", "ALIPAY", "NETBANK"}:
         live_institutions = await service.get_collection_institutions()
         live_codes = {
             str(item.get("code") or "").strip().upper()
@@ -1631,8 +1643,23 @@ async def select_checkout_institution(
     if gateway_id:
         txn.xendit_id = gateway_id
     txn.payment_url = redirect_url
+    if institution_code == "ALIPAY":
+        # Keep the customer on our checkout page and render the SwiftPay
+        # redirect URL as a scannable Alipay QR code. The URL remains the
+        # provider's payment authorization target; no secret is exposed.
+        txn.qr_code_url = redirect_url
+        txn.transaction_type = "alipay_qr"
     txn.updated_at = datetime.now(timezone.utc)
     await db.commit()
+
+    if institution_code == "ALIPAY":
+        return {
+            "success": True,
+            "payment_method": "alipay",
+            "qr_content": redirect_url,
+            "qr_code": redirect_url,
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method=alipay",
+        }
 
     return {"success": True, "redirect_url": redirect_url}
 
