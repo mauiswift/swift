@@ -50,6 +50,23 @@ class RolePermissions(BaseModel):
 
 PERMISSION_KEYS = tuple(RolePermissions.model_fields)
 
+WALLET_PERMISSION_KEYS = (
+    "can_manage_wallet",
+    "can_credit_wallet",
+    "can_debit_wallet",
+    "can_freeze_wallet",
+    "can_unfreeze_wallet",
+)
+
+ROLE_DESCRIPTIONS = {
+    PredefinedRoleEnum.OWNER: "Full platform access including super admin functions",
+    PredefinedRoleEnum.ADMIN: "All operational permissions except platform-level admin",
+    PredefinedRoleEnum.MANAGER: "Day-to-day operations: payments, disbursements, reports, team",
+    PredefinedRoleEnum.OPERATOR: "Payment and disbursement processing",
+    PredefinedRoleEnum.VIEWER: "Read-only access to reports and transaction history",
+    PredefinedRoleEnum.DEVELOPER: "Developer portal: API keys, webhooks, bot configuration",
+}
+
 
 # ============================================================================
 # ROLE DEFINITIONS - Locked Permission Combinations
@@ -169,14 +186,8 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
 def get_invited_super_admin_permissions() -> RolePermissions:
     """Return the restricted permissions used for invited super admins."""
     permissions = get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
-    permissions.update({
-        "can_manage_wallet": False,
-        "can_credit_wallet": False,
-        "can_debit_wallet": False,
-        "can_freeze_wallet": False,
-        "can_unfreeze_wallet": False,
-        "can_manage_team": False,
-    })
+    permissions.update({key: False for key in WALLET_PERMISSION_KEYS})
+    permissions["can_manage_team"] = False
     return RolePermissions(**permissions)
 
 
@@ -222,15 +233,7 @@ def get_all_roles() -> Dict[str, Dict[str, bool]]:
 
 def get_role_description(role: PredefinedRoleEnum) -> str:
     """Get human-readable description of a role"""
-    descriptions = {
-        PredefinedRoleEnum.OWNER: "Full platform access including super admin functions",
-        PredefinedRoleEnum.ADMIN: "All operational permissions except platform-level admin",
-        PredefinedRoleEnum.MANAGER: "Day-to-day operations: payments, disbursements, reports, team",
-        PredefinedRoleEnum.OPERATOR: "Payment and disbursement processing",
-        PredefinedRoleEnum.VIEWER: "Read-only access to reports and transaction history",
-        PredefinedRoleEnum.DEVELOPER: "Developer portal: API keys, webhooks, bot configuration",
-    }
-    return descriptions.get(role, "Unknown role")
+    return ROLE_DESCRIPTIONS.get(role, "Unknown role")
 
 
 # Role hierarchy for inheritance/permission checking

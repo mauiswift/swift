@@ -27,6 +27,7 @@ interface RolePermissions {
   can_manage_transactions: boolean;
   can_manage_bot: boolean;
   can_approve_topups: boolean;
+  can_manage_team: boolean;
   can_credit_wallet: boolean;
   can_debit_wallet: boolean;
   can_freeze_wallet: boolean;
@@ -55,6 +56,7 @@ interface AdminUser {
   can_manage_transactions: boolean;
   can_manage_bot: boolean;
   can_approve_topups: boolean;
+  can_manage_team: boolean;
   can_credit_wallet: boolean;
   can_debit_wallet: boolean;
   can_freeze_wallet: boolean;
@@ -72,6 +74,7 @@ const PERMISSION_KEYS: { key: keyof RolePermissions; label: string; color: strin
   { key: 'can_manage_transactions', label: 'Transactions', color: 'cyan' },
   { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
   { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
+  { key: 'can_manage_team', label: 'Team Management', color: 'blue' },
   { key: 'can_credit_wallet', label: 'Credit Wallet', color: 'emerald' },
   { key: 'can_debit_wallet', label: 'Debit Wallet', color: 'yellow' },
   { key: 'can_freeze_wallet', label: 'Freeze Wallet', color: 'indigo' },
