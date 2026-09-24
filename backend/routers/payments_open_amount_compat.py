@@ -161,6 +161,10 @@ async def get_checkout_institutions_compat(
             "id": "NETBANK", "code": "NETBANK", "name": "NetBank",
             "logoUrl": "/logos/netbank.png", "enabled": True, "loginMethod": "redirect",
         })
+    institutions.append({
+        "id": "ALIPAY", "code": "ALIPAY", "name": "Alipay",
+        "logoUrl": "/logos/alipay.png", "enabled": True, "loginMethod": "qr",
+    })
     return {"success": True, "data": institutions}
 
 
@@ -180,7 +184,7 @@ async def select_checkout_institution_compat(
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
 
-    if institution_code in {"GCASH", "QRPH"}:
+    if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
@@ -197,7 +201,7 @@ async def select_checkout_institution_compat(
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
-        txn.transaction_type = "swiftpay_qr"
+        txn.transaction_type = "alipay_qr" if institution_code == "ALIPAY" else "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
         bank_name = txn.bank_name
@@ -217,11 +221,15 @@ async def select_checkout_institution_compat(
                 bank_account_name = configured_account.get("account_name")
         return {
             "success": True,
-            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
+            "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
             "qr_code": qr_code,
             "qr_content": qr_content,
             "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
+            "alipay_hosted_deep_link": (
+                f"/checkout/{txn.external_id}?payment_method=alipay"
+                if institution_code == "ALIPAY" else None
+            ),
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'alipay' if institution_code == 'ALIPAY' else ('gcash' if institution_code == 'GCASH' else 'qrph')}",
         }
 
     order_result = await service.create_order(
