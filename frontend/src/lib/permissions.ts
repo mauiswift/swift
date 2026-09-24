@@ -39,6 +39,13 @@ export function hasPermission(
   return Boolean(permissions?.is_super_admin || permissions?.[permission]);
 }
 
+export function hasExplicitPermission(
+  permissions: UserPermissions | null | undefined,
+  permission: PermissionKey,
+): boolean {
+  return Boolean(permissions?.[permission]);
+}
+
 export function hasDashboardAccess(permissions: UserPermissions | null | undefined): boolean {
   return PERMISSION_KEYS.some(permission => permission !== 'is_super_admin' && Boolean(permissions?.[permission]));
 }

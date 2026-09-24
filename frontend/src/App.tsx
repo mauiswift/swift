@@ -215,7 +215,7 @@ function AuthAwareContent() {
       <Route path="/topups/:topupId" element={<Navigate to="/topup-requests" replace />} />
       <Route path="/payment-approvals" element={<RequireSuperAdmin><SuperAdminPaymentApproval /></RequireSuperAdmin>} />
       <Route path="/kyb-registrations" element={<RequireSuperAdmin><KybRegistrationsPage /></RequireSuperAdmin>} />
-      <Route path="/toss-account-approvals" element={<RequireSuperAdmin><TossAccountApprovals /></RequireSuperAdmin>} />
+      <Route path="/toss-account-approvals" element={<ProtectedAdminRoute permission="can_manage_wallet"><TossAccountApprovals /></ProtectedAdminRoute>} />
       <Route path="/kyc-verifications" element={<RequireSuperAdmin><KycVerificationsPage /></RequireSuperAdmin>} />
       <Route path="/payments" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/payments/:id" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentDetails /></ProtectedAdminRoute>} />
