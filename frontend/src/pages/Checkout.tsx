@@ -784,6 +784,11 @@ export default function Checkout() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const openKoreanPaymentApp = (app: 'toss' | 'kakao') => {
+    const appUrl = app === 'toss' ? 'supertoss://' : 'kakaopay://';
+    window.location.assign(appUrl);
+  };
+
   const openMagpieCardCheckout = async () => {
     if (!txn || cardCheckoutLoading) return;
     setCardFormError(null);
@@ -1318,6 +1323,34 @@ export default function Checkout() {
                     </div>
                     <p className="mt-4 text-xs font-bold text-slate-900">{isHighValuePhp ? 'Scan with a QRPh-enabled banking app' : 'QR로 송금 정보 불러오기'}</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-700">{isHighValuePhp ? 'Verify the bank details and send the exact amount shown above.' : '계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.'}</p>
+                    {isKrw && !isHighValuePhp && (
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => openKoreanPaymentApp('toss')}
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0064FF] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#0052d6]"
+                        >
+                          <Smartphone className="h-4 w-4" />
+                          Toss Bank에서 열기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openKoreanPaymentApp('kakao')}
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 py-3 text-xs font-bold text-[#191919] transition hover:bg-[#e6cf00]"
+                        >
+                          <Smartphone className="h-4 w-4" />
+                          Kakao Pay에서 열기
+                        </button>
+                      </div>
+                    )}
+                    {isKrw && !isHighValuePhp && (
+                      <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+                        {checkoutText(
+                          'After the app opens, scan the QR code above to load the transfer details.',
+                          '앱이 열리면 위 QR 코드를 스캔하여 송금 정보를 불러오세요.',
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
