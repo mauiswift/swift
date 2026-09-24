@@ -9,24 +9,20 @@ const BREAKPOINTS = {
 };
 
 export function useResponsive() {
-  const [screenSize, setScreenSize] = useState<ScreenSize>('desktop');
-  const [isClient, setIsClient] = useState(false);
+  const getScreenSize = (): ScreenSize => {
+    if (typeof window === 'undefined') return 'desktop';
+    if (window.innerWidth < BREAKPOINTS.tablet) return 'mobile';
+    if (window.innerWidth < BREAKPOINTS.desktop) return 'tablet';
+    return 'desktop';
+  };
+
+  const [screenSize, setScreenSize] = useState<ScreenSize>(getScreenSize);
 
   useEffect(() => {
-    setIsClient(true);
-
     const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < BREAKPOINTS.tablet) {
-        setScreenSize('mobile');
-      } else if (width < BREAKPOINTS.desktop) {
-        setScreenSize('tablet');
-      } else {
-        setScreenSize('desktop');
-      }
+      setScreenSize(getScreenSize());
     };
 
-    // Set initial size
     handleResize();
 
     window.addEventListener('resize', handleResize);
@@ -39,6 +35,6 @@ export function useResponsive() {
     isTablet: screenSize === 'tablet',
     isDesktop: screenSize === 'desktop',
     isMobileOrTablet: screenSize === 'mobile' || screenSize === 'tablet',
-    isClient,
+    isClient: true,
   };
 }

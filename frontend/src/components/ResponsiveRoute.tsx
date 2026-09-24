@@ -1,6 +1,5 @@
 import React from 'react';
 import { useResponsive } from '@/hooks/useResponsive';
-import AppLoadingScreen from './AppLoadingScreen';
 
 interface ResponsiveRouteProps {
   desktopComponent: React.ComponentType<any>;
@@ -25,11 +24,7 @@ export default function ResponsiveRoute({
   tabletComponent: TabletComponent,
   componentProps = {},
 }: ResponsiveRouteProps) {
-  const { screenSize, isClient } = useResponsive();
-
-  if (!isClient) {
-    return <AppLoadingScreen />;
-  }
+  const { screenSize } = useResponsive();
 
   const Component = screenSize === 'mobile'
     ? MobileComponent

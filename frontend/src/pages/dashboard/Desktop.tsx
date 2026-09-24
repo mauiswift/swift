@@ -71,7 +71,7 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare, dashboardActions }: any) {
+export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, initialLoading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare, dashboardActions }: any) {
   if (!user) return <Navigate to="/home" replace />;
 
   const desktopCurrencies = [
@@ -83,7 +83,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
 
   return (
     <Layout connected={connected}>
-      <div className="page-enter mx-auto max-w-[1065px]">
+      <div className="mx-auto max-w-[1065px]">
         <div className="mb-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="m-0 break-words text-[22px] font-semibold leading-tight tracking-[-0.04em] text-slate-900">{orgName}</h1>
           <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -139,7 +139,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
             {showRangeDropdown && (
               <>
                 <div onClick={() => setShowRangeDropdown(false)} className="fixed inset-0 z-10" />
-                <div className="absolute left-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.12)] page-enter">
+                <div className="absolute left-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
                   {([7, 30, 90] as RangeKey[]).map((key) => (
                     <button
                       key={key}
@@ -183,7 +183,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
                 <div className="rounded-2xl bg-slate-50/90 p-3.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Available balance</p>
                   <p className="mt-1 text-[clamp(1.2rem,2vw,1.45rem)] font-bold font-mono tracking-tight text-slate-900">
-                    {loading ? <span className="inline-block w-24 h-6 skeleton-shimmer rounded" /> : fmtCurrency(snap.available_balance ?? snap.balance, code)}
+                    {initialLoading ? <span className="inline-block w-24 h-6 rounded bg-slate-100" /> : fmtCurrency(snap.available_balance ?? snap.balance, code)}
                   </p>
                   <p className="mt-2 text-[11px] text-slate-500">
                     Total: <span className="font-semibold text-slate-700">{fmtCurrency(snap.balance, code)}</span>
@@ -228,21 +228,21 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
         )}
 
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">
-          <div className="stagger-item">
+          <div>
             <DashboardStatCard
               label={ui.payments}
               value={formatAmount(stats?.payments?.total_amount ?? 0)}
               sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
-              loading={loading}
+              loading={initialLoading}
               icon={TrendingUp}
             />
           </div>
-          <div className="stagger-item">
+          <div>
             <DashboardStatCard
               label={ui.disbursements}
               value={formatAmount(stats?.disbursements?.total_amount ?? 0)}
               sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
-              loading={loading}
+              loading={initialLoading}
               icon={WalletCards}
             />
           </div>
@@ -267,8 +267,8 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           <DailyVolumeChart dailyVolumes={stats.daily_volumes} />
         </DashboardPanel>
 
-        {!loading && !hasAnyTransactions ? (
-          <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+        {!initialLoading && !hasAnyTransactions ? (
+          <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)]">
              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300 shadow-inner">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
                   <polyline points="22 7 13.5 16 8.5 11 2 17" />
@@ -281,7 +281,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
              </p>
           </div>
         ) : (
-          <div className="mb-8 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+          <div className="mb-8 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.04)]">
             <div className="flex flex-col items-center gap-8 py-4 sm:flex-row sm:justify-center sm:gap-16 sm:py-8">
               <div
                 className="relative flex aspect-square w-full max-w-[220px] items-center justify-center rounded-full shadow-inner"
@@ -316,7 +316,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           </div>
         )}
 
-        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.04)]">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
             <p className="m-0 text-lg font-semibold tracking-[-0.04em] text-slate-900">{ui.payments}</p>
             <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">

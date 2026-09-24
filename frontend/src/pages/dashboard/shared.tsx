@@ -4,7 +4,6 @@ import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
-import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import React from 'react';
@@ -236,6 +235,7 @@ export function useDashboardData() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>(defaultStats);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const [range, setRange] = useState<RangeKey>(7);
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -265,8 +265,6 @@ export function useDashboardData() {
             }))
           : [];
         setStats({ ...defaultStats, ...statsRes.data, daily_volumes: dailyVolumes });
-      } else {
-        setStats(defaultStats);
       }
 
       const balanceMap: Record<string, WalletBalanceSnapshot> = {};
@@ -288,7 +286,7 @@ export function useDashboardData() {
       addBal('CNY', cnyRes);
       setBalances(balanceMap);
     } catch (err) {
-      setStats(defaultStats);
+      console.error('Unable to refresh dashboard data', err);
     }
   }, [user, collectionCurrency]);
 
@@ -301,7 +299,12 @@ export function useDashboardData() {
 
   useEffect(() => {
     if (!user) return;
-    const load = async () => { setLoading(true); await fetchData(range); setLoading(false); };
+    const load = async () => {
+      setLoading(true);
+      await fetchData(range);
+      setHasLoadedData(true);
+      setLoading(false);
+    };
     load();
   }, [user, range, fetchData]);
 
@@ -380,6 +383,7 @@ export function useDashboardData() {
     stats,
     balances,
     loading,
+    initialLoading: loading && !hasLoadedData,
     range,
     showRangeDropdown,
     searchTerm,
@@ -400,8 +404,4 @@ export function useDashboardData() {
     totalVolume,
     paymentShare,
   };
-}
-
-export function DashboardLoadingFallback() {
-  return <AppLoadingScreen />;
 }

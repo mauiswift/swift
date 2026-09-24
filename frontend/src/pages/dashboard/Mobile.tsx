@@ -31,6 +31,7 @@ type DashboardMobileProps = {
   stats: DashboardStats;
   balances: Record<string, { balance: number; available_balance: number }>;
   loading: boolean;
+  initialLoading: boolean;
   fetchData: (range: RangeKey) => void;
   setRange: (range: RangeKey) => void;
   connected: boolean;
@@ -71,7 +72,7 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
 }
 
 export default function DashboardMobile({
-  range, stats, balances, loading, fetchData, setRange, connected, user, orgName, ui, rangeLabels,
+  range, stats, balances, loading, initialLoading, fetchData, setRange, connected, user, orgName, ui, rangeLabels,
   formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume,
   totalVolume, paymentShare,
 }: DashboardMobileProps) {
@@ -86,7 +87,7 @@ export default function DashboardMobile({
 
   return (
     <Layout connected={connected}>
-      <div className="page-enter mx-auto w-full max-w-2xl space-y-5 py-1 sm:py-4">
+      <div className="mx-auto w-full max-w-2xl space-y-5 py-1 sm:py-4">
         <section className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">가맹점 요약</p>
@@ -158,7 +159,7 @@ export default function DashboardMobile({
                     </div>
                   </div>
                   <p className="shrink-0 text-right font-mono text-sm font-bold text-white">
-                    {loading ? <span className="inline-block h-4 w-16 animate-pulse rounded bg-white/10" /> : fmtCurrency(snap.balance, code)}
+                    {initialLoading ? <span className="inline-block h-4 w-16 rounded bg-white/10" /> : fmtCurrency(snap.balance, code)}
                   </p>
                 </div>
               );
@@ -172,13 +173,13 @@ export default function DashboardMobile({
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-500"><ArrowDownToLine size={17} /></div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{ui.payments}</p>
-              <p className="mt-1 truncate text-lg font-bold text-slate-900">{loading ? '—' : formatAmount(stats?.payments?.total_amount ?? 0)}</p>
+              <p className="mt-1 truncate text-lg font-bold text-slate-900">{initialLoading ? '—' : formatAmount(stats?.payments?.total_amount ?? 0)}</p>
               <p className="mt-1 text-[11px] text-slate-500">{stats?.payments?.total_count ?? 0} {ui.transactions}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-500"><ArrowUpRight size={17} /></div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{ui.disbursements}</p>
-              <p className="mt-1 truncate text-lg font-bold text-slate-900">{loading ? '—' : formatAmount(stats?.disbursements?.total_amount ?? 0)}</p>
+              <p className="mt-1 truncate text-lg font-bold text-slate-900">{initialLoading ? '—' : formatAmount(stats?.disbursements?.total_amount ?? 0)}</p>
               <p className="mt-1 text-[11px] text-slate-500">{stats?.disbursements?.total_count ?? 0} {ui.transactions}</p>
             </div>
           </div>
@@ -195,7 +196,7 @@ export default function DashboardMobile({
           </svg>
         </section>
 
-        {!loading && !hasAnyTransactions ? (
+        {!initialLoading && !hasAnyTransactions ? (
           <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
             <CircleDollarSign className="mx-auto h-8 w-8 text-slate-300" />
             <p className="mt-3 text-sm font-semibold text-slate-800">{ui.noTransactions}</p>

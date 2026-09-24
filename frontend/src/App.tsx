@@ -19,13 +19,13 @@ import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
 import FirstLoginGuide from '@/components/FirstLoginGuide';
+import Dashboard from './pages/dashboard';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
 const Login = React.lazy(() => import('./pages/Login'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
-const Dashboard = React.lazy(() => import('./pages/dashboard'));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
 const DisbursementsPage = React.lazy(() => import('./pages/DisbursementsPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
