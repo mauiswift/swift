@@ -62,6 +62,14 @@ DEFAULT_DEPOSIT_ACCOUNTS = [
         "account_name": "Swift Technology Ventures Inc.",
         "currency": "PHP",
     },
+    {
+        "value": "Instant VA",
+        "label": "Instant VA",
+        "bank_name": "Toss Bank",
+        "account_number": "1908-1618-8260",
+        "account_name": "SwiftPay Ventures Inc.",
+        "currency": "KRW",
+    },
 ]
 WALLET_SETTING_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 DEFAULT_WALLET_LIMITS = {
