@@ -91,9 +91,10 @@ class AlipayService:
                     # Any unexpected Magpie failure should not block local dev; fall back to placeholder
                     pass
 
-            # Not configured at all or Magpie failed: return a deterministic placeholder for local/dev
-            qr_payload = f"https://example.local/alipay/pay?out_trade_no={out_trade_no}&amount={amount}"
-            return {"success": True, "qr_content": qr_payload, "qr_url": qr_payload}
+            return {
+                "success": False,
+                "error": "Alipay is not configured. Configure Alipay or Magpie credentials before accepting Alipay payments.",
+            }
 
         # Direct implementation: build signed form and call Alipay gateway.
         # Uses RSA2 (SHA256) signing via cryptography.

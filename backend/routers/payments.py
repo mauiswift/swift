@@ -407,7 +407,7 @@ async def create_magpie_method_checkout(
     service = MagpieService()
     session = await service.create_session(
         amount_cents=int(round(float(txn.amount) * 100)),
-        currency="CNY",
+        currency="PHP",
         product_name=txn.description or "CNY payment",
         success_url=f"{public_host}/checkout/{txn.external_id}?status=success",
         cancel_url=f"{public_host}/checkout/{txn.external_id}?status=cancel",
@@ -1519,7 +1519,7 @@ async def select_checkout_institution(
                 detail=f"{institution_code} is currently unavailable on SwiftPay. Please choose another payment method or contact the payment administrator.",
             )
 
-    if institution_code in {"GCASH", "QRPH"}:
+    if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
@@ -1570,7 +1570,7 @@ async def select_checkout_institution(
 
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
-        txn.transaction_type = "swiftpay_qr"
+        txn.transaction_type = "alipay_qr" if institution_code == "ALIPAY" else "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
 
@@ -1578,17 +1578,22 @@ async def select_checkout_institution(
             f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
             f"api/v1/payments/checkout/{quote(str(txn.external_id), safe='')}/gcash"
         )
+        hosted_alipay_url = (
+            f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
+            f"checkout/{quote(str(txn.external_id), safe='')}?payment_method=alipay"
+        )
 
         return {
             "success": True,
-            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
+            "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
             "qr_code": qr_code,
             "qr_content": qr_content,
             # Prefer the provider-generated app link so the customer opens this
             # exact QRPH payment in GCash. Keep the hosted redirect as fallback.
             "gcash_deep_link": direct_gcash_deep_link,
             "gcash_hosted_deep_link": hosted_gcash_url if direct_gcash_deep_link else None,
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
+            "alipay_hosted_deep_link": hosted_alipay_url if institution_code == "ALIPAY" else None,
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'alipay' if institution_code == 'ALIPAY' else ('gcash' if institution_code == 'GCASH' else 'qrph')}",
         }
 
     order_result = await service.create_order(
