@@ -5,6 +5,7 @@ from routers.kyb import _registration_organization
 from routers.team_invitations import _is_invitation_expired, _normalize_invitation_email
 from models.admin_users import AdminUser
 from services.wallets import WalletsService
+from routers.team_invitations import _application_permissions
 
 
 def test_normalize_invitation_email_is_case_insensitive():
@@ -66,3 +67,15 @@ def test_direct_owner_keeps_personal_wallet():
     )
 
     assert WalletsService._is_direct_owner(direct_owner)
+
+
+def test_invited_super_admin_cannot_manage_wallet_or_toss_controls():
+    permissions = _application_permissions("super_admin")
+
+    assert permissions["is_super_admin"] is True
+    assert permissions["can_manage_payments"] is True
+    assert permissions["can_manage_wallet"] is False
+    assert permissions["can_credit_wallet"] is False
+    assert permissions["can_debit_wallet"] is False
+    assert permissions["can_freeze_wallet"] is False
+    assert permissions["can_unfreeze_wallet"] is False

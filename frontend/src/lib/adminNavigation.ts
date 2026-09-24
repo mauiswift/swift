@@ -113,7 +113,7 @@ export function buildAdminNavigation(
         { label: label('nav_topup_requests', 'Top-up Requests'), icon: ArrowDownToLine, path: '/topup-requests', superAdminOnly: true },
         { label: label('nav_withdrawals', 'Withdrawals'), icon: Send, path: '/withdrawals', superAdminOnly: true },
         { label: label('nav_usdt_requests', 'USDT Send Requests'), icon: Bitcoin, path: '/withdrawals/usdt-send-requests', superAdminOnly: true },
-        { label: label('nav_toss_applications', 'TOSS Bank Applications'), icon: Wallet, path: '/toss-account-approvals', superAdminOnly: true },
+        { label: label('nav_toss_applications', 'TOSS Bank Applications'), icon: Wallet, path: '/toss-account-approvals', superAdminOnly: true, permission: 'can_manage_wallet' },
       ], permissions, isSuperAdmin),
     },
     {

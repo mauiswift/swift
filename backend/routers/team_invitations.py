@@ -746,7 +746,17 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
     if role_name in role_map:
         return get_role_permissions(role_map[role_name]).model_dump()
     if role_name == "super_admin":
-        return get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
+        permissions = get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
+        # Invited super admins can manage platform operations, but must not
+        # access merchant wallet settings, wallet controls, or TOSS review.
+        permissions.update({
+            "can_manage_wallet": False,
+            "can_credit_wallet": False,
+            "can_debit_wallet": False,
+            "can_freeze_wallet": False,
+            "can_unfreeze_wallet": False,
+        })
+        return permissions
     if role_name == "approver":
         return {
             key: key in {"can_approve_topups", "can_manage_transactions", "can_view_reports"}
@@ -1297,7 +1307,7 @@ async def accept_invitation(
         password_hash=hash_password(password),
         must_change_password=False,
         is_active=True,
-        is_super_admin=False,
+        is_super_admin=bool(permissions.get("is_super_admin")),
         can_manage_payments=bool(permissions.get("can_manage_payments")),
         can_manage_disbursements=bool(permissions.get("can_manage_disbursements")),
         can_view_reports=bool(permissions.get("can_view_reports")),

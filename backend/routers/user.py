@@ -316,7 +316,11 @@ class TossVirtualAccountControlRequest(BaseModel):
 
 
 def _require_toss_reviewer(current_user: UserResponse) -> None:
-    if not current_user.permissions or not current_user.permissions.is_super_admin:
+    if (
+        not current_user.permissions
+        or not current_user.permissions.is_super_admin
+        or not current_user.permissions.can_manage_wallet
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin approval required.")
 
 

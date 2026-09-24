@@ -230,7 +230,7 @@ function AuthAwareContent() {
       <Route path="/support" element={<RequireAuth><SupportPage /></RequireAuth>} />
       <Route path="/settings/account-security" element={<RequireAuth><SettingsAccountSecure /></RequireAuth>} />
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
-      <Route path="/settings/shop/settlement" element={<RequireAuth><SettingsBanking /></RequireAuth>} />
+      <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute permission="can_manage_wallet"><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute permission="can_manage_bot"><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
       <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
