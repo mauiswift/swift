@@ -1135,11 +1135,6 @@ export default function Checkout() {
                   </div>
                 )}
                 <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-white/60">{currencyName} ({currencyCode})</p>
-                {txn.description && (
-                  <p className="mt-6 text-slate-200 text-[14px] leading-relaxed border-t border-white/15 pt-6">
-                    {txn.description}
-                  </p>
-                )}
               </div>
             )}
 
