@@ -1298,13 +1298,13 @@ export default function Checkout() {
                           <button
                             type="button"
                             onClick={() => openKoreanPaymentApp('toss')}
-                            className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[#d7e5ff] bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-[#0064FF] hover:shadow-md"
+                            className="group flex min-h-28 items-center gap-3 rounded-2xl border border-[#d7e5ff] bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#0064FF] hover:shadow-md"
                           >
                             <PaymentBrandLogo
                               brand="Toss Pay"
                               logoUrl="/logos/tosspay.png"
-                              size="md"
-                              className="border-0 bg-transparent p-0 shadow-none"
+                              size="lg"
+                              className="h-14 w-20 border-0 bg-[#f7f8ff] p-1.5 shadow-none"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="block text-sm font-bold text-slate-900">Toss Pay</span>
@@ -1315,13 +1315,13 @@ export default function Checkout() {
                           <button
                             type="button"
                             onClick={() => openKoreanPaymentApp('kakao')}
-                            className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[#f4e6a0] bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-[#FEE500] hover:shadow-md"
+                            className="group flex min-h-28 items-center gap-3 rounded-2xl border border-[#f4e6a0] bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#FEE500] hover:shadow-md"
                           >
                             <PaymentBrandLogo
                               brand="Kakao Pay"
                               logoUrl="/logos/kakaopay.png"
-                              size="md"
-                              className="border-0 bg-transparent p-0 shadow-none"
+                              size="lg"
+                              className="h-14 w-20 border-0 bg-[#fffdf0] p-1.5 shadow-none"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="block text-sm font-bold text-slate-900">Kakao Pay</span>

@@ -360,7 +360,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'tosspay',
     code: 'TOSSPAY',
     name: 'Toss Pay',
-    logo: '/logos/tosspay.svg',
+    logo: '/logos/tosspay.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',

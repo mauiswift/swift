@@ -345,7 +345,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'TOSSPAY',
     name: 'Toss Pay',
     fullName: 'Toss Pay',
-    logo: '/logos/tosspay.svg',
+    logo: '/logos/tosspay.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',
