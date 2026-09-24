@@ -1,6 +1,6 @@
 """add wallet action permissions to custom roles
 
-Revision ID: 20260924_custom_role_wallet_permissions
+Revision ID: 20260924_wallet_perms
 Revises: zzzz_final_consolidation
 Create Date: 2026-09-24 09:55:00.000000
 """
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy import inspect
 
 
-revision: str = "20260924_custom_role_wallet_permissions"
+revision: str = "20260924_wallet_perms"
 down_revision: Union[str, None] = "zzzz_final_consolidation"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
