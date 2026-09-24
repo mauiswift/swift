@@ -208,8 +208,8 @@ class WalletsService(BaseService[Wallets]):
                 organization_id=org_id,
                 balance=0.0,
                 currency=currency_upper,
-                is_frozen=(currency_upper == "USD"),
-                freeze_reason=("Top up 600 USDT to enable all wallet features." if currency_upper == "USD" else None),
+                is_frozen=False,
+                freeze_reason=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -319,10 +319,6 @@ class WalletsService(BaseService[Wallets]):
             wallet.available_balance = round(wallet.available_balance + amount, 2)
         else:
             wallet.pending_balance = round(wallet.pending_balance + amount, 2)
-
-        if wallet.currency == "USD" and wallet.balance >= 600.0 and wallet.is_frozen:
-            wallet.is_frozen = False
-            wallet.freeze_reason = None
 
         self._touch_wallet(wallet, credit=amount)
         self._append_ledger_entry(

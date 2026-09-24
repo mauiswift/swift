@@ -86,7 +86,7 @@ DEFAULT_DEPOSIT_RULES = {
     "topup_currencies": ["PHP", "USDT", "KRW"],
     "receipt_max_size_mb": 10.0,
     "first_usdt_topup_amount": 600.0,
-    "first_usdt_topup_rule_enabled": True,
+    "first_usdt_topup_rule_enabled": False,
 }
 PAYMENT_CHANNELS = (
     "gcash",

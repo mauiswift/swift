@@ -27,7 +27,7 @@ from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
-from services.transactions import is_customer_payment
+from services.transactions import is_customer_payment, is_payment_received
 from services.action_confirmation import ActionConfirmationService, ActionType
 from utils.datetime import serialize_utc_datetime
 
@@ -155,6 +155,8 @@ async def list_pending_payment_approvals(
                     "description": txn.description or "",
                     "status": txn.status,
                     "approval_status": getattr(txn, 'approval_status', 'pending'),
+                    "payment_received": is_payment_received(txn),
+                    "payment_received_at": serialize_utc_datetime(txn.paid_at) or "",
                     "created_at": serialize_utc_datetime(txn.created_at) or "",
                     "user_id": txn.user_id,
                 }

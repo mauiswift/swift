@@ -963,14 +963,6 @@ async def approve_admin_usdt_trade(
 		if float(from_wallet.available_balance or from_wallet.balance or 0) < float(trade.requested_amount):
 			raise ValueError("Insufficient PHP balance to approve this trade")
 
-		await service.debit_wallet(
-			trade.user_id,
-			float(trade.requested_amount),
-			"PHP",
-			"usdt_purchase",
-			f"usdt-trade-{trade.id}",
-			note="PHP reserved for approved USDT purchase",
-		)
 		trade.reviewed_by = str(current_user.id)
 		trade.reviewed_at = datetime.now(timezone.utc)
 		trade.status = "provider_pending"
@@ -1010,6 +1002,15 @@ async def approve_admin_usdt_trade(
 			trade.withdrawal_status = "processing"
 			trade.settled_amount = provider_amount
 			trade.status = "withdrawal_submitted"
+
+		await service.debit_wallet(
+			trade.user_id,
+			float(trade.requested_amount),
+			"PHP",
+			"usdt_purchase",
+			f"usdt-trade-{trade.id}",
+			note="Approved USDT purchase settled from PHP wallet",
+		)
 		await db.commit()
 	except (ValueError, RuntimeError) as exc:
 		await db.rollback()

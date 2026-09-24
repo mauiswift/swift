@@ -400,8 +400,8 @@ class TestWalletsService:
         assert created_disb.status == "processing"
 
     @pytest.mark.asyncio
-    async def test_new_usdt_wallet_is_frozen_until_600_topup(self):
-        """New USDT wallets should start frozen and self-unlock after reaching the onboarding threshold."""
+    async def test_new_usdt_wallet_is_not_frozen_without_onboarding_limit(self):
+        """USDT wallets should never be frozen behind a 600 USDT onboarding requirement."""
         from services import wallets as wallets_module
         from services.wallets import WalletsService
         from unittest.mock import AsyncMock, MagicMock
@@ -417,8 +417,8 @@ class TestWalletsService:
         wallet.balance = 0.0
         wallet.available_balance = 0.0
         wallet.pending_balance = 0.0
-        wallet.is_frozen = True
-        wallet.freeze_reason = "Top up 600 USDT to enable all wallet features."
+        wallet.is_frozen = False
+        wallet.freeze_reason = None
         wallet.total_credits = 0.0
         wallet.total_debits = 0.0
         wallet.transaction_count = 0

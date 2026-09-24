@@ -56,6 +56,15 @@ def is_customer_payment(txn: Transactions) -> bool:
     )
 
 
+def is_payment_received(txn: Transactions) -> bool:
+    """Return whether the payment was actually received by the gateway or already settled."""
+    if txn is None:
+        return False
+    status = str(txn.status or "").lower()
+    approval_status = str(txn.approval_status or "").lower()
+    return bool(txn.paid_at) or status in {"paid", "completed"} or approval_status == "approved"
+
+
 def publish_payment_link_created(txn: Transactions, user_name: Optional[str] = None) -> None:
     payment_event_bus.publish({
         "event_type": "payment_link_created",
@@ -487,9 +496,11 @@ class TransactionsService(BaseService[Transactions]):
             and approved_by is None
             and provider_callback
         ):
+            now = datetime.now(timezone.utc)
             txn.approval_status = "pending"
             txn.status = "pending"
-            txn.updated_at = datetime.now(timezone.utc)
+            txn.paid_at = now
+            txn.updated_at = now
             await self.db.commit()
             logger.info(
                 "Customer payment %s completed through %s and is awaiting super-admin approval",
