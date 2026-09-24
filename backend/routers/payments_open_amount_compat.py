@@ -22,6 +22,7 @@ from services.magpie_services import MagpieService
 from services.app_settings import get_payment_channels
 from services.app_settings import get_deposit_accounts
 from services.swiftpay_service import SwiftPayService
+from services.ph_banks_service import PHBanksService
 from services.payment_gateway import _is_security_bank_name, _select_manual_transfer_account
 from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
@@ -146,6 +147,8 @@ async def get_checkout_institutions_compat(
     }
     result = await SwiftPayService().get_collection_institutions()
     data = result.get("data") if result.get("success") else []
+    if not isinstance(data, list) or not data:
+        data = PHBanksService.get_all_banks_dict()
     institutions = [
         item for item in data
         if isinstance(item, dict) and _institution_matches_enabled(item.get("code"), enabled_codes)

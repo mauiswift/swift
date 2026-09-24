@@ -1411,6 +1411,8 @@ async def get_checkout_institutions(
                 "success": True,
                 "data": PHBanksService.get_all_banks_dict(),
             }
+        if not isinstance(res.get("data"), list) or not res["data"]:
+            res["data"] = PHBanksService.get_all_banks_dict()
 
         if (txn.currency or "").upper() == "PHP":
             channels = await get_payment_channels(db)
@@ -1534,7 +1536,12 @@ async def select_checkout_institution(
             for item in (live_institutions.get("data") or [])
             if isinstance(item, dict)
         }
-        if not live_institutions.get("success") or institution_code not in live_codes:
+        live_match = any(
+            code == institution_code
+            or _institution_matches_enabled(code, {institution_code})
+            for code in live_codes
+        )
+        if not live_institutions.get("success") or not live_match:
             logger.warning(
                 "SwiftPay %s checkout rejected because the institution is not live for this account: %s",
                 institution_code,
