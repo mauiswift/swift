@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Building2, WalletCards } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { resolveBrandLogoPath } from '@/config/payment-logo-registry';
+import { normalizeBrandKey, resolveBrandLogoPath } from '@/config/payment-logo-registry';
 
 interface PaymentBrandLogoProps {
   brand: string;
@@ -14,6 +15,15 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
   const [failedOfficialLogo, setFailedOfficialLogo] = useState(false);
   const [failedProviderLogo, setFailedProviderLogo] = useState(false);
   const officialLogoPath = resolveBrandLogoPath(brandName);
+  const brandKey = normalizeBrandKey(brandName);
+  const isWallet = ['gcash', 'maya', 'grabpay', 'alipay', 'kakaopay', 'tosspay', 'naverpay', 'payco', 'wechatpay'].some(key => brandKey.includes(key));
+  const fallbackLabel = brandName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() || 'PM';
   const logoPath = failedProviderLogo
     ? undefined
     : (failedOfficialLogo ? logoUrl : (officialLogoPath || logoUrl));
@@ -29,8 +39,9 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
 
   if (!logoPath) {
     return (
-      <span className={cn('inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-500', sizeClass, className)} role="img" aria-label={`${brandName} logo`}>
-        {brandName.slice(0, 2).toUpperCase()}
+      <span className={cn('inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600', sizeClass, className)} role="img" aria-label={`${brandName} logo`}>
+        {isWallet ? <WalletCards className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" /> : <Building2 className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />}
+        <span>{fallbackLabel}</span>
       </span>
     );
   }

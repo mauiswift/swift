@@ -1509,7 +1509,7 @@ export default function Checkout() {
                           className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg"
                         >
                           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                            <Landmark className="h-7 w-7 text-[#1475d1]" />
+                            <PaymentBrandLogo brand={krwBankName} size="md" className="border-0 bg-transparent p-0 shadow-none" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-base font-semibold text-slate-900">{checkoutText('Manual bank transfer', '수동 은행 송금')}</p>
@@ -1527,8 +1527,11 @@ export default function Checkout() {
                     {qrphInstitutions.length > 0 && (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <QrCode className="h-4 w-4 text-[#0B63FF]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">QRPH</p>
+                          <PaymentBrandLogo brand="QRPH" size="sm" className="h-7 w-12 border-0 bg-transparent p-0 shadow-none" />
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">QRPH</p>
+                            <p className="text-[11px] text-slate-400">{checkoutText('Scan with a supported app', '지원 앱으로 스캔')}</p>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {qrphInstitutions.map(renderInstitutionButton)}
@@ -1540,8 +1543,13 @@ export default function Checkout() {
                     {digitalWallets.length > 0 && (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{checkoutText('E-Wallets', '전자지갑')}</p>
+                          <div className="flex h-7 w-12 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+                            <Smartphone className="h-4 w-4" aria-hidden="true" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">{checkoutText('E-Wallets', '전자지갑')}</p>
+                            <p className="text-[11px] text-slate-400">{checkoutText('Mobile payment apps', '모바일 결제 앱')}</p>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {digitalWallets.map(renderInstitutionButton)}
@@ -1553,8 +1561,13 @@ export default function Checkout() {
                     {banks.length > 0 && (
                       <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{checkoutText('Banks', '은행')}</p>
+                          <div className="flex h-7 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                            <Building2 className="h-4 w-4" aria-hidden="true" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">{checkoutText('Banks', '은행')}</p>
+                            <p className="text-[11px] text-slate-400">{checkoutText('Secure bank redirect', '안전한 은행 결제')}</p>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {banks.map(renderInstitutionButton)}
