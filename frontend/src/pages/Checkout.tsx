@@ -418,7 +418,16 @@ export default function Checkout() {
       const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
         const shouldShowAlipay = String(currency || txn?.currency || '').toUpperCase() === 'PHP';
-        const returnedInstitutions = response.data.data as Institution[];
+        const returnedInstitutions = (response.data.data as Partial<Institution>[])
+          .filter(item => item && String(item.code || '').trim() && String(item.name || '').trim())
+          .map(item => ({
+            ...item,
+            id: String(item.id || item.code),
+            code: String(item.code).trim().toUpperCase(),
+            name: String(item.name).trim(),
+            enabled: item.enabled !== false,
+            loginMethod: item.loginMethod || 'redirect',
+          })) as Institution[];
         const fallbackInstitutions: Institution[] = PH_BANKS.map(bank => ({
           id: bank.code,
           code: bank.code,
@@ -426,8 +435,12 @@ export default function Checkout() {
           enabled: true,
           loginMethod: 'redirect',
         }));
-        const availableInstitutions = shouldShowAlipay && returnedInstitutions.length === 0
-          ? fallbackInstitutions
+        const institutionsByCode = new Map(
+          [...fallbackInstitutions, ...returnedInstitutions]
+            .map(institution => [institutionCode(institution), institution] as const),
+        );
+        const availableInstitutions = shouldShowAlipay
+          ? [...institutionsByCode.values()]
           : returnedInstitutions;
         const hasAlipay = availableInstitutions.some(item => institutionCode(item) === 'ALIPAY');
         setInstitutions(
@@ -445,6 +458,15 @@ export default function Checkout() {
       }
     } catch (err) {
       console.error('Failed to fetch institutions:', err);
+      if (String(currency || txn?.currency || '').toUpperCase() === 'PHP') {
+        setInstitutions(PH_BANKS.map(bank => ({
+          id: bank.code,
+          code: bank.code,
+          name: bank.name,
+          enabled: true,
+          loginMethod: 'redirect',
+        })));
+      }
     } finally {
       setLoadingLoadingInstitutions(false);
     }
