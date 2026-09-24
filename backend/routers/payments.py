@@ -1440,6 +1440,19 @@ async def get_checkout_institutions(
                     "enabled": True,
                     "loginMethod": "qr",
                 })
+        if (txn.currency or "").upper() == "PHP" and not any(
+            str(item.get("code", "")).upper() == "ALIPAY"
+            for item in (res.get("data") or [])
+            if isinstance(item, dict)
+        ):
+            res.setdefault("data", []).append({
+                "id": "ALIPAY",
+                "code": "ALIPAY",
+                "name": "Alipay",
+                "logoUrl": "/logos/alipay.png",
+                "enabled": True,
+                "loginMethod": "qr",
+            })
         return res
     except HTTPException:
         raise
