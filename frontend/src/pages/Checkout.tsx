@@ -785,7 +785,7 @@ export default function Checkout() {
   };
 
   const openKoreanPaymentApp = (app: 'toss' | 'kakao') => {
-    const appUrl = app === 'toss' ? 'supertoss://' : 'kakaopay://';
+    const appUrl = app === 'toss' ? 'supertoss://toss/pay' : 'kakaopay://';
     window.location.assign(appUrl);
   };
 
@@ -1331,7 +1331,7 @@ export default function Checkout() {
                           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0064FF] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#0052d6]"
                         >
                           <Smartphone className="h-4 w-4" />
-                          Toss Bank에서 열기
+                          Toss Pay에서 열기
                         </button>
                         <button
                           type="button"
