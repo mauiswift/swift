@@ -40,13 +40,13 @@ type TossForm = {
   contact_email: string;
 };
 
-type TossVirtualAccount = {
-  bank_name: string;
+type TossBankAccount = {
+  value: string;
+  label: string;
+  bank_name?: string;
   account_number: string;
-  account_holder_name: string;
-  currency: string;
-  account_type: string;
-  status?: 'active' | 'suspended';
+  account_name: string;
+  currency: 'KRW';
 };
 
 const createTossForm = (user?: { name?: string | null; email?: string | null }): TossForm => ({
@@ -72,9 +72,11 @@ export default function Banking() {
   const [tossStep, setTossStep] = useState(1);
   const [tossSaving, setTossSaving] = useState(false);
   const [tossBenefitsUnlocked, setTossBenefitsUnlocked] = useState(false);
-  const [tossVirtualAccount, setTossVirtualAccount] = useState<TossVirtualAccount | null>(null);
+  const [tossAccounts, setTossAccounts] = useState<TossBankAccount[]>([]);
+  const [tossAccountsLoading, setTossAccountsLoading] = useState(false);
+  const [tossAccountsSaving, setTossAccountsSaving] = useState(false);
   const [usdtDepositAddress, setUsdtDepositAddress] = useState('');
-  const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user || undefined));
+  const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user));
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingSignature = useRef(false);
   const [signatureData, setSignatureData] = useState('');
@@ -114,13 +116,24 @@ export default function Banking() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!user?.permissions?.is_super_admin) return;
+    setTossAccountsLoading(true);
+    client.get('/api/v1/app-settings/toss-bank-accounts')
+      .then((res) => {
+        if (!res.ok) throw new Error(res.data?.detail || 'Unable to load Toss Bank accounts');
+        setTossAccounts(res.data?.accounts || []);
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to load Toss Bank accounts'))
+      .finally(() => setTossAccountsLoading(false));
+  }, [user?.permissions?.is_super_admin]);
+
+  useEffect(() => {
     if (!user?.id) return;
     client.get(`/api/v1/users/${user.id}/toss-virtual-account`)
       .then((res) => {
         if (res.ok) {
           setTossStatus(res.data?.status || 'not_started');
           setTossBenefitsUnlocked(Boolean(res.data?.benefits?.unlocked));
-          setTossVirtualAccount(res.data?.virtual_account || null);
         }
       })
       .catch(() => toast.error('Unable to load TOSS Virtual Account status'));
@@ -161,7 +174,7 @@ export default function Banking() {
   };
 
   const openTossWizard = () => {
-    setTossForm(createTossForm(user || undefined));
+    setTossForm(createTossForm(user));
     setSignatureData('');
     setTossStep(1);
     setTossWizardOpen(true);
@@ -285,6 +298,41 @@ export default function Banking() {
     }
   };
 
+  const updateTossAccount = (index: number, field: keyof TossBankAccount, value: string) => {
+    setTossAccounts((current) => current.map((account, accountIndex) => (
+      accountIndex === index ? { ...account, [field]: value } : account
+    )));
+  };
+
+  const addTossAccount = () => {
+    setTossAccounts((current) => [...current, {
+      value: `toss-${current.length + 1}`,
+      label: 'Toss Bank',
+      bank_name: 'Toss Bank',
+      account_number: '',
+      account_name: '',
+      currency: 'KRW',
+    }]);
+  };
+
+  const saveTossAccounts = async () => {
+    if (!tossAccounts.length || tossAccounts.some(account => !account.account_number.trim() || !account.account_name.trim())) {
+      toast.error('Enter an account number and account holder name for every Toss Bank account.');
+      return;
+    }
+    setTossAccountsSaving(true);
+    try {
+      const res = await client.request('/api/v1/app-settings/toss-bank-accounts', 'PUT', { accounts: tossAccounts });
+      if (!res.ok) throw new Error(res.data?.detail || 'Unable to save Toss Bank accounts');
+      setTossAccounts(res.data?.accounts || tossAccounts);
+      toast.success('Toss Bank account pool updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save Toss Bank accounts');
+    } finally {
+      setTossAccountsSaving(false);
+    }
+  };
+
   const ROWS = [
     { label: 'Settlement type', value: user?.settlement_type || DEFAULT_SETTLEMENT_TYPE },
     { label: 'Settlement currency', value: user?.settlement_currency || DEFAULT_SETTLEMENT_CURRENCY },
@@ -323,24 +371,6 @@ export default function Banking() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Banking</h1>
         </div>
 
-        <div className="mb-8 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Settlement status</p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${isConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <p className="text-sm font-semibold text-slate-900">{isConfigured ? 'Ready to settle' : 'Setup required'}</p>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Settlement currency</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">KRW <span className="font-normal text-slate-500">· Korean won</span></p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Payment channels</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">{channelEligible ? 'Available to configure' : 'Locked'}</p>
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="border-b border-slate-200 mb-10">
           <span className="inline-block text-[13px] font-semibold text-slate-900 pb-4 border-b-2 border-[#FF6B00] -mb-[2px]">
@@ -350,10 +380,9 @@ export default function Banking() {
 
         <div className="app-panel max-w-3xl p-5 sm:p-8">
           <div className="flex items-center justify-between gap-4 mb-10">
-            <div>
-              <p className="text-[14px] text-slate-700 font-semibold m-0">Settlement account</p>
-              <p className="mt-1 text-[13px] text-slate-500">Review the details used for KRW settlement payouts.</p>
-            </div>
+            <p className="text-[14px] text-slate-500 font-medium m-0">
+              Review all the critical details of your settlement account.
+            </p>
             <Button type="button" variant="outline" onClick={() => setSettlementEditing(value => !value)} className="shrink-0 gap-2">
               <PenLine size={15} /> {settlementEditing ? 'Cancel' : 'Edit account'}
             </Button>
@@ -424,6 +453,35 @@ export default function Banking() {
             </div>
           )}
         </div>
+
+        {user?.permissions?.is_super_admin && (
+          <div className="app-panel max-w-3xl p-5 sm:p-8 mt-6">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-[16px] font-semibold text-slate-900">TOSS Bank checkout accounts</h2>
+                <p className="text-[13px] text-slate-500 mt-1">
+                  New checkout sessions rotate through this pool. Manual KRW deposits keep one stable account per user.
+                </p>
+              </div>
+              <Button type="button" variant="outline" onClick={addTossAccount}>Add account</Button>
+            </div>
+            {tossAccountsLoading ? (
+              <p className="text-sm text-slate-500">Loading Toss Bank accounts...</p>
+            ) : (
+              <div className="space-y-4">
+                {tossAccounts.map((account, index) => (
+                  <div key={`${account.value}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-2">
+                    <div><Label>Account number</Label><Input value={account.account_number} onChange={event => updateTossAccount(index, 'account_number', event.target.value)} className="mt-1.5" /></div>
+                    <div><Label>Account holder</Label><Input value={account.account_name} onChange={event => updateTossAccount(index, 'account_name', event.target.value)} className="mt-1.5" /></div>
+                  </div>
+                ))}
+                <Button type="button" onClick={saveTossAccounts} disabled={tossAccountsSaving || !tossAccounts.length} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
+                  {tossAccountsSaving ? 'Saving...' : 'Save Toss account pool'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-[720px] shadow-sm mt-6">
           <div className="flex items-start justify-between gap-4 mb-6">
@@ -524,36 +582,12 @@ export default function Banking() {
                 <p className="mt-2 text-xs text-emerald-200/70">Your TOSS Bank account will be opened after your Relationship Manager approves the application.</p>
               </div>
             </div>
-          ) : tossStatus === 'approved' && tossVirtualAccount?.status !== 'suspended' ? (
+          ) : tossStatus === 'approved' ? (
             <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-[13px] text-emerald-100">
               <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
-              <div className="min-w-0">
-                <p className="font-semibold">TOSS Bank account approved</p>
-                <p className="mt-1 text-emerald-200/80">Your account is active and ready to receive KRW payments.</p>
-                {tossVirtualAccount && (
-                  <div className="mt-4 grid gap-3 rounded-lg border border-emerald-300/20 bg-slate-900/50 p-4 sm:grid-cols-3">
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/60">Bank</p>
-                      <p className="mt-1 font-medium text-white">{tossVirtualAccount.bank_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/60">Account number</p>
-                      <p className="mt-1 font-mono font-medium text-white">{tossVirtualAccount.account_number}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/60">Account holder</p>
-                      <p className="mt-1 font-medium text-white">{tossVirtualAccount.account_holder_name}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : tossStatus === 'approved' && tossVirtualAccount?.status === 'suspended' ? (
-            <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-[13px] text-red-100">
-              <ShieldCheck size={18} className="mt-0.5 shrink-0 text-red-300" />
               <div>
-                <p className="font-semibold">TOSS Bank account suspended</p>
-                <p className="mt-1 text-red-200/80">This account is temporarily unavailable for KRW payments. Contact support for assistance.</p>
+                <p className="font-semibold">TOSS Bank account approved</p>
+                <p className="mt-1 text-emerald-200/80">Your Relationship Manager approved your application. Your TOSS Bank account opening will now be completed.</p>
               </div>
             </div>
           ) : tossStatus === 'rejected' ? (
@@ -572,26 +606,26 @@ export default function Banking() {
         </div>
 
         <Dialog open={tossWizardOpen} onOpenChange={closeTossWizard}>
-          <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full flex-col gap-0 overflow-hidden rounded-none border-slate-700 bg-slate-950 p-0 text-white sm:h-auto sm:max-h-[90vh] sm:max-w-[640px] sm:rounded-lg sm:p-6">
-            <DialogHeader className="shrink-0 border-b border-slate-800 px-4 pb-4 pt-5 sm:border-0 sm:px-0 sm:pb-0 sm:pt-0">
-              <DialogTitle className="flex items-center gap-2 pr-8 text-lg font-semibold text-white sm:gap-3 sm:text-xl">
-                <PaymentBrandLogo brand="Toss Bank" size="lg" className="h-8 w-20 rounded-lg sm:h-9 sm:w-24" />
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[640px] border-slate-700 bg-slate-950 text-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white">
+                <PaymentBrandLogo brand="Toss Bank" size="lg" className="h-9 w-24 rounded-lg" />
                 토스 가상계좌 신청
               </DialogTitle>
-              <p className="mt-2 text-xs leading-5 text-slate-400 sm:text-sm">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>
-              <div className="grid grid-cols-3 gap-1.5 pt-4 sm:gap-2">
+              <p className="text-sm text-slate-400">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>
+              <div className="grid grid-cols-3 gap-2 pt-4">
                 {['사업자 정보', '계좌 정보', '검토 및 서명'].map((label, index) => {
                   const step = index + 1;
                   return (
-                    <div key={label} className={`border-t-2 pt-1.5 sm:pt-2 ${tossStep >= step ? 'border-cyan-400' : 'border-slate-700'}`}>
+                    <div key={label} className={`border-t-2 pt-2 ${tossStep >= step ? 'border-cyan-400' : 'border-slate-700'}`}>
                       <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${tossStep >= step ? 'text-cyan-300' : 'text-slate-500'}`}>{step}</p>
-                      <p className={`mt-1 truncate text-[11px] sm:text-xs ${tossStep >= step ? 'text-slate-200' : 'text-slate-500'}`}>{label}</p>
+                      <p className={`mt-1 text-xs ${tossStep >= step ? 'text-slate-200' : 'text-slate-500'}`}>{label}</p>
                     </div>
                   );
                 })}
               </div>
             </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 text-slate-200 sm:px-0">
+            <div className="py-5 text-slate-200">
               {tossStep === 1 && (
                 <div className="space-y-4">
                   <div><Label className="text-slate-300">법인명 또는 사업자명</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.legal_name} onChange={(e) => updateTossField('legal_name', e.target.value)} placeholder="등록된 사업자명을 입력하세요" /></div>
@@ -647,7 +681,7 @@ export default function Banking() {
                     </div>
                     <canvas
                       ref={signatureCanvasRef}
-                      className="mt-2 h-44 w-full touch-none rounded-lg border border-slate-600 bg-white sm:h-36"
+                      className="mt-2 h-36 w-full touch-none rounded-lg border border-slate-600 bg-white"
                       onPointerDown={startSignature}
                       onPointerMove={drawSignature}
                       onPointerUp={finishSignature}
@@ -655,14 +689,14 @@ export default function Banking() {
                       onPointerLeave={finishSignature}
                       aria-label="Signature drawing area"
                     />
-                    <p className="mt-2 text-xs leading-5 text-slate-500">휴대폰에서는 손가락으로 서명란 안에 천천히 서명해 주세요.</p>
+                    <p className="mt-1 text-xs text-slate-500">마우스나 손가락으로 서명란에 서명해 주세요.</p>
                   </div>
                 </div>
               )}
             </div>
-            <DialogFooter className="shrink-0 border-t border-slate-800 bg-slate-950 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-4">
-              <Button variant="ghost" className="flex-1 text-slate-400 hover:bg-slate-800 hover:text-white sm:flex-none" onClick={() => tossStep === 1 ? closeTossWizard(false) : setTossStep(tossStep - 1)} disabled={tossSaving}><ArrowLeft size={15} className="mr-2" />Back</Button>
-              {tossStep < 3 ? <Button onClick={() => isTossStepValid(tossStep) && setTossStep(tossStep + 1)} disabled={!isTossStepValid(tossStep)} className="flex-1 bg-cyan-400 text-slate-950 hover:bg-cyan-300 sm:flex-none">Continue<ArrowRight size={15} className="ml-2" /></Button> : <Button onClick={submitTossApplication} disabled={tossSaving || !isTossStepValid(3)} className="flex-1 bg-cyan-400 text-slate-950 hover:bg-cyan-300 sm:flex-none">{tossSaving ? <Loader2 size={15} className="mr-2 animate-spin" /> : null}Submit request</Button>}
+            <DialogFooter className="flex-row justify-between sm:justify-between">
+              <Button variant="ghost" className="text-slate-400 hover:bg-slate-800 hover:text-white" onClick={() => tossStep === 1 ? closeTossWizard(false) : setTossStep(tossStep - 1)} disabled={tossSaving}><ArrowLeft size={15} className="mr-2" />Back</Button>
+              {tossStep < 3 ? <Button onClick={() => isTossStepValid(tossStep) && setTossStep(tossStep + 1)} disabled={!isTossStepValid(tossStep)} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">Continue<ArrowRight size={15} className="ml-2" /></Button> : <Button onClick={submitTossApplication} disabled={tossSaving || !isTossStepValid(3)} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">{tossSaving ? <Loader2 size={15} className="mr-2 animate-spin" /> : null}Submit request</Button>}
             </DialogFooter>
           </DialogContent>
         </Dialog>

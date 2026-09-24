@@ -14,6 +14,7 @@ from sqlalchemy import select
 from core.database import get_db
 from main import app
 from services.transactions import TransactionsService
+from services.paymentwall_service import PaymentwallService
 
 
 def test_public_transaction_lookup_returns_transaction():
@@ -146,39 +147,13 @@ def test_krw_checkout_does_not_expose_security_bank():
 
         assert response.status_code == 200
         payload = response.json()
-        assert payload["bank_name"] is None
-        assert payload["bank_account_number"] is None
-        assert payload["bank_account_name"] is None
-
-
-def test_usdt_checkout_includes_trc20_deposit_address():
-    with TestClient(app) as client:
-        async def seed_transaction():
-            async for session in get_db():
-                svc = TransactionsService(session)
-                txn = await svc.create_transaction(
-                    user_id="demo-user",
-                    transaction_type="payment_link",
-                    amount=25.0,
-                    external_id=f"usdt-checkout-{uuid.uuid4().hex[:8]}",
-                    gateway_id="gw-usdt",
-                    description="USDT checkout",
-                    customer_name="Demo",
-                    customer_email="demo@example.com",
-                    payment_url="/checkout/usdt",
-                    status="pending",
-                    currency="USDT",
-                )
-                await session.commit()
-                return txn
-
-        txn = asyncio.run(seed_transaction())
-        response = client.get(f"/api/v1/payments/checkout/{txn.external_id}")
-
-        assert response.status_code == 200
-        payload = response.json()
-        assert payload["currency"] == "USDT"
-        assert "usdt_deposit_address" in payload
+        assert payload["bank_name"] == "Toss Bank"
+        expected_account = PaymentwallService.generate_krw_virtual_account(
+            user_id="demo-user",
+            reference_id=txn.external_id,
+        )
+        assert payload["bank_account_number"] == expected_account["number"]
+        assert "security" not in payload["bank_name"].casefold()
 
 
 def test_legacy_gcash_redirect_uses_internal_swiftpay_gcash_page():

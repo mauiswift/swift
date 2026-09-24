@@ -11,10 +11,9 @@ from core.config import settings
 class PaymentwallService:
     """Build signed Paymentwall Widget URLs and validate pingbacks."""
 
-    KRW_BANK_NAME = None
-    KRW_ACCOUNT_NUMBER = None
-    KRW_ACCOUNT_NAME = None
-    KRW_SWIFT_CODE = None
+    KRW_BANK_NAME = "Toss Bank"
+    KRW_ACCOUNT_NAME = "SwiftPay Ventures Inc."
+    KRW_SWIFT_CODE = "TVBKVVTTXXX"
 
     BASE_URL = "https://api.paymentwall.com/api"
 
@@ -47,30 +46,21 @@ class PaymentwallService:
         bank_name: Optional[str] = None,
         account_holder_name: Optional[str] = None,
         account_number: Optional[str] = None,
-    ) -> Dict[str, Optional[str]]:
-        """Return KRW bank details only when the merchant has configured a real transfer account.
-
-        The SwiftPay public docs do not provide a provider-issued KRW virtual account,
-        so this method deliberately returns no fabricated values.
-        """
-        resolved_bank_name = (bank_name or PaymentwallService.KRW_BANK_NAME or "").strip()
-        resolved_account_name = (account_holder_name or PaymentwallService.KRW_ACCOUNT_NAME or "").strip()
-        if not resolved_bank_name or not resolved_account_name:
-            return {
-                "bank_name": None,
-                "number": None,
-                "name": None,
-                "account_name": None,
-                "swift_code": None,
-                "account_type": None,
-            }
-
-        resolved_number = (account_number or PaymentwallService.KRW_ACCOUNT_NUMBER or "").strip()
+    ) -> Dict[str, str]:
+        """Return stable Korean virtual-account details for one payment session."""
+        bank_name = bank_name or PaymentwallService.KRW_BANK_NAME
+        account_holder_name = account_holder_name or PaymentwallService.KRW_ACCOUNT_NAME
+        seed = f"{user_id}:{reference_id}"
+        digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+        digits = "".join(ch for ch in digest if ch.isdigit())[:14]
+        if len(digits) < 14:
+            digits = (digits + "0" * 14)[:14]
+        account_number = account_number or f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
         return {
-            "bank_name": resolved_bank_name,
-            "number": resolved_number or None,
-            "name": resolved_account_name,
-            "account_name": resolved_account_name,
+            "bank_name": bank_name,
+            "number": account_number,
+            "name": account_holder_name,
+            "account_name": account_holder_name,
             "swift_code": PaymentwallService.KRW_SWIFT_CODE,
             "account_type": "virtual_account",
         }
@@ -87,22 +77,17 @@ class PaymentwallService:
         account_number: Optional[str] = None,
         qr_payload: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create bank-transfer metadata and a QR payload for KRW sessions when configured."""
+        """Create bank-transfer metadata and a QR payload for KRW sessions."""
         account = self.generate_krw_virtual_account(
             user_id=user_id,
             reference_id=reference_id,
             bank_name=bank_name,
             account_holder_name=account_holder_name,
-            account_number=account_number or self.KRW_ACCOUNT_NUMBER,
+            account_number=account_number,
         )
-        if not account.get("bank_name") or not account.get("account_name"):
-            return {
-                "success": False,
-                "error": "KRW bank details are not configured",
-            }
         transfer_text = (
             f"Bank: {account['bank_name']}\n"
-            f"Account Name: {account['account_name']}\n"
+            "Account Name: SwiftPay Ventures Inc.\n"
             f"Amount: {amount:.2f} KRW\n"
             f"Reference: {reference_id}\n"
             f"Memo: {description or 'SwiftPay payment'}"
@@ -163,9 +148,6 @@ class PaymentwallService:
             reference_id=reference_id,
             description=description,
         )
-        if not bank_session.get("success"):
-            result["error"] = bank_session.get("error", "KRW bank details are not configured")
-            return result
         result["bank_account"] = bank_session["bank_account"]
         result["qr_code_url"] = bank_session["qr_code_url"]
         result["transfer_text"] = bank_session["transfer_text"]

@@ -20,7 +20,7 @@ from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
-from services.app_settings import get_payment_channels, get_usdt_trc20_address
+from services.app_settings import get_payment_channels
 from services.url_shortener import URLShortenerService
 from io import BytesIO
 import qrcode
@@ -29,10 +29,10 @@ import logging
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.magpie_services import CurrencyConverter, MagpieService
-from services.payment_gateway import gateway, _select_manual_transfer_account, _is_security_bank_name
+from services.payment_gateway import gateway, _select_manual_transfer_account
+from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
-from services.exchange_rate_service import get_rate
 from services.event_bus import payment_event_bus
 from utils.datetime import serialize_utc_datetime
 
@@ -224,26 +224,8 @@ class CheckoutInstitutionRequest(BaseModel):
     amount: Optional[float] = Field(default=None, gt=0)
 
 
-class CheckoutSwiftPayCurrencyRequest(BaseModel):
-    currency: Literal["USD", "EUR"]
-
-
 class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
-
-
-class MagpieCardDetails(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
-    number: str = Field(..., min_length=12, max_length=19)
-    exp_month: str = Field(..., min_length=2, max_length=2)
-    exp_year: str = Field(..., min_length=4, max_length=4)
-    cvc: str = Field(..., min_length=3, max_length=4)
-
-
-class MagpieCardDetailsRequest(BaseModel):
-    card: Dict[str, Any]
-    customer_country: Optional[str] = None
-    country: Optional[str] = None
 
 
 @router.get("/checkout/{identifier}/magpie-card/config")
@@ -332,6 +314,14 @@ async def create_magpie_card_source(
 
 class MagpieCardSourceRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
+
+
+class MagpieCardDetails(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    number: str = Field(..., min_length=12, max_length=19)
+    exp_month: str = Field(..., min_length=2, max_length=2)
+    exp_year: str = Field(..., min_length=4, max_length=4)
+    cvc: str = Field(..., min_length=3, max_length=4)
 
 
 class MagpieCardSourceProxyRequest(BaseModel):
@@ -1297,19 +1287,13 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            bank_name = txn.bank_name or bank_name
-            if _is_security_bank_name(bank_name):
-                bank_name = None
-            bank_account_number = txn.bank_account_number or bank_account_number
-            bank_account_name = txn.bank_account_name or bank_account_name
-            if not (bank_name and bank_account_number and bank_account_name):
-                bank_name = None
-                bank_account_number = None
-                bank_account_name = None
-
-        usdt_deposit_address = None
-        if (txn.currency or "").upper() == "USDT":
-            usdt_deposit_address = await get_usdt_trc20_address(db)
+            virtual_account = PaymentwallService.generate_krw_virtual_account(
+                user_id=str(txn.user_id),
+                reference_id=str(txn.external_id or txn.id),
+            )
+            bank_name = txn.bank_name or bank_name or virtual_account["bank_name"]
+            bank_account_number = txn.bank_account_number or bank_account_number or virtual_account["number"]
+            bank_account_name = txn.bank_account_name or bank_account_name or virtual_account["account_name"]
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
@@ -1334,7 +1318,6 @@ async def get_checkout_payment(
             "bank_name": bank_name,
             "bank_account_number": bank_account_number,
             "bank_account_name": bank_account_name,
-            "usdt_deposit_address": usdt_deposit_address,
             "created_at": serialize_utc_datetime(txn.created_at),
             "updated_at": serialize_utc_datetime(txn.updated_at),
         }
@@ -1662,80 +1645,3 @@ async def select_checkout_institution(
         }
 
     return {"success": True, "redirect_url": redirect_url}
-
-
-@router.post("/checkout/{identifier}/swiftpay-currency")
-async def select_checkout_swiftpay_currency(
-    identifier: str,
-    payload: CheckoutSwiftPayCurrencyRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    """Create a SwiftPay USD/EUR alternative for a KRW checkout."""
-    stmt = select(Transactions).where(
-        or_(
-            func.lower(Transactions.external_id) == identifier.lower(),
-            func.lower(Transactions.xendit_id) == identifier.lower(),
-            func.lower(Transactions.payment_url) == identifier.lower(),
-            func.lower(Transactions.qr_code_url) == identifier.lower(),
-        )
-    ).limit(1)
-    result = await db.execute(stmt)
-    txn = result.scalars().first()
-    if not txn:
-        raise HTTPException(status_code=404, detail="Payment not found")
-    if (txn.currency or "").upper() != "KRW":
-        raise HTTPException(status_code=400, detail="SwiftPay currency alternatives are only available for KRW payments")
-
-    service = SwiftPayService()
-    if not service.is_configured():
-        raise HTTPException(status_code=503, detail="SwiftPay is not configured")
-    try:
-        rate = await get_rate(f"{payload.currency}_KRW")
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail="Unable to obtain the current exchange rate") from exc
-
-    amount_krw = float(txn.amount or 0)
-    amount_foreign = round(amount_krw / rate, 2)
-    if amount_foreign <= 0:
-        raise HTTPException(status_code=400, detail="Payment amount must be greater than zero")
-    order_result = await service.create_order(
-        amount=amount_foreign,
-        reference_no=f"{txn.external_id}-{payload.currency}",
-        details={
-            "description": txn.description or "",
-            "customer_name": txn.customer_name or "",
-            "customer_email": txn.customer_email or "",
-            "original_currency": "KRW",
-            "original_amount": f"{amount_krw:.2f}",
-            "exchange_rate": f"{rate:.8f}",
-        },
-        currency=payload.currency,
-        generate_customer_redirect_url=True,
-        merchant_redirect_url=(
-            f"{str(settings.public_checkout_host).rstrip('/')}/checkout/"
-            f"{quote(str(txn.external_id), safe='')}?payment_method=swiftpay-{payload.currency.lower()}"
-            if settings.public_checkout_host
-            else None
-        ),
-        merchant_webhook_url=settings.swiftpay_callback_url or None,
-    )
-    if not order_result.get("success"):
-        raise HTTPException(status_code=502, detail=order_result.get("error", "Could not create SwiftPay checkout"))
-
-    order_data = order_result.get("data") or {}
-    redirect_url = order_data.get("customerRedirectUrl") or order_data.get("customer_redirect_url")
-    if not redirect_url:
-        raise HTTPException(status_code=502, detail="SwiftPay did not return a checkout URL")
-    gateway_id = order_data.get("paymentId") or order_data.get("payment_id") or order_data.get("id")
-    if gateway_id:
-        txn.xendit_id = gateway_id
-    txn.updated_at = datetime.now(timezone.utc)
-    await db.commit()
-    return {
-        "success": True,
-        "redirect_url": redirect_url,
-        "currency": payload.currency,
-        "amount": amount_foreign,
-        "amount_krw": amount_krw,
-        "exchange_rate": rate,
-    }

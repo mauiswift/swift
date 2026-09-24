@@ -23,6 +23,7 @@ from services.app_settings import get_payment_channels
 from services.app_settings import get_deposit_accounts
 from services.swiftpay_service import SwiftPayService
 from services.payment_gateway import _is_security_bank_name, _select_manual_transfer_account
+from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
@@ -155,11 +156,6 @@ async def get_checkout_institutions_compat(
             "id": "QRPH", "code": "QRPH", "name": "QR Ph",
             "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr",
         })
-    if "ALIPAY" not in returned_codes:
-        institutions.insert(0, {
-            "id": "ALIPAY", "code": "ALIPAY", "name": "Alipay",
-            "logoUrl": "/logos/alipay.png", "enabled": True, "loginMethod": "qr",
-        })
     if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
         institutions.append({
             "id": "NETBANK", "code": "NETBANK", "name": "NetBank",
@@ -184,7 +180,7 @@ async def select_checkout_institution_compat(
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
 
-    if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
+    if institution_code in {"GCASH", "QRPH"}:
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
@@ -192,13 +188,13 @@ async def select_checkout_institution_compat(
             qr_type="P2M",
         )
         if not qr_result.get("success"):
-            raise HTTPException(status_code=502, detail=qr_result.get("error", "Could not create QR checkout"))
+            raise HTTPException(status_code=502, detail=qr_result.get("error", "Could not create QRPH checkout"))
         data = qr_result.get("data") or {}
         qr_code = data.get("qrCode") or data.get("qr_code") or data.get("qrImage") or data.get("qr_image")
         qr_content = data.get("qrContent") or data.get("qr_content") or data.get("payload")
         deep_link = data.get("gcashDeepLink") or data.get("gcash_deep_link") or data.get("deepLink")
         if not qr_code and not qr_content and not deep_link:
-            raise HTTPException(status_code=502, detail="SwiftPay did not return a QR payload")
+            raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.transaction_type = "swiftpay_qr"
@@ -219,14 +215,13 @@ async def select_checkout_institution_compat(
                 bank_name = configured_account.get("label") or configured_account.get("value") or bank_name
                 bank_account_number = configured_account.get("account_number")
                 bank_account_name = configured_account.get("account_name")
-        payment_method = "gcash" if institution_code == "GCASH" else "qrph" if institution_code == "QRPH" else "alipay"
         return {
             "success": True,
-            "payment_method": payment_method,
+            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
             "qr_code": qr_code,
             "qr_content": qr_content,
             "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={payment_method}",
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
         }
 
     order_result = await service.create_order(
@@ -574,15 +569,17 @@ async def get_checkout_payment_compat(
                 txn.bank_account_number = bank_account_number
                 txn.bank_account_name = bank_account_name
                 await db.commit()
-        bank_name = txn.bank_name or bank_name
+        virtual_account = PaymentwallService.generate_krw_virtual_account(
+            user_id=str(txn.user_id),
+            reference_id=str(txn.external_id or txn.id),
+        )
+        bank_name = txn.bank_name or bank_name or virtual_account["bank_name"]
+        bank_account_number = txn.bank_account_number or bank_account_number or virtual_account["number"]
+        bank_account_name = txn.bank_account_name or bank_account_name or virtual_account["account_name"]
         if _is_security_bank_name(bank_name):
-            bank_name = None
-        bank_account_number = txn.bank_account_number or bank_account_number
-        bank_account_name = txn.bank_account_name or bank_account_name
-        if not (bank_name and bank_account_number and bank_account_name):
-            bank_name = None
-            bank_account_number = None
-            bank_account_name = None
+            bank_name = virtual_account["bank_name"]
+            bank_account_number = virtual_account["number"]
+            bank_account_name = virtual_account["account_name"]
 
     return {
         "success": True,

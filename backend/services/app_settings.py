@@ -153,6 +153,8 @@ async def get_user_manual_deposit_account(
             for key in ("value", "label", "bank_name")
         )
     ]
+    if normalized_currency == "KRW" and not toss_accounts:
+        return None
     eligible = toss_accounts or accounts
     digest = hashlib.sha256(f"{normalized_currency}:{user_id}".encode("utf-8")).digest()
     return dict(eligible[int.from_bytes(digest[:8], "big") % len(eligible)])

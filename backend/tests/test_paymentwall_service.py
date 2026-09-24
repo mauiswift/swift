@@ -74,7 +74,7 @@ def test_krw_qr_uses_hosted_payload_instead_of_bank_details():
     assert "order-123" in result["qr_code_url"]
 
 
-def test_krw_qr_hides_account_number_and_uses_configured_name():
+def test_krw_qr_hides_account_number_and_uses_swiftpay_account_name():
     service = PaymentwallService()
 
     result = service.create_krw_bank_transfer_qr(
@@ -86,20 +86,69 @@ def test_krw_qr_hides_account_number_and_uses_configured_name():
     )
 
     assert "Account Number:" not in result["qr_payload"]
-    assert "Different Name" in result["qr_payload"]
+    assert "SwiftPay Ventures Inc." in result["qr_payload"]
+    assert "Different Name" not in result["qr_payload"]
 
 
-def test_krw_qr_requires_configured_account_details():
+def test_krw_qr_generates_session_specific_toss_bank_account_details():
     service = PaymentwallService()
 
-    result = service.create_krw_bank_transfer_qr(
+    first = service.create_krw_bank_transfer_qr(
         user_id="merchant-1",
         amount=1250,
         reference_id="order-789",
     )
+    second = service.create_krw_bank_transfer_qr(
+        user_id="merchant-1",
+        amount=1250,
+        reference_id="order-790",
+    )
 
-    assert result["success"] is False
-    assert result["error"] == "KRW bank details are not configured"
+    assert first["bank_account"]["bank_name"] == "Toss Bank"
+    assert first["bank_account"]["account_type"] == "virtual_account"
+    assert first["bank_account"]["number"] != second["bank_account"]["number"]
+    assert first["bank_account"] == service.create_krw_bank_transfer_qr(
+        user_id="merchant-1",
+        amount=1250,
+        reference_id="order-789",
+    )["bank_account"]
+
+
+@pytest.mark.asyncio
+async def test_checkout_toss_account_rotates_from_previous_session(monkeypatch):
+    from services import payment_gateway
+
+    accounts = [
+        {
+            "value": "toss-primary",
+            "label": "Toss Bank",
+            "bank_name": "Toss Bank",
+            "account_number": "111-222-333",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+        {
+            "value": "toss-secondary",
+            "label": "Toss Bank",
+            "bank_name": "Toss Bank",
+            "account_number": "444-555-666",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+    ]
+
+    class FakeResult:
+        def scalar_one_or_none(self):
+            return "111-222-333"
+
+    class FakeDb:
+        async def execute(self, statement):
+            return FakeResult()
+
+    monkeypatch.setattr(payment_gateway, "get_deposit_accounts", AsyncMock(return_value=accounts))
+    selected = await payment_gateway._select_manual_transfer_account(FakeDb(), "KRW", 1250)
+
+    assert selected["bank_account_number"] == "444-555-666"
 
 
 def test_pingback_signature_is_verified(monkeypatch):
@@ -144,6 +193,46 @@ async def test_set_deposit_accounts_accepts_numeric_string_minimum_amount(monkey
 
     payload = json.loads(captured["value"])
     assert payload[0]["minimum_amount"] == 400000.0
+
+
+@pytest.mark.asyncio
+async def test_krw_manual_deposit_account_is_one_stable_toss_account_per_user(monkeypatch):
+    from services import app_settings
+
+    accounts = [
+        {
+            "value": "toss-primary",
+            "label": "Toss Bank",
+            "bank_name": "Toss Bank",
+            "account_number": "111-222-333",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+        {
+            "value": "toss-secondary",
+            "label": "Toss Bank",
+            "bank_name": "Toss Bank",
+            "account_number": "444-555-666",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+        {
+            "value": "other-bank",
+            "label": "Other Bank",
+            "bank_name": "Other Bank",
+            "account_number": "777-888-999",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+    ]
+    monkeypatch.setattr(app_settings, "get_deposit_accounts", AsyncMock(return_value=accounts))
+
+    first = await app_settings.get_user_manual_deposit_account(None, "user-1", "KRW")
+    second = await app_settings.get_user_manual_deposit_account(None, "user-1", "KRW")
+
+    assert first == second
+    assert first["bank_name"] == "Toss Bank"
+    assert first["account_number"] != "777-888-999"
 
 
 @pytest.mark.asyncio
