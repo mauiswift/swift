@@ -737,7 +737,9 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
     role_map = {
         "owner": PredefinedRoleEnum.OWNER,
         "admin": PredefinedRoleEnum.ADMIN,
+        "manager": PredefinedRoleEnum.MANAGER,
         "editor": PredefinedRoleEnum.OPERATOR,
+        "operator": PredefinedRoleEnum.OPERATOR,
         "viewer": PredefinedRoleEnum.VIEWER,
         "developer": PredefinedRoleEnum.DEVELOPER,
     }

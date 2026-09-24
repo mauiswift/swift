@@ -1326,7 +1326,9 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         role_map = {
             "owner": PredefinedRoleEnum.OWNER,
             "admin": PredefinedRoleEnum.ADMIN,
+            "manager": PredefinedRoleEnum.MANAGER,
             "editor": PredefinedRoleEnum.OPERATOR,
+            "operator": PredefinedRoleEnum.OPERATOR,
             "viewer": PredefinedRoleEnum.VIEWER,
             "developer": PredefinedRoleEnum.DEVELOPER,
         }
@@ -1351,12 +1353,14 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
                     setattr(admin_record, key, value)
             admin_record.team_permissions = repaired
             await db.commit()
-        elif not has_app_permission and admin_record.role == "approver":
+        elif not has_app_permission and admin_record.role in {"super_admin", "approver"}:
             repaired = {
                 "can_approve_topups": True,
                 "can_manage_transactions": True,
                 "can_view_reports": True,
             }
+            if admin_record.role == "super_admin":
+                repaired = get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
             for key, value in repaired.items():
                 setattr(admin_record, key, value)
             admin_record.team_permissions = repaired
