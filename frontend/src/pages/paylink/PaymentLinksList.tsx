@@ -7,13 +7,11 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, getIdentifiedPaymentLinkUrl, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { collectionCurrency } = useCollectionCurrency();
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
@@ -25,7 +23,7 @@ export default function PaymentLinksList() {
 
   const filteredLinks = useMemo(() => {
     const currencyLinks = links.filter(
-      (link) => link.currency.toUpperCase() === collectionCurrency.toUpperCase(),
+      (link) =>       link.currency.toUpperCase() === 'PHP',
     );
     if (!searchTerm.trim()) {
       return currencyLinks;
@@ -38,7 +36,7 @@ export default function PaymentLinksList() {
         .toLowerCase()
         .includes(lowerTerm)
     );
-  }, [links, searchTerm, collectionCurrency]);
+  }, [links, searchTerm]);
 
   return (
     <Layout>
@@ -51,7 +49,7 @@ export default function PaymentLinksList() {
               type="button"
               onClick={async () => {
                 const response = await client.get(
-                  `/api/v1/payments/open-amount-link?currency=${encodeURIComponent(collectionCurrency)}`,
+                  '/api/v1/payments/open-amount-link?currency=PHP',
                 );
                 const url = response.ok && response.data?.url
                   ? new URL(response.data.url, window.location.origin).toString()

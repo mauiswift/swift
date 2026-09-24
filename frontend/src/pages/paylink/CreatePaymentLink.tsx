@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Landmark, QrCode, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
-import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const isKorean = language === 'ko';
-  const { collectionCurrency: sharedCurrency } = useCollectionCurrency();
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [validUntil, setValidUntil] = useState(() => {
@@ -22,10 +20,8 @@ export default function CreatePaymentLink() {
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [description, setDescription] = useState('');
-  const [currency, setCurrency] = useState(sharedCurrency);
+  const currency = 'PHP';
   const [error, setError] = useState('');
-
-  useEffect(() => setCurrency(sharedCurrency), [sharedCurrency]);
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
@@ -35,8 +31,8 @@ export default function CreatePaymentLink() {
       return;
     }
 
-    if (currency.toUpperCase() === 'KRW' && numericAmount < 1000) {
-      setError(isKorean ? 'KRW 결제 금액은 ₩1,000 이상이어야 합니다.' : 'KRW payment links must be at least ₩1,000.');
+    if (numericAmount < 1 || numericAmount > 50000) {
+      setError(isKorean ? 'PHP 결제 금액은 ₱1~₱50,000이어야 합니다.' : 'PHP payment links must be between ₱1 and ₱50,000.');
       return;
     }
 
@@ -49,7 +45,7 @@ export default function CreatePaymentLink() {
 
     try {
       const reference_no = orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
-      const normalizedCurrency = currency.toUpperCase();
+      const normalizedCurrency = currency;
       const response = normalizedCurrency === 'KRW'
         ? await client.post('/api/v1/krw/payment-links', {
             amount: numericAmount,
@@ -151,15 +147,29 @@ export default function CreatePaymentLink() {
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
-          <p className="text-[13px] text-slate-500 mb-10 leading-relaxed">
-            {isKorean ? '거래 정보를 입력하여 새 결제 링크를 만드세요.' : 'Enter transaction details to create a new payment link with the information you provided.'}
+          <p className="text-[13px] text-slate-500 mb-6 leading-relaxed">
+            {isKorean ? 'PHP 결제 링크를 만들고 GCash, QRPH 또는 은행 결제를 받을 수 있습니다.' : 'Create a PHP payment link and accept GCash, QRPH, or bank payments.'}
           </p>
+
+          <div className="mb-8 grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: QrCode, title: 'GCash / QRPH', text: 'Fast QR checkout' },
+              { icon: Landmark, title: 'Bank transfer', text: 'Supported PH banks' },
+              { icon: ShieldCheck, title: 'Secure checkout', text: 'Hosted by SwiftPay' },
+            ].map(({ icon: Icon, title: cardTitle, text }) => (
+              <div key={cardTitle} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <Icon size={17} className="mb-2 text-[#FF6B00]" />
+                <p className="text-xs font-semibold text-slate-900">{cardTitle}</p>
+                <p className="mt-1 text-[11px] text-slate-500">{text}</p>
+              </div>
+            ))}
+          </div>
 
           <div className="space-y-6">
             <div>
               <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '금액' : 'Amount'}</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">{currency}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">PHP</span>
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
