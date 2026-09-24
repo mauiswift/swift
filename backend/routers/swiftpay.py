@@ -14,6 +14,7 @@ from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
 from services.transactions import TransactionsService
 from services.url_shortener import URLShortenerService
+from services.checkout_urls import build_checkout_url
 from models.disbursements import Disbursements
 
 logger = logging.getLogger(__name__)
@@ -104,12 +105,12 @@ async def create_swiftpay_order(
             description=payload.description or "SwiftPay payment",
             customer_name=payload.customer_name or "",
             customer_email=payload.customer_email or "",
-            payment_url=f"/checkout/{payload.reference_no}",
+            payment_url=build_checkout_url(payload.reference_no, currency),
             status="pending",
             currency=currency,
             idempotency_key=payload.reference_no,
         )
-        redirect_url = f"/checkout/{payload.reference_no}"
+        redirect_url = build_checkout_url(payload.reference_no, currency)
 
         # Generate short URL for the payment link
         short_url_slug = await URLShortenerService.create_short_url(db, txn.id)

@@ -30,6 +30,7 @@ from services.krw_payment_service import (
     KRWDisbursementResponse,
     KOREAN_BANKS,
 )
+from services.checkout_urls import canonicalize_checkout_url
 from models.disbursements import Disbursements
 from sqlalchemy import select
 
@@ -115,6 +116,8 @@ async def create_krw_payment_link(
         
         # Store transaction if successful
         if response.success:
+            response.payment_url = canonicalize_checkout_url(response.payment_url, "KRW")
+            response.payment_link = canonicalize_checkout_url(response.payment_link, "KRW")
             from services.transactions import TransactionsService
             txn_service = TransactionsService(db)
             

@@ -15,7 +15,10 @@ export function buildPermanentPaymentLink(
   ) {
     throw new Error(`Unsupported permanent link currency: ${currency}`);
   }
-  return `${origin.replace(/\/$/, '')}/pay/${encodeURIComponent(
+  const baseOrigin = ['localhost', '127.0.0.1'].includes(new URL(origin).hostname)
+    ? origin.replace(/\/$/, '')
+    : `${new URL(origin).protocol}//kr.swiftpay.site`;
+  return `${baseOrigin}/pay/${encodeURIComponent(
     slug,
   )}-${normalizedCurrency}`;
 }

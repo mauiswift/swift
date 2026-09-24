@@ -96,10 +96,21 @@ export function getIdentifiedPaymentLinkUrl(link: PaymentLink, origin: string) {
   const rawUrl = link.paymentUrl || (link.externalId
     ? `${origin}/checkout/${encodeURIComponent(link.externalId)}`
     : '');
-  if (!rawUrl || !rawUrl.startsWith('/')) return rawUrl;
+  if (!rawUrl) return rawUrl;
 
   const url = new URL(rawUrl, origin);
-  url.searchParams.set('currency', link.currency.toUpperCase());
+  const currency = link.currency.toUpperCase();
+  const isCheckoutPath = url.pathname.startsWith('/checkout/');
+  const isSwiftPayHost = ['swiftpay.site', 'kr.swiftpay.site'].includes(url.hostname);
+  if (isCheckoutPath && (url.hostname === new URL(origin).hostname || isSwiftPayHost)) {
+    const originUrl = new URL(origin);
+    const isLocal = ['localhost', '127.0.0.1'].includes(originUrl.hostname);
+    if (!isLocal) {
+      url.protocol = originUrl.protocol;
+      url.host = 'kr.swiftpay.site';
+    }
+  }
+  if (isCheckoutPath) url.searchParams.set('currency', currency);
   return url.toString();
 }
 

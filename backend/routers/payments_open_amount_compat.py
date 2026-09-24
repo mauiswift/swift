@@ -26,6 +26,7 @@ from services.ph_banks_service import PHBanksService
 from services.payment_gateway import _is_security_bank_name, _select_manual_transfer_account
 from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
+from services.checkout_urls import build_checkout_url
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 xend_compat_router = APIRouter(prefix="/api/v1/xend", tags=["xend"])
@@ -409,7 +410,7 @@ async def _get_open_amount_link(
             external_id=reference,
             status="pending",
             description=store_name or "Open amount payment",
-            payment_url=f"/checkout/{reference}?open_amount=1",
+            payment_url=build_checkout_url(reference, currency, {"open_amount": "1"}),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -426,7 +427,7 @@ async def _get_open_amount_link(
         "url": (
             f"/pay/{permanent_link_slug}-{currency}"
             if permanent_link_slug
-            else f"/checkout/{reference}?open_amount=1&currency={currency}"
+            else build_checkout_url(reference, currency, {"open_amount": "1", "currency": currency})
         ),
         "reference": reference,
         "store_name": store_name or None,
@@ -500,7 +501,7 @@ async def create_open_amount_payment_request_compat(
         status="pending",
         approval_status="pending",
         description="Customer-entered amount payment",
-        payment_url=f"/checkout/{request_reference}",
+        payment_url=build_checkout_url(request_reference, reusable.currency),
         **transfer_account,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),

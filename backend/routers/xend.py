@@ -13,6 +13,7 @@ from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.payment_processing import PaymentProcessor
 from services.swiftpay_service import SwiftPayService
+from services.checkout_urls import canonicalize_checkout_url
 from core.config import settings
 from services.transactions import TransactionsService
 from models.transactions import Transactions
@@ -340,7 +341,11 @@ async def _process_xend_request(
             return None
 
         payment_url = _pick(data, "customerRedirectUrl", "customer_redirect_url", "payment_url", "paymentUrl") or _pick(res, "reference_no", "referenceNo") or ""
-        checkout_url = _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url") or f"/checkout/{reference_no}"
+        checkout_url = canonicalize_checkout_url(
+            _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url")
+            or f"/checkout/{reference_no}",
+            effective_currency,
+        )
         gateway_id = _pick(data, "paymentId", "payment_id", "id") or ""
 
         txn_svc = TransactionsService(db)

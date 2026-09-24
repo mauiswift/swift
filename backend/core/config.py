@@ -181,6 +181,7 @@ class Settings(BaseSettings):
     # Public URLs
     frontend_url: str = ""
     public_checkout_host: str = ""
+    krw_checkout_host: str = "https://kr.swiftpay.site"
     gcash_hosted_deep_link_host: str = "https://swiftpay.site"
 
     # Magpie / Checkout integrations
@@ -314,6 +315,7 @@ class Settings(BaseSettings):
         "semaphore_api_url",
         "frontend_url",
         "public_checkout_host",
+        "krw_checkout_host",
         "gcash_hosted_deep_link_host",
         "telegram_mini_app_url",
         mode="before",

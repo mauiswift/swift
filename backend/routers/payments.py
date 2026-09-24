@@ -35,6 +35,7 @@ from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
+from services.checkout_urls import build_checkout_url, checkout_host
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -165,7 +166,7 @@ async def get_open_amount_link(
             external_id=reference,
             status="pending",
             description=store_name or "Open amount payment",
-            payment_url=f"/checkout/{reference}?open_amount=1",
+            payment_url=build_checkout_url(reference, currency, {"open_amount": "1"}),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -189,7 +190,7 @@ async def get_open_amount_link(
         "url": (
             f"/pay/{permanent_link_slug}-{currency}"
             if permanent_link_slug
-            else f"/checkout/{reference}?open_amount=1&currency={currency}"
+            else build_checkout_url(reference, currency, {"open_amount": "1", "currency": currency})
         ),
         "reference": reference,
         "store_name": store_name or None,
@@ -288,13 +289,7 @@ async def create_magpie_card_source(
     if not customer_country:
         customer_country = "KR" if currency == "KRW" else "PH"
     card_payload = {**payload.card, "country": customer_country}
-    public_host = (
-        getattr(settings, "public_checkout_host", "")
-        or getattr(settings, "frontend_url", "")
-        or "https://swiftpay.site"
-    ).strip().rstrip("/")
-    if not public_host.startswith(("http://", "https://")):
-        public_host = f"https://{public_host}"
+    public_host = checkout_host(currency)
     source = await MagpieService().create_card_source(
         public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
         currency=provider_currency,
@@ -355,13 +350,7 @@ async def create_magpie_card_source_proxy(
     if not public_key:
         raise HTTPException(status_code=503, detail="Magpie card payments are not configured")
 
-    public_host = (
-        getattr(settings, "public_checkout_host", "")
-        or getattr(settings, "frontend_url", "")
-        or "https://swiftpay.site"
-    ).strip().rstrip("/")
-    if not public_host.startswith(("http://", "https://")):
-        public_host = f"https://{public_host}"
+    public_host = checkout_host(currency)
 
     service = MagpieService()
     source = await service.create_card_source(
@@ -398,13 +387,7 @@ async def create_magpie_method_checkout(
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
 
-    public_host = (
-        getattr(settings, "public_checkout_host", "")
-        or getattr(settings, "frontend_url", "")
-        or "https://swiftpay.site"
-    ).strip().rstrip("/")
-    if not public_host.startswith(("http://", "https://")):
-        public_host = f"https://{public_host}"
+    public_host = checkout_host("CNY")
     service = MagpieService()
     session = await service.create_session(
         amount_cents=int(round(float(txn.amount) * 100)),
@@ -481,13 +464,7 @@ async def create_magpie_wallet_source(
         raise HTTPException(status_code=400, detail="Wallet checkout is only available for CNY payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
-    public_host = (
-        getattr(settings, "public_checkout_host", "")
-        or getattr(settings, "frontend_url", "")
-        or "https://swiftpay.site"
-    ).strip().rstrip("/")
-    if not public_host.startswith(("http://", "https://")):
-        public_host = f"https://{public_host}"
+    public_host = checkout_host("CNY")
     source = await MagpieService().create_wallet_source(
         public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
         currency="CNY",
@@ -660,7 +637,7 @@ async def _create_reusable_payment_attempt(
         description=template.description or "Payment link payment",
         customer_name=template.customer_name,
         customer_email=template.customer_email,
-        payment_url=f"/checkout/{reference}",
+        payment_url=build_checkout_url(reference, currency),
         created_at=now,
         updated_at=now,
     )
@@ -698,7 +675,7 @@ async def create_open_amount_payment_request(
         status="pending",
         approval_status="pending",
         description="Customer-entered amount payment",
-        payment_url=f"/checkout/{request_reference}",
+        payment_url=build_checkout_url(request_reference, reusable.currency),
         **transfer_account,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -1608,11 +1585,11 @@ async def select_checkout_institution(
         await db.commit()
 
         hosted_gcash_url = (
-            f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
+            f"{checkout_host('PHP')}/"
             f"api/v1/payments/checkout/{quote(str(txn.external_id), safe='')}/gcash"
         )
         hosted_alipay_url = (
-            f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
+            f"{checkout_host('PHP')}/"
             f"checkout/{quote(str(txn.external_id), safe='')}?payment_method=alipay"
         )
 

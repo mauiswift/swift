@@ -19,6 +19,7 @@ from schemas.auth import UserResponse
 from services.magpie_qr_service import MagpieQRService, CurrencyConverter
 from services.magpie_services import MagpieService
 from services.transactions import TransactionsService
+from services.checkout_urls import build_checkout_url, checkout_host
 
 logger = logging.getLogger(__name__)
 
@@ -221,15 +222,7 @@ async def create_alipay_qr(
                 customer_email=payload.customer_email,
             )
 
-            # Generate local checkout URL
-            from core.config import settings
-            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
-            if public_host:
-                if not public_host.startswith('http'):
-                    public_host = f"https://{public_host.lstrip('/')}"
-                result["checkout_url"] = f"{public_host.rstrip('/')}/checkout/{reference_id}"
-            else:
-                result["checkout_url"] = f"/checkout/{reference_id}"
+            result["checkout_url"] = build_checkout_url(reference_id, result.get("currency", "CNY"))
 
             logger.info(
                 f"Alipay QR created: {reference_id} "
@@ -300,15 +293,7 @@ async def create_wechat_qr(
                 customer_email=payload.customer_email,
             )
 
-            # Generate local checkout URL
-            from core.config import settings
-            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
-            if public_host:
-                if not public_host.startswith('http'):
-                    public_host = f"https://{public_host.lstrip('/')}"
-                result["checkout_url"] = f"{public_host.rstrip('/')}/checkout/{reference_id}"
-            else:
-                result["checkout_url"] = f"/checkout/{reference_id}"
+            result["checkout_url"] = build_checkout_url(reference_id, payload.currency or "PHP")
 
             logger.info(
                 f"WeChat QR created: {reference_id} "
@@ -381,15 +366,7 @@ async def create_dynamic_qr(
                 customer_email=payload.customer_email,
             )
 
-            # Generate local checkout URL
-            from core.config import settings
-            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
-            if public_host:
-                if not public_host.startswith('http'):
-                    public_host = f"https://{public_host.lstrip('/')}"
-                result["checkout_url"] = f"{public_host.rstrip('/')}/checkout/{reference_id}"
-            else:
-                result["checkout_url"] = f"/checkout/{reference_id}"
+            result["checkout_url"] = build_checkout_url(reference_id, payload.currency or "PHP")
 
             logger.info(
                 f"Dynamic QR created: {reference_id} "
@@ -432,10 +409,7 @@ async def create_magpie_checkout_session(
         amount_cents = int(round(payload.amount * 100))
 
         # Build success/fail URLs
-        from core.config import settings
-        public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or 'swiftpay.ph').strip()
-        if not public_host.startswith('http'):
-            public_host = f"https://{public_host.lstrip('/')}"
+        public_host = checkout_host("CNY")
 
         success_url = f"{public_host}/checkout/{reference_id}?status=success"
         cancel_url = f"{public_host}/checkout/{reference_id}?status=cancel"

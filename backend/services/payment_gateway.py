@@ -21,6 +21,7 @@ from services.app_settings import (
     get_deposit_accounts,
 )
 from services.user_benefits import get_krw_benefits
+from services.checkout_urls import build_checkout_url, checkout_host
 
 logger = logging.getLogger(__name__)
 KRW_LOCAL_CHANNELS = frozenset({"bank_transfer"})
@@ -334,13 +335,7 @@ class PaymentGateway:
                     requested_magpie_methods = ["card"]
 
                 if currency == "CNY" and callable(getattr(self.magpie, "create_session", None)):
-                    public_host = (
-                        getattr(settings, "public_checkout_host", "")
-                        or getattr(settings, "frontend_url", "")
-                        or "https://swiftpay.site"
-                    ).strip().rstrip("/")
-                    if not public_host.startswith(("http://", "https://")):
-                        public_host = f"https://{public_host}"
+                    public_host = checkout_host(currency)
                     reference_id = external_id or f"magpie-{uuid.uuid4().hex[:12]}"
                     checkout_external_id = reference_id
                     provider_amount = amount
@@ -535,7 +530,7 @@ class PaymentGateway:
 
         import uuid as _uuid
         reference_id = external_id or f"manual-{transaction_type}-{_uuid.uuid4().hex[:12]}"
-        checkout_url = f"/checkout/{reference_id}"
+        checkout_url = build_checkout_url(reference_id, currency)
         transfer_account = {}
         if currency == "KRW" and db is not None:
             transfer_account = await _select_manual_transfer_account(db, currency, amount)
