@@ -15,7 +15,7 @@ export const KRW_BANK_DEFINITIONS = [
   ['011', 'NH NongHyup Bank', '/logos/nonghyup-bank.svg'],
   ['020', 'Woori Bank', '/logos/woori-bank.svg'],
   ['023', 'SC First Bank', '/logos/sc-first-bank.svg'],
-  ['027', 'KEB Hana Bank', '/logos/hana-bank.svg'],
+  ['027', 'Citi Bank Korea', ''],
   ['031', 'Daegu Bank', ''],
   ['032', 'Busan Bank', ''],
   ['034', 'Gwangju Bank', ''],
@@ -30,11 +30,13 @@ export const KRW_BANK_DEFINITIONS = [
   ['089', 'K Bank', ''],
   ['090', 'Kakao Bank', '/logos/kakao-bank.svg'],
   ['092', 'Toss Bank', '/logos/toss-bank.png'],
-  ['KAKAO', 'Kakao Bank', '/logos/kakao-bank.svg'],
-  ['TOSS', 'Toss Bank', '/logos/toss-bank.png'],
-  ['KBANK', 'K Bank', ''],
-  ['NAVER', 'Naver Bank', ''],
 ] as const;
+
+const KRW_BANK_CODE_ALIASES: Record<string, string> = {
+  KAKAO: '090',
+  TOSS: '092',
+  KBANK: '089',
+};
 
 export const KRW_BANKS: KrwBank[] = KRW_BANK_DEFINITIONS.map(([code, name, logo]) => ({
   code,
@@ -49,10 +51,11 @@ export const KRW_BANK_BY_CODE = new Map(
 export const normalizeKrwBankName = (value?: string | null): string => {
   const raw = String(value ?? '').trim();
   if (!raw) return DEFAULT_KRW_BANK_NAME;
+  const aliasedCode = KRW_BANK_CODE_ALIASES[raw.toUpperCase()];
 
   const directMatch = KRW_BANKS.find(bank =>
     bank.name.toLowerCase() === raw.toLowerCase()
-    || bank.code.toLowerCase() === raw.toLowerCase()
+    || bank.code.toLowerCase() === (aliasedCode || raw).toLowerCase()
   );
   if (directMatch) return directMatch.name;
 
@@ -70,8 +73,9 @@ export const isSupportedKrwBank = (value?: string | null): boolean => {
   if (!raw) return false;
 
   const normalized = raw.toUpperCase();
+  const aliasedCode = KRW_BANK_CODE_ALIASES[normalized];
   return KRW_BANKS.some(bank =>
-    bank.code.toUpperCase() === normalized
+    bank.code.toUpperCase() === (aliasedCode || normalized)
     || bank.name.toUpperCase() === normalized
     || normalized.includes(bank.code.toUpperCase())
     || normalized.includes(bank.name.toUpperCase().replace(/\s+/g, ''))
