@@ -27,6 +27,7 @@ from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.downline import DownlineService
+from core.roles import get_role_permissions, PredefinedRoleEnum
 from schemas.auth import UserResponse
 from utils.datetime import serialize_utc_datetime
 
@@ -711,6 +712,46 @@ PREDEFINED_ROLES = {
     },
 }
 
+
+def _application_permissions(role_name: str, requested: Optional[dict] = None) -> dict[str, bool]:
+    """Return permission keys consumed by the dashboard and API guards."""
+    app_keys = {
+        "is_super_admin",
+        "can_manage_payments",
+        "can_manage_disbursements",
+        "can_view_reports",
+        "can_manage_wallet",
+        "can_manage_transactions",
+        "can_manage_bot",
+        "can_approve_topups",
+        "can_manage_team",
+        "can_credit_wallet",
+        "can_debit_wallet",
+        "can_freeze_wallet",
+        "can_unfreeze_wallet",
+    }
+    requested = requested if isinstance(requested, dict) else {}
+    if any(key in requested for key in app_keys):
+        return {key: bool(requested.get(key)) for key in app_keys}
+
+    role_map = {
+        "owner": PredefinedRoleEnum.OWNER,
+        "admin": PredefinedRoleEnum.ADMIN,
+        "editor": PredefinedRoleEnum.OPERATOR,
+        "viewer": PredefinedRoleEnum.VIEWER,
+        "developer": PredefinedRoleEnum.DEVELOPER,
+    }
+    if role_name in role_map:
+        return get_role_permissions(role_map[role_name]).model_dump()
+    if role_name == "super_admin":
+        return get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
+    if role_name == "approver":
+        return {
+            key: key in {"can_approve_topups", "can_manage_transactions", "can_view_reports"}
+            for key in app_keys
+        }
+    return {key: False for key in app_keys}
+
 # ────────────────────────────────────────────────────────────────
 # Endpoints
 # ────────────────────────────────────────────────────────────────
@@ -768,8 +809,7 @@ async def send_team_invitation(
     token = secrets.token_urlsafe(32)
 
     # Get permissions from predefined role or use custom
-    role_config = PREDEFINED_ROLES.get(role_name)
-    permissions = request.permissions or (role_config["permissions"] if role_config else {})
+    permissions = _application_permissions(role_name, request.permissions)
 
     org_id = admin.organization_id if admin and _is_org_admin(admin) else None
     org_name = admin.organization_name if admin and _is_org_admin(admin) else None
@@ -941,8 +981,7 @@ async def update_invitation(
             )
 
     # Update permissions
-    role_config = PREDEFINED_ROLES.get(role_name)
-    permissions = request.permissions or (role_config["permissions"] if role_config else {})
+    permissions = _application_permissions(role_name, request.permissions)
 
     invitation.email = invitation_email
     invitation.role = role_name
@@ -1240,7 +1279,10 @@ async def accept_invitation(
     # Invitations accepted by the previous link-only flow can still finish
     # account creation once, as long as no account was created yet.
 
-    permissions = invitation.permissions if isinstance(invitation.permissions, dict) else {}
+    permissions = _application_permissions(
+        invitation.role,
+        invitation.permissions if isinstance(invitation.permissions, dict) else None,
+    )
     telegram_id = f"invite-{secrets.token_urlsafe(18)}"
     admin_user = AdminUser(
         telegram_id=telegram_id,

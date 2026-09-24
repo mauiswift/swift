@@ -49,6 +49,7 @@ from schemas.auth import (
     LoginResponse,
 )
 from services.auth import AuthService, _get_platform_organization
+from core.roles import get_role_permissions, PredefinedRoleEnum
 from services.telegram_service import TelegramService
 from services.wallets import WalletsService
 from models.passkeys import PasskeyChallenge
@@ -1322,16 +1323,59 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
                 store_logo = api_cfg.store_logo_url
                 perm_link = api_cfg.permanent_link_slug
 
+        role_map = {
+            "owner": PredefinedRoleEnum.OWNER,
+            "admin": PredefinedRoleEnum.ADMIN,
+            "editor": PredefinedRoleEnum.OPERATOR,
+            "viewer": PredefinedRoleEnum.VIEWER,
+            "developer": PredefinedRoleEnum.DEVELOPER,
+        }
+        has_app_permission = any(
+            bool(getattr(admin_record, key, False))
+            for key in (
+                "is_super_admin",
+                "can_manage_payments",
+                "can_manage_disbursements",
+                "can_view_reports",
+                "can_manage_wallet",
+                "can_manage_transactions",
+                "can_manage_bot",
+                "can_approve_topups",
+                "can_manage_team",
+            )
+        )
+        if not has_app_permission and admin_record.role in role_map:
+            repaired = get_role_permissions(role_map[admin_record.role]).model_dump()
+            for key, value in repaired.items():
+                if hasattr(admin_record, key):
+                    setattr(admin_record, key, value)
+            admin_record.team_permissions = repaired
+            await db.commit()
+        elif not has_app_permission and admin_record.role == "approver":
+            repaired = {
+                "can_approve_topups": True,
+                "can_manage_transactions": True,
+                "can_view_reports": True,
+            }
+            for key, value in repaired.items():
+                setattr(admin_record, key, value)
+            admin_record.team_permissions = repaired
+            await db.commit()
+
         perms = UserPermissions(
-            is_super_admin=admin_record.is_super_admin,
-            can_manage_payments=admin_record.can_manage_payments,
-            can_manage_disbursements=admin_record.can_manage_disbursements,
-            can_view_reports=admin_record.can_view_reports,
-            can_manage_wallet=admin_record.can_manage_wallet,
-            can_manage_transactions=admin_record.can_manage_transactions,
-            can_manage_bot=admin_record.can_manage_bot,
-            can_approve_topups=admin_record.can_approve_topups,
-            can_manage_team=admin_record.can_manage_team,
+            is_super_admin=bool(admin_record.is_super_admin),
+            can_manage_payments=bool(admin_record.can_manage_payments),
+            can_manage_disbursements=bool(admin_record.can_manage_disbursements),
+            can_view_reports=bool(admin_record.can_view_reports),
+            can_manage_wallet=bool(admin_record.can_manage_wallet),
+            can_manage_transactions=bool(admin_record.can_manage_transactions),
+            can_manage_bot=bool(admin_record.can_manage_bot),
+            can_approve_topups=bool(admin_record.can_approve_topups),
+            can_manage_team=bool(admin_record.can_manage_team),
+            can_credit_wallet=bool(admin_record.can_credit_wallet),
+            can_debit_wallet=bool(admin_record.can_debit_wallet),
+            can_freeze_wallet=bool(admin_record.can_freeze_wallet),
+            can_unfreeze_wallet=bool(admin_record.can_unfreeze_wallet),
         )
     elif authenticated_user.role == "admin":
         # Fallback for environment-configured admin
