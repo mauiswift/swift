@@ -70,7 +70,10 @@ def test_direct_owner_keeps_personal_wallet():
 
 
 def test_invited_super_admin_cannot_manage_wallet_or_toss_controls():
-    permissions = _application_permissions("super_admin")
+    permissions = _application_permissions("super_admin", {
+        "can_manage_wallet": True,
+        "can_manage_team": True,
+    })
 
     assert permissions["is_super_admin"] is True
     assert permissions["can_manage_payments"] is True

@@ -49,7 +49,11 @@ from schemas.auth import (
     LoginResponse,
 )
 from services.auth import AuthService, _get_platform_organization
-from core.roles import get_role_permissions, PredefinedRoleEnum
+from core.roles import (
+    get_invited_super_admin_permissions,
+    get_role_permissions,
+    PredefinedRoleEnum,
+)
 from services.telegram_service import TelegramService
 from services.wallets import WalletsService
 from models.passkeys import PasskeyChallenge
@@ -1365,7 +1369,14 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
                 "can_view_reports": True,
             }
             if admin_record.role == "super_admin":
-                repaired = get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
+                # Incomplete JSON permissions are most commonly from invited
+                # accounts; repair them with the restricted invitation policy
+                # instead of restoring wallet and platform controls.
+                repaired = (
+                    get_invited_super_admin_permissions().model_dump()
+                    if isinstance(admin_record.team_permissions, dict)
+                    else get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
+                )
             for key, value in repaired.items():
                 setattr(admin_record, key, value)
             admin_record.team_permissions = repaired

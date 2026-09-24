@@ -166,6 +166,20 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
 }
 
 
+def get_invited_super_admin_permissions() -> RolePermissions:
+    """Return the restricted permissions used for invited super admins."""
+    permissions = get_role_permissions(PredefinedRoleEnum.OWNER).model_dump()
+    permissions.update({
+        "can_manage_wallet": False,
+        "can_credit_wallet": False,
+        "can_debit_wallet": False,
+        "can_freeze_wallet": False,
+        "can_unfreeze_wallet": False,
+        "can_manage_team": False,
+    })
+    return RolePermissions(**permissions)
+
+
 # ============================================================================
 # ROLE UTILITIES
 # ============================================================================
