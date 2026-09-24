@@ -1428,15 +1428,18 @@ async def get_checkout_institutions(
                 # even though it is enabled in the merchant channel settings.
                 # Alipay is handled through the QR Ph flow below, so it does
                 # not need to be present in SwiftPay's bank catalog.
-                if "ALIPAY" in enabled_codes:
-                    res["data"].append({
-                        "id": "ALIPAY",
-                        "code": "ALIPAY",
-                        "name": "Alipay",
-                        "logoUrl": "/logos/alipay.png",
-                        "enabled": True,
-                        "loginMethod": "qr",
-                    })
+                res["data"] = [
+                    item for item in res["data"]
+                    if str(item.get("code", "")).upper() != "ALIPAY"
+                ]
+                res["data"].append({
+                    "id": "ALIPAY",
+                    "code": "ALIPAY",
+                    "name": "Alipay",
+                    "logoUrl": "/logos/alipay.png",
+                    "enabled": True,
+                    "loginMethod": "qr",
+                })
         return res
     except HTTPException:
         raise
