@@ -351,6 +351,7 @@ export default function Checkout() {
           throw new Error('Invalid response: amount must be a non-negative number');
         }
         setTxn(response.data);
+        fetchInstitutions(response.data.currency);
         if (searchParams.get('open_amount') === '1') {
           setEnteredAmount('');
         }
@@ -367,7 +368,6 @@ export default function Checkout() {
 
     if (checkoutId) {
       fetchTransaction();
-      fetchInstitutions();
       fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
     } else {
       setError('Invalid checkout URL');
@@ -411,13 +411,13 @@ export default function Checkout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchInstitutions = async () => {
+  const fetchInstitutions = async (currency?: string) => {
     try {
       setLoadingLoadingInstitutions(true);
       const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
         const returnedInstitutions = response.data.data as Institution[];
-        const shouldShowAlipay = String(txn?.currency || '').toUpperCase() === 'PHP';
+        const shouldShowAlipay = String(currency || txn?.currency || '').toUpperCase() === 'PHP';
         const hasAlipay = returnedInstitutions.some(item => institutionCode(item) === 'ALIPAY');
         setInstitutions(
           shouldShowAlipay && !hasAlipay
