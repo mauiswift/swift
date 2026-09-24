@@ -20,7 +20,7 @@ from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
-from services.app_settings import get_payment_channels
+from services.app_settings import get_payment_channels, get_usdt_trc20_address
 from services.url_shortener import URLShortenerService
 from io import BytesIO
 import qrcode
@@ -1296,6 +1296,10 @@ async def get_checkout_payment(
             bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
             bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
 
+        usdt_deposit_address = None
+        if (txn.currency or "").upper() == "USDT":
+            usdt_deposit_address = await get_usdt_trc20_address(db)
+
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
         display_currency = txn.original_currency or txn.currency or "PHP"
@@ -1319,6 +1323,7 @@ async def get_checkout_payment(
             "bank_name": bank_name,
             "bank_account_number": bank_account_number,
             "bank_account_name": bank_account_name,
+            "usdt_deposit_address": usdt_deposit_address,
             "created_at": serialize_utc_datetime(txn.created_at),
             "updated_at": serialize_utc_datetime(txn.updated_at),
         }

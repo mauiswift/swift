@@ -58,6 +58,7 @@ interface Transaction {
   bank_name?: string;
   bank_account_number?: string;
   bank_account_name?: string;
+  usdt_deposit_address?: string | null;
   toss_deep_link?: string;
   created_at: string;
 }
@@ -536,6 +537,7 @@ export default function Checkout() {
   const isPhp = currencyCode === 'PHP' && processingCurrencyCode === 'PHP';
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
+  const isUsdt = currencyCode === 'USDT';
   const supportsMagpieCard = isPhp || isKrw || isCny;
   const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const checkoutText = (english: string, korean: string) => (
@@ -544,7 +546,7 @@ export default function Checkout() {
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
-  const isManualDeposit = isKrw || isHighValuePhp;
+  const isManualDeposit = isKrw || isHighValuePhp || isUsdt;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
@@ -1084,7 +1086,57 @@ export default function Checkout() {
               </div>
             )}
 
-            {isPending && isManualDeposit && (
+            {isPending && isUsdt && (
+              <div className="overflow-hidden rounded-[28px] border border-emerald-200 bg-white shadow-[0_18px_55px_rgba(16,185,129,0.10)]">
+                <div className="bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-700 px-6 py-7 text-white sm:px-8">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-200">USDT TRC20 transfer</p>
+                  <h2 className="mt-3 text-2xl font-semibold tracking-tight">Send USDT to complete payment</h2>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-emerald-50">
+                    Send the exact amount below over the TRON network (TRC20). The payment will be confirmed automatically after the transfer is detected.
+                  </p>
+                  <div className="mt-6 flex flex-col items-center gap-5 rounded-2xl bg-white p-5 text-slate-900 sm:flex-row sm:items-start">
+                    {txn.usdt_deposit_address ? (
+                      <QRCodeSVG
+                        value={`tron:${txn.usdt_deposit_address}`}
+                        size={148}
+                        includeMargin
+                        className="rounded-lg"
+                        aria-label="USDT TRC20 deposit address QR code"
+                      />
+                    ) : (
+                      <div className="flex h-[148px] w-[148px] items-center justify-center rounded-lg bg-amber-50 p-4 text-center text-xs font-semibold text-amber-800">
+                        Deposit address unavailable
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Amount to send</p>
+                      <p className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{fmtCurrency(payableAmount, 'USDT')}</p>
+                      <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">TRC20 deposit address</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <code className="min-w-0 flex-1 break-all rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
+                          {txn.usdt_deposit_address || 'Not configured'}
+                        </code>
+                        {txn.usdt_deposit_address && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(txn.usdt_deposit_address || '')}
+                            className="shrink-0 rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+                            aria-label="Copy USDT deposit address"
+                          >
+                            {copied ? <CheckCircle2 size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                          </button>
+                        )}
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-amber-700">
+                        Only send USDT using TRC20. Sending another asset or network may permanently lose the funds.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isPending && isManualDeposit && !isUsdt && (
               <div className="overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
                 <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
                   <div className="flex flex-wrap items-start justify-between gap-5">
