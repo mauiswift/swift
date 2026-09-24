@@ -6,7 +6,7 @@ export interface KrwBank {
   logo: string;
 }
 
-export const DEFAULT_KRW_BANK_NAME = 'Kakao Bank';
+export const DEFAULT_KRW_BANK_NAME = 'Bank transfer';
 
 export const KRW_BANK_DEFINITIONS = [
   ['KB', 'KB Kookmin Bank'],
@@ -49,7 +49,7 @@ export const normalizeKrwBankName = (value?: string | null): string => {
   if (normalized.includes('K BANK') || normalized.includes('KBANK')) return 'K Bank';
   if (normalized.includes('NAVER')) return 'Naver Bank';
 
-  return raw;
+  return raw || DEFAULT_KRW_BANK_NAME;
 };
 
 export const isSupportedKrwBank = (value?: string | null): boolean => {
