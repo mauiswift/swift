@@ -913,11 +913,6 @@ export default function Checkout() {
     const amountTitle = isKrw
       ? (swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '수동 은행 송금')
       : (isKoreanCheckout ? '결제' : 'Payment');
-    const amountDescription = isKrw
-      ? (swiftpayVirtualAccountEnabled
-        ? '금액을 입력하면 SwiftPay 가상계좌 입금 안내를 확인할 수 있습니다.'
-        : '금액을 입력하면 수동 은행 송금 안내를 확인할 수 있습니다.')
-      : (isKoreanCheckout ? '금액을 입력하면 안전한 결제 수단을 선택할 수 있습니다.' : 'Enter your amount to continue to secure bank and wallet selection.');
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
         {showSignaturePrompt && requiresDigitalSignature && (
@@ -967,7 +962,6 @@ export default function Checkout() {
                     {isKrw ? t('krw_bank_transfer') : (isKoreanCheckout ? 'PHP 결제' : 'PHP NETBANK')}
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight text-white">{amountTitle}</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-blue-50">{amountDescription}</p>
                 </div>
                 <PaymentBrandLogo
                   brand={amountBrand}
