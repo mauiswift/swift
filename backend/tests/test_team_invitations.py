@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, timezone
 from models.kyb_registrations import KybRegistration
 from routers.kyb import _registration_organization
 from routers.team_invitations import _is_invitation_expired, _normalize_invitation_email
+from models.admin_users import AdminUser
+from services.wallets import WalletsService
 
 
 def test_normalize_invitation_email_is_case_insensitive():
@@ -42,3 +44,25 @@ def test_downline_registration_gets_own_merchant_scope():
 
     assert downline_org != upline_org
     assert downline_name == "Downline Merchant"
+
+
+def test_invited_owner_uses_organization_wallet():
+    invited_owner = AdminUser(
+        telegram_id="invite-generated-id",
+        role="owner",
+        organization_id="acme-business",
+        is_super_admin=False,
+    )
+
+    assert not WalletsService._is_direct_owner(invited_owner)
+
+
+def test_direct_owner_keeps_personal_wallet():
+    direct_owner = AdminUser(
+        telegram_id="merchant-telegram-id",
+        role="owner",
+        organization_id="acme-business",
+        is_super_admin=False,
+    )
+
+    assert WalletsService._is_direct_owner(direct_owner)

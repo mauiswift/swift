@@ -118,6 +118,18 @@ class WalletsService(BaseService[Wallets]):
 
         return normalized
 
+    @staticmethod
+    def _is_direct_owner(admin_user: Optional[AdminUser]) -> bool:
+        """Keep directly registered owners on their legacy personal wallet.
+
+        Invitation-created accounts use a generated ``invite-`` Telegram ID,
+        including invitations assigned the owner role, and must use the shared
+        organization wallet instead.
+        """
+        if not admin_user or getattr(admin_user, "role", None) != "owner":
+            return False
+        return not str(getattr(admin_user, "telegram_id", "")).startswith("invite-")
+
     async def _resolve_effective_wallet_owner(self, user_id: str, currency: str = "PHP") -> Tuple[str, Optional[str]]:
         """Resolve the effective wallet owner (Org ID vs User ID).
 
@@ -144,10 +156,9 @@ class WalletsService(BaseService[Wallets]):
         # in the admin manual wallet credit/debit screens. Only invited org members
         # should be forced onto an org-scoped wallet.
         is_direct_owner = bool(
-            admin_user and admin_user.organization_id and (
-                getattr(admin_user, "role", None) == "owner"
-                or str(getattr(admin_user, "telegram_id", "")) == str(user_id)
-            )
+            admin_user
+            and admin_user.organization_id
+            and self._is_direct_owner(admin_user)
         )
         if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False) and not is_direct_owner:
             org_id = admin_user.organization_id
