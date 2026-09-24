@@ -755,6 +755,7 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
             "can_debit_wallet": False,
             "can_freeze_wallet": False,
             "can_unfreeze_wallet": False,
+            "can_manage_team": False,
         })
         return permissions
     if role_name == "approver":

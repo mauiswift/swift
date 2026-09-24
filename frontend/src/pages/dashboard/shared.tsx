@@ -8,7 +8,7 @@ import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import React from 'react';
 import { ArrowUpRight, BarChart3, Bot, CheckSquare, CreditCard, Crown, FileCheck2, FileSpreadsheet, Landmark, Link2, Send, Settings, type LucideIcon } from 'lucide-react';
-import { hasPermission, type PermissionKey } from '@/lib/permissions';
+import { hasPermission, hasSuperAdminAccess, type PermissionKey } from '@/lib/permissions';
 
 export interface DashboardStats {
   days: number;
@@ -196,10 +196,11 @@ export const dashboardActions: DashboardAction[] = [
   { label: 'Finished contracts', description: 'Open completed payment records', href: '/payments', icon: FileCheck2, tone: 'bg-violet-50 text-violet-600', superAdminOnly: true },
 ];
 
-export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false, language: string = 'en') {
+export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], language: string = 'en') {
+  const isPlatformSuperAdmin = hasSuperAdminAccess(permissions) && Boolean(permissions?.can_manage_team);
   return dashboardActions
     .filter(action => {
-      return (isSuperAdmin || !action.superAdminOnly) && (!action.permission || hasPermission(permissions, action.permission));
+      return (isPlatformSuperAdmin || !action.superAdminOnly) && (!action.permission || hasPermission(permissions, action.permission));
     })
     .map(action => {
       if (language !== 'ko') return action;
@@ -379,7 +380,7 @@ export function useDashboardData() {
     user,
     isSuperAdmin,
     permissions,
-    dashboardActions: getDashboardActions(permissions, isSuperAdmin, language),
+    dashboardActions: getDashboardActions(permissions, language),
     stats,
     balances,
     loading,

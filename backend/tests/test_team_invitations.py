@@ -79,3 +79,4 @@ def test_invited_super_admin_cannot_manage_wallet_or_toss_controls():
     assert permissions["can_debit_wallet"] is False
     assert permissions["can_freeze_wallet"] is False
     assert permissions["can_unfreeze_wallet"] is False
+    assert permissions["can_manage_team"] is False
