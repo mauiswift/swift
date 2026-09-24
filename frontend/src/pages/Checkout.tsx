@@ -600,6 +600,7 @@ export default function Checkout() {
   const isSupportedKrwInstitution = (institution: Institution) => {
     const code = institutionCode(institution);
     const name = institution.name.trim();
+    if (code === 'ALIPAY' || name.toUpperCase().includes('ALIPAY')) return true;
     return isSupportedKrwBank(code) || isSupportedKrwBank(name) || SUPPORTED_KRW_BANKS.some(bank => (
       bank.code === code || bank.name.toLowerCase() === name.toLowerCase()
     ));
@@ -612,8 +613,8 @@ export default function Checkout() {
     || institutionIsEnabled(institutionCode(institution), enabledPhpInstitutions))
   ));
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
-  const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));
-  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
+  const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH', 'ALIPAY'].includes(institutionCode(i)));
+  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'ALIPAY', 'QRPH'].includes(institutionCode(i)));
   const handleStartCheckout = async (institutionCode?: string) => {
     const selectedInstitutionCode = institutionCode?.trim().toUpperCase() || '';
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
@@ -649,7 +650,11 @@ export default function Checkout() {
     if (!url) { toast.error('No checkout URL available'); return; }
 
     if (isKrw && !isPhp && institutionCode) {
-      if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
+      const normalizedInstitution = institutionCode.trim().toUpperCase();
+      if (normalizedInstitution === 'ALIPAY') {
+        return;
+      }
+      if (normalizedInstitution === 'KAKAOPAY') {
         toast.error('KakaoPay collection is not currently available.');
         return;
       }
