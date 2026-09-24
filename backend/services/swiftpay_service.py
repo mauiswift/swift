@@ -61,8 +61,47 @@ class SwiftPayService:
         }
         if code in legacy_aliases:
             return legacy_aliases[code]
+        bic_prefixes = {
+            "BNORPHM": "BNOR",
+            "BOPIPHM": "BOPI",
+            "UBPHPHM": "UBPH",
+            "MBTCPHM": "MBTE",
+            "RCBCPHM": "RCBC",
+            "SETCPHM": "SETC",
+            "TLBPPHM": "TLBP",
+            "PNBMPHM": "PNBM",
+        }
+        for prefix, normalized in bic_prefixes.items():
+            if code.startswith(prefix):
+                return normalized
         if len(code) in {8, 11} and code.isalnum():
             return code[:4]
+        return code
+
+    @staticmethod
+    def normalize_collection_institution_code(value: str) -> str:
+        """Convert Philippine BIC/catalog values to SwiftPay collection keys."""
+        code = str(value or "").strip().upper()
+        collection_aliases = {
+            "BNORPHM": "BDO",
+            "BOPIPHM": "BPI",
+            "UBPHPHM": "UNIONBANK",
+            "MBTCPHM": "METROBANK",
+            "RCBCPHM": "RCBC",
+            "SETCPHM": "SECURITYBANK",
+            "TLBPPHM": "LANDBANK",
+            "PNBMPHM": "PNB",
+            "EAWRPHM": "EASTWEST",
+            "CHSVPHM": "CHINABANK",
+            "CHBKPHM": "CHINABANK",
+            "CIPHPHM": "CIMB",
+            "MBBEPHM": "MAYBANK",
+            "ROBPPHM": "ROBINSONS",
+            "PSBPPHM": "PSBANK",
+        }
+        for prefix, alias in collection_aliases.items():
+            if code.startswith(prefix):
+                return alias
         return code
 
     @classmethod
@@ -322,7 +361,7 @@ class SwiftPayService:
             if institution_code:
                 # Collection institution codes come from SwiftPay's
                 # /api/institutions catalog (for example, "BDO").
-                payload["institution_code"] = str(institution_code).strip().upper()
+                payload["institution_code"] = self.normalize_collection_institution_code(institution_code)
             if merchant_redirect_url:
                 payload["merchant_redirect_url"] = merchant_redirect_url
             if merchant_webhook_url:

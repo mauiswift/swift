@@ -142,7 +142,8 @@ async def test_create_order_payload_structure(monkeypatch):
     await svc.create_order(
         amount=100.0,
         reference_no="test-ref",
-        details=[{"customerName": "John"}],
+        details={"customerName": "John"},
+        institution_code="BNORPHMXXX",
     )
 
     assert captured_payload["x_currency"] == "PHP"
@@ -152,6 +153,7 @@ async def test_create_order_payload_structure(monkeypatch):
     assert "x_access_key" in captured_payload
     assert "x_amount" in captured_payload
     assert captured_payload["x_amount"] == "100.00"
+    assert captured_payload["institution_code"] == "BDO"
 
 
 @pytest.mark.asyncio
@@ -316,6 +318,12 @@ def test_normalize_external_bank_code_supports_legacy_bank_aliases():
     assert SwiftPayService.normalize_external_bank_code("BDO") == "BNOR"
     assert SwiftPayService.normalize_external_bank_code("BPI") == "BOPI"
     assert SwiftPayService.normalize_external_bank_code("UNIONBANK") == "UBPH"
+
+
+def test_normalize_collection_institution_code_converts_bic_catalog_values():
+    assert SwiftPayService.normalize_collection_institution_code("BNORPHMXXX") == "BDO"
+    assert SwiftPayService.normalize_collection_institution_code("BOPIPHMXXX") == "BPI"
+    assert SwiftPayService.normalize_collection_institution_code("GCASH") == "GCASH"
 
 
 def test_validate_external_bank_code_rejects_unknown_short_code():

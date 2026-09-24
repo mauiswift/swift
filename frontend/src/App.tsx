@@ -199,6 +199,7 @@ function AuthAwareContent() {
       <Route path="/checkout/:identifier" element={<Checkout />} />
       <Route path="/magpie-success" element={<MagpieSuccess />} />
       <Route path="/checkout/:identifier/gcash" element={<GcashPaymentPage />} />
+      <Route path="/checkout/:identifier/alipay" element={<GcashPaymentPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/error" element={<AuthError />} />
       <Route path="/logout-callback" element={<LogoutCallbackPage />} />

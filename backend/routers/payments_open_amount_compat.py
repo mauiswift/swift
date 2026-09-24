@@ -230,10 +230,14 @@ async def select_checkout_institution_compat(
             "qr_content": qr_content,
             "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
             "alipay_hosted_deep_link": (
-                f"/checkout/{txn.external_id}?payment_method=alipay"
+                f"/checkout/{txn.external_id}/alipay?payment_method=alipay"
                 if institution_code == "ALIPAY" else None
             ),
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'alipay' if institution_code == 'ALIPAY' else ('gcash' if institution_code == 'GCASH' else 'qrph')}",
+            "redirect_url": (
+                f"/checkout/{txn.external_id}/alipay?payment_method=alipay"
+                if institution_code == "ALIPAY"
+                else f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}"
+            ),
         }
 
     order_result = await service.create_order(

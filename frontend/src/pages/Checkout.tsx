@@ -759,13 +759,12 @@ export default function Checkout() {
           }
           if (selectedInstitutionCode === 'ALIPAY') {
             const alipayPageUrl = new URL(
-              `/checkout/${encodeURIComponent(checkoutIdentifier)}`,
+              `/checkout/${encodeURIComponent(checkoutIdentifier)}/alipay`,
               window.location.origin,
             );
             alipayPageUrl.searchParams.set('payment_method', 'alipay');
             alipayPageUrl.searchParams.set('qr', qrPayload);
             navigate(`${alipayPageUrl.pathname}${alipayPageUrl.search}`);
-            setShowQRPhModal(true);
             return;
           }
           setShowQRPhModal(true);

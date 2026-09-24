@@ -1590,7 +1590,7 @@ async def select_checkout_institution(
         )
         hosted_alipay_url = (
             f"{checkout_host('PHP')}/"
-            f"checkout/{quote(str(txn.external_id), safe='')}?payment_method=alipay"
+            f"checkout/{quote(str(txn.external_id), safe='')}/alipay?payment_method=alipay"
         )
 
         return {
@@ -1603,7 +1603,11 @@ async def select_checkout_institution(
             "gcash_deep_link": direct_gcash_deep_link,
             "gcash_hosted_deep_link": hosted_gcash_url if direct_gcash_deep_link else None,
             "alipay_hosted_deep_link": hosted_alipay_url if institution_code == "ALIPAY" else None,
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'alipay' if institution_code == 'ALIPAY' else ('gcash' if institution_code == 'GCASH' else 'qrph')}",
+            "redirect_url": (
+                f"/checkout/{txn.external_id}/alipay?payment_method=alipay"
+                if institution_code == "ALIPAY"
+                else f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}"
+            ),
         }
 
     order_result = await service.create_order(
