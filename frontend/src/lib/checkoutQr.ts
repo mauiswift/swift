@@ -1,4 +1,4 @@
-export type CheckoutQrPanelMode = 'none' | 'default' | 'gcash' | 'qrph';
+export type CheckoutQrPanelMode = 'none' | 'default' | 'gcash' | 'qrph' | 'alipay';
 
 export const sanitizeCheckoutDeepLink = (value: unknown): string | null => {
   if (typeof value !== 'string' || !value.trim()) return null;
@@ -34,5 +34,6 @@ export const resolveCheckoutQrPanelMode = ({
   if (gcashDeepLink) return 'gcash';
   if (normalizedMethod === 'gcash') return (gcashDeepLink || hasQrPayload) ? 'gcash' : 'default';
   if (normalizedMethod === 'qrph') return hasQrPayload ? 'qrph' : 'default';
+  if (normalizedMethod === 'alipay') return hasQrPayload ? 'alipay' : 'default';
   return 'default';
 };

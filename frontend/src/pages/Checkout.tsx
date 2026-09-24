@@ -684,9 +684,9 @@ export default function Checkout() {
         if (!response.ok) {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
         }
-        if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
+        if (['GCASH', 'QRPH', 'ALIPAY'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const qrPayload = response.data.qr_content || response.data.qr_code || '';
-          if (!qrPayload) throw new Error('SwiftPay did not return a QRPH payload');
+          if (!qrPayload) throw new Error('SwiftPay did not return a QR payload');
           setGcashDeepLink(null);
           setTxn(prev => prev ? {
             ...prev,
@@ -702,6 +702,17 @@ export default function Checkout() {
             gcashPageUrl.searchParams.set('payment_method', 'qrph');
             gcashPageUrl.searchParams.set('qr', qrPayload);
             navigate(`${gcashPageUrl.pathname}${gcashPageUrl.search}`);
+            return;
+          }
+          if (selectedInstitutionCode === 'ALIPAY') {
+            const alipayPageUrl = new URL(
+              `/checkout/${encodeURIComponent(checkoutIdentifier)}`,
+              window.location.origin,
+            );
+            alipayPageUrl.searchParams.set('payment_method', 'alipay');
+            alipayPageUrl.searchParams.set('qr', qrPayload);
+            navigate(`${alipayPageUrl.pathname}${alipayPageUrl.search}`);
+            setShowQRPhModal(true);
             return;
           }
           setShowQRPhModal(true);
@@ -1712,6 +1723,47 @@ export default function Checkout() {
                                 />
                               ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
                                 <img src={txn.qr_code_url} alt="QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
+                              ) : (
+                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    ) : qrPanelMode === 'alipay' ? (
+                      <section
+                        aria-label="Alipay payment details"
+                        className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                      >
+                        <h3 className="sr-only">{checkoutText('Alipay payment details', '알리페이 결제 정보')}</h3>
+                        <div className="space-y-3 bg-gradient-to-r from-[#0B57D0] to-[#0E63E0] px-6 py-7 text-white">
+                          <div className="flex items-center justify-between gap-4">
+                            <img src="/logos/alipay.png" alt="Alipay" className="h-10 w-auto" />
+                            <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide">
+                              ALIPAY QR
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-blue-100">{checkoutText('Scan this code with the Alipay app to complete payment.', '알리페이 앱으로 이 코드를 스캔해 결제를 완료하세요.')}</p>
+                        </div>
+                        <div className="space-y-5 p-6">
+                          <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-2">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{checkoutText('Merchant', '가맹점')}</p>
+                              <p className="mt-1 truncate text-[15px] font-semibold text-slate-900">{merchantDisplayName}</p>
+                            </div>
+                            <div className="sm:text-right">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{checkoutText('Amount Due', '결제 금액')}</p>
+                              <p className="mt-1 text-[18px] font-semibold text-[#0B57D0]">
+                                {fmtCurrency(Number(txn.amount || 0), txn.currency || 'PHP')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 text-center">
+                            <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
+                            <p className="text-[12px] text-slate-500">{checkoutText('Open Alipay and scan the QR to confirm payment.', '알리페이를 열고 QR를 스캔한 뒤 결제를 확인하세요.')}</p>
+                            <div className="flex justify-center">
+                              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                                <img src={txn.qr_code_url} alt="Alipay payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
                               ) : (
                                 <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
                               )}

@@ -29,6 +29,15 @@ test('resolveCheckoutQrPanelMode returns qrph for qrph payment method without gc
   }), 'qrph');
 });
 
+test('resolveCheckoutQrPanelMode returns alipay for alipay payment method with QR payload', () => {
+  assert.equal(resolveCheckoutQrPanelMode({
+    hasQR: true,
+    hasQrPayload: true,
+    paymentMethod: 'alipay',
+    gcashDeepLink: null,
+  }), 'alipay');
+});
+
 test('resolveCheckoutQrPanelMode returns none when no QR is available', () => {
   assert.equal(resolveCheckoutQrPanelMode({
     hasQR: false,

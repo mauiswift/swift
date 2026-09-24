@@ -413,9 +413,13 @@ class Settings(BaseSettings):
             missing = []
             if not self.telegram_bot_token:
                 missing.append("TELEGRAM_BOT_TOKEN")
+            if not self.telegram_bot_username:
+                missing.append("TELEGRAM_BOT_USERNAME")
             if missing:
-                raise ValueError(
-                    "Missing required environment variables for production startup: " + ", ".join(missing)
+                logger.warning(
+                    "Production startup continuing without Telegram bot configuration: %s. "
+                    "Telegram integrations will stay disabled until these variables are set.",
+                    ", ".join(missing),
                 )
         else:
             if not self.telegram_bot_token:

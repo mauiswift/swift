@@ -84,3 +84,16 @@ def test_production_settings_auto_generate_short_jwt_secret(monkeypatch):
 
     assert settings.jwt_secret_key
     assert len(settings.jwt_secret_key) >= 32
+
+
+def test_production_startup_allows_missing_telegram_token(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+
+    settings = Settings()
+    settings.validate_for_startup()
+
+    assert settings.jwt_secret_key
+    assert len(settings.jwt_secret_key) >= 32
