@@ -38,7 +38,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/hana-bank.svg': ['hana', 'hanabank'],
   '/logos/woori-bank.svg': ['woori', 'wooribank'],
   '/logos/nonghyup-bank.svg': ['nh', 'nonghyup', 'nonghyupbank', 'nhnonghyupbank'],
-  '/logos/ibk-bank.svg': ['ibk', 'industrialbankofkorea'],
+  '/logos/ibk-bank.svg': ['ibk', 'industrialbankofkorea', 'ibkindustrialbankofkorea'],
   '/logos/kdb-bank.png': ['kdb', 'kdbbank'],
   '/logos/kakao-bank.svg': ['kakaobank', 'kakao'],
   '/logos/toss-bank.png': ['tossbank', 'toss'],
