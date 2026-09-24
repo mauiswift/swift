@@ -192,14 +192,14 @@ export const dashboardActions: DashboardAction[] = [
   { label: 'Bot settings', description: 'Configure Telegram bot operations', href: '/bot-settings', permission: 'can_manage_bot', icon: Bot, tone: 'bg-slate-100 text-slate-700' },
   { label: 'VIP', description: 'Manage your VIP network', href: '/downline-management', permission: 'can_manage_team', icon: Crown, tone: 'bg-violet-50 text-violet-600' },
   { label: 'Payment approvals', description: 'Approve or reject pending payments', href: '/payment-approvals', icon: CheckSquare, tone: 'bg-emerald-50 text-emerald-600', superAdminOnly: true },
-  { label: 'TOSS applications', description: 'Review virtual account applications', href: '/toss-account-approvals', icon: Landmark, tone: 'bg-orange-50 text-orange-600', superAdminOnly: true },
+  { label: 'TOSS applications', description: 'Review virtual account applications', href: '/toss-account-approvals', permission: 'can_manage_wallet', icon: Landmark, tone: 'bg-orange-50 text-orange-600', superAdminOnly: true },
   { label: 'Finished contracts', description: 'Open completed payment records', href: '/payments', icon: FileCheck2, tone: 'bg-violet-50 text-violet-600', superAdminOnly: true },
 ];
 
 export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false, language: string = 'en') {
   return dashboardActions
     .filter(action => {
-      return (isSuperAdmin || !action.superAdminOnly) && (isSuperAdmin || !action.permission || hasPermission(permissions, action.permission));
+      return (isSuperAdmin || !action.superAdminOnly) && (!action.permission || hasPermission(permissions, action.permission));
     })
     .map(action => {
       if (language !== 'ko') return action;
@@ -309,7 +309,7 @@ export function useDashboardData() {
   }, [user, range, fetchData]);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchTerm.trim() && (isSuperAdmin || hasPermission(permissions, 'can_manage_payments'))) {
+    if (e.key === 'Enter' && searchTerm.trim() && hasPermission(permissions, 'can_manage_payments')) {
       navigate(`/payments?search=${encodeURIComponent(searchTerm.trim())}`);
     }
   };

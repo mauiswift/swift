@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, User, LogIn } from 'lucide-react';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
-import { hasDashboardAccess, hasExplicitPermission, PermissionKey } from '@/lib/permissions';
+import { hasDashboardAccess, hasPermission, PermissionKey } from '@/lib/permissions';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -38,7 +38,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   }
 
   const canAccessProtectedRoute = permission
-    ? hasExplicitPermission(user.permissions, permission)
+    ? hasPermission(user.permissions, permission)
     : isAdmin || hasDashboardAccess(user.permissions);
 
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page

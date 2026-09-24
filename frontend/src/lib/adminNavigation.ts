@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import {
   hasDashboardAccess,
-  hasExplicitPermission,
+  hasPermission,
   type PermissionKey,
   type UserPermissions,
 } from '@/lib/permissions';
@@ -56,7 +56,7 @@ function visible(
   isSuperAdmin: boolean,
 ): boolean {
   if (item.superAdminOnly && !isSuperAdmin) return false;
-  return !item.permission || hasExplicitPermission(permissions, item.permission);
+  return !item.permission || hasPermission(permissions, item.permission);
 }
 
 function filterItems(
