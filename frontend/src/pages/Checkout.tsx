@@ -577,6 +577,7 @@ export default function Checkout() {
   ].join('\n');
   const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
+  const swiftpayVirtualAccountEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'virtual_account');
   const institutionCode = (institution: Institution) => String(institution.code || '').trim().toUpperCase();
   const enabledInstitutionCode = (code: string) => String(code || '').trim().toUpperCase();
   const institutionIsEnabled = (providerCode: string, enabledCodes: string[]) => {
@@ -844,9 +845,13 @@ export default function Checkout() {
 
   if (openAmount) {
     const amountBrand = isKrw ? 'Toss Bank' : 'Netbank';
-    const amountTitle = isKrw ? '수동 은행 송금' : (isKoreanCheckout ? '결제' : 'Payment');
+    const amountTitle = isKrw
+      ? (swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '수동 은행 송금')
+      : (isKoreanCheckout ? '결제' : 'Payment');
     const amountDescription = isKrw
-      ? '금액을 입력하면 수동 은행 송금 안내를 확인할 수 있습니다.'
+      ? (swiftpayVirtualAccountEnabled
+        ? '금액을 입력하면 SwiftPay 가상계좌 입금 안내를 확인할 수 있습니다.'
+        : '금액을 입력하면 수동 은행 송금 안내를 확인할 수 있습니다.')
       : (isKoreanCheckout ? '금액을 입력하면 안전한 결제 수단을 선택할 수 있습니다.' : 'Enter your amount to continue to secure bank and wallet selection.');
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
@@ -1086,10 +1091,18 @@ export default function Checkout() {
                     <div>
                       <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
                         <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
-                        {isHighValuePhp ? 'PHP BANK TRANSFER' : t('krw_bank_transfer')}
+                        {isHighValuePhp ? 'PHP BANK TRANSFER' : (swiftpayVirtualAccountEnabled ? 'SWIFTPAY VIRTUAL ACCOUNT' : t('krw_bank_transfer'))}
                       </div>
-                      <h2 className="text-2xl font-semibold tracking-tight text-white">{isHighValuePhp ? 'Manual bank deposit' : '토스뱅크 계좌이체'}</h2>
-                      <p className="mt-2 max-w-md text-sm leading-relaxed text-white">{isHighValuePhp ? 'Send the exact amount to the Security Bank account below.' : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.'}</p>
+                      <h2 className="text-2xl font-semibold tracking-tight text-white">
+                        {isHighValuePhp ? 'Manual bank deposit' : (swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '토스뱅크 계좌이체')}
+                      </h2>
+                      <p className="mt-2 max-w-md text-sm leading-relaxed text-white">
+                        {isHighValuePhp
+                          ? 'Send the exact amount to the Security Bank account below.'
+                          : (swiftpayVirtualAccountEnabled
+                            ? 'Use the SwiftPay virtual account details below to send the exact KRW amount.'
+                            : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.')}
+                      </p>
                     </div>
                     <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
                       {isHighValuePhp ? 'Payment pending' : '결제 대기 중'}
@@ -1329,6 +1342,23 @@ export default function Checkout() {
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#e23b2e]" />
                     </button>
+                    {supportsMagpieCard && (
+                      <button
+                        type="button"
+                        onClick={openMagpieCardCheckout}
+                        disabled={cardCheckoutLoading}
+                        className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : ''}`}
+                      >
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                          <CreditCard className="h-7 w-7 text-[#1475d1]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base font-semibold text-slate-900">{checkoutText('Visa / Mastercard', 'Visa / Mastercard')}</p>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay securely by card through Magpie.', 'Magpie를 통해 안전하게 카드로 결제하세요.')}</p>
+                        </div>
+                        {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
+                      </button>
+                    )}
                   </div>
                 ) : isMagpieCheckout ? (
                   <button
@@ -1389,6 +1419,22 @@ export default function Checkout() {
                       </div>
                     ) : isPhp && (
                       <div className="space-y-3">
+                        {swiftpayVirtualAccountEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartCheckout()}
+                            className="group flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg"
+                          >
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                              <Landmark className="h-7 w-7 text-[#1475d1]" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-lg font-semibold text-slate-900">{checkoutText('SwiftPay Virtual Account', 'SwiftPay 가상계좌')}</p>
+                              <p className="mt-1 text-[13px] text-slate-500">{checkoutText('Continue to SwiftPay secure checkout to pay using the merchant virtual account.', 'SwiftPay 보안 결제로 이동하여 가맹점 가상계좌로 결제하세요.')}</p>
+                            </div>
+                            <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={openMagpieCardCheckout}

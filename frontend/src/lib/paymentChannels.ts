@@ -7,6 +7,7 @@ export const PAYMENT_CHANNELS = [
   { id: 'gcash', label: 'GCash' },
   { id: 'maya', label: 'Maya' },
   { id: 'bank_transfer', label: 'Bank transfer' },
+  { id: 'virtual_account', label: 'SwiftPay Virtual Account' },
   { id: 'qr_code', label: 'QR code' },
   { id: 'alipay', label: 'Alipay' },
   { id: 'wechat', label: 'WeChat Pay' },

@@ -92,6 +92,7 @@ PAYMENT_CHANNELS = (
     "gcash",
     "maya",
     "bank_transfer",
+    "virtual_account",
     "qr_code",
     "alipay",
     "wechat",
@@ -125,7 +126,7 @@ PHP_CHECKOUT_INSTITUTIONS = (
 )
 DEFAULT_PAYMENT_CHANNELS = {
     "PHP": {
-        "checkout": ["gcash", "maya", "bank_transfer", "qr_code", "card"],
+        "checkout": ["gcash", "maya", "bank_transfer", "virtual_account", "qr_code", "card"],
         "checkout_institutions": list(PHP_CHECKOUT_INSTITUTIONS),
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
@@ -136,7 +137,7 @@ DEFAULT_PAYMENT_CHANNELS = {
         "disbursement": [],
     },
     "KRW": {
-        "checkout": ["bank_transfer"],
+        "checkout": ["bank_transfer", "virtual_account"],
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
     },
