@@ -9,7 +9,7 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../theme';
 
-export const CreateTransactionScreen = ({ navigation }) => {
+export const CreateTransactionScreen = ({ navigation }: { navigation: { goBack: () => void } }) => {
   const { colors, common } = useTheme();
 
   return (

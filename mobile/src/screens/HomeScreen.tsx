@@ -92,7 +92,7 @@ const BalanceCard = ({ balance, currency, isLoading, navigation }: { balance: nu
 const TrustBanner = () => {
   const { colors, roundness, typography } = useTheme();
   return (
-    <View style={[styles.trustBanner, { backgroundColor: colors.surface, borderRadius: roundness.md }]}>
+    <View style={[styles.trustBanner, { backgroundColor: colors.surface, borderRadius: roundness.md, borderColor: colors.border }]}> 
        <View style={styles.trustItem}>
            <MaterialIcons name="security" size={16} color={colors.textSecondary} />
            <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>PCI-DSS</Text>
@@ -107,6 +107,17 @@ const TrustBanner = () => {
            <MaterialIcons name="lock" size={16} color={colors.textSecondary} />
            <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>암호화</Text>
        </View>
+    </View>
+  );
+};
+
+const SummaryStat = ({ label, value }: { label: string; value: string }) => {
+  const { colors, roundness, typography } = useTheme();
+
+  return (
+    <View style={[styles.quickStat, { backgroundColor: colors.surface, borderRadius: roundness.md, borderColor: colors.border }]}> 
+      <Text style={[styles.quickStatValue, { color: colors.text, ...typography.bodyLarge }]}>{value}</Text>
+      <Text style={[styles.quickStatLabel, { color: colors.textSecondary, ...typography.caption }]}>{label}</Text>
     </View>
   );
 };
@@ -176,30 +187,49 @@ const NavButton = ({ icon, label, onPress, color }: { icon: string, label: strin
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
   const { colors, common, isDark, typography, roundness } = useTheme();
   const [token, setToken] = useState<string | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let mounted = true;
+
     const loadToken = async () => {
-      const storedToken = await AsyncStorage.getItem('auth_token');
-      setToken(storedToken);
+      try {
+        const storedToken = await AsyncStorage.getItem('auth_token');
+        if (mounted) setToken(storedToken);
+      } finally {
+        if (mounted) setIsHydrating(false);
+      }
     };
+
     loadToken();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const balanceQuery = useQuery(
     ['balance', token],
     () => api.getBalance(token),
-    { enabled: !!token }
+    { enabled: !!token && !isHydrating }
   );
 
   const transactionsQuery = useQuery(
     ['transactions', token],
     () => api.getTransactions(token),
-    { enabled: !!token }
+    { enabled: !!token && !isHydrating }
   );
 
+  const safeBalance = Number(balanceQuery.data?.balance ?? 0);
+  const transactionItems = Array.isArray(transactionsQuery.data?.items)
+    ? transactionsQuery.data.items
+    : Array.isArray(transactionsQuery.data?.data)
+      ? transactionsQuery.data.data
+      : [];
+
   const onRefresh = async () => {
+    if (!token) return;
     setRefreshing(true);
     await Promise.all([
       balanceQuery.refetch(),
@@ -267,9 +297,9 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
       >
         <View style={styles.balanceContainer}>
           <BalanceCard
-            balance={balanceQuery.data?.balance}
+            balance={safeBalance}
             currency={balanceQuery.data?.currency || 'PHP'}
-            isLoading={balanceQuery.isLoading}
+            isLoading={isHydrating || (Boolean(token) && balanceQuery.isLoading)}
             navigation={navigation}
           />
         </View>
@@ -278,16 +308,22 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
           <TrustBanner />
         </View>
 
+        <View style={styles.summaryRow}>
+          <SummaryStat label="이번 달" value="₱21,480" />
+          <SummaryStat label="대기" value="2" />
+          <SummaryStat label="성공률" value="98%" />
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text, ...typography.h3 }]}>최근 활동</Text>
           </View>
 
-          {transactionsQuery.isLoading && !transactionsQuery.data ? (
+          {isHydrating || (Boolean(token) && transactionsQuery.isLoading && !transactionItems.length) ? (
             <ActivityIndicator size="large" color={common.primary} style={{ marginVertical: 20 }} />
-          ) : (transactionsQuery.data?.items?.length > 0 || transactionsQuery.data?.data?.length > 0) ? (
+          ) : transactionItems.length > 0 ? (
             <View style={styles.transactionsList}>
-              {(transactionsQuery.data.items || transactionsQuery.data.data).slice(0, 5).map((item: any) => (
+              {transactionItems.slice(0, 5).map((item: any) => (
                 <TransactionItem key={item.id} transaction={item} />
               ))}
               <TouchableOpacity
@@ -414,6 +450,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginHorizontal: 24,
     alignItems: 'center',
+    borderWidth: 1,
   },
   trustItem: {
     flexDirection: 'row',
@@ -427,6 +464,28 @@ const styles = StyleSheet.create({
     width: 1,
     height: 12,
     backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 24,
+    marginTop: 20,
+  },
+  quickStat: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  quickStatValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  quickStatLabel: {
+    marginTop: 4,
+    textAlign: 'center',
   },
   section: {
     marginTop: 24,

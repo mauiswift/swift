@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface User {
   id: string;
   username: string;
+  name?: string;
   email: string;
   permissions?: {
     is_super_admin: boolean;
@@ -16,6 +17,7 @@ interface User {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  isLoading: boolean;
   user: User | null;
   login: (token: string, userData: User) => Promise<void>;
   logout: () => Promise<void>;

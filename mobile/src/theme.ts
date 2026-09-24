@@ -1,4 +1,4 @@
-import { useColorScheme } from 'react-native';
+import { useColorScheme, type TextStyle } from 'react-native';
 
 export const COLORS = {
   primary: '#FF6B00', // SwiftPay Orange (Vibrant)
@@ -8,28 +8,52 @@ export const COLORS = {
   danger: '#EF4444',
 
   light: {
-    background: '#F9FAFB',
+    background: '#F5F7FB',
     surface: '#FFFFFF',
-    text: '#111827',
+    text: '#0F172A',
     textSecondary: '#64748B',
     border: '#E2E8F0',
     card: '#FFFFFF',
     tabBar: '#FFFFFF',
+    highlight: '#FFF7ED',
   },
   dark: {
     background: '#0F172A',
-    surface: '#1E293B',
+    surface: '#111827',
     text: '#F8FAFC',
     textSecondary: '#94A3B8',
     border: '#334155',
     card: '#1E293B',
-    tabBar: '#1E293B',
+    tabBar: '#111827',
+    highlight: '#1E293B',
   }
 };
 
 export const useTheme = () => {
   const isDark = useColorScheme() === 'dark';
   const colors = isDark ? COLORS.dark : COLORS.light;
+
+  const typography: {
+    h1: TextStyle;
+    h2: TextStyle;
+    h3: TextStyle;
+    bodyLarge: TextStyle;
+    body: TextStyle;
+    bodySmall: TextStyle;
+    caption: TextStyle;
+    label: TextStyle;
+    button: TextStyle;
+  } = {
+    h1: { fontSize: 32, fontWeight: '900', letterSpacing: -1.0 },
+    h2: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+    h3: { fontSize: 20, fontWeight: '800' },
+    bodyLarge: { fontSize: 16, fontWeight: '600' },
+    body: { fontSize: 14, fontWeight: '500' },
+    bodySmall: { fontSize: 13, fontWeight: '500' },
+    caption: { fontSize: 12, fontWeight: '600' },
+    label: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.0 },
+    button: { fontSize: 15, fontWeight: '700' },
+  };
 
   return {
     isDark,
@@ -47,6 +71,12 @@ export const useTheme = () => {
       md: 16,
       lg: 24,
       xl: 32,
+    },
+    layout: {
+      pagePadding: 24,
+      cardPadding: 16,
+      tightPadding: 12,
+      sectionGap: 24,
     },
     roundness: {
       sm: 8,
@@ -71,16 +101,6 @@ export const useTheme = () => {
         elevation: 3,
       },
     },
-    typography: {
-      h1: { fontSize: 32, fontWeight: '900', letterSpacing: -1.0 },
-      h2: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
-      h3: { fontSize: 20, fontWeight: '800' },
-      bodyLarge: { fontSize: 16, fontWeight: '600' },
-      body: { fontSize: 14, fontWeight: '500' },
-      bodySmall: { fontSize: 13, fontWeight: '500' },
-      caption: { fontSize: 12, fontWeight: '600' },
-      label: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.0 },
-      button: { fontSize: 15, fontWeight: '700' },
-    }
+    typography,
   };
 };
