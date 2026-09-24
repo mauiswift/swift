@@ -133,6 +133,14 @@ async def get_rate(currency_pair: str) -> float:
         _cache[normalized_pair] = (rate, time.monotonic())
         return rate
 
+    if normalized_pair == "EUR_KRW":
+        eur_php = await get_rate("EUR_PHP")
+        usd_php = await get_rate("USD_PHP")
+        if eur_php > 0 and usd_php > 0:
+            rate = eur_php / usd_php
+            _cache[normalized_pair] = (rate, time.monotonic())
+            return rate
+
     if normalized_pair == "USD_CNY":
         rate = await get_rate("USDT_CNY")
         _cache[normalized_pair] = (rate, time.monotonic())

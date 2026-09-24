@@ -33,20 +33,6 @@ import AppFooter from '@/components/AppFooter';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import BrandLogo from '@/components/BrandLogo';
 
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.unobserve(entry.target); } },
-      { threshold }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [threshold]);
-  return { ref, isVisible };
-}
-
 // ─── Solutions tab data ────────────────────────────────────────
 const SOLUTION_TABS = [
   {
@@ -147,7 +133,9 @@ function SolutionsTabs() {
           return (
         <button
               key={t.id}
+              id={t.id}
               role="tab"
+              aria-controls={`solution-panel-${t.id}`}
               aria-selected={i === activeTab}
               onClick={() => setActiveTab(i)}
               className={`flex flex-none items-center gap-3 rounded-xl px-4 py-3 text-left text-[15px] font-semibold transition-colors ${
@@ -161,7 +149,7 @@ function SolutionsTabs() {
         })}
       </div>
 
-      <div className="min-h-[420px] rounded-2xl border border-[#f2f2f2] bg-white p-8 shadow-sm lg:p-12">
+      <div id={`solution-panel-${tab.id}`} role="tabpanel" aria-labelledby={tab.id} className="min-h-[420px] rounded-2xl border border-[#f2f2f2] bg-white p-8 shadow-sm lg:p-12">
         <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
             <h3 className="text-[22px] font-semibold tracking-tight text-[#1a1a1a]">{tab.heading}</h3>
@@ -414,34 +402,11 @@ function HomePage() {
     { name: 'QR PH' },
   ];
 
-  const { ref: benefitsRef, isVisible: benefitsVisible } = useScrollReveal(0.1);
-  const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal(0.1);
-  const { ref: resultsRef, isVisible: resultsVisible } = useScrollReveal(0.1);
-  const { ref: industriesRef, isVisible: industriesVisible } = useScrollReveal(0.1);
-
   return (
     <div className="min-h-screen overflow-x-hidden bg-white font-display text-[#1a1a1a] [selection:bg-[#f5c8a4]]">
       <Navbar />
 
-      {/* Keyframe animations injected once */}
       <style>{`
-        @keyframes marqueeScroll { from { transform:translateX(0) } to { transform:translateX(-50%) } }
-        .marquee-track { animation: marqueeScroll 36s linear infinite; }
-        .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
-        @keyframes ringFill { to { stroke-dashoffset: 0 } }
-        .ring-fill-anim { stroke-dasharray:232; stroke-dashoffset:232; animation: ringFill 1.4s cubic-bezier(.16,1,.3,1) 1s forwards; }
-        @keyframes floatSlow { 0%,100% { transform:translateY(0px) } 50% { transform:translateY(-10px) } }
-        @keyframes shimmer { 0% { transform:translateX(-120%);} 100% { transform:translateX(120%);} }
-        .float-slow { animation: floatSlow 6s ease-in-out infinite; }
-        .shine::after {
-          content:'';
-          position:absolute;
-          inset:-30% auto -30% -30%;
-          width:55%;
-          transform:translateX(-120%);
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,0.52),transparent);
-          animation: shimmer 3.6s ease-in-out infinite;
-        }
         .soft-grid {
           background-image: linear-gradient(rgba(15,23,42,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.02) 1px, transparent 1px);
           background-size: 18px 18px;
@@ -492,13 +457,13 @@ function HomePage() {
                 <div className="absolute inset-10 rounded-[2rem] bg-gradient-to-br from-[#fff7ed] via-white to-[#dbeafe] blur-2xl opacity-70" />
                 <HeroImage />
                 {/* Ring card */}
-                <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white/90 p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] backdrop-blur-sm text-center">
+                <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] text-center">
                   <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
                   <div className="flex items-center justify-center">
                     <div className="relative h-[94px] w-[94px] flex-none">
                       <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90">
                         <circle className="stroke-[#e2f5f3]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" />
-                        <circle className="ring-fill-anim stroke-[#06d6b6]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" strokeLinecap="round" />
+                        <circle className="stroke-[#06d6b6]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" strokeLinecap="round" />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
                         <strong className="text-[17px] font-semibold">100%</strong>
@@ -509,14 +474,14 @@ function HomePage() {
                   <p className="mt-3 text-[11px] text-[#9a9a9a]">0 pending transactions</p>
                 </div>
                 {/* Chip: Collections */}
-                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white/90 px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.07)]">
+                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.07)]">
                   Collections
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
                     <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
                   </span>
                 </div>
                 {/* Chip: Payments */}
-                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white/90 px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.07)]">
+                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.07)]">
                   Payments
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
                     <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
@@ -531,13 +496,12 @@ function HomePage() {
         <section className="border-t border-[#f2f2f2]" style={{ paddingBlock: 'clamp(40px,5vw,64px)' }} aria-label="Trusted by leading enterprises">
           <p className="mb-8 text-center text-[13px] font-semibold uppercase tracking-[0.1em] text-[#9a9a9a]">Trusted by leading enterprises</p>
           <div
-            className="marquee-wrap overflow-hidden"
-            style={{ WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)' }}
+            className="overflow-hidden"
           >
-            <div className="marquee-track flex w-max items-center" style={{ gap: 'clamp(64px,8vw,120px)' }}>
-              {[...clientLogos, ...clientLogos].map((logo, i) => (
-                <img key={i} src={logo.src} alt={i < clientLogos.length ? logo.alt : ''} aria-hidden={i >= clientLogos.length}
-                  className="max-h-[44px] w-auto opacity-50 grayscale transition-all hover:opacity-100 hover:grayscale-0" loading="lazy" />
+            <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+              {clientLogos.map((logo) => (
+                <img key={logo.alt} src={logo.src} alt={logo.alt}
+                  className="max-h-[44px] w-auto opacity-60 grayscale transition-[opacity,filter] hover:opacity-100 hover:grayscale-0" loading="lazy" />
               ))}
             </div>
           </div>
@@ -626,9 +590,9 @@ function HomePage() {
 
         {/* ── Results and industries ────────────────────────────── */}
         <section id="stories" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
-          <div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Real results from real implementations</h2></div><div ref={resultsRef} className={`grid grid-cols-1 gap-6 sm:grid-cols-3 transition-all duration-700 ${resultsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>{results.map(result => <article key={result.industry} className="flex flex-col overflow-hidden rounded-2xl border border-[#e6e6e6] bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"><div className="flex min-h-[168px] items-center justify-center p-8" style={{ background: result.logoBg }}><img src={result.logo} alt={result.industry} className="h-[46px] w-auto max-w-[78%] object-contain" style={{ filter: result.logoFilter }} loading="lazy" /></div><div className="flex flex-1 flex-col items-start gap-3 p-6"><span className="rounded-full bg-[#f2f2f2] px-3 py-1 text-[14px] font-semibold text-[#2c2c2c]">{result.tag}</span><h3 className="text-[22px] font-semibold tracking-[-0.01em]">{result.industry}</h3><p className="text-[16px] leading-relaxed text-[#535353]">{result.desc}</p></div></article>)}</div></div>
+          <div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Real results from real implementations</h2></div><div className="grid grid-cols-1 gap-6 sm:grid-cols-3">{results.map(result => <article key={result.industry} className="flex flex-col overflow-hidden rounded-2xl border border-[#e6e6e6] bg-white shadow-sm transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-xl"><div className="flex min-h-[168px] items-center justify-center p-8" style={{ background: result.logoBg }}><img src={result.logo} alt={result.industry} className="h-[46px] w-auto max-w-[78%] object-contain" style={{ filter: result.logoFilter }} loading="lazy" /></div><div className="flex flex-1 flex-col items-start gap-3 p-6"><span className="rounded-full bg-[#f2f2f2] px-3 py-1 text-[14px] font-semibold text-[#2c2c2c]">{result.tag}</span><h3 className="text-[22px] font-semibold tracking-[-0.01em]">{result.industry}</h3><p className="text-[16px] leading-relaxed text-[#535353]">{result.desc}</p></div></article>)}</div></div>
         </section>
-        <section id="industries" style={{ background: '#fff0eb', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2></div><div ref={industriesRef} className={`mx-auto grid max-w-[980px] grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 transition-all duration-700 ${industriesVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>{industries.map(({ label, Icon, color }) => <div key={label} className="group flex flex-col items-center gap-3 text-center"><span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md ${color}`}><Icon className="h-7 w-7" /></span><span className="text-[14px] font-semibold text-[#6a3617]">{label}</span></div>)}</div></div></section>
+        <section id="industries" style={{ background: '#fff0eb', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2></div><div className="mx-auto grid max-w-[980px] grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">{industries.map(({ label, Icon, color }) => <div key={label} className="group flex flex-col items-center gap-3 text-center"><span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm transition-[box-shadow,transform] duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md ${color}`}><Icon className="h-7 w-7" /></span><span className="text-[14px] font-semibold text-[#6a3617]">{label}</span></div>)}</div></div></section>
 
         {/* ── Security and CTA ──────────────────────────────────── */}
         <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2><p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls.</p></div><div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">{securityBadges.map(badge => <div key={badge.label} className="flex flex-col items-center gap-4 text-center"><img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" /><span className="max-w-[14ch] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span></div>)}</div></div></section>

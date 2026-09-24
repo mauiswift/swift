@@ -35,7 +35,7 @@ interface RolePermissions {
 }
 
 interface RolePreset {
-  id: string;
+  id: number;
   name: string;
   description: string;
   color: string;
@@ -99,6 +99,26 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
   reporter: <Tag className="h-4 w-4 text-yellow-400" />,
 };
 
+const permissionKeys: (keyof RolePermissions)[] = [
+  'is_super_admin',
+  ...PERMISSION_KEYS.map(({ key }) => key),
+];
+
+function normalizeRole(role: RolePreset & Partial<RolePermissions>): RolePreset {
+  const permissions = permissionKeys.reduce((result, key) => {
+    result[key] = Boolean(role[key] ?? role.permissions?.[key]);
+    return result;
+  }, {} as RolePermissions);
+
+  return {
+    id: role.id,
+    name: role.name,
+    description: role.description || 'Custom permission template',
+    color: role.color || 'blue',
+    permissions,
+  };
+}
+
 // ── PermissionBadge ────────────────────────────────────────────────────────────
 
 function PermissionBadge({ active, label, color }: { active: boolean; label: string; color: string }) {
@@ -134,7 +154,9 @@ export default function RolesPage() {
     try {
       const res = await fetch('/api/v1/roles');
       if (!res.ok) throw new Error(await res.text());
-      setRoles(await res.json());
+      const payload = await res.json();
+      if (!Array.isArray(payload)) throw new Error('Invalid roles response');
+      setRoles(payload.map(normalizeRole));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load roles');
     } finally {

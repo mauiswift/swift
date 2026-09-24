@@ -32,6 +32,7 @@ from services.magpie_services import CurrencyConverter, MagpieService
 from services.payment_gateway import gateway, _select_manual_transfer_account
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
+from services.exchange_rate_service import get_rate
 from services.event_bus import payment_event_bus
 from utils.datetime import serialize_utc_datetime
 
@@ -221,6 +222,10 @@ async def get_open_amount_links(
 class CheckoutInstitutionRequest(BaseModel):
     institution_code: str = Field(..., min_length=1, max_length=100)
     amount: Optional[float] = Field(default=None, gt=0)
+
+
+class CheckoutSwiftPayCurrencyRequest(BaseModel):
+    currency: Literal["USD", "EUR"]
 
 
 class OpenAmountPaymentRequest(BaseModel):
@@ -1624,3 +1629,80 @@ async def select_checkout_institution(
     await db.commit()
 
     return {"success": True, "redirect_url": redirect_url}
+
+
+@router.post("/checkout/{identifier}/swiftpay-currency")
+async def select_checkout_swiftpay_currency(
+    identifier: str,
+    payload: CheckoutSwiftPayCurrencyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a SwiftPay USD/EUR alternative for a KRW checkout."""
+    stmt = select(Transactions).where(
+        or_(
+            func.lower(Transactions.external_id) == identifier.lower(),
+            func.lower(Transactions.xendit_id) == identifier.lower(),
+            func.lower(Transactions.payment_url) == identifier.lower(),
+            func.lower(Transactions.qr_code_url) == identifier.lower(),
+        )
+    ).limit(1)
+    result = await db.execute(stmt)
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").upper() != "KRW":
+        raise HTTPException(status_code=400, detail="SwiftPay currency alternatives are only available for KRW payments")
+
+    service = SwiftPayService()
+    if not service.is_configured():
+        raise HTTPException(status_code=503, detail="SwiftPay is not configured")
+    try:
+        rate = await get_rate(f"{payload.currency}_KRW")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="Unable to obtain the current exchange rate") from exc
+
+    amount_krw = float(txn.amount or 0)
+    amount_foreign = round(amount_krw / rate, 2)
+    if amount_foreign <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be greater than zero")
+    order_result = await service.create_order(
+        amount=amount_foreign,
+        reference_no=f"{txn.external_id}-{payload.currency}",
+        details={
+            "description": txn.description or "",
+            "customer_name": txn.customer_name or "",
+            "customer_email": txn.customer_email or "",
+            "original_currency": "KRW",
+            "original_amount": f"{amount_krw:.2f}",
+            "exchange_rate": f"{rate:.8f}",
+        },
+        currency=payload.currency,
+        generate_customer_redirect_url=True,
+        merchant_redirect_url=(
+            f"{str(settings.public_checkout_host).rstrip('/')}/checkout/"
+            f"{quote(str(txn.external_id), safe='')}?payment_method=swiftpay-{payload.currency.lower()}"
+            if settings.public_checkout_host
+            else None
+        ),
+        merchant_webhook_url=settings.swiftpay_callback_url or None,
+    )
+    if not order_result.get("success"):
+        raise HTTPException(status_code=502, detail=order_result.get("error", "Could not create SwiftPay checkout"))
+
+    order_data = order_result.get("data") or {}
+    redirect_url = order_data.get("customerRedirectUrl") or order_data.get("customer_redirect_url")
+    if not redirect_url:
+        raise HTTPException(status_code=502, detail="SwiftPay did not return a checkout URL")
+    gateway_id = order_data.get("paymentId") or order_data.get("payment_id") or order_data.get("id")
+    if gateway_id:
+        txn.xendit_id = gateway_id
+    txn.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {
+        "success": True,
+        "redirect_url": redirect_url,
+        "currency": payload.currency,
+        "amount": amount_foreign,
+        "amount_krw": amount_krw,
+        "exchange_rate": rate,
+    }

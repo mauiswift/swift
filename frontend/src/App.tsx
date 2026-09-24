@@ -128,6 +128,7 @@ class AppErrorBoundary extends React.Component<
 function AuthAwareContent() {
   const { loading, platformBranding, isSuperAdmin, user } = useAuth();
   const location = useLocation();
+  const isPublicHome = location.pathname === '/';
   const { data: maintenanceEnabled } = useQuery({
     queryKey: ['maintenance-gate-status'],
     queryFn: async () => {
@@ -148,7 +149,7 @@ function AuthAwareContent() {
     retry: 2,
   });
 
-  if (loading) {
+  if (loading && !isPublicHome) {
     return <AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />;
   }
 

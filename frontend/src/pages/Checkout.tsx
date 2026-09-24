@@ -224,6 +224,7 @@ export default function Checkout() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
+  const [swiftPayCurrencyLoading, setSwiftPayCurrencyLoading] = useState<'USD' | 'EUR' | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '', country: 'KR' });
   const [checkoutDesign, setCheckoutDesign] = useState({
@@ -749,6 +750,25 @@ export default function Checkout() {
     if (!txn || cardCheckoutLoading) return;
     setCardFormError(null);
     setShowCardForm(true);
+  };
+
+  const openSwiftPayCurrencyCheckout = async (currency: 'USD' | 'EUR') => {
+    if (!txn || swiftPayCurrencyLoading) return;
+    setSwiftPayCurrencyLoading(currency);
+    try {
+      const response = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/swiftpay-currency`,
+        { currency },
+      );
+      if (!response.ok || !response.data?.redirect_url) {
+        throw new Error(response.data?.detail || response.data?.error || `Unable to open the ${currency} checkout.`);
+      }
+      window.location.assign(response.data.redirect_url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Unable to open the ${currency} checkout.`);
+    } finally {
+      setSwiftPayCurrencyLoading(null);
+    }
   };
 
   const openMagpieWalletCheckout = (method: 'alipay' | 'wechat' | 'unionpay') => {
@@ -1411,6 +1431,34 @@ export default function Checkout() {
                         {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
                       </button>
                     )}
+                    <div className="sm:col-span-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {checkoutText('Alternative: pay in USD or EUR', '대안: USD 또는 EUR로 결제')}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                        {checkoutText(
+                          'SwiftPay will show the converted foreign-currency amount. Your KRW total remains fixed at the amount above.',
+                          'SwiftPay에 환산된 외화 금액이 표시됩니다. 원화 결제 금액은 위 금액으로 고정됩니다.',
+                        )}
+                      </p>
+                      <p className="mt-2 text-xs font-semibold text-indigo-900">
+                        {checkoutText('KRW amount due:', '결제할 원화 금액:')} {fmtCurrency(payableAmount, 'KRW')}
+                      </p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {(['USD', 'EUR'] as const).map(currency => (
+                          <button
+                            key={currency}
+                            type="button"
+                            onClick={() => openSwiftPayCurrencyCheckout(currency)}
+                            disabled={swiftPayCurrencyLoading !== null}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {swiftPayCurrencyLoading === currency && <Loader2 className="h-4 w-4 animate-spin" />}
+                            {currency} checkout
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ) : isMagpieCheckout ? (
                   <button

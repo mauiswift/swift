@@ -40,6 +40,10 @@ class RoleOut(BaseModel):
     can_manage_bot: bool
     can_approve_topups: bool
     can_manage_team: bool
+    can_credit_wallet: bool
+    can_debit_wallet: bool
+    can_freeze_wallet: bool
+    can_unfreeze_wallet: bool
     created_by: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -58,6 +62,10 @@ class RoleCreate(BaseModel):
     can_manage_bot: bool = False
     can_approve_topups: bool = False
     can_manage_team: bool = False
+    can_credit_wallet: bool = False
+    can_debit_wallet: bool = False
+    can_freeze_wallet: bool = False
+    can_unfreeze_wallet: bool = False
 
 
 class RoleUpdate(BaseModel):
@@ -73,6 +81,10 @@ class RoleUpdate(BaseModel):
     can_manage_bot: Optional[bool] = None
     can_approve_topups: Optional[bool] = None
     can_manage_team: Optional[bool] = None
+    can_credit_wallet: Optional[bool] = None
+    can_debit_wallet: Optional[bool] = None
+    can_freeze_wallet: Optional[bool] = None
+    can_unfreeze_wallet: Optional[bool] = None
 
 
 class RoleApplyRequest(BaseModel):
@@ -128,6 +140,10 @@ async def create_role(
         can_manage_bot=data.can_manage_bot,
         can_approve_topups=data.can_approve_topups,
         can_manage_team=data.can_manage_team,
+        can_credit_wallet=data.can_credit_wallet,
+        can_debit_wallet=data.can_debit_wallet,
+        can_freeze_wallet=data.can_freeze_wallet,
+        can_unfreeze_wallet=data.can_unfreeze_wallet,
         created_by=current_user.id,
     )
     db.add(role)
@@ -224,6 +240,10 @@ async def apply_role_to_admin(
     admin.can_manage_bot = role.can_manage_bot
     admin.can_approve_topups = role.can_approve_topups
     admin.can_manage_team = role.can_manage_team
+    admin.can_credit_wallet = role.can_credit_wallet
+    admin.can_debit_wallet = role.can_debit_wallet
+    admin.can_freeze_wallet = role.can_freeze_wallet
+    admin.can_unfreeze_wallet = role.can_unfreeze_wallet
 
     await db.commit()
     logger.info(
