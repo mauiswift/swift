@@ -82,7 +82,7 @@ class SwiftPayService:
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
     _KRW_BANK_HINTS = (
         "KB", "KOOOKMIN", "KOOKMIN", "KDB", "SHINHAN", "HANA", "WOORI", "NH", "NONGHYUP",
-        "IBK", "SC", "SBI", "KAKAO", "NAVER", "TOSS", "PAYCO", "KOREA"
+        "IBK", "SC", "SBI", "KAKAO", "K BANK", "KBANK", "NAVER", "TOSS", "PAYCO", "KOREA"
     )
     _KRW_BANK_FALLBACK_NAMES = (
         "KB KOOKMIN BANK", "KB Kookmin Bank", "KOOKMIN BANK", "SHINHAN BANK", "HANA BANK",
@@ -98,8 +98,11 @@ class SwiftPayService:
         {"code": "IBK", "name": "IBK"},
         {"code": "KDB", "name": "KDB Bank"},
         {"code": "SC", "name": "SC First Bank"},
+        {"code": "K", "name": "K Bank"},
+        {"code": "KBANK", "name": "K Bank"},
         {"code": "KAKAO", "name": "Kakao Bank"},
         {"code": "NAVER", "name": "Naver Bank"},
+        {"code": "TOSS", "name": "Toss Bank"},
     )
     @classmethod
     def _looks_like_korean_bank(cls, code: str, name: str, item_type: str = "") -> bool:

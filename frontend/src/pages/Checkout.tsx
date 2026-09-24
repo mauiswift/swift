@@ -36,7 +36,11 @@ import {
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
-import { KRW_BANKS as SUPPORTED_KRW_BANKS } from '@/config/krw-banks';
+import {
+  KRW_BANKS as SUPPORTED_KRW_BANKS,
+  normalizeKrwBankName,
+  isSupportedKrwBank,
+} from '@/config/krw-banks';
 
 interface Transaction {
   id: number;
@@ -565,7 +569,9 @@ export default function Checkout() {
   const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
   const merchantDisplayName = txn.merchant_name?.trim() || 'Merchant';
-  const krwBankName = isSecurityBankName(txn.bank_name) ? 'Toss Bank' : (txn.bank_name || 'Toss Bank');
+  const krwBankName = isSecurityBankName(txn.bank_name)
+    ? 'Toss Bank'
+    : normalizeKrwBankName(txn.bank_name || 'Toss Bank');
   const krwAccountNumber = isSecurityBankName(txn.bank_name) ? '1908-1618-8260' : (txn.bank_account_number || '1908-1618-8260');
   const krwAccountName = isSecurityBankName(txn.bank_name) ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
   const manualDepositBankName = isKrw ? krwBankName : (isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || 'Toss Bank'));
@@ -592,9 +598,9 @@ export default function Checkout() {
   };
   const isSupportedKrwInstitution = (institution: Institution) => {
     const code = institutionCode(institution);
-    const name = institution.name.trim().toLowerCase();
-    return SUPPORTED_KRW_BANKS.some(bank => (
-      bank.code === code || bank.name.toLowerCase() === name
+    const name = institution.name.trim();
+    return isSupportedKrwBank(code) || isSupportedKrwBank(name) || SUPPORTED_KRW_BANKS.some(bank => (
+      bank.code === code || bank.name.toLowerCase() === name.toLowerCase()
     ));
   };
   const visibleInstitutions = institutions.filter(institution => (

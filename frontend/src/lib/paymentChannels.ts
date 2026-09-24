@@ -3,6 +3,8 @@ import { client } from '@/lib/api';
 export type PaymentChannelFlow = 'checkout' | 'withdrawal' | 'disbursement';
 export type PaymentChannels = Record<string, Record<PaymentChannelFlow, string[]> & { checkout_institutions?: string[] }>;
 
+const SUPPORTED_PAYMENT_CHANNEL_CURRENCIES = new Set(['PHP', 'CNY', 'KRW', 'USDT']);
+
 export const PAYMENT_CHANNELS = [
   { id: 'gcash', label: 'GCash' },
   { id: 'maya', label: 'Maya' },
@@ -14,9 +16,46 @@ export const PAYMENT_CHANNELS = [
   { id: 'card', label: 'Card' },
 ] as const;
 
+const normalizePaymentChannelCurrency = (currency: string | null | undefined): string | null => {
+  const normalized = String(currency ?? 'PHP').trim().toUpperCase();
+  const aliasMap: Record<string, string> = { USD: 'USDT', USDC: 'USDT' };
+  const key = aliasMap[normalized] ?? normalized;
+  return SUPPORTED_PAYMENT_CHANNEL_CURRENCIES.has(key) ? key : null;
+};
+
+export const sanitizePaymentChannels = (channels: PaymentChannels | null): PaymentChannels | null => {
+  if (!channels || typeof channels !== 'object') return null;
+
+  const sanitized = Object.entries(channels).reduce<PaymentChannels>((acc, [currency, config]) => {
+    const normalizedCurrency = normalizePaymentChannelCurrency(currency);
+    if (!normalizedCurrency || !config || typeof config !== 'object') return acc;
+
+    const nextConfig: Record<string, unknown> = {};
+    for (const flow of ['checkout', 'withdrawal', 'disbursement'] as const) {
+      const value = (config as Record<string, unknown>)[flow];
+      nextConfig[flow] = Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string')
+        : [];
+    }
+
+    const institutions = (config as Record<string, unknown>).checkout_institutions;
+    if (Array.isArray(institutions)) {
+      nextConfig.checkout_institutions = institutions
+        .filter((item): item is string => typeof item === 'string')
+        .map(item => item.trim().toUpperCase());
+    }
+
+    acc[normalizedCurrency] = nextConfig as Record<PaymentChannelFlow, string[]> & { checkout_institutions?: string[] };
+    return acc;
+  }, {} as PaymentChannels);
+
+  return Object.keys(sanitized).length > 0 ? sanitized : null;
+};
+
 export async function fetchPaymentChannels(): Promise<PaymentChannels | null> {
   const response = await client.get('/api/v1/app-settings/payment-channels');
-  return response.ok && response.data?.channels ? response.data.channels as PaymentChannels : null;
+  if (!response.ok || !response.data?.channels) return null;
+  return sanitizePaymentChannels(response.data.channels as PaymentChannels);
 }
 
 export function isPaymentChannelEnabled(
@@ -28,5 +67,10 @@ export function isPaymentChannelEnabled(
   // Settings are an authorization boundary: do not expose a channel while
   // configuration is unavailable or has not explicitly enabled it.
   if (!channels) return false;
-  return channels[String(currency || 'PHP').toUpperCase()]?.[flow]?.includes(channel) ?? false;
+
+  const normalizedCurrency = normalizePaymentChannelCurrency(currency);
+  if (!normalizedCurrency) return false;
+
+  const flowChannels = channels[normalizedCurrency]?.[flow];
+  return Array.isArray(flowChannels) ? flowChannels.includes(channel) : false;
 }

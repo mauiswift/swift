@@ -284,6 +284,16 @@ function HeroImage() {
   );
 }
 
+function SectionIntro({ eyebrow, title, description, center = true }: { eyebrow?: string; title: string; description?: string; center?: boolean }) {
+  return (
+    <div className={center ? 'mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center' : 'mb-[clamp(40px,6vw,64px)] max-w-[720px]'}>
+      {eyebrow && <span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">{eyebrow}</span>}
+      <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>{title}</h2>
+      {description && <p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">{description}</p>}
+    </div>
+  );
+}
+
 // ─── Homepage ──────────────────────────────────────────────────
 function HomePage() {
   const showLegacyFooter = false;
@@ -536,11 +546,11 @@ function HomePage() {
         {/* ── Markets, currencies, and payment channels ─────────── */}
         <section id="coverage" className="bg-[#f8fafc]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
-            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">Coverage</span>
-              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Reach customers across markets and payment rails</h2>
-              <p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Accept local and cross-border payments through one payment operation, with channel availability based on your merchant configuration.</p>
-            </div>
+            <SectionIntro
+              eyebrow="Coverage"
+              title="Reach customers across markets and payment rails"
+              description="Accept local and cross-border payments through one payment operation, with channel availability based on your merchant configuration."
+            />
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm">
                 <div className="mb-5 flex items-center gap-3">
@@ -583,7 +593,10 @@ function HomePage() {
         {/* ── Solutions ─────────────────────────────────────────── */}
         <section id="solutions" className="bg-[#fafafa]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
-            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">Solutions and tools</span><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>One system for your entire payment operation</h2></div>
+            <SectionIntro
+              eyebrow="Solutions and tools"
+              title="One system for your entire payment operation"
+            />
             <SolutionsTabs />
           </div>
         </section>
@@ -595,7 +608,7 @@ function HomePage() {
         <section id="industries" style={{ background: '#fff0eb', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2></div><div className="mx-auto grid max-w-[980px] grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">{industries.map(({ label, Icon, color }) => <div key={label} className="group flex flex-col items-center gap-3 text-center"><span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm transition-[box-shadow,transform] duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md ${color}`}><Icon className="h-7 w-7" /></span><span className="text-[14px] font-semibold text-[#6a3617]">{label}</span></div>)}</div></div></section>
 
         {/* ── Security and CTA ──────────────────────────────────── */}
-        <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2><p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls.</p></div><div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">{securityBadges.map(badge => <div key={badge.label} className="flex flex-col items-center gap-4 text-center"><img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" /><span className="max-w-[14ch] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span></div>)}</div></div></section>
+        <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><SectionIntro eyebrow="Security" title="Enterprise-grade security and compliance" description="Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls." /><div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">{securityBadges.map(badge => <div key={badge.label} className="flex flex-col items-center gap-4 text-center"><img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" /><span className="max-w-[14ch] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span></div>)}</div></div></section>
         <section className="relative overflow-hidden bg-[#191919] text-center text-white" style={{ backgroundImage: 'radial-gradient(ellipse 60% 80% at 50% 120%,rgba(238,134,73,.14),transparent 62%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="relative z-10 mx-auto max-w-[1200px] px-6 sm:px-8"><h2 className="mx-auto mb-10 block max-w-[17ch] font-semibold leading-tight tracking-[-0.018em] text-white" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>See how SwiftPay transforms your payment operations</h2><a href="/contact" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">Talk with a payments expert<span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/20"><ArrowRight className="h-[13px] w-[13px]" /></span></a></div></section>
       </main>
 
