@@ -458,13 +458,13 @@ def _send_invitation_email(
 
     try:
         EmailService.send_invitation_email(
-            to_email,
-            token,
-            role,
-            inviter_name,
-            organization_name,
-            expires_at,
-            notes,
+            to_email=to_email,
+            token=token,
+            role=role,
+            inviter_name=inviter_name,
+            organization_name=organization_name,
+            expires_at=expires_at,
+            notes=notes,
         )
         logger.info("Invitation email sent to %s", to_email)
     except Exception as exc:

@@ -207,7 +207,7 @@ export default function Layout({ children }: LayoutProps) {
         onClick={onClose}
         aria-current={exactTabMatch ? 'page' : undefined}
         title={collapsed ? item.label : undefined}
-        className={`group flex min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-[#1E293B] font-semibold text-white' : 'text-slate-300 hover:text-white hover:bg-[#1F2A37]/50'}`}
+        className={`group flex min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827] ${exactTabMatch ? 'bg-[#1E293B] font-semibold text-white' : 'text-slate-300 hover:text-white hover:bg-[#1F2A37]/50'}`}
       >
         <Icon
           size={16}
@@ -281,7 +281,7 @@ export default function Layout({ children }: LayoutProps) {
             type="button"
             onClick={handleLogout}
             title={collapsed ? t('nav_logout') : undefined}
-            className="flex items-center gap-2 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-300 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-[#1F2A37]/50 transition-colors"
+            className="flex items-center gap-2 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-300 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-[#1F2A37]/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827]"
           >
             <LogOut size={15} className="text-slate-400 flex-shrink-0" />
             {!collapsed && <span className="truncate">{t('nav_logout')}</span>}
@@ -303,6 +303,9 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="dashboard-density app-shell flex w-full overflow-hidden font-sans text-slate-900">
+      <a className="skip-link" href="#dashboard-main">
+        {language === 'ko' ? '본문으로 건너뛰기' : 'Skip to main content'}
+      </a>
       {/* Desktop Sidebar - Static */}
       <div className="hidden lg:flex lg:shrink-0 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:min-w-0 print:hidden">
         <Sidebar collapsed={sidebarCollapsed} />
@@ -322,7 +325,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header - Mobile Optimized */}
-        <header className="sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8 print:hidden">
+        <header aria-label={language === 'ko' ? '대시보드 도구 모음' : 'Dashboard toolbar'} className="sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/95 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8 print:hidden">
           {/* Left: Menu button - Touch-friendly 44x44px */}
           <div className="flex min-w-0 items-center gap-1.5">
             <button
@@ -445,7 +448,7 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Main Content - Mobile Optimized Padding */}
-        <main className="app-main">
+        <main id="dashboard-main" tabIndex={-1} className="app-main">
           <div key={`${location.pathname}${location.search}`} className="app-content app-motion flex-1">
             <div className="print:hidden"><BroadcastBanner /></div>
             <div className="print:hidden"><WhatsNewBanner /></div>

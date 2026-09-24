@@ -74,11 +74,49 @@
 }
 
 @layer components {
+  .skip-link {
+    position: fixed;
+    left: 1rem;
+    top: 1rem;
+    z-index: 100;
+    transform: translateY(-180%);
+    border-radius: 0.75rem;
+    background: #0f172a;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.2);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+    color: #fff;
+  }
+
+  .dashboard-surface {
+    background: #fff;
+    background: rgb(255 255 255 / 0.92);
+  }
+
+  @supports not ((backdrop-filter: blur(1px))) {
+    .dashboard-surface,
+    .app-shell header {
+      background: #fff;
+    }
+  }
+
   .app-shell {
     min-height: 100dvh;
     background:
       radial-gradient(circle at 100% 0%, rgb(219 234 254 / 0.32), transparent 28rem),
       #f6f8fb;
+  }
+
+  .dashboard-surface {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
   }
 
   .app-main {

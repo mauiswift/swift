@@ -58,7 +58,7 @@ export const statusStyles: Record<string, { bg: string; text: string; dot: strin
 
 export function DashboardPanel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`rounded-[26px] border border-slate-200/80 bg-white/90 shadow-[0_12px_32px_rgba(15,23,42,0.06)] ${className}`}>
+    <section className={`dashboard-surface rounded-[26px] border border-slate-200/80 shadow-[0_12px_32px_rgba(15,23,42,0.06)] ${className}`}>
       {children}
     </section>
   );
@@ -107,7 +107,9 @@ export function DailyVolumeChart({
         </div>
         <span className="text-[10px] text-slate-400">Peak {formatValue(maxValue)}</span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className={`h-full w-full ${compact ? 'min-h-[110px]' : 'min-h-[150px]'}`} role="img" aria-label="Daily payment and disbursement volume chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className={`h-full w-full ${compact ? 'min-h-[110px]' : 'min-h-[150px]'}`} role="img" aria-labelledby="daily-volume-chart-title daily-volume-chart-description">
+        <title id="daily-volume-chart-title">Daily payment and disbursement volume</title>
+        <desc id="daily-volume-chart-description">A seven-day comparison of payment and disbursement amounts.</desc>
         <g stroke="#e2e8f0" strokeWidth="1">
           {[0, 0.5, 1].map((ratio) => {
             const y = bottom - ratio * (bottom - top);
@@ -145,7 +147,7 @@ export function DashboardStatCard({
 }) {
   const { language } = useLanguage();
   return (
-    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
+    <div className="card-3d dashboard-surface group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
       <div className="card-3d-inner flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-4">
           <div>

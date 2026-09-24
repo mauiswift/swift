@@ -5,7 +5,7 @@ import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound, Shield } from 'lucide-react';
+import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound, Shield, RefreshCw } from 'lucide-react';
 
 interface DownlineMember {
   id: number;
@@ -72,9 +72,20 @@ export default function DownlineManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isKrw]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!selectedMember) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busyMemberId && !activityLoading) {
+        setSelectedMember(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedMember, busyMemberId, activityLoading]);
 
   useEffect(() => {
     if (!isSuperAdmin || !user?.id) return;
@@ -260,12 +271,12 @@ export default function DownlineManagement() {
             {isKrw ? '추천 네트워크와 커미션 활동을 확인하세요.' : 'View your referral network and commission activity.'}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={fetchReferralLink} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+            <button type="button" onClick={fetchReferralLink} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
               <UserPlus className="h-4 w-4" />
               {isKrw ? '추천 회원 초대' : 'Invite member'}
             </button>
             {referralLink && (
-              <button type="button" onClick={() => navigator.clipboard.writeText(referralLink)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <button type="button" onClick={() => navigator.clipboard.writeText(referralLink)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                 <Copy className="h-4 w-4" />
                 {isKrw ? '링크 복사' : 'Copy invite link'}
               </button>
@@ -303,7 +314,14 @@ export default function DownlineManagement() {
             </div>
           </div>
         )}
-        {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+            <span>{error}</span>
+            <button type="button" onClick={() => void load()} className="min-h-9 rounded-md border border-red-300 bg-white px-3 py-1.5 font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">
+              {isKrw ? '다시 시도' : 'Retry'}
+            </button>
+          </div>
+        )}
         {stats && (
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {[
@@ -314,7 +332,7 @@ export default function DownlineManagement() {
               [isKrw ? '보류 중인 수익' : 'Pending earnings', stats.pending_earnings.toFixed(2)],
               [isKrw ? '지급 완료' : 'Paid out', stats.paid_out.toFixed(2)],
             ].map(([label, value]) => (
-              <div key={String(label)} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div key={String(label)} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p className="text-xs text-slate-500">{label}</p>
                 <p className="mt-2 text-xl font-semibold text-slate-900">{value}</p>
               </div>
@@ -324,17 +342,21 @@ export default function DownlineManagement() {
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4">
             <div className="mr-auto font-semibold text-slate-900">{isKrw ? '추천 회원' : 'Referral members'}</div>
+            <button type="button" onClick={() => void load()} disabled={loading} aria-label={isKrw ? '다운라인 새로고침' : 'Refresh downline'} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50">
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />
+              <span className="hidden sm:inline">{isKrw ? '새로고침' : 'Refresh'}</span>
+            </button>
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-              <input value={search} onChange={event => setSearch(event.target.value)} placeholder={isKrw ? '회원 검색' : 'Search members'} className="h-9 w-44 rounded-md border border-slate-200 pl-8 pr-2 text-sm outline-none focus:border-blue-500" />
+              <input value={search} onChange={event => setSearch(event.target.value)} placeholder={isKrw ? '회원 검색' : 'Search members'} aria-label={isKrw ? '회원 검색' : 'Search members'} className="h-9 w-44 rounded-md border border-slate-200 pl-8 pr-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
             </div>
-            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600">
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} aria-label={isKrw ? '상태 필터' : 'Filter by status'} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
               <option value="all">{isKrw ? '모든 상태' : 'All statuses'}</option>
               <option value="active">{isKrw ? '활성' : 'Active'}</option>
               <option value="suspended">{isKrw ? '정지됨' : 'Suspended'}</option>
               <option value="inactive">{isKrw ? '비활성' : 'Inactive'}</option>
             </select>
-            <select value={levelFilter} onChange={event => setLevelFilter(event.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600">
+            <select value={levelFilter} onChange={event => setLevelFilter(event.target.value)} aria-label={isKrw ? '등급 필터' : 'Filter by level'} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
               <option value="all">{isKrw ? '모든 등급' : 'All levels'}</option>
               {[1, 2, 3, 4, 5].map(level => <option key={level} value={String(level)}>{isKrw ? `${level}단계` : `Level ${level}`}</option>)}
             </select>
@@ -348,6 +370,7 @@ export default function DownlineManagement() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
+                <caption className="sr-only">{isKrw ? '다운라인 추천 회원 목록' : 'Downline referral members'}</caption>
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="px-5 py-3">{isKrw ? '회원' : 'Member'}</th>
@@ -362,15 +385,15 @@ export default function DownlineManagement() {
                     <tr key={member.id}>
                       <td className="px-5 py-4"><p className="font-medium text-slate-900">{member.name || member.user_id}</p><p className="text-xs text-slate-500">{member.email || member.user_id}</p></td>
                       <td className="px-5 py-4 text-slate-600">{member.level}{member.is_direct ? (isKrw ? ' (직접)' : ' (direct)') : ''}</td>
-                      <td className="px-5 py-4 text-slate-600">{statusLabel(member.status)}</td>
+                      <td className="px-5 py-4"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${member.status === 'active' ? 'bg-emerald-50 text-emerald-700' : member.status === 'suspended' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{statusLabel(member.status)}</span></td>
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
-                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); setDownlinePassword(''); setDownlinePasswordConfirm(''); void loadActivity(member); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
-                          <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
+                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} aria-label={`${isKrw ? '상세 보기' : 'View details'}: ${member.name || member.user_id}`} onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); setDownlinePassword(''); setDownlinePasswordConfirm(''); void loadActivity(member); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><Eye className="h-4 w-4" /></button>
+                          <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} aria-label={`${member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}: ${member.name || member.user_id}`} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50">
                             {member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
                           </button>
-                          {member.pending_commissions > 0 && <button type="button" title={isKrw ? '커미션 승인' : 'Approve commissions'} disabled={busyMemberId === member.id} onClick={() => approveCommissions(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><WalletCards className="h-4 w-4 text-blue-600" /></button>}
+                          {member.pending_commissions > 0 && <button type="button" title={isKrw ? '커미션 승인' : 'Approve commissions'} aria-label={`${isKrw ? '커미션 승인' : 'Approve commissions'}: ${member.name || member.user_id}`} disabled={busyMemberId === member.id} onClick={() => approveCommissions(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"><WalletCards className="h-4 w-4 text-blue-600" /></button>}
                         </div>
                       </td>
                     </tr>
@@ -383,13 +406,13 @@ export default function DownlineManagement() {
       </div>
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" aria-labelledby="downline-member-title">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
+                <h2 id="downline-member-title" className="text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
                 <p className="text-sm text-slate-500">{selectedMember.email || selectedMember.user_id}</p>
               </div>
-              <button type="button" onClick={() => { setSelectedMember(null); setDownlinePassword(''); setDownlinePasswordConfirm(''); }} className="rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label={isKrw ? '상세 닫기' : 'Close details'} onClick={() => { setSelectedMember(null); setDownlinePassword(''); setDownlinePasswordConfirm(''); }} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><X className="h-5 w-5" /></button>
             </div>
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '상태' : 'Status'}</p><p className="mt-1 font-semibold text-slate-900">{statusLabel(selectedMember.status)}</p></div>

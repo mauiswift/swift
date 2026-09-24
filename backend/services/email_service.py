@@ -43,7 +43,13 @@ class EmailService:
         }
 
     @staticmethod
-    def send_html_email(to_email: str, subject: str, html_body: str, from_name: Optional[str] = None) -> None:
+    def send_html_email(
+        to_email: str,
+        subject: str,
+        html_body: str,
+        from_name: Optional[str] = None,
+        text_body: Optional[str] = None,
+    ) -> None:
         config = EmailService._resolve_smtp_config()
         from_name = (from_name or config["from_name"]).strip() or "SwiftPay"
         resend_api_key_name = "".join(["resend", "_api_key"])
@@ -59,6 +65,7 @@ class EmailService:
                 "to": [to_email],
                 "subject": subject,
                 "html": html_body,
+                **({"text": text_body} if text_body else {}),
             }).encode("utf-8")
             request = urllib.request.Request(
                 "https://api.resend.com/emails",
@@ -93,6 +100,8 @@ class EmailService:
             msg["Subject"] = subject
             msg["From"] = f"{from_name} <{smtp_from}>"
             msg["To"] = to_email
+            if text_body:
+                msg.attach(MIMEText(text_body, "plain", "utf-8"))
             msg.attach(MIMEText(html_body, "html"))
 
             context = ssl.create_default_context()
@@ -202,12 +211,26 @@ class EmailService:
         config = EmailService._resolve_smtp_config()
         frontend_url = config["frontend_url"]
         accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
-        recipient_role = escape(role.strip() or "team member")
-        sender_name = escape(inviter_name.strip()) if inviter_name.strip() else "the SwiftPay team"
-        organization = escape(organization_name.strip() or "SwiftPay team")
-        invitation_notes = escape(notes.strip())
-        expiry_text = escape(expires_at.strip()) if expires_at else "7 days from the date of this email"
+        raw_role = role.strip() or "team member"
+        raw_sender_name = inviter_name.strip() or "the SwiftPay team"
+        raw_organization = organization_name.strip() or "SwiftPay team"
+        raw_notes = notes.strip()
+        raw_expiry = expires_at.strip() if expires_at else "7 days from the date of this email"
+        recipient_role = escape(raw_role)
+        sender_name = escape(raw_sender_name)
+        organization = escape(raw_organization)
+        invitation_notes = escape(raw_notes)
+        expiry_text = escape(raw_expiry)
         escaped_accept_url = escape(accept_url, quote=True)
+        text_body = (
+            f"{raw_sender_name} invited you to join {raw_organization} on SwiftPay.\n\n"
+            f"Role: {raw_role}\n"
+            f"Expires: {raw_expiry}\n"
+            + (f"\nMessage from the inviter:\n{raw_notes}\n" if raw_notes else "")
+            + f"\nAccept the invitation: {accept_url}\n\n"
+            "Only accept this invitation if you recognize the organization and inviter. "
+            "If you were not expecting this email, ignore it. Never forward the invitation link."
+        )
         body_html = f"""
         <html>
             <body style="margin:0; padding:24px 12px; background:#f1f5f9; color:#0f172a; font-family:Arial,sans-serif; line-height:1.6;">
@@ -221,7 +244,7 @@ class EmailService:
                         <p style="margin:0 0 8px; color:#64748b; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;">You’re invited</p>
                         <h1 style="margin:0 0 16px; color:#0f172a; font-size:26px; line-height:1.25;">Join {organization}</h1>
                         <p style="margin:0 0 18px;">Hello,</p>
-                        <p style="margin:0 0 22px;">{sender_name} invited you to join the SwiftPay team.</p>
+                        <p style="margin:0 0 22px;">{sender_name} invited you to join <strong>{organization}</strong> on SwiftPay.</p>
                         <div style="margin:0 0 24px; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
                             <p style="margin:0 0 8px; color:#64748b; font-size:12px; text-transform:uppercase; letter-spacing:.06em;">Invitation details</p>
                             <p style="margin:0 0 4px;"><strong>Organization:</strong> {organization}</p>
@@ -241,7 +264,12 @@ class EmailService:
             </body>
         </html>
         """
-        EmailService.send_html_email(to_email, f"You're invited to join {organization_name.strip() or 'SwiftPay'}", body_html)
+        EmailService.send_html_email(
+            to_email,
+            f"You're invited to join {raw_organization}",
+            body_html,
+            text_body=text_body,
+        )
 
     @staticmethod
     def send_toss_account_notification(

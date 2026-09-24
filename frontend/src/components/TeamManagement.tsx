@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,8 @@ import {
   Lock,
   Loader2,
   AlertTriangle,
+  Search,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
@@ -73,6 +75,7 @@ function RoleBadge({ role }: { role: string }) {
 interface TeamMember {
   id: number;
   name?: string;
+  email?: string | null;
   telegram_id: string;
   role: string;
   permissions: Record<string, boolean>;
@@ -539,8 +542,9 @@ export function TeamMembersTab() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [orgWallet, setOrgWallet] = useState<OrganizationWalletBalance | null>(null);
+  const [query, setQuery] = useState('');
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiFetch('/api/v1/team/members');
@@ -559,9 +563,22 @@ export function TeamMembersTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isSuperAdmin]);
 
-  useEffect(() => { fetchMembers(); }, [isSuperAdmin]);
+  useEffect(() => { void fetchMembers(); }, [fetchMembers]);
+
+  const visibleMembers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return members;
+    return members.filter((member) => [
+      member.name,
+      member.email,
+      member.telegram_id,
+      member.role,
+      member.organization_name,
+      member.organization_id,
+    ].some((value) => value?.toLowerCase().includes(normalizedQuery)));
+  }, [members, query]);
 
   const handleSuperAdminToggle = async (member: TeamMember) => {
     if (!isSuperAdmin || String(member.telegram_id) === String(user?.id)) return;
@@ -580,11 +597,38 @@ export function TeamMembersTab() {
 
   return (
     <Card className="bg-white border border-slate-200">
-      <CardHeader className="pb-3 border-b border-slate-100">
-        <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Active Team Members
-        </CardTitle>
+      <CardHeader className="gap-4 border-b border-slate-100 pb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Users className="h-4 w-4" />
+            <span>{tx('Active Team Members', '활성 팀원')}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              {members.length}
+            </span>
+          </CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void fetchMembers()}
+            disabled={loading}
+            className="min-h-10 gap-2 self-start sm:self-auto"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />
+            {tx('Refresh', '새로고침')}
+          </Button>
+        </div>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={tx('Search by name, email, role, or Telegram ID', '이름, 이메일, 역할 또는 텔레그램 ID로 검색')}
+            aria-label={tx('Search team members', '팀원 검색')}
+            className="h-10 pl-9"
+          />
+        </div>
       </CardHeader>
       <CardContent className="pt-6">
         {orgWallet && (
@@ -607,15 +651,22 @@ export function TeamMembersTab() {
             <Loader2 className="h-5 w-5 motion-safe:animate-spin text-slate-400" aria-hidden="true" />
           </div>
         ) : members.length === 0 ? (
-          <p className="text-sm text-slate-500 text-center py-8">No team members</p>
+          <p className="py-8 text-center text-sm text-slate-500">{tx('No team members', '팀원이 없습니다')}</p>
+        ) : visibleMembers.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-500">{tx('No members match your search.', '검색 결과가 없습니다.')}</p>
         ) : (
           <div className="space-y-3">
-            {members.map((member) => (
-              <div key={member.id} className="p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+            {visibleMembers.map((member) => (
+              <div key={member.id} className="rounded-xl border border-slate-200 p-4 transition-colors hover:bg-slate-50">
                 <div className="flex flex-col gap-2 min-w-0">
-                  <p className="text-sm font-medium text-foreground break-words">{member.name}</p>
-                  <p className="text-xs text-slate-500 mt-0.5 break-all">@{member.telegram_id}</p>
-                  <RoleBadge role={member.role} />
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-medium text-foreground">{member.name || tx('Unnamed member', '이름 없음')}</p>
+                      {member.email && <p className="mt-0.5 break-all text-xs text-slate-500">{member.email}</p>}
+                      <p className="mt-0.5 break-all text-[11px] text-slate-400">@{member.telegram_id}</p>
+                    </div>
+                    <RoleBadge role={member.role} />
+                  </div>
                   {isSuperAdmin && (
                     <Button
                       type="button"
@@ -633,7 +684,7 @@ export function TeamMembersTab() {
                       Org: {member.organization_name || member.organization_id}
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-1 mt-1">
+                  <div className="mt-1 flex flex-wrap gap-1">
                     {Object.entries(member.permissions)
                       .filter(([, enabled]) => enabled)
                       .map(([perm]) => (
