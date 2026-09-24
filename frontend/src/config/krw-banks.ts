@@ -23,13 +23,13 @@ export const KRW_BANK_DEFINITIONS = [
   ['050', 'Jeju Bank', ''],
   ['071', 'Post Office Bank', ''],
   ['081', 'Hana Bank', '/logos/hana-bank.svg'],
-  ['088', 'National Bank', '/logos/kb-kookmin.svg'],
+  ['088', 'National Bank', ''],
   ['089', 'Bank of Korea', ''],
   ['090', 'NongHyup Bank', '/logos/nonghyup-bank.svg'],
   ['KAKAO', 'Kakao Bank', '/logos/kakao-bank.svg'],
   ['TOSS', 'Toss Bank', '/logos/toss-bank.png'],
   ['KBANK', 'K Bank', ''],
-  ['NAVER', 'Naver Bank', '/logos/naver.svg'],
+  ['NAVER', 'Naver Bank', ''],
 ] as const;
 
 export const KRW_BANKS: KrwBank[] = KRW_BANK_DEFINITIONS.map(([code, name, logo]) => ({
