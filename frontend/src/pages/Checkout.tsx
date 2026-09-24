@@ -1336,7 +1336,8 @@ export default function Checkout() {
                           <div key={bank.code} className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg border border-[#dce7f5] bg-white px-2 py-2.5 text-center">
                             <div className="flex h-10 w-16 items-center justify-center">
                               <PaymentBrandLogo
-                                brand={bank.code}
+                                brand={bank.name}
+                                logoUrl={bank.logo || undefined}
                                 size="sm"
                                 className="border-0 bg-transparent p-0 shadow-none"
                               />
