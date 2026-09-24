@@ -16,6 +16,7 @@ from models.disbursements import Disbursements
 from models.wallet_transactions import Wallet_transactions
 from services.transactions import TransactionsService
 from services.system_earnings import credit_system_earnings
+from services.swiftpay_service import SwiftPayService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
@@ -42,11 +43,26 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
     - QR Code payments
     """
     try:
-        payload = await request.json()
+        query_payload = dict(request.query_params)
+        if query_payload.get("signature"):
+            service = SwiftPayService()
+            signature = str(query_payload.get("signature", ""))
+            if not service.verify_signature(query_payload, signature):
+                raise HTTPException(status_code=400, detail="Invalid SwiftPay webhook signature")
+            payload = query_payload
+        else:
+            payload = await request.json()
         
-        reference_no = _payload_value(payload, "reference_no", "referenceNo", "merchant_reference", "merchantReferenceNo")
-        status = _payload_value(payload, "status", "payment_status", "paymentStatus")
-        payment_id = _payload_value(payload, "payment_id", "paymentId", "id")
+        reference_no = _payload_value(
+            payload,
+            "x_reference_no",
+            "reference_no",
+            "referenceNo",
+            "merchant_reference",
+            "merchantReferenceNo",
+        )
+        status = _payload_value(payload, "x_payment_status", "status", "payment_status", "paymentStatus")
+        payment_id = _payload_value(payload, "x_payment_id", "payment_id", "paymentId", "id")
         amount = _payload_value(payload, "amount", "paid_amount", "paidAmount")
         
         logger.info(f"SwiftPay webhook: reference_no={reference_no}, status={status}, amount={amount}")
@@ -131,9 +147,11 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 await db.commit()
         
         return {"success": True, "received": True, "reference_no": reference_no}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"SwiftPay webhook error: {e}", exc_info=True)
-        return {"success": False, "error": str(e)}
+        raise HTTPException(status_code=500, detail="SwiftPay webhook processing failed") from e
 
 
 @router.post("/magpie")

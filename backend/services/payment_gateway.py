@@ -289,7 +289,8 @@ class PaymentGateway:
             and magpie_configured
             and has_magpie_checkout
             and transaction_type in ("invoice", "payment_link")
-            and ((not currency_is_explicit) or currency in {"CNY", "KRW"} or magpie_card_requested)
+            and currency != "KRW"
+            and ((not currency_is_explicit) or currency == "CNY" or magpie_card_requested)
         ):
             logger.info("Routing %s request to Magpie (invoice/payment_link)", transaction_type)
             try:
@@ -315,7 +316,7 @@ class PaymentGateway:
                 if magpie_card_requested:
                     requested_magpie_methods = ["card"]
 
-                if currency in {"CNY", "KRW"} and callable(getattr(self.magpie, "create_session", None)):
+                if currency == "CNY" and callable(getattr(self.magpie, "create_session", None)):
                     public_host = (
                         getattr(settings, "public_checkout_host", "")
                         or getattr(settings, "frontend_url", "")
@@ -437,29 +438,56 @@ class PaymentGateway:
                     "error": checkout_res.get("error") or "Magpie CNY checkout could not be created",
                 }
 
-        # SwiftPay collection orders support PHP only. For a KRW quote, keep
-        # the customer-facing amount in KRW but settle the provider order in
-        # PHP and retain both values on the transaction.
-        if not manual_verification and self.swift.is_configured() and currency in {"PHP", "KRW"}:
+        # SwiftPay's documented collection order contract supports PHP, USD,
+        # and EUR. The caller must provide the amount in this currency.
+        if not manual_verification and self.swift.is_configured() and currency in {"PHP", "USD", "EUR"}:
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
-            provider_amount = amount if currency == "PHP" else await CurrencyConverter.convert_live(amount, currency, "PHP")
+            provider_amount = amount
             if provider_amount < 1:
                 return {
                     "success": False,
-                    "error": f"{currency} {amount:,.2f} converts to less than the SwiftPay minimum of PHP 1.00",
+                    "error": f"{currency} {amount:,.2f} is below the SwiftPay minimum provider amount",
                 }
-            checkout_url = f"/checkout/{reference_no}"
+            order_result = await self.swift.create_order(
+                amount=provider_amount,
+                reference_no=reference_no,
+                details={
+                    "customerName": customer_name or "Customer",
+                    "email": customer_email,
+                    "description": description or "SwiftPay payment",
+                    "sourceAmount": (metadata or {}).get("original_amount"),
+                    "sourceCurrency": (metadata or {}).get("original_currency"),
+                },
+                currency=currency,
+                generate_customer_redirect_url=True,
+                merchant_webhook_url=self.swift.callback_url or None,
+            )
+            if not order_result.get("success"):
+                return order_result
+            order_data = order_result.get("data") if isinstance(order_result.get("data"), dict) else {}
+            provider_reference = str(order_result.get("reference_no") or reference_no)
+            checkout_url = (
+                order_data.get("customerRedirectUrl")
+                or order_data.get("customer_redirect_url")
+                or ""
+            )
+            provider_payment_id = (
+                order_data.get("paymentId")
+                or order_data.get("payment_id")
+                or order_result.get("payment_id")
+                or provider_reference
+            )
             txn = await TransactionsService(db).create_transaction(
                 user_id=user_id,
                 transaction_type=transaction_type,
                 amount=provider_amount,
-                currency="PHP",
-                original_amount=amount if currency != "PHP" else None,
-                original_currency=currency if currency != "PHP" else None,
-                external_id=reference_no,
-                gateway_id=reference_no,
+                currency=currency,
+                original_amount=(metadata or {}).get("original_amount"),
+                original_currency=(metadata or {}).get("original_currency"),
+                external_id=provider_reference,
+                gateway_id=provider_payment_id,
                 description=description or "",
                 customer_name=customer_name,
                 customer_email=customer_email,
@@ -469,16 +497,17 @@ class PaymentGateway:
             return {
                 "success": True,
                 "data": {
-                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                    "payment_id": provider_payment_id,
                     "transaction_id": getattr(txn, "id", None),
                     "payment_url": checkout_url,
                     "checkout_url": checkout_url,
                     "gateway": "swiftpay_self_hosted",
-                    "amount": amount if currency != "PHP" else provider_amount,
+                    "amount": provider_amount,
                     "currency": currency,
                     "processing_amount": provider_amount,
-                    "processing_currency": "PHP",
-                    "exchange_rate": round(provider_amount / amount, 8),
+                    "processing_currency": currency,
+                    "exchange_rate": 1,
+                    "provider_payment_id": provider_payment_id,
                 },
             }
 

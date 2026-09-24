@@ -11,6 +11,7 @@ from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
+from services.magpie_service import CurrencyConverter
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
@@ -23,13 +24,26 @@ async def create_paymentwall_payment(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a KRW invoice using the configured provider or manual verification."""
+    """Create a provider checkout in USD/EUR for a quoted KRW amount."""
     amount = float(payload.get("amount", 0))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="amount must be greater than zero")
     
     reference_id = str(payload.get("reference_id") or f"paymentwall-{uuid.uuid4().hex[:12]}")
-    currency = str(payload.get("currency", "KRW")).upper()
+    source_currency = str(payload.get("currency", "KRW")).upper()
+    settlement_currency = str(payload.get("settlement_currency", "USD")).upper()
+    if source_currency != "KRW":
+        raise HTTPException(status_code=400, detail="This endpoint accepts a KRW source amount")
+    if settlement_currency not in {"USD", "EUR"}:
+        raise HTTPException(status_code=400, detail="settlement_currency must be USD or EUR")
+    try:
+        settlement_amount = await CurrencyConverter.convert_live(
+            amount, source_currency, settlement_currency
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if settlement_amount <= 0:
+        raise HTTPException(status_code=400, detail="KRW amount converts below the provider minimum")
     
     # Use unified payment gateway routing (SwiftPay first if configured for KRW, else Paymentwall)
     gateway = PaymentGateway(db)
@@ -39,14 +53,21 @@ async def create_paymentwall_payment(
         result = await gateway.create_payment(
             db=db,
             user_id=str(current_user.id),
-            amount=amount,
-            currency=currency,
+            amount=settlement_amount,
+            currency=settlement_currency,
             external_id=reference_id,
             transaction_type="invoice",
-            description=str(payload.get("description", "")),
+            description=(
+                f"{payload.get('description', '')} "
+                f"(KRW quote: {amount:,.2f} KRW; charged: {settlement_amount:,.2f} {settlement_currency})"
+            ).strip(),
             customer_name=str(payload.get("customer_name", "")),
             customer_email=str(payload.get("customer_email", "")),
-            metadata=payload.get("metadata") if isinstance(payload.get("metadata"), dict) else None,
+            metadata={
+                **(payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}),
+                "original_amount": amount,
+                "original_currency": "KRW",
+            },
         )
     except Exception as exc:
         logger.exception("KRW payment link generation failed")
@@ -54,7 +75,24 @@ async def create_paymentwall_payment(
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Payment creation failed"))
 
+    # The live SwiftPay contract does not support KRW orders or virtual
+    # accounts. Do not expose the internal/manual fallback as a successful
+    # provider payment: it has no provider settlement or webhook guarantee.
+    result_data = result.get("data") if isinstance(result.get("data"), dict) else {}
+    if result_data.get("gateway") in {"manual_internal", "manual_external_verification"}:
+        raise HTTPException(
+            status_code=501,
+            detail=(
+                "A verified USD/EUR provider checkout is required; internal/manual payment "
+                "instructions are disabled for this KRW quote."
+            ),
+        )
+
     # Return the gateway result directly (already contains success, data with payment_url, etc.)
+    result_data["quoted_amount"] = amount
+    result_data["quoted_currency"] = "KRW"
+    result_data["charged_amount"] = settlement_amount
+    result_data["charged_currency"] = settlement_currency
     return result
 
 

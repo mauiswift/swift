@@ -145,11 +145,9 @@ async def test_create_order_payload_structure(monkeypatch):
         details=[{"customerName": "John"}],
     )
 
-    # x_currency should NOT be in the payload for create_order
-    assert "x_currency" not in captured_payload
-    # details should be a list
-    assert isinstance(captured_payload["details"], list)
-    assert captured_payload["details"][0]["customerName"] == "John"
+    assert captured_payload["x_currency"] == "PHP"
+    # SwiftPay documents details as a JSON string.
+    assert json.loads(captured_payload["details"])["customerName"] == "John"
     # x_ fields should be present
     assert "x_access_key" in captured_payload
     assert "x_amount" in captured_payload

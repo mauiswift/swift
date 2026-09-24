@@ -169,9 +169,11 @@ Create a Magpie Checkout Session via the backend compatibility route and set the
 
 After payment, Magpie will redirect customers to the frontend route `/magpie-success` (or the backend static redirect which forwards there), preserving the session and payment_url query parameters.
 
-### Paymentwall KRW collection
-Paymentwall Widget checkout is available for South Korean won (`KRW`). Configure the
-following server-side variables from the Paymentwall merchant area:
+### KRW collection safety
+The documented SwiftPay live order API does not support `KRW` or virtual-account
+allocation; its supported order currencies are `PHP`, `USD`, and `EUR`. The application
+therefore fails closed for KRW rather than converting a KRW amount into a PHP order or
+presenting an internal bank account as a provider-generated virtual account.
 
 ```env
 PAYMENTWALL_APP_KEY=your_paymentwall_app_key
@@ -180,12 +182,15 @@ PAYMENTWALL_WIDGET_CODE=w123
 PAYMENTWALL_SIGN_VERSION=3
 ```
 
-Set Paymentwall's pingback URL to
-`https://your-api-host/api/v1/paymentwall/pingback`. Create a payment through
-`POST /api/v1/paymentwall/create-payment` with an amount and `currency: "KRW"`,
-or use the existing Xend-compatible collection routes with the same currency.
-The backend verifies Paymentwall's pingback signature before marking the matching
-transaction paid and crediting the merchant's KRW wallet.
+These settings are retained for deployments with a separately verified KRW-capable
+provider. Do not enable live KRW acceptance until that provider's API contract,
+virtual-account allocation, deposit matching, and signed webhook have been configured
+and tested in sandbox.
+
+For a documented SwiftPay checkout, the safe alternative is to quote the customer's
+amount in KRW and explicitly charge the converted amount in `USD` or `EUR`. The
+conversion and both currency values are retained on the transaction; this is a
+multi-currency hosted checkout, not a KRW virtual account.
 
 ### Production database persistence
 Production must use PostgreSQL or a Railway persistent volume. If using the included

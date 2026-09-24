@@ -276,6 +276,8 @@ class SwiftPayService:
         currency: str = "PHP",
         generate_customer_redirect_url: bool = True,
         institution_code: Optional[str] = None,
+        merchant_redirect_url: Optional[str] = None,
+        merchant_webhook_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
@@ -293,8 +295,8 @@ class SwiftPayService:
         if not isinstance(currency_value, str):
             return {"success": False, "error": "SwiftPay order currency must be a single currency code"}
         currency_code = currency_value.strip().upper()
-        if currency_code != "PHP":
-            return {"success": False, "error": "SwiftPay provider orders support PHP only"}
+        if currency_code not in {"PHP", "USD", "EUR"}:
+            return {"success": False, "error": "SwiftPay provider orders support PHP, USD, and EUR"}
 
         max_retries = 3
         base_reference = (reference_no or "").strip() or f"swiftpay-{uuid.uuid4().hex[:12]}"
@@ -303,13 +305,8 @@ class SwiftPayService:
 
         for attempt in range(1, max_retries + 1):
             current_reference = base_reference if attempt == 1 else f"{base_reference}-{uuid.uuid4().hex[:6]}"
-            # Ensure details is a list per provider expectations
-            details_payload = []
-            if details is not None:
-                if isinstance(details, list):
-                    details_payload = details
-                else:
-                    details_payload = [details]
+            # The live contract defines details as a JSON string.
+            details_payload = json.dumps(details or {}, separators=(",", ":"), ensure_ascii=False)
 
             payload: Dict[str, Any] = {
                 "x_access_key": self.access_key,
@@ -323,6 +320,10 @@ class SwiftPayService:
                 # Collection institution codes come from SwiftPay's
                 # /api/institutions catalog (for example, "BDO").
                 payload["institution_code"] = str(institution_code).strip().upper()
+            if merchant_redirect_url:
+                payload["merchant_redirect_url"] = merchant_redirect_url
+            if merchant_webhook_url:
+                payload["merchant_webhook_url"] = merchant_webhook_url
 
             payload["signature"] = self._sign_payload(payload)
 
