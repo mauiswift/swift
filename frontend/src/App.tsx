@@ -20,8 +20,8 @@ import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
 import FirstLoginGuide from '@/components/FirstLoginGuide';
 import Dashboard from './pages/dashboard';
+import HomePage from './pages/Index';
 
-const HomePage = React.lazy(() => import('./pages/Index'));
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
 const Login = React.lazy(() => import('./pages/Login'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));

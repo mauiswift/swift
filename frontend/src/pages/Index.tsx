@@ -460,7 +460,7 @@ function HomePage() {
             <div className="grid items-center gap-[clamp(40px,5vw,72px)] lg:grid-cols-[11fr_9fr]">
               {/* Copy */}
               <div className="relative z-10">
-                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.025em] content-appear">
+                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.025em]">
                   The payment gateway for{' '}
                   <span className="relative z-0 inline-block whitespace-nowrap">
                     Philippine
