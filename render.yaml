@@ -55,4 +55,4 @@ databases:
   - name: swiftpay-postgres
     databaseName: swiftpay
     user: swiftpay
-    plan: starter
+    plan: free
