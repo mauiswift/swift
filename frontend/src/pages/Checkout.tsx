@@ -623,6 +623,7 @@ export default function Checkout() {
     (!isKrw || isSupportedKrwInstitution(institution))
     && (!isPhp
     || institutionCode(institution) === 'QRPH'
+    || institutionCode(institution) === 'ALIPAY'
     || !Array.isArray(enabledPhpInstitutions)
     || institutionIsEnabled(institutionCode(institution), enabledPhpInstitutions))
   ));
