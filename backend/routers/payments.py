@@ -1426,7 +1426,9 @@ async def get_checkout_institutions(
                 # Alipay is exposed as a SwiftPay institution checkout. Some
                 # accounts do not include it in the provider catalog response,
                 # even though it is enabled in the merchant channel settings.
-                if "ALIPAY" in enabled_codes and "ALIPAY" not in returned_codes:
+                # Alipay is handled through the QR Ph flow below, so it does
+                # not need to be present in SwiftPay's bank catalog.
+                if "ALIPAY" in enabled_codes:
                     res["data"].append({
                         "id": "ALIPAY",
                         "code": "ALIPAY",
