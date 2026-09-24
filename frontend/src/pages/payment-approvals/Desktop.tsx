@@ -19,6 +19,8 @@ interface PendingPayment {
   user_name?: string;
   description: string;
   status: string;
+  payment_received?: boolean;
+  payment_received_at?: string | null;
   created_at: string;
   transaction_type: string;
   external_id?: string;
@@ -322,6 +324,9 @@ export default function SuperAdminPaymentApprovalDesktop() {
                         <p className="text-[12px] text-slate-600 max-w-xs truncate">
                           {payment.description}
                         </p>
+                        <span className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${payment.payment_received ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                          {payment.payment_received ? 'Payment received' : 'Not received'}
+                        </span>
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">

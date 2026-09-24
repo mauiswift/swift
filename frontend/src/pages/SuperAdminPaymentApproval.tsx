@@ -15,6 +15,8 @@ interface PendingPayment {
   customer_name?: string;
   description: string;
   status: string;
+  payment_received?: boolean;
+  payment_received_at?: string | null;
   created_at: string;
   transaction_type: string;
   external_id?: string;

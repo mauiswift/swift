@@ -19,6 +19,8 @@ interface PendingPayment {
   user_name?: string;
   description: string;
   status: string;
+  payment_received?: boolean;
+  payment_received_at?: string | null;
   created_at: string;
   transaction_type: string;
   external_id?: string;
@@ -211,13 +213,20 @@ export default function SuperAdminPaymentApprovalMobile() {
           ) : (
             payments.map((payment) => (
               <div key={payment.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
-                <label className="flex items-center gap-2 text-xs text-slate-500">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(payment.id)}
-                    onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
-                    aria-label={`Select payment ${payment.id}`}
-                  />
+                <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(payment.id)}
+                      onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
+                      aria-label={`Select payment ${payment.id}`}
+                    />
+                    <span>{payment.external_id || `#${payment.id}`}</span>
+                  </label>
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${payment.payment_received ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                    {payment.payment_received ? 'Payment received' : 'Not received'}
+                  </span>
+                </div>
                   Select for bulk action
                 </label>
                 {/* Header */}
