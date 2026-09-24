@@ -42,6 +42,7 @@ import {
   normalizeKrwBankName,
   isSupportedKrwBank,
 } from '@/config/krw-banks';
+import { PH_BANKS } from '@/config/ph-banks';
 
 interface Transaction {
   id: number;
@@ -416,12 +417,22 @@ export default function Checkout() {
       setLoadingLoadingInstitutions(true);
       const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
-        const returnedInstitutions = response.data.data as Institution[];
         const shouldShowAlipay = String(currency || txn?.currency || '').toUpperCase() === 'PHP';
-        const hasAlipay = returnedInstitutions.some(item => institutionCode(item) === 'ALIPAY');
+        const returnedInstitutions = response.data.data as Institution[];
+        const fallbackInstitutions: Institution[] = PH_BANKS.map(bank => ({
+          id: bank.code,
+          code: bank.code,
+          name: bank.name,
+          enabled: true,
+          loginMethod: 'redirect',
+        }));
+        const availableInstitutions = shouldShowAlipay && returnedInstitutions.length === 0
+          ? fallbackInstitutions
+          : returnedInstitutions;
+        const hasAlipay = availableInstitutions.some(item => institutionCode(item) === 'ALIPAY');
         setInstitutions(
           shouldShowAlipay && !hasAlipay
-            ? [...returnedInstitutions, {
+            ? [...availableInstitutions, {
               id: 'ALIPAY',
               code: 'ALIPAY',
               name: 'Alipay',
@@ -429,7 +440,7 @@ export default function Checkout() {
               enabled: true,
               loginMethod: 'qr',
             }]
-            : returnedInstitutions,
+            : availableInstitutions,
         );
       }
     } catch (err) {

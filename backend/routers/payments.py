@@ -33,6 +33,7 @@ from services.payment_gateway import gateway, _select_manual_transfer_account
 from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
+from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
 from utils.datetime import serialize_utc_datetime
 
@@ -1404,7 +1405,12 @@ async def get_checkout_institutions(
 
         res = await gateway.swift.get_collection_institutions()
         if not res.get("success"):
-            return {"success": True, "data": []} # Return empty instead of error for UX
+            # Keep PHP checkout usable when the provider catalog is temporarily
+            # unavailable. The local catalog contains the supported bank codes.
+            return {
+                "success": True,
+                "data": PHBanksService.get_all_banks_dict(),
+            }
 
         if (txn.currency or "").upper() == "PHP":
             channels = await get_payment_channels(db)
@@ -1432,6 +1438,8 @@ async def get_checkout_institutions(
                     item for item in res["data"]
                     if str(item.get("code", "")).upper() != "ALIPAY"
                 ]
+                if not res["data"]:
+                    res["data"] = PHBanksService.get_all_banks_dict()
                 res["data"].append({
                     "id": "ALIPAY",
                     "code": "ALIPAY",
