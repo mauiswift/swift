@@ -1298,18 +1298,36 @@ export default function Checkout() {
                           <button
                             type="button"
                             onClick={() => openKoreanPaymentApp('toss')}
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0064FF] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#0052d6]"
+                            className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[#d7e5ff] bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-[#0064FF] hover:shadow-md"
                           >
-                            <Smartphone className="h-4 w-4" />
-                            Toss Pay에서 열기
+                            <PaymentBrandLogo
+                              brand="Toss Pay"
+                              logoUrl="/logos/tosspay.png"
+                              size="md"
+                              className="border-0 bg-transparent p-0 shadow-none"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-bold text-slate-900">Toss Pay</span>
+                              <span className="mt-0.5 block text-[11px] text-slate-500">토스페이에서 열기</span>
+                            </span>
+                            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#0064FF]" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
                             onClick={() => openKoreanPaymentApp('kakao')}
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 py-3 text-xs font-bold text-[#191919] transition hover:bg-[#e6cf00]"
+                            className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[#f4e6a0] bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-[#FEE500] hover:shadow-md"
                           >
-                            <Smartphone className="h-4 w-4" />
-                            Kakao Pay에서 열기
+                            <PaymentBrandLogo
+                              brand="Kakao Pay"
+                              logoUrl="/logos/kakaopay.png"
+                              size="md"
+                              className="border-0 bg-transparent p-0 shadow-none"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-bold text-slate-900">Kakao Pay</span>
+                              <span className="mt-0.5 block text-[11px] text-slate-500">카카오페이에서 열기</span>
+                            </span>
+                            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#b49b00]" aria-hidden="true" />
                           </button>
                         </div>
                         <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
