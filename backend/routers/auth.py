@@ -1332,28 +1332,33 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             "viewer": PredefinedRoleEnum.VIEWER,
             "developer": PredefinedRoleEnum.DEVELOPER,
         }
-        has_app_permission = any(
-            bool(getattr(admin_record, key, False))
-            for key in (
-                "is_super_admin",
-                "can_manage_payments",
-                "can_manage_disbursements",
-                "can_view_reports",
-                "can_manage_wallet",
-                "can_manage_transactions",
-                "can_manage_bot",
-                "can_approve_topups",
-                "can_manage_team",
-            )
+        canonical_permission_keys = {
+            "is_super_admin",
+            "can_manage_payments",
+            "can_manage_disbursements",
+            "can_view_reports",
+            "can_manage_wallet",
+            "can_manage_transactions",
+            "can_manage_bot",
+            "can_approve_topups",
+            "can_manage_team",
+            "can_credit_wallet",
+            "can_debit_wallet",
+            "can_freeze_wallet",
+            "can_unfreeze_wallet",
+        }
+        has_canonical_permissions = (
+            isinstance(admin_record.team_permissions, dict)
+            and canonical_permission_keys.issubset(admin_record.team_permissions)
         )
-        if not has_app_permission and admin_record.role in role_map:
+        if admin_record.role in role_map and not has_canonical_permissions:
             repaired = get_role_permissions(role_map[admin_record.role]).model_dump()
             for key, value in repaired.items():
                 if hasattr(admin_record, key):
                     setattr(admin_record, key, value)
             admin_record.team_permissions = repaired
             await db.commit()
-        elif not has_app_permission and admin_record.role in {"super_admin", "approver"}:
+        elif admin_record.role in {"super_admin", "approver"} and not has_canonical_permissions:
             repaired = {
                 "can_approve_topups": True,
                 "can_manage_transactions": True,
