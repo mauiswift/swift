@@ -148,6 +148,6 @@ DEFAULT_PAYMENT_CHANNELS = {
     },
 }
 KRW_BANK_NAME_KEY = "krw_bank_name"
-DEFAULT_KRW_BANK_NAME = "Toss Bank"
+DEFAULT_KRW_BANK_NAME = "Kakao Bank"
 KRW_ACCOUNT_HOLDER_NAME_KEY = "krw_account_holder_name"
 DEFAULT_KRW_ACCOUNT_HOLDER_NAME = "SwiftPay Ventures Inc."

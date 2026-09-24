@@ -38,6 +38,7 @@ import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } f
 import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
 import {
   KRW_BANKS as SUPPORTED_KRW_BANKS,
+  DEFAULT_KRW_BANK_NAME,
   normalizeKrwBankName,
   isSupportedKrwBank,
 } from '@/config/krw-banks';
@@ -570,11 +571,11 @@ export default function Checkout() {
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
   const merchantDisplayName = txn.merchant_name?.trim() || 'Merchant';
   const krwBankName = isSecurityBankName(txn.bank_name)
-    ? 'Toss Bank'
-    : normalizeKrwBankName(txn.bank_name || 'Toss Bank');
+    ? DEFAULT_KRW_BANK_NAME
+    : normalizeKrwBankName(txn.bank_name || DEFAULT_KRW_BANK_NAME);
   const krwAccountNumber = isSecurityBankName(txn.bank_name) ? '1908-1618-8260' : (txn.bank_account_number || '1908-1618-8260');
   const krwAccountName = isSecurityBankName(txn.bank_name) ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
-  const manualDepositBankName = isKrw ? krwBankName : (isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || 'Toss Bank'));
+  const manualDepositBankName = isKrw ? krwBankName : (isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || DEFAULT_KRW_BANK_NAME));
   const manualDepositAccountNumber = isKrw ? krwAccountNumber : (isHighValuePhp ? '0000068888173' : (txn.bank_account_number || '1908-1618-8260'));
   const manualDepositAccountName = isKrw ? krwAccountName : (isHighValuePhp ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.'));
   const krwTransferQrValue = [
@@ -872,7 +873,7 @@ export default function Checkout() {
   );
 
   if (openAmount) {
-    const amountBrand = isKrw ? 'Toss Bank' : 'Netbank';
+    const amountBrand = isKrw ? krwBankName : 'Netbank';
     const amountTitle = isKrw
       ? (swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '수동 은행 송금')
       : (isKoreanCheckout ? '결제' : 'Payment');

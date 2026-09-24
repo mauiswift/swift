@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { KRW_BANKS } from '@/config/krw-banks';
+import { KRW_BANKS, normalizeKrwBankName } from '@/config/krw-banks';
 
 const originalFetch = globalThis.fetch;
 const windowMock = {
@@ -52,5 +52,10 @@ describe('isPaymentChannelEnabled', () => {
     expect(names).toContain('Toss Bank');
     expect(names).toContain('K Bank');
     expect(names).toContain('Naver Bank');
+  });
+
+  it('does not default empty KRW bank names to Toss Bank', () => {
+    expect(normalizeKrwBankName('')).toBe('Kakao Bank');
+    expect(normalizeKrwBankName(null)).toBe('Kakao Bank');
   });
 });

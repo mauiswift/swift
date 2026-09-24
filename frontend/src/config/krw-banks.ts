@@ -6,6 +6,8 @@ export interface KrwBank {
   logo: string;
 }
 
+export const DEFAULT_KRW_BANK_NAME = 'Kakao Bank';
+
 export const KRW_BANK_DEFINITIONS = [
   ['KB', 'KB Kookmin Bank'],
   ['SHINHAN', 'Shinhan Bank'],
@@ -33,7 +35,7 @@ export const KRW_BANK_BY_CODE = new Map(
 
 export const normalizeKrwBankName = (value?: string | null): string => {
   const raw = String(value ?? '').trim();
-  if (!raw) return 'Toss Bank';
+  if (!raw) return DEFAULT_KRW_BANK_NAME;
 
   const directMatch = KRW_BANKS.find(bank =>
     bank.name.toLowerCase() === raw.toLowerCase()

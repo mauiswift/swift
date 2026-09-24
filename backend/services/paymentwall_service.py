@@ -11,7 +11,7 @@ from core.config import settings
 class PaymentwallService:
     """Build signed Paymentwall Widget URLs and validate pingbacks."""
 
-    KRW_BANK_NAME = "Toss Bank"
+    KRW_BANK_NAME = "Kakao Bank"
     KRW_ACCOUNT_NUMBER = "1908-1618-8260"
     KRW_ACCOUNT_NAME = "SwiftPay Ventures Inc."
     KRW_SWIFT_CODE = "TVBKVVTTXXX"
