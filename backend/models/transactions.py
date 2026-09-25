@@ -42,6 +42,7 @@ class Transactions(Base):
     bank_name = Column(String(128), nullable=True)
     bank_account_number = Column(String(128), nullable=True)
     bank_account_name = Column(String(256), nullable=True)
+    bank_account_reference = Column(String(256), nullable=True)
     qr_code_url = Column(String, nullable=True)
     telegram_chat_id = Column(String, nullable=True)
     checkout_token = Column(String, nullable=True)

@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from core.database import get_db
 from main import app
+from models.transactions import Transactions
 from services.transactions import TransactionsService
 from services.paymentwall_service import PaymentwallService
 
@@ -149,7 +150,7 @@ def test_krw_checkout_does_not_expose_security_bank():
         assert payload["bank_name"] == "토스페이"
         expected_account = PaymentwallService.generate_krw_virtual_account(
             user_id="demo-user",
-            reference_id=f"session-{payload['id']}",
+            reference_id=payload["external_id"],
         )
         assert payload["bank_account_number"] == expected_account["number"]
         assert "security" not in payload["bank_name"].casefold()
@@ -157,6 +158,19 @@ def test_krw_checkout_does_not_expose_security_bank():
         refreshed = client.get(f"/api/v1/payments/checkout/{payload['external_id']}")
         assert refreshed.status_code == 200
         assert refreshed.json()["bank_account_number"] == payload["bank_account_number"]
+
+        changed_reference = f"{payload['external_id']}-UPDATED"
+
+        async def change_reference():
+            async for session in get_db():
+                current = await session.get(Transactions, payload["id"])
+                current.external_id = changed_reference
+                await session.commit()
+
+        asyncio.run(change_reference())
+        changed = client.get(f"/api/v1/payments/checkout/{changed_reference}")
+        assert changed.status_code == 200
+        assert changed.json()["bank_account_number"] != payload["bank_account_number"]
 
 
 def test_krw_checkout_account_changes_between_payment_sessions():

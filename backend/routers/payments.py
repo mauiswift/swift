@@ -53,7 +53,8 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
         .with_for_update()
     )
     pool_accounts = result.scalars().all()
-    if txn.bank_account_number:
+    reference = str(txn.external_id or "").strip()
+    if txn.bank_account_number and txn.bank_account_reference == reference:
         assigned = await db.scalar(
             select(TossAccountPool).where(
                 TossAccountPool.account_number == txn.bank_account_number,
@@ -101,7 +102,7 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
             })
             known_numbers.add(account_number)
 
-    if txn.bank_account_number:
+    if txn.bank_account_number and txn.bank_account_reference == reference:
         existing = next(
             (candidate for candidate in candidates if candidate["number"] == txn.bank_account_number),
             None,
@@ -140,6 +141,7 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
         txn.bank_name = account["bank_name"]
         txn.bank_account_number = account["number"]
         txn.bank_account_name = account["account_name"]
+        txn.bank_account_reference = reference
         await db.commit()
         return {
             "bank_name": account["bank_name"],
@@ -149,7 +151,7 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
 
     virtual_account = PaymentwallService.generate_krw_virtual_account(
         user_id=str(txn.user_id),
-        reference_id=f"session-{txn.id}",
+        reference_id=reference or f"session-{txn.id}",
     )
     return virtual_account
 
