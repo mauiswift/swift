@@ -279,14 +279,14 @@ async def test_send_disbursement_payload(monkeypatch):
     assert res["success"] is True
     assert captured_payload["merchantReferenceNo"] == "DISB-123"
     assert captured_payload["institutionCode"] == "GCASH"
-    assert captured_payload["externalBankCode"] == "GCASH"
-    assert captured_payload["recipientInformation"]["firstName"] == "Juan"
+    assert "externalBankCode" not in captured_payload
+    assert captured_payload["recipientInformation"]["fullName"] == "Juan Cruz"
     assert captured_payload["recipientInformation"]["address"]["city"] == "Manila"
-    assert captured_payload["creditInformation"]["amount"] == "500.00"
+    assert captured_payload["creditInformation"]["amount"] == 500.0
 
 
 @pytest.mark.asyncio
-async def test_send_disbursement_normalizes_bic_external_bank_code(monkeypatch):
+async def test_send_disbursement_uses_documented_institution_code(monkeypatch):
     svc = SwiftPayService()
     captured_payload = {}
 
@@ -311,7 +311,7 @@ async def test_send_disbursement_normalizes_bic_external_bank_code(monkeypatch):
 
     assert result["success"] is True
     assert captured_payload["institutionCode"] == "BNORPHMXXX"
-    assert captured_payload["externalBankCode"] == "BNOR"
+    assert "externalBankCode" not in captured_payload
 
 
 def test_normalize_external_bank_code_supports_legacy_bank_aliases():
@@ -326,6 +326,11 @@ def test_normalize_collection_institution_code_converts_bic_catalog_values():
     assert SwiftPayService.normalize_collection_institution_code("BNORPHMXXX") == "BDO"
     assert SwiftPayService.normalize_collection_institution_code("BOPIPHMXXX") == "BPI"
     assert SwiftPayService.normalize_collection_institution_code("GCASH") == "GCASH"
+
+
+def test_normalize_disbursement_institution_code_converts_aliases():
+    assert SwiftPayService.normalize_disbursement_institution_code("BDO") == "BNORPHMXXX"
+    assert SwiftPayService.normalize_disbursement_institution_code("BPI") == "BOPIPHMXXX"
 
 
 def test_validate_external_bank_code_rejects_unknown_short_code():
@@ -359,8 +364,7 @@ async def test_send_disbursement_accepts_account_name_alias(monkeypatch):
     )
 
     assert res["success"] is True
-    assert captured_payload["recipientInformation"]["firstName"] == "Maria"
-    assert captured_payload["recipientInformation"]["lastName"] == "Santos"
+    assert captured_payload["recipientInformation"]["fullName"] == "Maria Santos"
 
 
 def test_disbursement_institutions_exclude_cards_and_duplicates():

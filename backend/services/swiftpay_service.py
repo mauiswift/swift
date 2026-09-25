@@ -94,6 +94,27 @@ class SwiftPayService:
         return code
 
     @staticmethod
+    def normalize_disbursement_institution_code(value: str) -> str:
+        """Return the SwiftPay institution catalogue code for a bank alias."""
+        code = str(value or "").strip().upper()
+        institution_aliases = {
+            "BDO": "BNORPHMXXX",
+            "BPI": "BOPIPHMXXX",
+            "UNIONBANK": "UBPHPHMMXXX",
+            "UBP": "UBPHPHMMXXX",
+            "METROBANK": "MBTCPHMMXXX",
+            "MBT": "MBTCPHMMXXX",
+            "RCBC": "RCBCPHMMXXX",
+            "SECURITYBANK": "SETCPHMMXXX",
+            "SECB": "SETCPHMMXXX",
+            "LANDBANK": "TLBPPHMMXXX",
+            "LBP": "TLBPPHMMXXX",
+            "PNB": "PNBMPHMMTOD",
+            "PBCOM": "CPHIPHMMXXX",
+        }
+        return institution_aliases.get(code, code)
+
+    @staticmethod
     def normalize_collection_institution_code(value: str) -> str:
         """Convert Philippine BIC/catalog values to SwiftPay collection keys."""
         code = str(value or "").strip().upper()
@@ -649,6 +670,9 @@ class SwiftPayService:
                     middle_name = " ".join(name_parts[1:-1]) if not middle_name else middle_name
         first_name = first_name or "Customer"
         last_name = last_name or "Customer"
+        full_name = " ".join(
+            part for part in (first_name, middle_name, last_name) if part
+        ).strip() or "Customer"
 
         url = f"{self.base_url}/api/disbursements/send"
         base_reference = (reference_no or "").strip() or f"swiftpay-disb-{uuid.uuid4().hex[:12]}"
@@ -663,23 +687,22 @@ class SwiftPayService:
             payload = {
                 "merchantReferenceNo": current_reference,
                 "channel": channel,
-                "institutionCode": bank_code,
-                "externalBankCode": self.validate_external_bank_code(bank_code),
+                "institutionCode": self.normalize_disbursement_institution_code(bank_code),
                 "creditInformation": {
-                    "amount": self._format_amount(amount),
-                    "currency": currency.upper(),
+                    "amount": float(amount),
                     "remarks": note or f"Disbursement for {current_reference}"
                 },
                 "recipientInformation": {
                     "accountNumber": account_number,
-                    "firstName": first_name,
-                    "middleName": middle_name,
-                    "lastName": last_name,
+                    "fullName": full_name,
                     "mobileNumber": normalized_phone or "",
                     "email": email or "",
                     "address": {
-                        "Line1": line1,
-                        "Line2": line2,
+                        "fullAddress": ", ".join(
+                            part for part in (line1, line2, city, province, postal_code, country_code) if part
+                        ),
+                        "line1": line1,
+                        "line2": line2,
                         "city": city,
                         "postalCode": postal_code,
                         "province": province,
