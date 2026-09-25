@@ -106,7 +106,7 @@ export default function GcashPaymentPage() {
     window.location.assign(appPaymentLink);
     if (appLaunchTimeoutRef.current) clearTimeout(appLaunchTimeoutRef.current);
     appLaunchTimeoutRef.current = setTimeout(() => {
-      toast.info('GCash app did not open. Scan the QR code below to continue.');
+      toast.info(`${isAlipay ? 'Alipay' : 'GCash'} app did not open. Scan the QR code below to continue.`);
     }, 1800);
   };
 

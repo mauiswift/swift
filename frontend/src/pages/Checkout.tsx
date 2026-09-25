@@ -820,6 +820,8 @@ export default function Checkout() {
             );
             alipayPageUrl.searchParams.set('payment_method', 'alipay');
             alipayPageUrl.searchParams.set('qr', qrPayload);
+            const alipayDeepLink = response.data?.alipay_deep_link;
+            if (alipayDeepLink) alipayPageUrl.searchParams.set('deep_link', alipayDeepLink);
             navigate(`${alipayPageUrl.pathname}${alipayPageUrl.search}`);
             return;
           }
