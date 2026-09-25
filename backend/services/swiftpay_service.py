@@ -669,6 +669,19 @@ class SwiftPayService:
         """Send a disbursement via SwiftPay Disbursement API (Step 1 & 2)."""
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            return {"success": False, "error": "Disbursement amount must be greater than zero"}
+        normalized_channel = str(channel or "").strip().upper()
+        if normalized_channel not in {"INSTAPAY", "PESONET"}:
+            return {"success": False, "error": "Disbursement channel must be INSTAPAY or PESONET"}
+        base_reference = (reference_no or "").strip()
+        if not base_reference:
+            base_reference = f"swiftpay-disb-{uuid.uuid4().hex[:12]}"
+        if len(base_reference) > 50:
+            return {"success": False, "error": "Disbursement reference must be 50 characters or fewer"}
+        institution_code = self.normalize_disbursement_institution_code(bank_code)
+        if not institution_code or len(institution_code) > 16:
+            return {"success": False, "error": "A valid SwiftPay institution code is required"}
         normalized_phone = self.normalize_philippine_mobile(phone)
         if phone and not normalized_phone:
             return {
@@ -690,7 +703,6 @@ class SwiftPayService:
         ).strip() or "Customer"
 
         url = f"{self.base_url}/api/disbursements/send"
-        base_reference = (reference_no or "").strip() or f"swiftpay-disb-{uuid.uuid4().hex[:12]}"
         max_retries = 3
 
         for attempt in range(1, max_retries + 1):
@@ -701,8 +713,8 @@ class SwiftPayService:
             )
             payload = {
                 "merchantReferenceNo": current_reference,
-                "channel": channel,
-                "institutionCode": self.normalize_disbursement_institution_code(bank_code),
+                "channel": normalized_channel,
+                "institutionCode": institution_code,
                 "creditInformation": {
                     "amount": float(amount),
                     "remarks": note or f"Disbursement for {current_reference}"

@@ -342,6 +342,31 @@ async def test_send_disbursement_uses_documented_institution_code(monkeypatch):
     assert "externalBankCode" not in captured_payload
 
 
+@pytest.mark.asyncio
+async def test_send_disbursement_rejects_invalid_contract_values():
+    svc = SwiftPayService()
+
+    assert (await svc.send_disbursement(
+        reference_no="DISB-INVALID",
+        amount=0,
+        bank_code="BDO",
+        account_number="1234567890",
+    ))["error"] == "Disbursement amount must be greater than zero"
+    assert (await svc.send_disbursement(
+        reference_no="DISB-INVALID",
+        amount=100,
+        bank_code="BDO",
+        account_number="1234567890",
+        channel="BANK",
+    ))["error"] == "Disbursement channel must be INSTAPAY or PESONET"
+    assert (await svc.send_disbursement(
+        reference_no="x" * 51,
+        amount=100,
+        bank_code="BDO",
+        account_number="1234567890",
+    ))["error"] == "Disbursement reference must be 50 characters or fewer"
+
+
 def test_normalize_external_bank_code_supports_legacy_bank_aliases():
     assert SwiftPayService.normalize_external_bank_code("BDO") == "BNOR"
     assert SwiftPayService.normalize_external_bank_code("BPI") == "BOPI"
