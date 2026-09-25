@@ -769,6 +769,7 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
 @router.post("/invite", response_model=InvitationResponse)
 async def send_team_invitation(
     request: SendInvitationRequest,
+    http_request: Request,
     current_user: UserResponse = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -849,7 +850,7 @@ async def send_team_invitation(
     logger.info(f"Team invitation created for {request.email} by {current_user.id}")
 
     # Build manual link for response
-    manual_link = _invitation_link(token, request=request)
+    manual_link = _invitation_link(token, request=http_request)
 
     # Send email notification
     email_error = None
@@ -864,7 +865,7 @@ async def send_team_invitation(
             organization_name=org_name or "",
             expires_at=serialize_utc_datetime(invitation.expires_at),
             notes=request.notes or "",
-            request=request,
+            request=http_request,
         )
         logger.info(f"Team invitation email sent to {request.email}")
         email_sent = True
