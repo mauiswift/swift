@@ -435,12 +435,8 @@ export default function Checkout() {
           enabled: true,
           loginMethod: 'redirect',
         }));
-        const institutionsByCode = new Map(
-          [...fallbackInstitutions, ...returnedInstitutions]
-            .map(institution => [institutionCode(institution), institution] as const),
-        );
-        const availableInstitutions = shouldShowAlipay
-          ? [...institutionsByCode.values()]
+        const availableInstitutions = shouldShowAlipay && returnedInstitutions.length === 0
+          ? fallbackInstitutions
           : returnedInstitutions;
         const hasAlipay = availableInstitutions.some(item => institutionCode(item) === 'ALIPAY');
         setInstitutions(
