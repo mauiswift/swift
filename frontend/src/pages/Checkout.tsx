@@ -35,7 +35,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
-import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
+import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink, sanitizeTossDeepLink } from '@/lib/checkoutQr';
 import {
   KRW_BANKS as SUPPORTED_KRW_BANKS,
   DEFAULT_KRW_BANK_NAME,
@@ -585,6 +585,10 @@ export default function Checkout() {
     `NAME:${krwAccountName}`,
     `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
   ].join('\n');
+  const tossDeepLink = sanitizeTossDeepLink(txn.toss_deep_link) || 'supertoss://toss/pay';
+  const openTossApp = () => {
+    window.location.assign(tossDeepLink);
+  };
   const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
   const swiftpayVirtualAccountEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'virtual_account');
@@ -1630,6 +1634,14 @@ export default function Checkout() {
                             </span>
                           </div>
                           <p className="text-[13px] text-blue-100">{checkoutText('Scan this code with any QRPH-compatible bank or e-wallet app.', 'QRPH를 지원하는 은행 또는 전자지갑 앱으로 이 코드를 스캔하세요.')}</p>
+                          <button
+                            type="button"
+                            onClick={openTossApp}
+                            className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20"
+                          >
+                            <Smartphone className="h-4 w-4" aria-hidden="true" />
+                            {checkoutText('Open Toss app to scan', '토스 앱에서 스캔하기')}
+                          </button>
                         </div>
                         <div className="space-y-5 p-6">
                           <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-2">
