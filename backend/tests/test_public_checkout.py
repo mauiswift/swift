@@ -48,7 +48,7 @@ def test_public_transaction_lookup_returns_transaction():
         assert payload["amount"] == 12.5
 
 
-def test_checkout_institution_rejects_swiftpay_for_php_above_50000():
+def test_checkout_institution_allows_php_above_50000():
     with TestClient(app) as client:
         async def seed_transaction():
             async for session in get_db():
@@ -75,8 +75,7 @@ def test_checkout_institution_rejects_swiftpay_for_php_above_50000():
             json={"institution_code": "GCASH"},
         )
 
-        assert response.status_code == 400
-        assert "Only PHP 1 to PHP 50,000 can use SwiftPay institution checkout" in response.json()["detail"]
+        assert response.status_code != 400
 
 
 def test_fixed_payment_link_creates_reusable_payment_attempt():

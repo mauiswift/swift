@@ -593,11 +593,9 @@ export default function Checkout() {
   const checkoutText = (english: string, korean: string) => (
     isKoreanCheckout ? korean : english
   );
-  const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
-  const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
-  const isManualDeposit = isKrw || isHighValuePhp || isUsdt;
-  const usesHighValuePhpQr = isHighValuePhp;
+  const isManualDeposit = isKrw || isUsdt;
+  const usesHighValuePhpQr = false;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
   const qrPanelMode = resolveCheckoutQrPanelMode({
