@@ -31,7 +31,7 @@
         "CLOUDFLARE_TURNSTILE_ALLOWED_HOSTNAMES": "swiftpay.site,kr.swiftpay.site",
         "SWIFTPAY_MODE": "production",
         "SWIFTPAY_BASE_URL": "https://api.pay.live.swiftpay.ph",
-        "SMTP_HOST": "smtp.hostinger.com",
+        "SMTP_HOST": "smtp.gmail.com",
         "SMTP_FROM_NAME": "SwiftPay",
         "SMTP_PORT": "465"
       }
