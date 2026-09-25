@@ -78,6 +78,30 @@ interface Institution {
   loginMethod: string;
 }
 
+type CheckoutCurrency = 'PHP' | 'KRW' | 'CNY' | 'USDT' | 'USD' | 'EUR' | 'GBP';
+
+const CURRENCY_CAPABILITIES: Record<CheckoutCurrency, {
+  manualDeposit: boolean;
+  magpieCard: boolean;
+  country: string;
+}> = {
+  PHP: { manualDeposit: false, magpieCard: true, country: 'PH' },
+  KRW: { manualDeposit: true, magpieCard: true, country: 'KR' },
+  CNY: { manualDeposit: false, magpieCard: true, country: 'CN' },
+  USDT: { manualDeposit: true, magpieCard: false, country: 'PH' },
+  USD: { manualDeposit: false, magpieCard: false, country: 'PH' },
+  EUR: { manualDeposit: false, magpieCard: false, country: 'PH' },
+  GBP: { manualDeposit: false, magpieCard: false, country: 'PH' },
+};
+
+function getCurrencyCapabilities(currency: string) {
+  return CURRENCY_CAPABILITIES[currency as CheckoutCurrency] || {
+    manualDeposit: false,
+    magpieCard: false,
+    country: 'PH',
+  };
+}
+
 function getCheckoutErrorMessage(value: unknown, fallback: string): string {
   if (typeof value === 'string' && value.trim()) return value;
   if (Array.isArray(value)) {
@@ -277,7 +301,7 @@ export default function Checkout() {
 
   useEffect(() => {
     const currency = (txn?.currency || '').toUpperCase();
-    const defaultCountry = currency === 'KRW' ? 'KR' : currency === 'PHP' ? 'PH' : 'PH';
+    const defaultCountry = getCurrencyCapabilities(currency).country;
     setCardForm(prev => ({ ...prev, country: prev.country || defaultCountry }));
     if (currency === 'KRW') {
       setCardForm(prev => ({ ...prev, country: 'KR' }));
@@ -588,16 +612,16 @@ export default function Checkout() {
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const isUsdt = currencyCode === 'USDT';
-  const supportsMagpieCard = isPhp || isKrw || isCny;
+  const currencyCapabilities = getCurrencyCapabilities(currencyCode);
+  const supportsMagpieCard = currencyCapabilities.magpieCard;
   const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const checkoutText = (english: string, korean: string) => (
     isKoreanCheckout ? korean : english
   );
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
-  const isManualDeposit = isKrw || isUsdt;
-  const usesHighValuePhpQr = false;
-  const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
-  const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
+  const isManualDeposit = currencyCapabilities.manualDeposit;
+  const hasQR = (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
+  const hasQrPayload = !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
   const qrPanelMode = resolveCheckoutQrPanelMode({
     hasQR,
     hasQrPayload,
@@ -617,9 +641,9 @@ export default function Checkout() {
     : normalizeKrwBankName(txn.bank_name || DEFAULT_KRW_BANK_NAME);
   const krwAccountNumber = isSecurityBankName(txn.bank_name) ? '1908-1618-8260' : (txn.bank_account_number || '1908-1618-8260');
   const krwAccountName = isSecurityBankName(txn.bank_name) ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
-  const manualDepositBankName = isKrw ? krwBankName : (isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || DEFAULT_KRW_BANK_NAME));
-  const manualDepositAccountNumber = isKrw ? krwAccountNumber : (isHighValuePhp ? '0000068888173' : (txn.bank_account_number || '1908-1618-8260'));
-  const manualDepositAccountName = isKrw ? krwAccountName : (isHighValuePhp ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.'));
+  const manualDepositBankName = isKrw ? krwBankName : (txn.bank_name || DEFAULT_KRW_BANK_NAME);
+  const manualDepositAccountNumber = isKrw ? krwAccountNumber : (txn.bank_account_number || '1908-1618-8260');
+  const manualDepositAccountName = isKrw ? krwAccountName : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
   const krwTransferQrValue = [
     'SWIFTPAY-KRW-TRANSFER',
     `BANK:${krwBankName}`,
@@ -1241,26 +1265,24 @@ export default function Checkout() {
                     <div>
                       <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
                         <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
-                        {isHighValuePhp ? 'PHP BANK TRANSFER' : (swiftpayVirtualAccountEnabled ? 'SWIFTPAY VIRTUAL ACCOUNT' : t('krw_bank_transfer'))}
+                        {swiftpayVirtualAccountEnabled ? 'SWIFTPAY VIRTUAL ACCOUNT' : t('krw_bank_transfer')}
                       </div>
                       <h2 className="text-2xl font-semibold tracking-tight text-white">
-                        {isHighValuePhp ? 'Manual bank deposit' : (swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '토스뱅크 계좌이체')}
+                        {swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '토스뱅크 계좌이체'}
                       </h2>
                       <p className="mt-2 max-w-md text-sm leading-relaxed text-white">
-                        {isHighValuePhp
-                          ? 'Send the exact amount to the Security Bank account below.'
-                          : (swiftpayVirtualAccountEnabled
+                        {swiftpayVirtualAccountEnabled
                             ? 'Use the SwiftPay virtual account details below to send the exact KRW amount.'
-                            : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.')}
+                            : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.'}
                       </p>
                     </div>
                     <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
-                      {isHighValuePhp ? 'Payment pending' : '결제 대기 중'}
+                      결제 대기 중
                     </div>
                   </div>
                   <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-3">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">보내실 금액</p>
                       {openAmount ? (
                         <div className="checkout-amount-input mt-1 flex w-full max-w-xs items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2">
                         <span className="text-sm font-bold text-white/70" aria-hidden="true">{amountSymbol}</span>
@@ -1284,7 +1306,7 @@ export default function Checkout() {
                     </div>
                     <div className="h-9 w-px bg-white/20" />
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Order reference' : '주문번호'}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">주문번호</p>
                       <p className="mt-1 font-mono text-sm font-semibold text-white">{displayReference}</p>
                     </div>
                   </div>
@@ -1294,13 +1316,11 @@ export default function Checkout() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        {!isHighValuePhp && (
-                          <PaymentBrandLogo
-                            brand={manualDepositBankName}
-                            size="sm"
-                            className="border border-[#dce7f5] shadow-sm"
-                          />
-                        )}
+                        <PaymentBrandLogo
+                          brand={manualDepositBankName}
+                          size="sm"
+                          className="border border-[#dce7f5] shadow-sm"
+                        />
                         <div>
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">{checkoutText('Transfer details', '송금 정보')}</p>
                         <p className="mt-1 text-sm text-slate-700">{checkoutText('Confirm the account details before sending your deposit.', '입금 전에 아래 계좌 정보를 확인하세요.')}</p>
@@ -1312,7 +1332,7 @@ export default function Checkout() {
                       {[
                         [checkoutText('Bank', '은행'), manualDepositBankName],
                         [checkoutText('Account name', '예금주'), manualDepositAccountName],
-                        [checkoutText('Account number', isHighValuePhp ? '계좌번호' : 'Instant VA'), manualDepositAccountNumber],
+                        [checkoutText('Account number', swiftpayVirtualAccountEnabled ? 'Instant VA' : '계좌번호'), manualDepositAccountNumber],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-xl border border-[#dce7f5] bg-white px-4 py-3.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">{label}</p>
@@ -1341,7 +1361,7 @@ export default function Checkout() {
                       </div>
                     )}
 
-                    {isKrw && !isHighValuePhp && (
+                    {isKrw && (
                       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
                         <div className="flex items-center gap-2">
                           <Smartphone className="h-4 w-4 text-[#1475d1]" aria-hidden="true" />
@@ -1396,12 +1416,12 @@ export default function Checkout() {
 
                     <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
                       <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                          <p>{isHighValuePhp ? 'Send the exact amount and include the order reference in the transfer note. Your payment status will update after the deposit is confirmed.' : '정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.'}</p>
+                          <p>정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.</p>
                     </div>
 
                   </div>
 
-                  {!isHighValuePhp && (
+                  {isKrw && (
                     <div className="border-t border-[#dce7f5] pt-5">
                       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">{checkoutText('Supported Korean banks', '지원되는 한국 은행')}</p>
                       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
@@ -1424,14 +1444,10 @@ export default function Checkout() {
 
                   <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
                     <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
-                      {isHighValuePhp ? (
-                        <img src="/images/qrph_high_value.jpg" alt="QRPh payment code" className="w-full rounded-lg object-contain" />
-                      ) : (
-                        <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
-                      )}
+                      <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
                     </div>
-                    <p className="mt-4 text-xs font-bold text-slate-900">{isHighValuePhp ? 'Scan with a QRPh-enabled banking app' : 'QR로 송금 정보 불러오기'}</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-700">{isHighValuePhp ? 'Verify the bank details and send the exact amount shown above.' : '계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.'}</p>
+                    <p className="mt-4 text-xs font-bold text-slate-900">QR로 송금 정보 불러오기</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-700">계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.</p>
                   </div>
                 </div>
               </div>
@@ -1790,13 +1806,7 @@ export default function Checkout() {
                             <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
                             <p className="text-[12px] text-slate-500">{checkoutText('Use your preferred banking app and confirm payment.', '원하는 은행 앱으로 스캔한 뒤 결제를 확인하세요.')}</p>
                             <div className="flex justify-center">
-                              {usesHighValuePhpQr ? (
-                                <img
-                                  src="/images/qrph_high_value.jpg"
-                                  alt="QRPh payment code for high-value PHP checkout"
-                                  className="mx-auto w-full max-w-[320px] rounded-xl object-contain"
-                                />
-                              ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
                                 <img src={txn.qr_code_url} alt="QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
                               ) : (
                                 <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
@@ -1872,7 +1882,7 @@ export default function Checkout() {
                             <QrCode className="h-6 w-6 text-emerald-600" />
                           </div>
                           <div className="flex-1 text-left">
-                            <p className="font-semibold text-slate-900">{usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
+                            <p className="font-semibold text-slate-900">Scan QR Code</p>
                             <p className="text-[12px] text-slate-500">{checkoutText('Pay using your banking app', '은행 앱으로 결제')}</p>
                           </div>
                           <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:text-emerald-500" />
@@ -2122,7 +2132,7 @@ export default function Checkout() {
               <h2 className="text-xl font-semibold text-slate-900">
                 {qrInstructionApp === 'toss'
                   ? 'Pay with Toss'
-                  : (usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay')}
+                  : 'Scan QR Code to Pay'}
               </h2>
               <p className="text-sm text-slate-500">
                 {qrInstructionApp === 'toss'
@@ -2131,13 +2141,7 @@ export default function Checkout() {
               </p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
-              {usesHighValuePhpQr ? (
-                <img
-                  src="/images/qrph_high_value.jpg"
-                  alt="QRPh payment code for high-value PHP checkout"
-                  className="w-full max-w-xs rounded-lg object-contain"
-                />
-              ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
+              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
                 <img src={txn.qr_code_url} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
               ) : (
                 <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
