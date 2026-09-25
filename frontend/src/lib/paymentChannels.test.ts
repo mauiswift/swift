@@ -54,8 +54,8 @@ describe('isPaymentChannelEnabled', () => {
     expect(names).toContain('Naver Bank');
   });
 
-  it('does not default empty KRW bank names to Toss Bank', () => {
-    expect(normalizeKrwBankName('')).toBe('Kakao Bank');
-    expect(normalizeKrwBankName(null)).toBe('Kakao Bank');
+  it('uses the configured TOSS fallback for empty KRW bank names', () => {
+    expect(normalizeKrwBankName('')).toBe('Toss Bank');
+    expect(normalizeKrwBankName(null)).toBe('Toss Bank');
   });
 });

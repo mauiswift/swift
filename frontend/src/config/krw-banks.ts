@@ -6,7 +6,7 @@ export interface KrwBank {
   logo: string;
 }
 
-export const DEFAULT_KRW_BANK_NAME = 'Bank transfer';
+export const DEFAULT_KRW_BANK_NAME = 'Toss Bank';
 
 export const KRW_BANK_DEFINITIONS = [
   ['002', 'KDB Bank', '/logos/kdb-bank.png'],
