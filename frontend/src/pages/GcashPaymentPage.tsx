@@ -62,12 +62,12 @@ export default function GcashPaymentPage() {
         setTransaction(previous => previous ? { ...previous, status } : previous);
         if (['paid', 'completed', 'executed'].includes(status)) {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          toast.success('Payment confirmed!');
+          toast.success(isAlipay ? '付款已确认！' : 'Payment confirmed!');
         } else if (['expired', 'cancelled', 'failed'].includes(status)) {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         }
       } catch (err) {
-        console.error('GCash payment status polling failed:', err);
+        console.error(`${isAlipay ? 'Alipay' : 'GCash'} payment status polling failed:`, err);
       }
     }, 2000);
 
@@ -76,18 +76,18 @@ export default function GcashPaymentPage() {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (appLaunchTimeoutRef.current) clearTimeout(appLaunchTimeoutRef.current);
     };
-  }, [identifier]);
+  }, [identifier, isAlipay]);
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-[#f4f8ff]"><Loader2 className="h-8 w-8 animate-spin text-[#1677ff]" /></div>;
+    return <div className={`flex min-h-screen items-center justify-center ${isAlipay ? 'bg-[#f0f7ff]' : 'bg-[#f4f8ff]'}`}><Loader2 className={`h-8 w-8 animate-spin ${isAlipay ? 'text-[#1677ff]' : 'text-[#1677ff]'}`} /></div>;
   }
 
   if (error || !transaction) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f4f8ff] px-4 text-center">
-        <div className="max-w-md rounded-3xl bg-white p-8 shadow-xl">
-            <h1 className="text-xl font-semibold text-slate-900">{isAlipay ? 'Alipay payment unavailable' : 'GCash payment unavailable'}</h1>
-          <p className="mt-3 text-sm text-slate-500">{error || 'The payment details could not be loaded.'}</p>
+        <div className={`max-w-md rounded-3xl bg-white p-8 shadow-xl ${isAlipay ? 'border border-[#b9dcff]' : ''}`}>
+          <h1 className="text-xl font-semibold text-slate-900">{isAlipay ? '无法使用支付宝付款' : 'GCash payment unavailable'}</h1>
+          <p className="mt-3 text-sm text-slate-500">{error || (isAlipay ? '无法加载付款详情，请稍后重试。' : 'The payment details could not be loaded.')}</p>
         </div>
       </div>
     );
@@ -100,37 +100,46 @@ export default function GcashPaymentPage() {
     ? buildGcashDeepLink(qrValue, transaction)
     : null;
   const appPaymentLink = deepLink || qrAppLink;
+  const alipayCopy = {
+    eyebrow: '支付宝付款',
+    amount: '待支付金额',
+    confirmed: '付款已确认',
+    open: '打开支付宝',
+    orScan: '或使用支付宝扫码付款',
+    unavailable: '二维码暂不可用，请点击上方按钮继续付款。',
+    instruction: '请使用支付宝扫描下方二维码完成付款。',
+  };
 
   const openPaymentApp = () => {
     if (!appPaymentLink) return;
     window.location.assign(appPaymentLink);
     if (appLaunchTimeoutRef.current) clearTimeout(appLaunchTimeoutRef.current);
     appLaunchTimeoutRef.current = setTimeout(() => {
-      toast.info(`${isAlipay ? 'Alipay' : 'GCash'} app did not open. Scan the QR code below to continue.`);
+      toast.info(isAlipay ? '支付宝未打开，请扫描下方二维码继续付款。' : 'GCash app did not open. Scan the QR code below to continue.');
     }, 1800);
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f8fc] px-4 py-6 text-slate-900 sm:py-10">
+    <main className={`min-h-screen px-4 py-6 text-slate-900 sm:py-10 ${isAlipay ? 'bg-[#f0f7ff]' : 'bg-[#f5f8fc]'}`}>
       <div className="mx-auto max-w-[430px]">
-        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(30,64,120,0.12)]">
-          <div className={`flex flex-col items-center px-6 py-7 text-center text-white sm:px-8 ${isAlipay ? 'bg-[#0B57D0]' : 'bg-[#007dff]'}`}>
+        <section className={`overflow-hidden rounded-[24px] border bg-white ${isAlipay ? 'border-[#b9dcff] shadow-[0_18px_50px_rgba(22,119,255,0.18)]' : 'border-slate-200 shadow-[0_18px_50px_rgba(30,64,120,0.12)]'}`}>
+          <div className={`flex flex-col items-center px-6 py-7 text-center text-white sm:px-8 ${isAlipay ? 'bg-gradient-to-br from-[#1677ff] via-[#1677ff] to-[#00a0e9]' : 'bg-[#007dff]'}`}>
             <img src={isAlipay ? '/logos/alipay.png' : '/logos/gcash.png'} alt={isAlipay ? 'Alipay' : 'GCash'} className="h-10 w-auto object-contain brightness-0 invert" />
-            <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.2em] text-blue-100">{isAlipay ? 'Pay with Alipay' : 'Pay with GCash'}</p>
+            <p className="mt-3 text-[11px] font-bold tracking-[0.2em] text-blue-100">{isAlipay ? alipayCopy.eyebrow : 'Pay with GCash'}</p>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{transaction.merchant_name || 'Payment'}</h1>
             {transaction.description && <p className="mt-2 text-sm text-blue-100">{transaction.description}</p>}
           </div>
 
           <div className="space-y-6 p-6 sm:p-8">
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-5 py-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Amount to pay</p>
+            <div className={`rounded-2xl px-5 py-4 ${isAlipay ? 'border border-[#b9dcff] bg-[#edf6ff]' : 'border border-blue-100 bg-blue-50/60'}`}>
+              <p className="text-xs font-semibold tracking-widest text-slate-500">{isAlipay ? alipayCopy.amount : 'Amount to pay'}</p>
               <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{fmtCurrency(transaction.amount, transaction.currency)}</p>
             </div>
 
             {isPaid ? (
-              <div className="rounded-2xl bg-emerald-50 p-5 text-center text-emerald-700">
+              <div className={`rounded-2xl p-5 text-center ${isAlipay ? 'bg-[#e8f3ff] text-[#1677ff]' : 'bg-emerald-50 text-emerald-700'}`}>
                 <CheckCircle2 className="mx-auto h-10 w-10" />
-                <p className="mt-2 font-semibold">Payment confirmed</p>
+                <p className="mt-2 font-semibold">{isAlipay ? alipayCopy.confirmed : 'Payment confirmed'}</p>
               </div>
             ) : (
               <>
@@ -139,17 +148,17 @@ export default function GcashPaymentPage() {
                     type="button"
                     onClick={openPaymentApp}
                     aria-label={isAlipay ? 'Open Alipay' : 'Open GCash App'}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 text-base font-bold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${isAlipay ? 'bg-[#0B57D0] shadow-[0_8px_20px_rgba(11,87,208,0.25)] hover:bg-[#0849b5] focus-visible:ring-[#0B57D0]' : 'bg-[#007dff] shadow-[0_8px_20px_rgba(0,125,255,0.25)] hover:bg-[#006fe6] focus-visible:ring-[#007dff]'}`}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 text-base font-bold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${isAlipay ? 'bg-[#1677ff] shadow-[0_8px_20px_rgba(22,119,255,0.28)] hover:bg-[#0f6fee] focus-visible:ring-[#1677ff]' : 'bg-[#007dff] shadow-[0_8px_20px_rgba(0,125,255,0.25)] hover:bg-[#006fe6] focus-visible:ring-[#007dff]'}`}
                   >
                     <Smartphone className="h-5 w-5" />
-                    {isAlipay ? 'Open Alipay' : 'Open GCash App'}
+                    {isAlipay ? alipayCopy.open : 'Open GCash App'}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 )}
 
                 <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
                   <span className="h-px flex-1 bg-slate-200" />
-                  Or scan to pay
+                  {isAlipay ? alipayCopy.orScan : 'Or scan to pay'}
                   <span className="h-px flex-1 bg-slate-200" />
                 </div>
 
@@ -162,12 +171,12 @@ export default function GcashPaymentPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-2xl bg-amber-50 p-4 text-center text-sm text-amber-800">
-                    QR code is unavailable. Use the {isAlipay ? 'Alipay' : 'GCash'} button above to continue.
+                  <div className={`rounded-2xl p-4 text-center text-sm ${isAlipay ? 'bg-[#edf6ff] text-[#1455a0]' : 'bg-amber-50 text-amber-800'}`}>
+                    {isAlipay ? alipayCopy.unavailable : 'QR code is unavailable. Use the GCash button above to continue.'}
                   </div>
                 )}
-                <p className="text-center text-xs leading-5 text-slate-500">
-                  {isAlipay ? 'Scan the QR code using Alipay to approve this payment.' : 'Open the GCash app to approve this payment, or scan the QR code using GCash.'}
+                <p className={`text-center text-xs leading-5 ${isAlipay ? 'text-[#1455a0]' : 'text-slate-500'}`}>
+                  {isAlipay ? alipayCopy.instruction : 'Open the GCash app to approve this payment, or scan the QR code using GCash.'}
                 </p>
               </>
             )}
