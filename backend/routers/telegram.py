@@ -832,10 +832,8 @@ def _start_kb() -> dict:
     """Quick-action keyboard using command text Telegram can route directly."""
     return _reply_keyboard([
         ["/link", "/scanqr"],
-        ["/alipay", "/wechat"],
         ["/wallet", "/status"],
-        ["/send", "/disburse"],
-        ["/deposit", "/topup"],
+        ["/help", "/start"],
     ])
 
 
@@ -1023,36 +1021,17 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 _inline_button(_t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), url=_dashboard_url("wallet"))
             ],
             [
-                _inline_button(_t(str(chat_id), "💳 Payments", "💳 支付", db_lang=selected_lang), url=_dashboard_url("payments")),
-                _inline_button(_t(str(chat_id), "🏦 Disbursements", "🏦 出款", db_lang=selected_lang), url=_dashboard_url("disbursements"))
-            ],
-            [
-                _inline_button(_t(str(chat_id), "📈 Reports", "📈 报表", db_lang=selected_lang), url=_dashboard_url("reports")),
-                _inline_button(_t(str(chat_id), "⚙️ Settings", "⚙️ 设置", db_lang=selected_lang), callback_data="action:settings")
-            ],
-            [
                 _inline_button(_t(str(chat_id), "💱 Change Currency", "💱 切换货币", db_lang=selected_lang), callback_data="action:currency"),
                 _inline_button(_t(str(chat_id), "❓ Help", "❓ 帮助", db_lang=selected_lang), callback_data="action:help")
-            ],
-            [
-                _inline_button(_t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), callback_data="wizard:/topup"),
-                _inline_button(_t(str(chat_id), "💸 Payout", "💸 出款", db_lang=selected_lang), callback_data="wizard:/disburse")
             ],
             [
                 _inline_button(_t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), callback_data="wizard:/link"),
                 _inline_button(_t(str(chat_id), "📷 QRPH", "📷 QRPH", db_lang=selected_lang), callback_data="wizard:/scanqr")
             ],
             [
-                _inline_button(_t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), callback_data="wizard:/deposit"),
-                _inline_button(_t(str(chat_id), "📋 Status", "📋 查询", db_lang=selected_lang), callback_data="wizard:/status")
-            ],
-            [
                 _inline_button(_t(str(chat_id), "🟢 Buy USDT", "🟢 买入 USDT", db_lang=selected_lang), callback_data="wizard:/buyusdt"),
                 _inline_button(_t(str(chat_id), "🔴 Sell USDT", "🔴 卖出 USDT", db_lang=selected_lang), callback_data="wizard:/sellusdt")
             ],
-            [
-               _inline_button(_t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), url=f"https://t.me/{settings.telegram_bot_username}?startgroup=true")
-            ]
         ]
     }
 
@@ -1064,7 +1043,6 @@ def _pay_kb() -> dict:
     """Quick-action keyboard shown after payment creation commands."""
     return _reply_keyboard([
         ["/link", "/scanqr"],
-        ["/alipay", "/wechat"],
         ["/status", "/help"],
     ])
 
@@ -1073,9 +1051,8 @@ def _wallet_kb() -> dict:
     """Quick-action keyboard shown after wallet commands."""
     return _reply_keyboard([
         ["/buyusdt", "/sellusdt"],
-        ["/send", "/disburse"],
-        ["/deposit", "/topup"],
-        ["/wallet", "/status"],
+        ["/send", "/wallet"],
+        ["/help", "/start"],
     ])
 
 
@@ -1084,7 +1061,6 @@ def _info_kb() -> dict:
     return _reply_keyboard([
         ["/link", "/scanqr"],
         ["/buyusdt", "/sellusdt"],
-        ["/wallet", "/status"],
         ["/help", "/start"],
     ])
 

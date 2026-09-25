@@ -1186,6 +1186,9 @@ def test_bot_keyboards_share_command_button_shape():
     labels = [button["text"] for row in keyboard["keyboard"] for button in row]
     assert ["/buyusdt", "/sellusdt"] == labels[:2]
     assert keyboard["resize_keyboard"] is True
+    assert len(keyboard["keyboard"]) == 3
+    assert len(telegram_router._start_kb()["keyboard"]) == 3
+    assert len(telegram_router._info_kb()["keyboard"]) == 3
     assert telegram_router._inline_button("Buy", callback_data="wizard:/buyusdt") == {
         "text": "Buy",
         "callback_data": "wizard:/buyusdt",
@@ -1193,7 +1196,7 @@ def test_bot_keyboards_share_command_button_shape():
     panel_buttons = telegram_router._start_kb()
     panel_labels = [button["text"] for row in panel_buttons["keyboard"] for button in row]
     assert "/buyusdt" not in panel_labels
-    assert "/topup" in panel_labels
+    assert "/help" in panel_labels
 
 
 def test_inline_button_requires_one_action():
