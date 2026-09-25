@@ -5,10 +5,12 @@ import Layout from '@/components/Layout';
 import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { collectionCurrency } = useCollectionCurrency();
   const isKorean = language === 'ko';
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
@@ -20,19 +22,26 @@ export default function CreatePaymentLink() {
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [description, setDescription] = useState('');
-  const currency = 'PHP';
+  const currency = collectionCurrency.toUpperCase();
   const [error, setError] = useState('');
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
+    const minimumAmount = currency === 'KRW' ? 1000 : 1;
+    const maximumAmount = currency === 'KRW' ? 100_000_000 : 50_000;
+    const currencyLabel = currency === 'KRW' ? '₩' : '₱';
 
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       setError(isKorean ? '유효한 금액을 입력하세요.' : 'Please enter a valid amount.');
       return;
     }
 
-    if (numericAmount < 1 || numericAmount > 50000) {
-      setError(isKorean ? 'PHP 결제 금액은 ₱1~₱50,000이어야 합니다.' : 'PHP payment links must be between ₱1 and ₱50,000.');
+    if (numericAmount < minimumAmount || numericAmount > maximumAmount) {
+      setError(
+        isKorean
+          ? `${currency} 결제 금액은 ${currencyLabel}${minimumAmount.toLocaleString()}~${currencyLabel}${maximumAmount.toLocaleString()}이어야 합니다.`
+          : `${currency} payment links must be between ${currencyLabel}${minimumAmount.toLocaleString()} and ${currencyLabel}${maximumAmount.toLocaleString()}.`,
+      );
       return;
     }
 
@@ -67,7 +76,7 @@ export default function CreatePaymentLink() {
             currency: normalizedCurrency,
             external_id: reference_no,
             customer_name: payor.trim() || '',
-            payment_methods: [],
+            payment_methods: normalizedCurrency === 'PHP' ? [] : ['bank_transfer'],
           });
       const data = response.data as any;
 
@@ -148,7 +157,7 @@ export default function CreatePaymentLink() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
           <p className="text-[13px] text-slate-500 mb-6 leading-relaxed">
-            {isKorean ? 'PHP 결제 링크를 만들고 GCash, QRPH 또는 은행 결제를 받을 수 있습니다.' : 'Create a PHP payment link and accept GCash, QRPH, or bank payments.'}
+            {isKorean ? `${currency} 결제 링크를 만들고 사용 가능한 결제 수단으로 결제받을 수 있습니다.` : `Create a ${currency} payment link and accept available payment methods.`}
           </p>
 
           <div className="mb-8 grid gap-3 sm:grid-cols-3">
@@ -169,7 +178,7 @@ export default function CreatePaymentLink() {
             <div>
               <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '금액' : 'Amount'}</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">PHP</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">{currency}</span>
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
