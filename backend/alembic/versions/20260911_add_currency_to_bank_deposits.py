@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 
-revision: str = "20260911_add_currency_to_bank_deposits"
+revision: str = "20260911_bank_currency"
 down_revision: Union[str, Sequence[str], None] = "zzzz_final_consolidation"
 branch_labels = None
 depends_on = None
