@@ -318,6 +318,8 @@ def test_normalize_external_bank_code_supports_legacy_bank_aliases():
     assert SwiftPayService.normalize_external_bank_code("BDO") == "BNOR"
     assert SwiftPayService.normalize_external_bank_code("BPI") == "BOPI"
     assert SwiftPayService.normalize_external_bank_code("UNIONBANK") == "UBPH"
+    assert SwiftPayService.normalize_external_bank_code("Banco de Oro Unibank Inc (BDO)") == "BNOR"
+    assert SwiftPayService.normalize_external_bank_code("PHVBPHMXXX") == "PHVB"
 
 
 def test_normalize_collection_institution_code_converts_bic_catalog_values():

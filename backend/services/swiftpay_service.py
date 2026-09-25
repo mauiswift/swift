@@ -61,6 +61,21 @@ class SwiftPayService:
         }
         if code in legacy_aliases:
             return legacy_aliases[code]
+        name_aliases = (
+            ("BANCO DE ORO", "BNOR"),
+            ("BANCO DE ORO UNIBANK", "BNOR"),
+            ("BANK OF THE PHILIPPINE ISLANDS", "BOPI"),
+            ("UNIONBANK", "UBPH"),
+            ("METROBANK", "MBTE"),
+            ("METROPOLITAN BANK", "MBTE"),
+            ("SECURITY BANK", "SETC"),
+            ("LAND BANK", "TLBP"),
+            ("PHILIPPINE NATIONAL BANK", "PNBM"),
+            ("PHILIPPINE BANK OF COMMUNICATIONS", "CPHI"),
+        )
+        for name, normalized in name_aliases:
+            if name in code:
+                return normalized
         bic_prefixes = {
             "BNORPHM": "BNOR",
             "BOPIPHM": "BOPI",
@@ -74,7 +89,7 @@ class SwiftPayService:
         for prefix, normalized in bic_prefixes.items():
             if code.startswith(prefix):
                 return normalized
-        if len(code) in {8, 11} and code.isalnum():
+        if len(code) in {8, 10, 11} and code.isalnum():
             return code[:4]
         return code
 
