@@ -815,8 +815,23 @@ export default function Checkout() {
 
   const openKoreanPaymentApp = (app: 'toss' | 'kakao') => {
     if (app === 'toss') {
-      setQrInstructionApp('toss');
-      setShowQRPhModal(true);
+      const tossDeepLink = txn?.toss_deep_link?.trim() || 'supertoss://toss/pay';
+      let appOpened = false;
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+          appOpened = true;
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.location.assign(tossDeepLink);
+      window.setTimeout(() => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        if (!appOpened) {
+          setQrInstructionApp('toss');
+          setShowQRPhModal(true);
+        }
+      }, 1200);
       return;
     }
     window.location.assign('kakaopay://');
