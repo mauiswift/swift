@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
 import { client } from '@/lib/api';
+import { PERMISSION_DEFINITIONS } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -923,20 +924,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] = [
-  { key: 'can_manage_payments', label: 'Payments', color: 'blue' },
-  { key: 'can_manage_disbursements', label: 'Disbursements', color: 'emerald' },
-  { key: 'can_view_reports', label: 'Reports', color: 'yellow' },
-  { key: 'can_manage_wallet', label: 'Wallet', color: 'indigo' },
-  { key: 'can_manage_transactions', label: 'Transactions', color: 'cyan' },
-  { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
-  { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
-  { key: 'can_manage_team', label: 'Manage Team', color: 'orange' },
-  { key: 'can_credit_wallet', label: 'Credit Wallet', color: 'emerald' },
-  { key: 'can_debit_wallet', label: 'Debit Wallet', color: 'yellow' },
-  { key: 'can_freeze_wallet', label: 'Freeze Wallet', color: 'indigo' },
-  { key: 'can_unfreeze_wallet', label: 'Unfreeze Wallet', color: 'cyan' },
-];
+const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] = PERMISSION_DEFINITIONS;
 
 const defaultForm = {
   telegram_id: '',

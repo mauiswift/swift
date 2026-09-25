@@ -112,6 +112,7 @@ export function buildAdminNavigation(
       superAdminOnly: true,
       items: filterItems([
         { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
+        { label: label('nav_roles', 'Roles & Permissions'), icon: ShieldCheck, path: '/roles', superAdminOnly: true },
         { label: label('nav_approvals', 'Payment Approvals'), icon: ClipboardCheck, path: '/payment-approvals', superAdminOnly: true },
         { label: label('nav_bank_deposits', 'Bank Deposits'), icon: Banknote, path: '/bank-deposits', superAdminOnly: true },
         { label: label('nav_topup_requests', 'Top-up Requests'), icon: ArrowDownToLine, path: '/topup-requests', superAdminOnly: true },

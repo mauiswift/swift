@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { client } from '@/lib/api';
+import { PERMISSION_DEFINITIONS, type ConfigurablePermissionKey } from '@/lib/permissions';
 import {
   Shield,
   Crown,
@@ -39,6 +41,7 @@ interface RolePreset {
   name: string;
   description: string;
   color: string;
+  is_system: boolean;
   permissions: RolePermissions;
 }
 
@@ -66,20 +69,7 @@ interface AdminUser {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PERMISSION_KEYS: { key: keyof RolePermissions; label: string; color: string }[] = [
-  { key: 'can_manage_payments', label: 'Payments', color: 'blue' },
-  { key: 'can_manage_disbursements', label: 'Disbursements', color: 'emerald' },
-  { key: 'can_view_reports', label: 'Reports', color: 'yellow' },
-  { key: 'can_manage_wallet', label: 'Wallet', color: 'indigo' },
-  { key: 'can_manage_transactions', label: 'Transactions', color: 'cyan' },
-  { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
-  { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
-  { key: 'can_manage_team', label: 'Team Management', color: 'blue' },
-  { key: 'can_credit_wallet', label: 'Credit Wallet', color: 'emerald' },
-  { key: 'can_debit_wallet', label: 'Debit Wallet', color: 'yellow' },
-  { key: 'can_freeze_wallet', label: 'Freeze Wallet', color: 'indigo' },
-  { key: 'can_unfreeze_wallet', label: 'Unfreeze Wallet', color: 'cyan' },
-];
+const PERMISSION_KEYS = PERMISSION_DEFINITIONS;
 
 const BADGE_COLORS: Record<string, string> = {
   amber: 'bg-amber-500/15 border-amber-500/25 text-amber-400',
@@ -115,9 +105,13 @@ function normalizeRole(role: RolePreset & Partial<RolePermissions>): RolePreset 
     name: role.name,
     description: role.description || 'Custom permission template',
     color: role.color || 'blue',
+    is_system: Boolean(role.is_system),
     permissions,
   };
 }
+
+const emptyPermissions = (): Record<ConfigurablePermissionKey, boolean> =>
+  Object.fromEntries(PERMISSION_DEFINITIONS.map(({ key }) => [key, false])) as Record<ConfigurablePermissionKey, boolean>;
 
 // ── PermissionBadge ────────────────────────────────────────────────────────────
 
@@ -146,13 +140,22 @@ export default function RolesPage() {
   const [rolesLoading, setRolesLoading] = useState(true);
   const [adminsLoading, setAdminsLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
+  const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
+  const [roleForm, setRoleForm] = useState({
+    name: '',
+    description: '',
+    color: 'blue',
+    is_super_admin: false,
+    permissions: emptyPermissions(),
+  });
+  const [savingRole, setSavingRole] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const fetchRoles = useCallback(async () => {
     setRolesLoading(true);
     try {
-      const res = await fetch('/api/v1/roles');
+      const res = await client.fetch('/api/v1/roles');
       if (!res.ok) throw new Error(await res.text());
       const payload = await res.json();
       if (!Array.isArray(payload)) throw new Error('Invalid roles response');
@@ -167,7 +170,7 @@ export default function RolesPage() {
   const fetchAdmins = useCallback(async () => {
     setAdminsLoading(true);
     try {
-      const res = await fetch('/api/v1/admin-users');
+      const res = await client.fetch('/api/v1/admin-users');
       if (!res.ok) throw new Error(await res.text());
       setAdmins(await res.json());
     } catch (e: unknown) {
@@ -188,7 +191,7 @@ export default function RolesPage() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`/api/v1/admin-users/${admin.id}`, {
+      const res = await client.fetch(`/api/v1/admin-users/${admin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -202,6 +205,67 @@ export default function RolesPage() {
       setError(e instanceof Error ? e.message : 'Failed to apply role');
     } finally {
       setApplying(null);
+    }
+  };
+
+  const resetRoleForm = () => {
+    setEditingRoleId(null);
+    setRoleForm({
+      name: '',
+      description: '',
+      color: 'blue',
+      is_super_admin: false,
+      permissions: emptyPermissions(),
+    });
+  };
+
+  const editRole = (role: RolePreset) => {
+    setEditingRoleId(role.id);
+    setRoleForm({
+      name: role.name,
+      description: role.description,
+      color: role.color,
+      is_super_admin: role.permissions.is_super_admin,
+      permissions: Object.fromEntries(
+        PERMISSION_DEFINITIONS.map(({ key }) => [key, Boolean(role.permissions[key])]),
+      ) as Record<ConfigurablePermissionKey, boolean>,
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const saveRole = async () => {
+    if (!roleForm.name.trim()) {
+      setError('Role name is required.');
+      return;
+    }
+    setSavingRole(true);
+    setError('');
+    setSuccess('');
+    try {
+      const payload = {
+        name: roleForm.name.trim(),
+        description: roleForm.description.trim() || null,
+        color: roleForm.color,
+        is_super_admin: roleForm.is_super_admin,
+        ...roleForm.permissions,
+      };
+      const res = await client.fetch(
+        editingRoleId === null ? '/api/v1/roles' : `/api/v1/roles/${editingRoleId}`,
+        {
+          method: editingRoleId === null ? 'POST' : 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) throw new Error(await res.text());
+      await fetchRoles();
+      setSuccess(editingRoleId === null ? 'Role created.' : 'Role updated.');
+      resetRoleForm();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save role');
+    } finally {
+      setSavingRole(false);
     }
   };
 
@@ -275,6 +339,86 @@ export default function RolesPage() {
           </p>
         </div>
 
+        {isSuperAdmin && (
+          <Card className="mb-5 border-slate-200 bg-white">
+            <CardContent className="p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    {editingRoleId === null ? 'Create custom role' : 'Edit custom role'}
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Configure access by capability. System roles remain locked.
+                  </p>
+                </div>
+                {editingRoleId !== null && (
+                  <Button type="button" variant="ghost" size="sm" onClick={resetRoleForm}>Cancel</Button>
+                )}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-slate-700">
+                  Role name
+                  <input
+                    value={roleForm.name}
+                    onChange={(event) => setRoleForm((current) => ({ ...current, name: event.target.value }))}
+                    className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm font-normal text-slate-900"
+                    placeholder="e.g. Finance reviewer"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Description
+                  <input
+                    value={roleForm.description}
+                    onChange={(event) => setRoleForm((current) => ({ ...current, description: event.target.value }))}
+                    className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm font-normal text-slate-900"
+                    placeholder="What this role can do"
+                  />
+                </label>
+              </div>
+              <label className="mt-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                <input
+                  type="checkbox"
+                  checked={roleForm.is_super_admin}
+                  onChange={(event) => setRoleForm((current) => ({ ...current, is_super_admin: event.target.checked }))}
+                  className="h-4 w-4 accent-amber-600"
+                />
+                Super admin access
+              </label>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                {Array.from(new Set(PERMISSION_DEFINITIONS.map(({ group }) => group))).map((group) => (
+                  <section key={group} className="rounded-xl border border-slate-200 p-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{group}</h3>
+                    <div className="mt-2 space-y-2">
+                      {PERMISSION_DEFINITIONS.filter((permission) => permission.group === group).map((permission) => (
+                        <label key={permission.key} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 hover:bg-slate-50">
+                          <input
+                            type="checkbox"
+                            checked={roleForm.permissions[permission.key]}
+                            onChange={(event) => setRoleForm((current) => ({
+                              ...current,
+                              permissions: { ...current.permissions, [permission.key]: event.target.checked },
+                            }))}
+                            className="mt-0.5 h-4 w-4 accent-[#FF6B00]"
+                          />
+                          <span>
+                            <span className="block text-xs font-semibold text-slate-800">{permission.label}</span>
+                            <span className="block text-[11px] text-slate-500">{permission.description}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button type="button" onClick={saveRole} disabled={savingRole} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
+                  {savingRole ? 'Saving...' : editingRoleId === null ? 'Create role' : 'Save changes'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Loading Skeletons */}
         {rolesLoading && (
           <div className="space-y-3" aria-busy="true" aria-label="Loading roles">
@@ -289,7 +433,7 @@ export default function RolesPage() {
           <div className="space-y-4">
             {roles.map((role) => {
               const colorCls = BADGE_COLORS[role.color] || BADGE_COLORS['blue'];
-              const icon = ROLE_ICONS[role.id] ?? <Shield className="h-4 w-4 text-blue-400" />;
+              const icon = ROLE_ICONS[role.name] ?? <Shield className="h-4 w-4 text-blue-400" />;
 
               return (
                 <Card key={role.id} className="bg-card border-border">
@@ -303,7 +447,7 @@ export default function RolesPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm text-foreground">{role.name}</span>
                           <Badge className={`text-[9px] px-1.5 py-0 h-4 border ${colorCls}`}>
-                            PRESET
+                            {role.is_system ? 'SYSTEM' : 'CUSTOM'}
                           </Badge>
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">{role.description}</p>
@@ -326,6 +470,12 @@ export default function RolesPage() {
                         />
                       ))}
                     </div>
+
+                    {isSuperAdmin && !role.is_system && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => editRole(role)}>
+                        Edit permissions
+                      </Button>
+                    )}
 
                     {/* Apply to admin — super admin only */}
                     {isSuperAdmin && (

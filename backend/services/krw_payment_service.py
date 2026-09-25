@@ -84,7 +84,7 @@ class KRWDisbursementRequest(BaseModel):
     reference_no: str = Field(..., min_length=1, max_length=255, description="Unique reference number")
     bank_info: KRWBankInfo = Field(..., description="Recipient bank information")
     description: Optional[str] = Field(None, max_length=500, description="Disbursement description")
-    priority: str = Field(default="normal", regex="^(normal|high|urgent)$", description="Processing priority")
+    priority: str = Field(default="normal", pattern="^(normal|high|urgent)$", description="Processing priority")
 
     @validator("amount")
     def validate_amount(cls, v: float) -> float:
@@ -445,4 +445,3 @@ class KRWPaymentService:
             "swift_code": bank_info.get("swift"),
             "account_number": account_number,
         }
-
