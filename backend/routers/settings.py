@@ -1,4 +1,7 @@
 from pathlib import Path
+import os
+import re
+import tempfile
 from typing import Dict
 
 from dependencies.auth import get_admin_user
@@ -7,6 +10,9 @@ from pydantic import BaseModel
 from schemas.auth import UserResponse
 
 router = APIRouter(prefix="/api/v1/admin/settings", tags=["admin-settings"])
+
+_SETTING_KEY = re.compile(r"^[A-Z][A-Z0-9_]*$")
+_SENSITIVE_KEY_PARTS = ("KEY", "SECRET", "TOKEN", "PASSWORD", "PRIVATE", "CREDENTIAL")
 
 
 class EnvVariable(BaseModel):
@@ -59,9 +65,33 @@ def write_env_file(env_type: str, env_vars: Dict[str, str]):
     # Ensure the directory exists
     env_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(env_file, "w", encoding="utf-8") as f:
-        for key, value in env_vars.items():
-            f.write(f"{key}={value}\n")
+    fd, temporary_path = tempfile.mkstemp(prefix=f".{env_file.name}.", dir=env_file.parent, text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            for key, value in env_vars.items():
+                f.write(f"{key}={value}\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_path, env_file)
+    except Exception:
+        try:
+            os.unlink(temporary_path)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def _validate_setting_key(key: str) -> str:
+    normalized = key.strip().upper()
+    if not _SETTING_KEY.fullmatch(normalized):
+        raise HTTPException(status_code=400, detail="Invalid environment variable name")
+    return normalized
+
+
+def _display_setting_value(key: str, value: str) -> str:
+    if not value or not any(part in key for part in _SENSITIVE_KEY_PARTS):
+        return value
+    return "••••" if len(value) <= 4 else f"{value[:2]}••••{value[-2:]}"
 
 
 @router.get("", response_model=EnvConfig)
@@ -95,11 +125,19 @@ async def get_settings(current_user: UserResponse = Depends(get_admin_user)):
         # Build response data
         backend_config = {}
         for key, value in backend_vars.items():
-            backend_config[key] = EnvVariable(key=key, value=value, description=backend_descriptions.get(key, ""))
+            backend_config[key] = EnvVariable(
+                key=key,
+                value=_display_setting_value(key, value),
+                description=backend_descriptions.get(key, ""),
+            )
 
         frontend_config = {}
         for key, value in frontend_vars.items():
-            frontend_config[key] = EnvVariable(key=key, value=value, description=frontend_descriptions.get(key, ""))
+            frontend_config[key] = EnvVariable(
+                key=key,
+                value=_display_setting_value(key, value),
+                description=frontend_descriptions.get(key, ""),
+            )
 
         return EnvConfig(backend_vars=backend_config, frontend_vars=frontend_config)
     except Exception as e:
@@ -111,6 +149,7 @@ async def update_backend_setting(
     key: str, update: EnvVariableUpdate, current_user: UserResponse = Depends(get_admin_user)
 ):
     """Update a backend environment variable."""
+    key = _validate_setting_key(key)
     try:
         env_vars = read_env_file("backend")
         env_vars[key] = update.value
@@ -125,6 +164,7 @@ async def update_frontend_setting(
     key: str, update: EnvVariableUpdate, current_user: UserResponse = Depends(get_admin_user)
 ):
     """Update a frontend environment variable."""
+    key = _validate_setting_key(key)
     try:
         env_vars = read_env_file("frontend")
         env_vars[key] = update.value
@@ -139,6 +179,7 @@ async def add_backend_setting(
     key: str, update: EnvVariableUpdate, current_user: UserResponse = Depends(get_admin_user)
 ):
     """Add a backend environment variable."""
+    key = _validate_setting_key(key)
     try:
         env_vars = read_env_file("backend")
         env_vars[key] = update.value
@@ -153,6 +194,7 @@ async def add_frontend_setting(
     key: str, update: EnvVariableUpdate, current_user: UserResponse = Depends(get_admin_user)
 ):
     """Add a frontend environment variable."""
+    key = _validate_setting_key(key)
     try:
         env_vars = read_env_file("frontend")
         env_vars[key] = update.value
@@ -165,6 +207,7 @@ async def add_frontend_setting(
 @router.delete("/backend/{key}")
 async def delete_backend_setting(key: str, current_user: UserResponse = Depends(get_admin_user)):
     """Delete a backend environment variable."""
+    key = _validate_setting_key(key)
     try:
         env_vars = read_env_file("backend")
         if key in env_vars:
@@ -180,6 +223,7 @@ async def delete_backend_setting(key: str, current_user: UserResponse = Depends(
 @router.delete("/frontend/{key}")
 async def delete_frontend_setting(key: str, current_user: UserResponse = Depends(get_admin_user)):
     """Delete a frontend environment variable."""
+    key = _validate_setting_key(key)
     try:
         env_vars = read_env_file("frontend")
         if key in env_vars:

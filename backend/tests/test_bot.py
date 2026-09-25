@@ -1203,6 +1203,16 @@ def test_inline_button_requires_one_action():
         telegram_router._inline_button("Invalid", callback_data="a", url="https://example.com")
 
 
+def test_settings_mask_sensitive_values():
+    from routers.settings import _display_setting_value, _validate_setting_key
+
+    assert _display_setting_value("JWT_SECRET_KEY", "abcdefgh") == "ab••••gh"
+    assert _display_setting_value("PORT", "8000") == "8000"
+    assert _validate_setting_key(" jwt_secret_key ") == "JWT_SECRET_KEY"
+    with pytest.raises(Exception):
+        _validate_setting_key("bad-key")
+
+
 def test_usdt_trade_quote_uses_selected_currency_and_wallet_link():
     tg = MagicMock()
     tg.send_message = AsyncMock()
