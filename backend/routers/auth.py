@@ -52,6 +52,7 @@ from services.auth import AuthService, _get_platform_organization
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
+    get_role_permissions_by_name,
     PredefinedRoleEnum,
 )
 from services.telegram_service import TelegramService
@@ -76,6 +77,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+
+
+def _admin_permissions(admin: Optional[AdminUser]) -> UserPermissions:
+    """Build login permissions from the canonical role matrix."""
+    if not admin:
+        return UserPermissions(is_super_admin=False)
+    if admin.role:
+        return UserPermissions(**get_role_permissions_by_name(admin.role).model_dump())
+    return UserPermissions(
+        is_super_admin=bool(admin.is_super_admin),
+        can_manage_payments=bool(admin.can_manage_payments),
+        can_manage_disbursements=bool(admin.can_manage_disbursements),
+        can_view_reports=bool(admin.can_view_reports),
+        can_manage_wallet=bool(admin.can_manage_wallet),
+        can_manage_transactions=bool(admin.can_manage_transactions),
+        can_manage_bot=bool(admin.can_manage_bot),
+        can_approve_topups=bool(admin.can_approve_topups),
+        can_manage_team=bool(admin.can_manage_team),
+        can_credit_wallet=bool(admin.can_credit_wallet),
+        can_debit_wallet=bool(admin.can_debit_wallet),
+        can_freeze_wallet=bool(admin.can_freeze_wallet),
+        can_unfreeze_wallet=bool(admin.can_unfreeze_wallet),
+    )
 
 
 def _passkey_origin(request: Request) -> str:
@@ -226,21 +250,7 @@ async def verify_transaction_otp(
 async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
     admin_result = await db.execute(select(AdminUser).where(AdminUser.telegram_id == user.id))
     admin = admin_result.scalar_one_or_none()
-    permissions = UserPermissions(
-        is_super_admin=bool(admin and admin.is_super_admin),
-        can_manage_payments=bool(admin and admin.can_manage_payments),
-        can_manage_disbursements=bool(admin and admin.can_manage_disbursements),
-        can_view_reports=bool(admin and admin.can_view_reports),
-        can_manage_wallet=bool(admin and admin.can_manage_wallet),
-        can_manage_transactions=bool(admin and admin.can_manage_transactions),
-        can_manage_bot=bool(admin and admin.can_manage_bot),
-        can_approve_topups=bool(admin and admin.can_approve_topups),
-        can_manage_team=bool(admin and admin.can_manage_team),
-        can_credit_wallet=bool(admin and admin.can_credit_wallet),
-        can_debit_wallet=bool(admin and admin.can_debit_wallet),
-        can_freeze_wallet=bool(admin and admin.can_freeze_wallet),
-        can_unfreeze_wallet=bool(admin and admin.can_unfreeze_wallet),
-    )
+    permissions = _admin_permissions(admin)
     if user.role == "admin" and not admin:
         permissions = UserPermissions(
             is_super_admin=True,
@@ -763,17 +773,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             except Exception:
                 await db.rollback()
     else:
-        perms = UserPermissions(
-            is_super_admin=db_admin.is_super_admin,
-            can_manage_payments=db_admin.can_manage_payments,
-            can_manage_disbursements=db_admin.can_manage_disbursements,
-            can_view_reports=db_admin.can_view_reports,
-            can_manage_wallet=db_admin.can_manage_wallet,
-            can_manage_transactions=db_admin.can_manage_transactions,
-            can_manage_bot=db_admin.can_manage_bot,
-            can_approve_topups=db_admin.can_approve_topups,
-            can_manage_team=db_admin.can_manage_team,
-        )
+        perms = _admin_permissions(db_admin)
         try:
             db_admin.name = display_name
             db_admin.telegram_username = payload.username or db_admin.telegram_username
@@ -1114,17 +1114,7 @@ async def google_login(
     await db.commit()
     await db.refresh(user)
 
-    permissions = UserPermissions(
-        is_super_admin=bool(admin_record and admin_record.is_super_admin),
-        can_manage_payments=bool(admin_record and admin_record.can_manage_payments),
-        can_manage_disbursements=bool(admin_record and admin_record.can_manage_disbursements),
-        can_view_reports=bool(admin_record and admin_record.can_view_reports),
-        can_manage_wallet=bool(admin_record and admin_record.can_manage_wallet),
-        can_manage_transactions=bool(admin_record and admin_record.can_manage_transactions),
-        can_manage_bot=bool(admin_record and admin_record.can_manage_bot),
-        can_approve_topups=bool(admin_record and admin_record.can_approve_topups),
-        can_manage_team=bool(admin_record and admin_record.can_manage_team),
-    )
+    permissions = _admin_permissions(admin_record)
     auth_service = AuthService(db)
     app_token, _, _ = await auth_service.issue_app_token(
         user=user,

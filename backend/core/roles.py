@@ -247,6 +247,31 @@ ROLE_HIERARCHY = {
     PredefinedRoleEnum.OWNER: 5,
 }
 
+ROLE_ALIASES = {
+    "editor": PredefinedRoleEnum.OPERATOR,
+    "operator": PredefinedRoleEnum.OPERATOR,
+}
+
+
+def get_role_permissions_by_name(role_name: str | None) -> RolePermissions:
+    """Resolve every supported stored role to its canonical permission matrix."""
+    normalized = (role_name or "admin").strip().lower()
+    if normalized == "super_admin":
+        return get_invited_super_admin_permissions()
+    if normalized == "approver":
+        return RolePermissions(
+            can_view_reports=True,
+            can_manage_transactions=True,
+            can_approve_topups=True,
+        )
+    role = ROLE_ALIASES.get(normalized)
+    if role is None:
+        try:
+            role = PredefinedRoleEnum(normalized)
+        except ValueError:
+            role = PredefinedRoleEnum.ADMIN
+    return get_role_permissions(role)
+
 
 def get_role_level(role: PredefinedRoleEnum) -> int:
     """Get the hierarchy level of a role (higher = more privileges)"""

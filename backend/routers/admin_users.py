@@ -25,6 +25,7 @@ from models.auth import User
 from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.auth import _get_platform_organization
+from core.roles import get_role_permissions_by_name
 from utils.audit import log_action
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ class AdminUserCreate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
+    role: str = "admin"
     is_super_admin: bool = False
     can_manage_payments: bool = False
     can_manage_disbursements: bool = False
@@ -140,7 +142,8 @@ class AdminUserUpdate(BaseModel):
     settlement_currency: Optional[str] = None
 
 
-SUPER_ADMIN_PERMISSION_FIELDS = (
+ROLE_PERMISSION_FIELDS = (
+    "is_super_admin",
     "can_manage_payments",
     "can_manage_disbursements",
     "can_view_reports",
@@ -155,17 +158,27 @@ SUPER_ADMIN_PERMISSION_FIELDS = (
     "can_unfreeze_wallet",
 )
 
+SUPER_ADMIN_PERMISSION_FIELDS = tuple(
+    field for field in ROLE_PERMISSION_FIELDS if field != "is_super_admin"
+)
+
+
+def _apply_role_permissions(admin: AdminUser, role_name: str) -> None:
+    permissions = get_role_permissions_by_name(role_name)
+    values = permissions.model_dump()
+    admin.role = "operator" if role_name == "editor" else role_name
+    for field in ROLE_PERMISSION_FIELDS:
+        setattr(admin, field, values[field])
+    admin.team_permissions = values
+
 
 def _apply_super_admin_permissions(values: dict) -> dict:
-    """Make super-admin status imply the complete admin permission set."""
+    """Preserve the legacy helper for callers outside the role assignment API."""
     if values.get("is_super_admin") is True:
         values["role"] = "super_admin"
         for field in SUPER_ADMIN_PERMISSION_FIELDS:
             values[field] = True
-    elif values.get("is_super_admin") is False and values.get("role") in {
-        "super_admin",
-        "owner",
-    }:
+    elif values.get("is_super_admin") is False and values.get("role") in {"super_admin", "owner"}:
         values["role"] = "admin"
     return values
 
@@ -240,6 +253,11 @@ async def list_admin_users(current_user: UserResponse = Depends(get_current_user
 async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Add an admin user. Only the platform/root super admin can do this."""
     _require_super_admin(current_user)
+    if set(data.model_fields_set).intersection(ROLE_PERMISSION_FIELDS):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Individual permission flags are managed by role. Set the role instead.",
+        )
     if not data.name or not data.name.strip():
         raise HTTPException(status_code=400, detail="Full name is required.")
     normalized_email = _normalize_email(data.email) if data.email is not None else None
@@ -256,22 +274,12 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         await _ensure_unique_usdt_wallet_address(db, normalized_address)
 
     platform_org_id, platform_org_name = _get_platform_organization()
-    is_super_admin = bool(data.is_super_admin)
-    permission_values = _apply_super_admin_permissions({
-        "is_super_admin": is_super_admin,
-        "can_manage_payments": data.can_manage_payments,
-        "can_manage_disbursements": data.can_manage_disbursements,
-        "can_view_reports": data.can_view_reports,
-        "can_manage_wallet": data.can_manage_wallet,
-        "can_manage_transactions": data.can_manage_transactions,
-        "can_manage_bot": data.can_manage_bot,
-        "can_approve_topups": data.can_approve_topups,
-        "can_manage_team": data.can_manage_team,
-        "can_credit_wallet": data.can_credit_wallet,
-        "can_debit_wallet": data.can_debit_wallet,
-        "can_freeze_wallet": data.can_freeze_wallet,
-        "can_unfreeze_wallet": data.can_unfreeze_wallet,
-    })
+    role_name = data.role.strip().lower()
+    if role_name not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "approver", "super_admin"}:
+        raise HTTPException(status_code=400, detail="Invalid role.")
+    permission_values = get_role_permissions_by_name(role_name).model_dump()
+    permission_values["role"] = role_name
+    is_super_admin = permission_values["is_super_admin"]
     if is_super_admin:
         organization_id, organization_name = platform_org_id, platform_org_name
     else:
@@ -286,7 +294,7 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         password_hash=hash_password(password_value) if password_value else None,
         is_active=True,
         is_super_admin=is_super_admin,
-        role=permission_values.get("role"),
+        role=permission_values["role"],
         can_manage_payments=permission_values["can_manage_payments"],
         can_manage_disbursements=permission_values["can_manage_disbursements"],
         can_view_reports=permission_values["can_view_reports"],
@@ -299,6 +307,7 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         can_debit_wallet=permission_values["can_debit_wallet"],
         can_freeze_wallet=permission_values["can_freeze_wallet"],
         can_unfreeze_wallet=permission_values["can_unfreeze_wallet"],
+        team_permissions=permission_values,
         organization_id=organization_id,
         organization_name=organization_name,
         added_by=current_user.id,
@@ -335,9 +344,20 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
     admin = (await db.execute(select(AdminUser).where(AdminUser.id == admin_id))).scalar_one_or_none()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found.")
-    if admin.telegram_id == current_user.id and data.is_super_admin is False:
-        raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
     payload_data = data.model_dump(exclude_none=True)
+    supplied_permission_fields = set(payload_data).intersection(ROLE_PERMISSION_FIELDS)
+    if supplied_permission_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Individual permission flags are managed by role. Set the role instead.",
+        )
+    requested_role = payload_data.pop("role", None)
+    if requested_role is not None:
+        requested_role = requested_role.strip().lower()
+        if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "approver", "super_admin"}:
+            raise HTTPException(status_code=400, detail="Invalid role.")
+        if admin.telegram_id == current_user.id and requested_role != "owner":
+            raise HTTPException(status_code=400, detail="Cannot change your own platform role.")
     if "email" in payload_data:
         payload_data["email"] = _normalize_email(payload_data["email"])
         if payload_data["email"]:
@@ -381,6 +401,8 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
             else:
                 value = round(value, 2)
         setattr(admin, field, value)
+    if requested_role is not None:
+        _apply_role_permissions(admin, requested_role)
     await log_action(db, current_user, "update_admin", target_type="admin_user", target_id=admin.telegram_id,
                      details=f"Updated permissions/status for {admin.name or admin.telegram_id}", payload=data.model_dump(exclude_none=True))
     await db.commit()

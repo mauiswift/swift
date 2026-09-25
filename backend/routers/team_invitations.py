@@ -30,6 +30,7 @@ from services.downline import DownlineService
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
+    get_role_permissions_by_name,
     PredefinedRoleEnum,
 )
 from schemas.auth import UserResponse
@@ -1291,10 +1292,7 @@ async def accept_invitation(
     # Invitations accepted by the previous link-only flow can still finish
     # account creation once, as long as no account was created yet.
 
-    permissions = _application_permissions(
-        invitation.role,
-        invitation.permissions if isinstance(invitation.permissions, dict) else None,
-    )
+    permissions = get_role_permissions_by_name(invitation.role).model_dump()
     telegram_id = f"invite-{secrets.token_urlsafe(18)}"
     admin_user = AdminUser(
         telegram_id=telegram_id,

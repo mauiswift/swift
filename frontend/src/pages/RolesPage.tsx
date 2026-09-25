@@ -192,8 +192,7 @@ export default function RolesPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...role.permissions,
-          is_super_admin: role.permissions.is_super_admin,
+          role: role.name,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
