@@ -3003,8 +3003,19 @@ export default function AdminManagement() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const canApproveTopups = isSuperAdmin;
+  const canManagePayments = isSuperAdmin || Boolean(user?.permissions?.can_manage_payments);
+  const canManageDisbursements = isSuperAdmin || Boolean(user?.permissions?.can_manage_disbursements);
+  const canViewReports = isSuperAdmin || Boolean(user?.permissions?.can_view_reports);
+  const canManageWallet = isSuperAdmin || Boolean(user?.permissions?.can_manage_wallet);
+  const canManageTransactions = isSuperAdmin || Boolean(user?.permissions?.can_manage_transactions);
+  const canManageBot = isSuperAdmin || Boolean(user?.permissions?.can_manage_bot);
+  const canApproveTopups = isSuperAdmin || Boolean(user?.permissions?.can_approve_topups);
   const canManageTeam = isSuperAdmin || Boolean(user?.permissions?.can_manage_team);
+  const canAccessAdminUsers = isSuperAdmin;
+  const canAccessUserManagement = isSuperAdmin || canManageTeam;
+  const canAccessApprovalsAndWallets = isSuperAdmin || canApproveTopups || canManageWallet || canManagePayments || canManageDisbursements || canManageTransactions;
+  const canAccessPaymentsAndConfiguration = isSuperAdmin || canManagePayments || canManageWallet || canManageDisbursements || canManageTransactions || canManageBot;
+  const canAccessGovernance = isSuperAdmin || canViewReports || canManageTeam;
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -3255,78 +3266,78 @@ export default function AdminManagement() {
   const filteredInactiveAdmins = filteredAdmins.filter((admin) => !admin.is_active);
 
   const tabs = [
-    {
+    ...(canAccessAdminUsers ? [{
       id: 'admins',
       label: 'Admin Users',
       icon: <ShieldCheck className="h-4 w-4" />,
       count: admins.length,
       group: 'People & access',
       description: 'Manage dashboard administrators and their specific permissions.'
-    },
-    {
+    }] : []),
+    ...(canAccessUserManagement ? [{
       id: 'users',
       label: 'User Management',
       icon: <Users className="h-4 w-4" />,
       group: 'People & access',
       description: 'View and manage roles for all registered platform users.'
-    },
-    ...(isSuperAdmin ? [{
+    }] : []),
+    ...(canAccessApprovalsAndWallets ? [{
       id: 'crypto',
       label: 'Crypto Requests',
       icon: <Bitcoin className="h-4 w-4" />,
       group: 'Approvals & wallets',
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessApprovalsAndWallets ? [{
       id: 'wallet-control',
       label: 'Wallet Control',
       icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
       group: 'Approvals & wallets',
       description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessApprovalsAndWallets ? [{
       id: 'operations',
       label: 'Operational workflows',
       icon: <RefreshCw className="h-4 w-4" />,
       group: 'Approvals & wallets',
       description: 'Open payment, deposit, withdrawal, verification, broadcast, and bot operations.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessApprovalsAndWallets ? [{
       id: 'toss-approvals',
       label: 'TOSS Bank approvals',
       icon: <CheckCircle className="h-4 w-4" />,
       group: 'Approvals & wallets',
       description: 'Review and approve TOSS Bank virtual account applications.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessPaymentsAndConfiguration ? [{
       id: 'payment-channels',
       label: 'Payment Channels',
       icon: <Power className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessPaymentsAndConfiguration ? [{
       id: 'wallet-settings',
       label: 'Wallet Settings',
       icon: <WrenchIcon className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessPaymentsAndConfiguration ? [{
       id: 'bitgo',
       label: 'BitGo USDT',
       icon: <Bitcoin className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessPaymentsAndConfiguration ? [{
       id: 'checkout-design',
       label: 'Checkout Design',
       icon: <Palette className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Customize the public checkout appearance.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessPaymentsAndConfiguration ? [{
       id: 'platform-settings',
       label: 'Platform settings',
       icon: <WrenchIcon className="h-4 w-4" />,
@@ -3340,14 +3351,14 @@ export default function AdminManagement() {
       group: 'Teams',
       description: 'Manage pending team invites and organization access.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canManageTeam ? [{
       id: 'team-members',
       label: 'Team Members',
       icon: <Users className="h-4 w-4" />,
       group: 'Teams',
       description: 'Manage existing team members within your organization.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canAccessGovernance ? [{
       id: 'audit-logs',
       label: 'Audit Logs',
       icon: <FileText className="h-4 w-4" />,

@@ -32,6 +32,7 @@ from core.roles import (
     get_role_permissions,
     get_role_permissions_by_name,
     PredefinedRoleEnum,
+    validate_role_exists,
 )
 from schemas.auth import UserResponse
 from utils.datetime import serialize_utc_datetime
@@ -496,8 +497,8 @@ def _is_org_admin(admin: Optional[AdminUser]) -> bool:
 
 
 def _validate_role_name(role: str) -> str:
-    normalized = (role or "").strip()
-    if normalized not in PREDEFINED_ROLES:
+    normalized = (role or "").strip().lower()
+    if not validate_role_exists(normalized):
         raise HTTPException(status_code=400, detail="Invalid role")
     return normalized
 
@@ -745,6 +746,23 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
     if any(key in requested for key in app_keys):
         return {key: bool(requested.get(key)) for key in app_keys}
 
+    if role_name == "approver":
+        return {
+            "is_super_admin": False,
+            "can_manage_payments": False,
+            "can_manage_disbursements": False,
+            "can_view_reports": True,
+            "can_manage_wallet": False,
+            "can_manage_transactions": True,
+            "can_manage_bot": False,
+            "can_approve_topups": True,
+            "can_manage_team": False,
+            "can_credit_wallet": False,
+            "can_debit_wallet": False,
+            "can_freeze_wallet": False,
+            "can_unfreeze_wallet": False,
+        }
+
     role_map = {
         "owner": PredefinedRoleEnum.OWNER,
         "admin": PredefinedRoleEnum.ADMIN,
@@ -756,11 +774,6 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
     }
     if role_name in role_map:
         return get_role_permissions(role_map[role_name]).model_dump()
-    if role_name == "approver":
-        return {
-            key: key in {"can_approve_topups", "can_manage_transactions", "can_view_reports"}
-            for key in app_keys
-        }
     return {key: False for key in app_keys}
 
 # ────────────────────────────────────────────────────────────────

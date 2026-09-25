@@ -5,7 +5,7 @@ from routers.kyb import _registration_organization
 from routers.team_invitations import _is_invitation_expired, _normalize_invitation_email
 from models.admin_users import AdminUser
 from services.wallets import WalletsService
-from routers.team_invitations import _application_permissions
+from routers.team_invitations import _application_permissions, _validate_role_name
 
 
 def test_normalize_invitation_email_is_case_insensitive():
@@ -83,3 +83,9 @@ def test_invited_super_admin_cannot_manage_wallet_or_toss_controls():
     assert permissions["can_freeze_wallet"] is False
     assert permissions["can_unfreeze_wallet"] is False
     assert permissions["can_manage_team"] is False
+
+
+def test_validate_role_name_accepts_canonical_roles_case_insensitively():
+    assert _validate_role_name("Manager") == "manager"
+    assert _validate_role_name("OPERATOR") == "operator"
+    assert _validate_role_name("owner") == "owner"

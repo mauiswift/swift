@@ -7,11 +7,14 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, getIdentifiedPaymentLinkUrl, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { collectionCurrency } = useCollectionCurrency();
+  const currentCurrency = collectionCurrency.toUpperCase();
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
@@ -48,8 +51,9 @@ export default function PaymentLinksList() {
             <button
               type="button"
               onClick={async () => {
+                const currency = currentCurrency || 'PHP';
                 const response = await client.get(
-                  '/api/v1/payments/open-amount-link?currency=PHP',
+                  `/api/v1/payments/open-amount-link?currency=${encodeURIComponent(currency)}`,
                 );
                 const url = response.ok && response.data?.url
                   ? new URL(response.data.url, window.location.origin).toString()
@@ -65,7 +69,7 @@ export default function PaymentLinksList() {
                 }
                 const success = await copyTextToClipboard(url);
                 if (success) {
-                  toast.success('Default open-amount link copied');
+                  toast.success(`${currency} default open-amount link copied`);
                 } else {
                   toast.error('Unable to copy default payment link');
                 }
