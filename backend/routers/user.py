@@ -19,6 +19,7 @@ from services.user import UserService
 from services.user_benefits import KRW_BENEFIT_THRESHOLD_USDT, get_krw_benefits
 from services.toss_virtual_accounts import create_toss_virtual_account
 from services.email_service import EmailService
+from models.toss_account_pool import TossAccountPool
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from utils.datetime import serialize_utc_datetime
@@ -315,6 +316,13 @@ class TossVirtualAccountControlRequest(BaseModel):
     status: str = Field(pattern="^(active|suspended)$")
 
 
+class TossAccountPoolRequest(BaseModel):
+    bank_name: str = Field(default="Toss Bank", min_length=2, max_length=128)
+    account_number: str = Field(min_length=6, max_length=64)
+    account_holder_name: str = Field(min_length=2, max_length=256)
+    is_active: bool = True
+
+
 def _require_toss_reviewer(current_user: UserResponse) -> None:
     if (
         not current_user.permissions
@@ -322,6 +330,76 @@ def _require_toss_reviewer(current_user: UserResponse) -> None:
         or not current_user.permissions.can_manage_wallet
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin approval required.")
+
+
+def _serialize_toss_pool_account(account: TossAccountPool) -> dict:
+    return {
+        "id": account.id,
+        "bank_name": account.bank_name,
+        "account_number": account.account_number,
+        "account_holder_name": account.account_holder_name,
+        "is_active": account.is_active,
+        "last_assigned_at": account.last_assigned_at,
+        "last_assigned_transaction_id": account.last_assigned_transaction_id,
+    }
+
+
+@admin_router.get("/toss-account-pool")
+async def list_toss_account_pool(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    result = await db.execute(select(TossAccountPool).order_by(TossAccountPool.is_active.desc(), TossAccountPool.id.asc()))
+    return {"items": [_serialize_toss_pool_account(account) for account in result.scalars().all()]}
+
+
+@admin_router.post("/toss-account-pool")
+async def add_toss_account_pool(
+    body: TossAccountPoolRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    account = TossAccountPool(
+        bank_name=body.bank_name.strip(),
+        account_number=body.account_number.strip(),
+        account_holder_name=body.account_holder_name.strip(),
+        is_active=body.is_active,
+    )
+    db.add(account)
+    try:
+        await db.commit()
+        await db.refresh(account)
+    except Exception as exc:
+        await db.rollback()
+        logger.exception("Unable to add TOSS pool account")
+        raise HTTPException(status_code=409, detail="That TOSS account number is already in the pool.") from exc
+    return _serialize_toss_pool_account(account)
+
+
+@admin_router.patch("/toss-account-pool/{account_id}")
+async def update_toss_account_pool(
+    account_id: int,
+    body: TossAccountPoolRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    account = await db.get(TossAccountPool, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="TOSS pool account not found.")
+    account.bank_name = body.bank_name.strip()
+    account.account_number = body.account_number.strip()
+    account.account_holder_name = body.account_holder_name.strip()
+    account.is_active = body.is_active
+    try:
+        await db.commit()
+        await db.refresh(account)
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="That TOSS account number is already in the pool.") from exc
+    return _serialize_toss_pool_account(account)
 
 
 def _queue_toss_email(email: Optional[str], name: Optional[str], event: str, account: Optional[dict] = None, note: Optional[str] = None) -> None:

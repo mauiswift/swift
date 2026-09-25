@@ -39,6 +39,15 @@ type TossApplication = {
   };
 };
 
+type TossPoolAccount = {
+  id: number;
+  bank_name: string;
+  account_number: string;
+  account_holder_name: string;
+  is_active: boolean;
+  last_assigned_at?: string | null;
+};
+
 export function TossAccountApprovalsPanel() {
   const [items, setItems] = useState<TossApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,20 +59,58 @@ export function TossAccountApprovalsPanel() {
   const [accountForm, setAccountForm] = useState({ bank_name: '', account_number: '', account_holder_name: '', status: 'active' as 'active' | 'suspended' });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending_review' | 'active' | 'suspended'>('all');
+  const [pool, setPool] = useState<TossPoolAccount[]>([]);
+  const [poolForm, setPoolForm] = useState({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
+  const [editingPoolId, setEditingPoolId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await client.get('/api/v1/admin/toss-virtual-accounts');
+      const [response, poolResponse] = await Promise.all([
+        client.get('/api/v1/admin/toss-virtual-accounts'),
+        client.get('/api/v1/admin/toss-account-pool'),
+      ]);
       if (!response.ok) throw new Error(response.data?.detail || 'Unable to load TOSS applications');
       setItems(response.data?.items || []);
+      if (poolResponse.ok) setPool(poolResponse.data?.items || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load TOSS applications');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const savePoolAccount = async () => {
+    if (!poolForm.account_number.trim() || !poolForm.account_holder_name.trim()) {
+      toast.error('Bank account number and holder name are required.');
+      return;
+    }
+    const response = await client.request(
+      editingPoolId ? `/api/v1/admin/toss-account-pool/${editingPoolId}` : '/api/v1/admin/toss-account-pool',
+      editingPoolId ? 'PATCH' : 'POST',
+      poolForm,
+    );
+    if (!response.ok) {
+      toast.error(response.data?.detail || 'Unable to save TOSS pool account.');
+      return;
+    }
+    setPoolForm({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
+    toast.success(editingPoolId ? 'TOSS pool account updated.' : 'TOSS pool account added.');
+    setEditingPoolId(null);
+    await load();
+  };
+
+  const editPoolAccount = (account: TossPoolAccount) => {
+    setPoolForm({
+      bank_name: account.bank_name,
+      account_number: account.account_number,
+      account_holder_name: account.account_holder_name,
+      is_active: account.is_active,
+    });
+    setEditingPoolId(account.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => { void load(); }, [load]);
 
@@ -181,6 +228,37 @@ export function TossAccountApprovalsPanel() {
             <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Pending review</p>
             <p className="mt-2 text-2xl font-semibold text-orange-950">{items.filter((item) => item.status === 'pending_review').length}</p>
           </div>
+
+          <section className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">TOSS payment account pool</h2>
+                <p className="mt-1 text-sm text-slate-600">Add active Toss Bank accounts here. Each new KRW payment session is assigned the least recently used active account.</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700">{pool.filter((account) => account.is_active).length} active</span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <Input value={poolForm.bank_name} onChange={(event) => setPoolForm({ ...poolForm, bank_name: event.target.value })} placeholder="Bank name" />
+              <Input value={poolForm.account_number} onChange={(event) => setPoolForm({ ...poolForm, account_number: event.target.value })} placeholder="Account number" />
+              <Input value={poolForm.account_holder_name} onChange={(event) => setPoolForm({ ...poolForm, account_holder_name: event.target.value })} placeholder="Account holder name" />
+              <Button onClick={() => void savePoolAccount()}><Building2 size={14} className="mr-2" />{editingPoolId ? 'Save account' : 'Add account'}</Button>
+            </div>
+            {pool.length > 0 && (
+              <div className="mt-4 overflow-hidden rounded-xl border border-blue-100 bg-white">
+                {pool.map((account) => (
+                  <div key={account.id} className="flex flex-col gap-2 border-b border-slate-100 p-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 text-sm">
+                      <span className={`mr-2 inline-block h-2 w-2 rounded-full ${account.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      <span className="font-semibold text-slate-800">{account.bank_name}</span>
+                      <span className="ml-3 font-mono text-slate-600">{account.account_number}</span>
+                      <span className="ml-3 text-slate-500">{account.account_holder_name}</span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => editPoolAccount(account)}><Pencil size={13} className="mr-1" />Edit</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Review type</p>
             <p className="mt-2 text-sm font-semibold text-slate-900">Virtual account opening</p>

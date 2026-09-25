@@ -18,6 +18,7 @@ from models.transactions import Transactions
 from models.auth import User
 from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
+from models.toss_account_pool import TossAccountPool
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
 from services.app_settings import get_payment_channels
@@ -41,6 +42,50 @@ from utils.datetime import serialize_utc_datetime
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
+
+
+async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions) -> dict[str, str]:
+    """Return the pool account assigned to this checkout session."""
+    result = await db.execute(
+        select(TossAccountPool)
+        .where(TossAccountPool.is_active.is_(True))
+        .order_by(TossAccountPool.last_assigned_at.asc().nullsfirst(), TossAccountPool.id.asc())
+        .with_for_update()
+    )
+    account = result.scalars().first()
+    if txn.bank_account_number:
+        assigned = await db.scalar(
+            select(TossAccountPool).where(
+                TossAccountPool.account_number == txn.bank_account_number,
+                TossAccountPool.last_assigned_transaction_id == txn.id,
+            )
+        )
+        if assigned:
+            return {
+                "bank_name": assigned.bank_name,
+                "number": assigned.account_number,
+                "account_name": assigned.account_holder_name,
+            }
+    if account:
+        now = datetime.now(timezone.utc)
+        account.last_assigned_at = now
+        account.last_assigned_transaction_id = txn.id
+        account.updated_at = now
+        txn.bank_name = account.bank_name
+        txn.bank_account_number = account.account_number
+        txn.bank_account_name = account.account_holder_name
+        await db.commit()
+        return {
+            "bank_name": account.bank_name,
+            "number": account.account_number,
+            "account_name": account.account_holder_name,
+        }
+
+    virtual_account = PaymentwallService.generate_krw_virtual_account(
+        user_id=str(txn.user_id),
+        reference_id=f"session-{txn.id}",
+    )
+    return virtual_account
 
 SWIFTPAY_INSTITUTION_PREFIXES = {
     "BDO": ("BNORPHM",),
@@ -1269,16 +1314,7 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            virtual_account = PaymentwallService.generate_krw_virtual_account(
-                user_id=str(txn.user_id),
-                # Bind the account to the persisted payment session, not the
-                # merchant reference. A user can reuse a reference while
-                # creating a new checkout and must still receive a new account.
-                reference_id=f"session-{txn.id}",
-            )
-            # KRW collection accounts are session-scoped. Never reuse a
-            # merchant settlement account or a previously stored account
-            # number for a new checkout session.
+            virtual_account = await _get_toss_account_for_transaction(db, txn)
             bank_name = virtual_account["bank_name"]
             bank_account_number = virtual_account["number"]
             bank_account_name = virtual_account["account_name"]
