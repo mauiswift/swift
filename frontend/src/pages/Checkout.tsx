@@ -813,7 +813,9 @@ export default function Checkout() {
   };
 
   const openKoreanPaymentApp = (app: 'toss' | 'kakao') => {
-    const appUrl = app === 'toss' ? 'supertoss://toss/pay' : 'kakaopay://';
+    const appUrl = app === 'toss'
+      ? (txn?.toss_deep_link || 'supertoss://toss/pay')
+      : 'kakaopay://';
     window.location.assign(appUrl);
   };
 
@@ -1302,6 +1304,26 @@ export default function Checkout() {
                         </div>
                       ))}
                     </div>
+
+                    {isKrw && txn.qr_code_url && (
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="text-center">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-700">
+                            {checkoutText('Scan QRPH to pay', 'QRPH로 결제')}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {checkoutText('Use your banking app to scan this QR code.', '은행 앱으로 이 QR 코드를 스캔하세요.')}
+                          </p>
+                        </div>
+                        <div className="mx-auto mt-4 flex max-w-xs items-center justify-center rounded-xl border border-slate-100 bg-white p-3">
+                          {/^(https?:)?\/\//i.test(txn.qr_code_url) ? (
+                            <img src={txn.qr_code_url} alt="QRPH payment code" className="w-full rounded-lg object-contain" />
+                          ) : (
+                            <QRCodeSVG value={txn.qr_code_url} size={280} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {isKrw && !isHighValuePhp && (
                       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
