@@ -1441,14 +1441,18 @@ async def get_checkout_institutions(
 
         res = await gateway.swift.get_collection_institutions()
         if not res.get("success"):
-            # Keep PHP checkout usable when the provider catalog is temporarily
-            # unavailable. The local catalog contains the supported bank codes.
+            # Never advertise the static disbursement catalog as live checkout
+            # institutions. Those codes may be valid generally but unavailable
+            # for this SwiftPay account.
             return {
                 "success": True,
-                "data": PHBanksService.get_all_banks_dict(),
+                "data": [
+                    {"id": "QRPH", "code": "QRPH", "name": "QR Ph", "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr"},
+                    {"id": "ALIPAY", "code": "ALIPAY", "name": "Alipay", "logoUrl": "/logos/alipay.png", "enabled": True, "loginMethod": "qr"},
+                ],
             }
         if not isinstance(res.get("data"), list) or not res["data"]:
-            res["data"] = PHBanksService.get_all_banks_dict()
+            res["data"] = []
 
         if (txn.currency or "").upper() == "PHP":
             channels = await get_payment_channels(db)

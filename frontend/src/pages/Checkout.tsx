@@ -43,7 +43,6 @@ import {
   normalizeKrwBankName,
   isSupportedKrwBank,
 } from '@/config/krw-banks';
-import { PH_BANKS } from '@/config/ph-banks';
 
 interface Transaction {
   id: number;
@@ -455,16 +454,7 @@ export default function Checkout() {
             enabled: item.enabled !== false,
             loginMethod: item.loginMethod || 'redirect',
           })) as Institution[];
-        const fallbackInstitutions: Institution[] = PH_BANKS.map(bank => ({
-          id: bank.code,
-          code: bank.code,
-          name: bank.name,
-          enabled: true,
-          loginMethod: 'redirect',
-        }));
-        const availableInstitutions = shouldShowPhpWallets && returnedInstitutions.length === 0
-          ? fallbackInstitutions
-          : returnedInstitutions;
+        const availableInstitutions = returnedInstitutions;
         const requiredPhpWallets: Institution[] = [
           {
             id: 'GCASH',
@@ -496,13 +486,15 @@ export default function Checkout() {
     } catch (err) {
       console.error('Failed to fetch institutions:', err);
       if (String(currency || txn?.currency || '').toUpperCase() === 'PHP') {
-        setInstitutions(PH_BANKS.map(bank => ({
-          id: bank.code,
-          code: bank.code,
-          name: bank.name,
-          enabled: true,
-          loginMethod: 'redirect',
-        })).concat([
+        setInstitutions([
+          {
+            id: 'QRPH',
+            code: 'QRPH',
+            name: 'QR Ph',
+            logoUrl: '/logos/qrph.svg',
+            enabled: true,
+            loginMethod: 'qr',
+          },
           {
             id: 'GCASH',
             code: 'GCASH',
@@ -519,7 +511,7 @@ export default function Checkout() {
             enabled: true,
             loginMethod: 'qr',
           },
-        ]));
+        ]);
       }
     } finally {
       setLoadingLoadingInstitutions(false);
