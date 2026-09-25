@@ -187,7 +187,10 @@ async def approve_payment_link(
     """
     _require_super_admin(current_user)
 
-    txn = await db.get(Transactions, txn_id)
+    result = await db.execute(
+        select(Transactions).where(Transactions.id == txn_id).with_for_update()
+    )
+    txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
 
@@ -318,11 +321,17 @@ async def reject_payment_link(
     """
     _require_super_admin(current_user)
 
-    txn = await db.get(Transactions, txn_id)
+    result = await db.execute(
+        select(Transactions).where(Transactions.id == txn_id).with_for_update()
+    )
+    txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
 
-    if txn.status not in APPROVABLE_PAYMENT_STATUSES:
+    if txn.status not in APPROVABLE_PAYMENT_STATUSES and not (
+        txn.status in EXTERNALLY_PAID_STATUSES
+        and txn.approval_status in {None, "pending"}
+    ):
         raise HTTPException(
             status_code=400,
             detail=f"Cannot reject payment link with status {txn.status}",

@@ -1197,6 +1197,7 @@ async def list_admin_withdrawals(
 				"processed_at": item.processed_at,
 				"failure_reason": item.failure_reason,
 				"note": item.note,
+				"approved_by": item.approved_by,
 			}
 			for item in items
 		],
@@ -1244,7 +1245,7 @@ async def approve_withdrawal(
 	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
-	if disb.status in {"completed", "failed", "cancelled"}:
+	if disb.status not in {"pending", "processing"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	currency = (disb.currency or "PHP").upper()
 	if currency == "PHP":
@@ -1348,7 +1349,7 @@ async def reject_withdrawal(
 	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
-	if disb.status in {"completed", "failed", "cancelled"}:
+	if disb.status not in {"pending", "processing"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	disb.approved_by = current_user.id
 	disb.note = body.reason or "Rejected by admin"
