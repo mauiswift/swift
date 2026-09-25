@@ -100,40 +100,71 @@ class EmailService:
             )
             raise RuntimeError("Email sending is not configured on this server")
 
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{from_name} <{smtp_from}>"
-            msg["To"] = to_email
-            if text_body:
-                msg.attach(MIMEText(text_body, "plain", "utf-8"))
-            msg.attach(MIMEText(html_body, "html"))
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{from_name} <{smtp_from}>"
+        msg["To"] = to_email
+        if text_body:
+            msg.attach(MIMEText(text_body, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html"))
 
-            context = ssl.create_default_context()
-            if config["port"] == 465:
-                server_connection = smtplib.SMTP_SSL(smtp_host, config["port"], context=context)
-            else:
-                server_connection = smtplib.SMTP(smtp_host, config["port"])
+        context = ssl.create_default_context()
+        configured_port = config["port"]
+        smtp_attempts = [configured_port]
+        if configured_port == 465:
+            # Hostinger and several managed SMTP providers support both implicit
+            # TLS on 465 and STARTTLS on 587. A dropped 465 connection is often
+            # caused by a provider-side edge or port-specific routing issue.
+            smtp_attempts.append(587)
 
-            with server_connection as server:
-                server.ehlo()
-                if config["port"] != 465:
-                    server.starttls(context=context)
+        last_connection_error: Optional[Exception] = None
+        for attempt, port in enumerate(smtp_attempts):
+            try:
+                if port == 465:
+                    server_connection = smtplib.SMTP_SSL(
+                        smtp_host,
+                        port,
+                        context=context,
+                        timeout=20,
+                    )
+                else:
+                    server_connection = smtplib.SMTP(smtp_host, port, timeout=20)
+
+                with server_connection as server:
                     server.ehlo()
-                if config["username"] and config["password"]:
-                    server.login(config["username"], config["password"])
-                server.sendmail(smtp_from, to_email, msg.as_string())
+                    if port != 465:
+                        server.starttls(context=context)
+                        server.ehlo()
+                    if config["username"] and config["password"]:
+                        server.login(config["username"], config["password"])
+                    server.sendmail(smtp_from, to_email, msg.as_string())
 
-            logger.info("Email sent to %s subject=%s", to_email, subject)
-        except smtplib.SMTPAuthenticationError as exc:
-            logger.error("SMTP authentication failed for %s subject=%s", to_email, subject)
-            raise RuntimeError(
-                "SMTP authentication failed. For Gmail, use a 16-character App Password "
-                "with 2-Step Verification enabled, not the normal Google account password."
-            ) from exc
-        except Exception:
-            logger.exception("Failed to send email to %s subject=%s", to_email, subject)
-            raise
+                logger.info("Email sent to %s subject=%s via SMTP port %s", to_email, subject, port)
+                return
+            except smtplib.SMTPAuthenticationError:
+                logger.error("SMTP authentication failed for %s subject=%s", to_email, subject)
+                raise RuntimeError(
+                    "SMTP authentication failed. For Gmail, use a 16-character App Password "
+                    "with 2-Step Verification enabled, not the normal Google account password."
+                )
+            except (smtplib.SMTPServerDisconnected, ConnectionError, TimeoutError, OSError) as exc:
+                last_connection_error = exc
+                if attempt < len(smtp_attempts) - 1:
+                    logger.warning(
+                        "SMTP connection failed to %s:%s (%s); retrying via port %s",
+                        smtp_host,
+                        port,
+                        exc,
+                        smtp_attempts[attempt + 1],
+                    )
+                    continue
+                raise RuntimeError(
+                    f"SMTP connection failed for {smtp_host}; "
+                    "check SMTP_HOST, SMTP_PORT, and whether the provider allows outbound SMTP"
+                ) from exc
+        if last_connection_error:
+            raise RuntimeError("SMTP connection failed") from last_connection_error
+        raise RuntimeError("SMTP email delivery failed")
 
     @staticmethod
     def send_merchant_credentials_email(
