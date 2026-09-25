@@ -519,6 +519,25 @@ class TestTelegramWebhook:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_start_always_prompts_for_currency(self):
+        captured = {}
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            captured["text"] = text
+            captured["reply_markup"] = reply_markup
+            return {"success": True, "message_id": 1}
+
+        with patch.object(
+            telegram_router.TelegramService,
+            "send_message",
+            new=fake_send_message,
+        ):
+            asyncio.run(telegram_router._send_currency_prompt(telegram_router.TelegramService(), "123", "Test"))
+
+        assert "Choose your currency" in captured["text"]
+        assert "currency:PHP" in str(captured["reply_markup"])
+        assert "currency:KRW" in str(captured["reply_markup"])
+
     def test_start_panel_uses_english_labels_for_selected_language(self):
         captured = {}
 
@@ -1127,6 +1146,48 @@ class TestNormalizeBotCommandText:
     )
     def test_normalizes_commands_consistently(self, raw, expected):
         assert telegram_router._normalize_bot_command_text(raw) == expected
+
+
+def test_general_wizard_uses_selected_currency():
+    telegram_router._user_currency["123"] = "CNY"
+    try:
+        assert telegram_router._wizard_currency("123", "/link") == "CNY"
+        assert telegram_router._wizard_currency("123", "/withdraw") == "CNY"
+        assert telegram_router._wizard_currency("123", "/deposit") == "CNY"
+        assert telegram_router._wizard_currency("123", "/sendusdt") == "USD"
+    finally:
+        telegram_router._user_currency.pop("123", None)
+
+
+def test_usdt_trade_quote_uses_selected_currency_and_wallet_link():
+    tg = MagicMock()
+    tg.send_message = AsyncMock()
+    service = MagicMock()
+    service.get_conversion_quote = AsyncMock(
+        return_value={
+            "to_amount": 9.8,
+            "rate": 0.0196,
+            "fee_amount": 0.2,
+        }
+    )
+    with (
+        patch.object(telegram_router, "CurrencyService", return_value=service),
+        patch.object(telegram_router, "_get_user_currency", new=AsyncMock(return_value="PHP")),
+        patch.object(telegram_router, "_dashboard_url", return_value="https://swiftpay.ph/wallet"),
+    ):
+        asyncio.run(
+            telegram_router._send_usdt_trade_quote(
+                tg, MagicMock(), "123", "buy", 500
+            )
+        )
+
+    service.get_conversion_quote.assert_awaited_once()
+    call = service.get_conversion_quote.await_args.kwargs
+    assert call["from_currency"] == "PHP"
+    assert call["to_currency"] == "USDT"
+    message = tg.send_message.await_args.args[1]
+    assert "₱500.00 PHP" in message
+    assert "9.80 USDT" in message
 
 
 # ---------------------------------------------------------------------------
