@@ -81,11 +81,31 @@ import asyncio
 import os
 
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
 
 async def normalize_migration_versions() -> None:
-    engine = create_async_engine(os.environ["DATABASE_URL"])
+    database_url = os.environ["DATABASE_URL"].strip()
+    if database_url.startswith("postgres://"):
+        database_url = "postgresql://" + database_url[len("postgres://") :]
+    url = make_url(database_url)
+    if url.drivername in {"postgres", "postgresql"}:
+        query = dict(url.query)
+        for parameter in (
+            "sslmode",
+            "sslcert",
+            "sslkey",
+            "sslrootcert",
+            "sslcrl",
+            "gssencmode",
+            "channel_binding",
+        ):
+            query.pop(parameter, None)
+        database_url = url.set(
+            drivername="postgresql+asyncpg", query=query
+        ).render_as_string(hide_password=False)
+    engine = create_async_engine(database_url)
     try:
         async with engine.begin() as connection:
             versions = {
