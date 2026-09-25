@@ -30,6 +30,18 @@ services:
         value: https://api.pay.live.swiftpay.ph
       - key: SWIFTPAY_CALLBACK_URL
         value: https://swiftpay-api.onrender.com/api/v1/webhooks/swiftpay
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: SMTP_FROM_NAME
+        value: SwiftPay
       - key: MAGPIE_MODE
         value: production
       - key: MAGPIE_BASE_URL
