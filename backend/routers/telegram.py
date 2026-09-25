@@ -945,8 +945,8 @@ def _welcome_en(name: str = "") -> str:
     return (
         f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{greeting} Your dashboard-first merchant bot is ready.\n\n"
-        f"📊 <b>Dashboard modules</b>\n"
+        f"{greeting} Your merchant workspace is ready.\n\n"
+        f"📊 <b>Workspace</b>\n"
         f"  /dashboard — Main operational overview\n"
         f"  /wallet — Wallet balances and history\n"
         f"  /payments — Payments and checkout activity\n"
@@ -955,9 +955,8 @@ def _welcome_en(name: str = "") -> str:
         f"💳 <b>Quick actions</b>\n"
         f"  /link — Create a payment link\n"
         f"  /scanqr — Create a QRPH payment\n"
-        f"  /deposit — Submit a bank deposit\n"
-        f"  /topup [amt] — Top up via USDT\n\n"
-        f"💡 <b>Tip:</b> Start from /dashboard or /wallet to match the web dashboard experience."
+        f"  /buyusdt and /sellusdt — Trade with a secure quote\n\n"
+        f"🔐 <b>Security:</b> Transfers and conversions require dashboard authentication."
     )
 
 
@@ -966,8 +965,8 @@ def _welcome_zh(name: str = "") -> str:
     return (
         f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{greeting} 您的仪表板式商户机器人已就绪。\n\n"
-        f"📊 <b>仪表板模块</b>\n"
+        f"{greeting} 您的商户工作区已准备就绪。\n\n"
+        f"📊 <b>工作区</b>\n"
         f"  /dashboard — 运营总览\n"
         f"  /wallet — 钱包余额和明细\n"
         f"  /payments — 支付与收款列表\n"
@@ -976,9 +975,8 @@ def _welcome_zh(name: str = "") -> str:
         f"💳 <b>快捷操作</b>\n"
         f"  /link — 创建付款链接\n"
         f"  /scanqr — 创建 QRPH 收款\n"
-        f"  /deposit — 提交银行入账\n"
-        f"  /topup [金额] — 通过 USDT 充值\n\n"
-        f"💡 <b>提示：</b> 从 /dashboard 或 /wallet 开始，与网页端仪表板体验保持一致。"
+        f"  /buyusdt 和 /sellusdt — 查看安全报价\n\n"
+        f"🔐 <b>安全：</b> 转账和兑换需要在仪表板完成身份验证。"
     )
 
 
@@ -1011,7 +1009,8 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
         f"🆔 <b>{id_label}:</b> <code>{chat_id}</code>\n\n"
         f"{_currency_symbol(selected_currency)} <b>{selected_currency} :</b> {selected_bal:,.2f}\n"
         f"💎 <b>{points_label} :</b> 0.00\n\n"
-        f"📢 <b>{official_channel_label} :</b> @PayBotPH"
+        f"📢 <b>{official_channel_label} :</b> @PayBotPH\n"
+        f"✨ <i>Choose an action below to get started.</i>"
     )
 
     kb = {
@@ -1021,7 +1020,10 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 _inline_button(_t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), url=_dashboard_url("wallet"))
             ],
             [
-                _inline_button(_t(str(chat_id), "💱 Change Currency", "💱 切换货币", db_lang=selected_lang), callback_data="action:currency"),
+                _inline_button(_t(str(chat_id), "🔄 Refresh", "🔄 刷新", db_lang=selected_lang), callback_data="action:refresh"),
+                _inline_button(_t(str(chat_id), "💱 Currency", "💱 货币", db_lang=selected_lang), callback_data="action:currency")
+            ],
+            [
                 _inline_button(_t(str(chat_id), "❓ Help", "❓ 帮助", db_lang=selected_lang), callback_data="action:help")
             ],
             [
@@ -1774,6 +1776,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     )
                 elif action == "currency":
                     await _send_currency_prompt(tg, cq_chat_id, cq_first_name)
+                elif action == "refresh":
+                    await _send_start_panel(db, cq_chat_id, cq_first_name)
                 elif action == "help":
                     await _send_bot_response(
                         tg,

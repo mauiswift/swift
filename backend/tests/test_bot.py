@@ -1199,6 +1199,13 @@ def test_bot_keyboards_share_command_button_shape():
     assert "/help" in panel_labels
 
 
+def test_bot_welcome_text_highlights_secure_workspace():
+    welcome = telegram_router._welcome_en("Test")
+    assert "merchant workspace" in welcome
+    assert "/buyusdt and /sellusdt" in welcome
+    assert "dashboard authentication" in welcome
+
+
 def test_inline_button_requires_one_action():
     with pytest.raises(ValueError):
         telegram_router._inline_button("Invalid")
