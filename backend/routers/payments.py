@@ -88,9 +88,10 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
         ).strip()
         account_number = str(configured.get("account_number") or "").strip()
         account_name = str(configured.get("account_name") or "").strip()
+        account_identity = f"{bank_name} {configured.get('label', '')} {configured.get('value', '')}".lower()
         if (
             str(configured.get("currency") or "").upper() == "KRW"
-            and "toss" in f"{bank_name} {configured.get('label', '')} {configured.get('value', '')}".lower()
+            and ("toss" in account_identity or "토스" in account_identity or "tosspay" in account_identity)
             and account_number
             and account_name
             and account_number not in known_numbers
