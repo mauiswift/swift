@@ -72,6 +72,53 @@ raise SystemExit(1)
 PY
 fi
 
+# A previous deployment briefly recorded both a migration and its no-op
+# compatibility successor. Alembic treats that ancestor/descendant pair as
+# overlapping heads, so remove only the redundant ancestor before upgrading.
+if [ -n "$DB_URL" ] && ! echo "$DB_URL" | grep -q '^sqlite'; then
+  python - <<'PY'
+import asyncio
+import os
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+
+
+async def normalize_migration_versions() -> None:
+    engine = create_async_engine(os.environ["DATABASE_URL"])
+    try:
+        async with engine.begin() as connection:
+            versions = {
+                row[0]
+                for row in (
+                    await connection.execute(
+                        text("SELECT version_num FROM alembic_version")
+                    )
+                ).all()
+            }
+            if {
+                "v8w9x0y1z2a3",
+                "zzz1_mark_v8w9x0y1z2a3",
+            }.issubset(versions):
+                await connection.execute(
+                    text(
+                        "DELETE FROM alembic_version "
+                        "WHERE version_num = :version"
+                    ),
+                    {"version": "v8w9x0y1z2a3"},
+                )
+                print(
+                    "[entrypoint] removed redundant "
+                    "v8w9x0y1z2a3 migration marker"
+                )
+    finally:
+        await engine.dispose()
+
+
+asyncio.run(normalize_migration_versions())
+PY
+fi
+
 # Run alembic migrations with a few retries but don't loop forever
 MIGRATION_MAX_RETRIES=${MIGRATION_MAX_RETRIES:-3}
 RETRY_DELAY=${MIGRATION_RETRY_DELAY:-5}
