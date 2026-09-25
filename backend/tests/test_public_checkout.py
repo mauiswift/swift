@@ -149,10 +149,14 @@ def test_krw_checkout_does_not_expose_security_bank():
         assert payload["bank_name"] == "토스페이"
         expected_account = PaymentwallService.generate_krw_virtual_account(
             user_id="demo-user",
-            reference_id=f"session-{txn.id}",
+            reference_id=f"session-{payload['id']}",
         )
         assert payload["bank_account_number"] == expected_account["number"]
         assert "security" not in payload["bank_name"].casefold()
+
+        refreshed = client.get(f"/api/v1/payments/checkout/{payload['external_id']}")
+        assert refreshed.status_code == 200
+        assert refreshed.json()["bank_account_number"] == payload["bank_account_number"]
 
 
 def test_krw_checkout_account_changes_between_payment_sessions():

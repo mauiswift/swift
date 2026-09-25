@@ -664,6 +664,14 @@ def _is_reusable_open_amount_link(txn: Transactions) -> bool:
     )
 
 
+def _is_reusable_payment_attempt(txn: Transactions) -> bool:
+    return (
+        txn.transaction_type == "payment_link"
+        and bool(txn.external_id)
+        and "-PAY-" in txn.external_id.upper()
+    )
+
+
 async def _create_reusable_payment_attempt(
     db: AsyncSession,
     template: Transactions,
@@ -1260,6 +1268,11 @@ async def get_checkout_payment(
             raise HTTPException(status_code=404, detail="Payment not found")
         # The reusable zero-amount link is always public. Individual amounts
         # become approval requests through the open-amount-request endpoint.
+        # Fixed links create one independent attempt per new checkout session;
+        # the attempt identifier remains stable across refreshes.
+        if txn.transaction_type == "payment_link" and not _is_reusable_open_amount_link(txn) and not _is_reusable_payment_attempt(txn):
+            txn = await _create_reusable_payment_attempt(db, txn)
+            await db.commit()
         
         # Try to fetch merchant branding
         merchant_name = "Merchant"
@@ -1518,7 +1531,7 @@ async def select_checkout_institution(
 
     # Fixed payment links are reusable templates. Each checkout gets its own
     # transaction so approval and wallet crediting remain independent.
-    if txn.transaction_type == "payment_link" and not _is_reusable_open_amount_link(txn):
+    if txn.transaction_type == "payment_link" and not _is_reusable_open_amount_link(txn) and not _is_reusable_payment_attempt(txn):
         txn = await _create_reusable_payment_attempt(db, txn)
 
     if (txn.currency or "").upper() != "PHP":
