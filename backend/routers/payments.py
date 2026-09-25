@@ -126,9 +126,19 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
             .limit(1)
         )
         latest_number = str(latest_result.scalar_one_or_none() or "").strip()
+        previous_number = str(txn.bank_account_number or "").strip()
+        rotation_candidates = [
+            candidate for candidate in candidates
+            if candidate["number"] not in {latest_number, previous_number}
+        ]
+        if not rotation_candidates:
+            rotation_candidates = [
+                candidate for candidate in candidates
+                if candidate["number"] != previous_number
+            ] or candidates
         account = next(
-            (candidate for candidate in candidates if candidate["number"] != latest_number),
-            candidates[0],
+            (candidate for candidate in rotation_candidates if candidate["number"] != latest_number),
+            rotation_candidates[0],
         )
         pool_account = next(
             (candidate for candidate in pool_accounts if candidate.account_number == account["number"]),
