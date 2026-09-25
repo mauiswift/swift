@@ -7,7 +7,7 @@ from sqlalchemy import inspect
 import sqlalchemy as sa
 
 
-revision: str = "20260917_add_original_checkout_amount"
+revision: str = "20260917_checkout_amount"
 down_revision: Union[str, Sequence[str], None] = "zzzz_final_consolidation"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
