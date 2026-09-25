@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Loader2, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
-import { sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
+import { sanitizeAlipayAppDeepLink, sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
 
 interface Transaction {
   amount: number;
@@ -26,10 +26,11 @@ export default function GcashPaymentPage() {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appLaunchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const deepLink = useMemo(
-    () => sanitizeGcashAppDeepLink(searchParams.get('deep_link') || searchParams.get('gcash_deep_link')),
-    [searchParams],
-  );
+  const deepLink = useMemo(() => {
+    const value = searchParams.get('deep_link')
+      || (isAlipay ? searchParams.get('alipay_deep_link') : searchParams.get('gcash_deep_link'));
+    return isAlipay ? sanitizeAlipayAppDeepLink(value) : sanitizeGcashAppDeepLink(value);
+  }, [isAlipay, searchParams]);
   const qrValue = searchParams.get('qr');
 
   useEffect(() => {
@@ -95,12 +96,12 @@ export default function GcashPaymentPage() {
   const status = transaction.status.toLowerCase();
   const isPaid = ['paid', 'completed', 'executed'].includes(status);
   const isClosed = isPaid || ['expired', 'cancelled', 'failed'].includes(status);
-  const qrAppLink = qrValue && !/^https?:\/\//i.test(qrValue)
+  const qrAppLink = !isAlipay && qrValue && !/^https?:\/\//i.test(qrValue)
     ? buildGcashDeepLink(qrValue, transaction)
     : null;
   const appPaymentLink = deepLink || qrAppLink;
 
-  const openGcashApp = () => {
+  const openPaymentApp = () => {
     if (!appPaymentLink) return;
     window.location.assign(appPaymentLink);
     if (appLaunchTimeoutRef.current) clearTimeout(appLaunchTimeoutRef.current);
@@ -136,7 +137,7 @@ export default function GcashPaymentPage() {
                 {appPaymentLink && !isClosed && (
                   <button
                     type="button"
-                    onClick={openGcashApp}
+                    onClick={openPaymentApp}
                     aria-label={isAlipay ? 'Open Alipay' : 'Open GCash App'}
                     className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 text-base font-bold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${isAlipay ? 'bg-[#0B57D0] shadow-[0_8px_20px_rgba(11,87,208,0.25)] hover:bg-[#0849b5] focus-visible:ring-[#0B57D0]' : 'bg-[#007dff] shadow-[0_8px_20px_rgba(0,125,255,0.25)] hover:bg-[#006fe6] focus-visible:ring-[#007dff]'}`}
                   >
@@ -154,15 +155,15 @@ export default function GcashPaymentPage() {
 
                 {qrValue ? (
                   <div className="flex justify-center rounded-2xl border border-slate-200 bg-white p-5">
-                    {/^(https?:\/\/)/i.test(qrValue) && !/^https:\/\/gcash/i.test(qrValue) ? (
-                      <img src={qrValue} alt="GCash payment QR code" className="h-64 w-64 object-contain" />
+                    {/^https?:\/\/.*\.(?:png|jpe?g|webp)(?:[?#].*)?$/i.test(qrValue) || /^https:\/\/gcash/i.test(qrValue) ? (
+                      <img src={qrValue} alt={`${isAlipay ? 'Alipay' : 'GCash'} payment QR code`} className="h-64 w-64 object-contain" />
                     ) : (
                       <QRCodeSVG value={qrValue} size={256} level="M" includeMargin className="h-auto max-w-full" />
                     )}
                   </div>
                 ) : (
                   <div className="rounded-2xl bg-amber-50 p-4 text-center text-sm text-amber-800">
-                    QR code is unavailable. Use the GCash button above to continue.
+                    QR code is unavailable. Use the {isAlipay ? 'Alipay' : 'GCash'} button above to continue.
                   </div>
                 )}
                 <p className="text-center text-xs leading-5 text-slate-500">
