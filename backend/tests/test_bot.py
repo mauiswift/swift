@@ -1159,6 +1159,28 @@ def test_general_wizard_uses_selected_currency():
         telegram_router._user_currency.pop("123", None)
 
 
+class TestWizardAnswerValidation:
+    def test_rejects_invalid_choices_and_amounts(self):
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "bank", "type": "str"}, "cash"
+        )
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "amount", "type": "float"}, "not-a-number"
+        )
+
+    def test_accepts_valid_common_answers(self):
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "bank", "type": "str"}, "GCASH"
+        ) is None
+        assert telegram_router._validate_wizard_answer(
+            "/sendusdt", {"key": "address", "type": "str"},
+            "TQm2R8kY8zZ7wX6vU5tS4rQ3pN2mL1kJH",
+        ) is None
+        assert telegram_router._validate_wizard_answer(
+            "/link", {"key": "description", "type": "str"}, "Monthly invoice"
+        ) is None
+
+
 def test_usdt_trade_quote_uses_selected_currency_and_wallet_link():
     tg = MagicMock()
     tg.send_message = AsyncMock()

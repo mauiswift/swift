@@ -1,6 +1,7 @@
 import logging
 from html import escape as _escape_html
 import hashlib
+import math
 import os
 import re
 import secrets
@@ -707,6 +708,56 @@ def _render_wizard_prompt(chat_id: str, cmd: str, prompt: str) -> str:
     if currency == "PHP":
         return prompt
     return prompt.replace(" in PHP", f" in {currency}").replace(" PHP", f" {currency}").replace("₱", _currency_symbol(currency))
+
+
+def _validate_wizard_answer(cmd: str, param: Dict, raw: str) -> Optional[str]:
+    """Return a user-facing error for an invalid wizard answer."""
+    value = raw.strip()
+    key = param["key"]
+    if not value:
+        return None if param.get("optional") else "This step cannot be skipped."
+
+    if param["type"] == "float":
+        clean_value = value.replace("₱", "").replace("$", "").replace(",", "").strip()
+        try:
+            amount = float(clean_value)
+        except ValueError:
+            return "Please enter a valid number, for example 500 or 1250.50."
+        if not math.isfinite(amount) or amount <= 0:
+            return "The amount must be greater than zero."
+        return None
+
+    if key in {"bank", "channel", "provider"}:
+        allowed = {
+            "bank": {"BDO", "BPI", "UNIONBANK", "METROBANK", "LANDBANK", "PNB", "RCBC", "GCASH", "MAYA"},
+            "channel": {"BDO", "BPI", "UNIONBANK", "METROBANK", "LANDBANK", "GCASH", "MAYA"},
+            "provider": {"GCASH", "MAYA", "GRABPAY"},
+        }[key]
+        if value.upper() not in allowed:
+            return f"Choose one of: {', '.join(sorted(allowed))}."
+    elif key in {"account", "recipient"}:
+        if not re.fullmatch(r"@?[A-Za-z0-9][A-Za-z0-9_.+\- ]{2,63}", value):
+            return "Enter a valid account number or recipient username/Telegram ID."
+    elif key == "username":
+        if not re.fullmatch(r"@?[A-Za-z0-9_]{3,32}", value):
+            return "Enter a valid Telegram username, such as @username."
+    elif key == "address":
+        if not re.fullmatch(r"T[1-9A-HJ-NP-Za-km-z]{33}", value):
+            return "Enter a valid TRC20 wallet address starting with T."
+    elif key in {"id", "reference"}:
+        if len(value) < 3 or len(value) > 128 or any(ord(char) < 32 for char in value):
+            return "Enter a valid transaction ID or reference."
+    elif key == "name":
+        if len(value) < 2 or len(value) > 100 or not re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'\-]*", value):
+            return "Enter a valid account holder name."
+    elif key == "method":
+        allowed = {"invoice", "qr", "link", "va", "ewallet"}
+        if value.lower() not in allowed:
+            return "Choose one of: invoice, qr, link, va, ewallet."
+    elif key in {"description", "action"} and len(value) > 500:
+        return "Please keep this answer under 500 characters."
+
+    return None
 
 
 def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]] = None, start_step: int = 0, currency: Optional[str] = None) -> str:
@@ -2047,6 +2098,16 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         raw = param["default"]
                     elif not raw and not param.get("optional"):
                         await tg.send_message(chat_id, f"❌ <b>Input Required</b>\n━━━━━━━━━━━━━━━━━━━━\nThis step cannot be skipped.\n\n{_render_wizard_prompt(chat_id, cmd, param['prompt'])}")
+                        return {"status": "ok"}
+
+                    validation_error = _validate_wizard_answer(cmd, param, raw)
+                    if validation_error:
+                        await tg.send_message(
+                            chat_id,
+                            f"❌ <b>Invalid Answer</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+                            f"{validation_error}\n\n"
+                            f"{_render_wizard_prompt(chat_id, cmd, param['prompt'])}",
+                        )
                         return {"status": "ok"}
 
                     if param["type"] == "float":
