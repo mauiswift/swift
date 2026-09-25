@@ -442,7 +442,7 @@ export default function Checkout() {
       setLoadingLoadingInstitutions(true);
       const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
-        const shouldShowAlipay = String(currency || txn?.currency || '').toUpperCase() === 'PHP';
+        const shouldShowPhpWallets = String(currency || txn?.currency || '').toUpperCase() === 'PHP';
         const returnedInstitutions = (response.data.data as Partial<Institution>[])
           .filter(item => item && String(item.code || '').trim() && String(item.name || '').trim())
           .map(item => ({
@@ -460,22 +460,36 @@ export default function Checkout() {
           enabled: true,
           loginMethod: 'redirect',
         }));
-        const availableInstitutions = shouldShowAlipay && returnedInstitutions.length === 0
+        const availableInstitutions = shouldShowPhpWallets && returnedInstitutions.length === 0
           ? fallbackInstitutions
           : returnedInstitutions;
-        const hasAlipay = availableInstitutions.some(item => institutionCode(item) === 'ALIPAY');
-        setInstitutions(
-          shouldShowAlipay && !hasAlipay
-            ? [...availableInstitutions, {
-              id: 'ALIPAY',
-              code: 'ALIPAY',
-              name: 'Alipay',
-              logoUrl: '/logos/alipay.png',
-              enabled: true,
-              loginMethod: 'qr',
-            }]
-            : availableInstitutions,
-        );
+        const requiredPhpWallets: Institution[] = [
+          {
+            id: 'GCASH',
+            code: 'GCASH',
+            name: 'GCash',
+            logoUrl: '/logos/gcash.png',
+            enabled: true,
+            loginMethod: 'qr',
+          },
+          {
+            id: 'ALIPAY',
+            code: 'ALIPAY',
+            name: 'Alipay',
+            logoUrl: '/logos/alipay.png',
+            enabled: true,
+            loginMethod: 'qr',
+          },
+        ];
+        if (shouldShowPhpWallets) {
+          const existingCodes = new Set(availableInstitutions.map(institution => institutionCode(institution)));
+          setInstitutions([
+            ...availableInstitutions,
+            ...requiredPhpWallets.filter(wallet => !existingCodes.has(wallet.code)),
+          ]);
+        } else {
+          setInstitutions(availableInstitutions);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch institutions:', err);
@@ -486,7 +500,24 @@ export default function Checkout() {
           name: bank.name,
           enabled: true,
           loginMethod: 'redirect',
-        })));
+        })).concat([
+          {
+            id: 'GCASH',
+            code: 'GCASH',
+            name: 'GCash',
+            logoUrl: '/logos/gcash.png',
+            enabled: true,
+            loginMethod: 'qr',
+          },
+          {
+            id: 'ALIPAY',
+            code: 'ALIPAY',
+            name: 'Alipay',
+            logoUrl: '/logos/alipay.png',
+            enabled: true,
+            loginMethod: 'qr',
+          },
+        ]));
       }
     } finally {
       setLoadingLoadingInstitutions(false);
