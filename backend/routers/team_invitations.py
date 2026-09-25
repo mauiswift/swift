@@ -406,9 +406,23 @@ def _is_invitation_expired(expires_at: Optional[datetime], now: Optional[datetim
     return normalized_expiry < current_time
 
 
-def _invitation_link(token: str) -> str:
-    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
-    return f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
+def _resolve_frontend_origin(request: Optional[Request] = None, frontend_url: Optional[str] = None) -> str:
+    candidate = (frontend_url or os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").strip().rstrip("/")
+    if candidate:
+        return candidate
+
+    if request is not None:
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+        forwarded_proto = (request.headers.get("x-forwarded-proto") or "https").split(",")[0].strip() or "https"
+        if forwarded_host:
+            return f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+
+    return ""
+
+
+def _invitation_link(token: str, request: Optional[Request] = None, frontend_url: Optional[str] = None) -> str:
+    base_url = _resolve_frontend_origin(request=request, frontend_url=frontend_url)
+    return f"{base_url}/accept-invitation?token={token}" if base_url else f"/accept-invitation?token={token}"
 
 
 def _send_invitation_email(
@@ -419,6 +433,7 @@ def _send_invitation_email(
     organization_name: str = "",
     expires_at: Optional[str] = None,
     notes: str = "",
+    request: Optional[Request] = None,
 ) -> None:
     """Send invitation email. Raises SMTPError if sending fails.
     
@@ -431,7 +446,7 @@ def _send_invitation_email(
     Raises:
         SMTPError: If SMTP is not configured or email sending fails
     """
-    accept_url = _invitation_link(token)
+    accept_url = _invitation_link(token, request=request)
 
     config = EmailService._resolve_smtp_config()
     smtp_configured = bool(config["host"] and config["from_email"])
@@ -834,7 +849,7 @@ async def send_team_invitation(
     logger.info(f"Team invitation created for {request.email} by {current_user.id}")
 
     # Build manual link for response
-    manual_link = _invitation_link(token)
+    manual_link = _invitation_link(token, request=request)
 
     # Send email notification
     email_error = None
@@ -849,6 +864,7 @@ async def send_team_invitation(
             organization_name=org_name or "",
             expires_at=serialize_utc_datetime(invitation.expires_at),
             notes=request.notes or "",
+            request=request,
         )
         logger.info(f"Team invitation email sent to {request.email}")
         email_sent = True

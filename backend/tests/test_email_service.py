@@ -1,6 +1,18 @@
 import urllib.request
 
+from core.config import settings
 from services.email_service import EmailService
+from routers.team_invitations import _invitation_link
+
+
+class _Headers(dict):
+    def get(self, key, default=None):
+        return super().get(key.lower(), default)
+
+
+class _FakeRequest:
+    def __init__(self, headers):
+        self.headers = _Headers(headers)
 
 
 def test_gmail_app_password_removes_display_spaces(monkeypatch):
@@ -37,3 +49,16 @@ def test_send_html_email_uses_bearer_token_for_resend(monkeypatch):
     EmailService.send_html_email("user@example.com", "Invitation", "<p>Hello</p>")
 
     assert captured["headers"]["Authorization"] == "Bearer test-api-key"
+
+
+def test_invitation_link_uses_request_host_when_frontend_url_is_missing(monkeypatch):
+    monkeypatch.delenv("FRONTEND_URL", raising=False)
+    settings.frontend_url = ""
+    request = _FakeRequest({
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "app.swiftpay.site",
+    })
+
+    link = _invitation_link("abc123", request=request)
+
+    assert link == "https://app.swiftpay.site/accept-invitation?token=abc123"

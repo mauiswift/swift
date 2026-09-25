@@ -19,6 +19,11 @@ class EmailService:
     """Centralized outbound email integration for merchant and team notifications."""
 
     @staticmethod
+    def resolve_frontend_url() -> str:
+        """Return the configured frontend origin or an empty string when none is known."""
+        return (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").strip().rstrip("/")
+
+    @staticmethod
     def _resolve_smtp_config() -> dict:
         resend_api_key_name = "".join(["resend", "_api_key"])
         resend_from_email_name = "".join(["resend", "_from_email"])
@@ -209,7 +214,7 @@ class EmailService:
         notes: str = "",
     ) -> None:
         config = EmailService._resolve_smtp_config()
-        frontend_url = config["frontend_url"]
+        frontend_url = config["frontend_url"] or EmailService.resolve_frontend_url()
         accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
         raw_role = role.strip() or "team member"
         raw_sender_name = inviter_name.strip() or "the SwiftPay team"
