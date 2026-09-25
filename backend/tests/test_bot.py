@@ -1111,6 +1111,25 @@ class TestParseTlv:
 
 
 # ---------------------------------------------------------------------------
+# Helper: Telegram command normalization
+# ---------------------------------------------------------------------------
+class TestNormalizeBotCommandText:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("/start", "/start"),
+            ("/start@swiftpay_bot", "/start"),
+            ("⚙️ Settings /settings", "/settings"),
+            ("  /link  500  ", "/link 500"),
+            ("hello", "hello"),
+            ("", ""),
+        ],
+    )
+    def test_normalizes_commands_consistently(self, raw, expected):
+        assert telegram_router._normalize_bot_command_text(raw) == expected
+
+
+# ---------------------------------------------------------------------------
 # USDT TRC20 static QR image
 # ---------------------------------------------------------------------------
 class TestUsdtQrImage:

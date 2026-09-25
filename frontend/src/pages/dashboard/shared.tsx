@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -168,6 +168,43 @@ export function DashboardStatCard({
         </div>
       </div>
     </div>
+  );
+}
+
+export function DashboardWorkspaceActions({ actions }: { actions: DashboardAction[] }) {
+  const { language } = useLanguage();
+
+  if (!actions.length) return null;
+
+  return (
+    <DashboardPanel className="mb-6 p-5">
+      <div className="mb-4">
+        <h2 className="text-[15px] font-semibold text-slate-900">
+          {language === 'ko' ? '내 작업 공간' : 'Your workspace'}
+        </h2>
+        <p className="mt-1 text-xs text-slate-500">
+          {language === 'ko' ? '역할에 사용할 수 있는 기능' : 'Functions available for your role'}
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {actions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <Link
+              key={`${action.href}-${action.label}`}
+              to={action.href}
+              className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm"
+            >
+              <div className={`inline-flex rounded-xl p-2.5 ${action.tone}`}>
+                <Icon className="h-4 w-4" />
+              </div>
+              <p className="mt-3 text-sm font-semibold text-slate-900">{action.label}</p>
+              <p className="mt-1 text-xs text-slate-500">{action.description}</p>
+            </Link>
+          );
+        })}
+      </div>
+    </DashboardPanel>
   );
 }
 

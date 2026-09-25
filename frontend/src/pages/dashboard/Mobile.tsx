@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
 import Layout from '@/components/Layout';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { DashboardPanel, DashboardStatCard } from './shared';
+import { DashboardPanel, DashboardStatCard, DashboardWorkspaceActions, type DashboardAction } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -46,6 +46,7 @@ type DashboardMobileProps = {
   disbursementVolume: number;
   totalVolume: number;
   paymentShare: number;
+  dashboardActions: DashboardAction[];
 };
 
 const currencyList = [
@@ -74,7 +75,7 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
 export default function DashboardMobile({
   range, stats, balances, loading, initialLoading, fetchData, setRange, connected, user, orgName, ui, rangeLabels,
   formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume,
-  totalVolume, paymentShare,
+  totalVolume, paymentShare, dashboardActions,
 }: DashboardMobileProps) {
   const chartPoints = useMemo(() => {
     const values = (stats?.daily_volumes || []).slice(-7).map(day => day.payments + day.disbursements);
@@ -167,8 +168,10 @@ export default function DashboardMobile({
           </div>
         </section>
 
+        <DashboardWorkspaceActions actions={dashboardActions} />
+
         <section>
-          <SectionTitle>성과</SectionTitle>
+          <SectionTitle>{ui.performance}</SectionTitle>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-500"><ArrowDownToLine size={17} /></div>
@@ -186,7 +189,7 @@ export default function DashboardMobile({
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <SectionTitle action={<BarChart3 size={17} className="text-blue-500" />}>거래량</SectionTitle>
+          <SectionTitle action={<BarChart3 size={17} className="text-blue-500" />}>{ui.volumeOverview}</SectionTitle>
           <svg viewBox="0 0 360 100" className="h-24 w-full" role="img" aria-label="Transaction volume chart">
             <g stroke="#E2E8F0" strokeWidth="0.6"><line x1="20" x2="340" y1="20" y2="20" /><line x1="20" x2="340" y1="50" y2="50" /><line x1="20" x2="340" y1="80" y2="80" /></g>
             <polyline fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={chartPoints} />
@@ -218,7 +221,7 @@ export default function DashboardMobile({
         )}
 
         <section>
-          <SectionTitle>상태별 분류</SectionTitle>
+          <SectionTitle>{ui.status}</SectionTitle>
           <div className="space-y-2">
             {(stats?.status_breakdown || []).map((row) => {
               const style = statusStyles[row.status] || statusStyles.Expired;

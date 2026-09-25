@@ -55,6 +55,26 @@ _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit")
 
 
+def _normalize_bot_command_text(text: str) -> str:
+    """Normalize Telegram command text from messages and reply buttons.
+
+    Telegram may append ``@bot_username`` when a command is used in a group,
+    while reply keyboards may prefix the command with an icon or whitespace.
+    Keep arguments intact and return a canonical slash command.
+    """
+    normalized = str(text or "").strip()
+    if not normalized:
+        return ""
+    slash_index = normalized.find("/")
+    if slash_index > 0:
+        normalized = normalized[slash_index:]
+    if not normalized.startswith("/"):
+        return normalized
+    command, separator, arguments = normalized.partition(" ")
+    command = command.split("@", 1)[0].lower()
+    return f"{command}{separator}{arguments.strip()}".strip()
+
+
 def _first_scalar(result):
     """Return the first matching ORM row without assuming database uniqueness."""
     return result.scalars().first()
@@ -1656,11 +1676,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             return {"status": "ok"}
 
         chat_id = str(message.get("chat", {}).get("id", ""))
-        text = message.get("text", "")
-        # Reply keyboard buttons contain the command text directly.
-        # Strip any leading emoji/whitespace so command routing works correctly.
-        if text and "/" in text and not text.startswith("/"):
-            text = text[text.index("/"):]
+        text = _normalize_bot_command_text(message.get("text", ""))
         username = message.get("from", {}).get("username", "unknown")
         first_name = _escape_html(message.get("from", {}).get("first_name", ""))
         photos = message.get("photo", [])
