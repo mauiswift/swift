@@ -21,7 +21,7 @@ from models.merchant_api_config import MerchantApiConfig
 from models.toss_account_pool import TossAccountPool
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
-from services.app_settings import get_payment_channels
+from services.app_settings import get_payment_channels, get_deposit_accounts
 from services.url_shortener import URLShortenerService
 from io import BytesIO
 import qrcode
@@ -52,7 +52,7 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
         .order_by(TossAccountPool.last_assigned_at.asc().nullsfirst(), TossAccountPool.id.asc())
         .with_for_update()
     )
-    account = result.scalars().first()
+    pool_accounts = result.scalars().all()
     if txn.bank_account_number:
         assigned = await db.scalar(
             select(TossAccountPool).where(
@@ -66,19 +66,85 @@ async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions)
                 "number": assigned.account_number,
                 "account_name": assigned.account_holder_name,
             }
-    if account:
-        now = datetime.now(timezone.utc)
-        account.last_assigned_at = now
-        account.last_assigned_transaction_id = txn.id
-        account.updated_at = now
-        txn.bank_name = account.bank_name
-        txn.bank_account_number = account.account_number
-        txn.bank_account_name = account.account_holder_name
-        await db.commit()
-        return {
+
+    candidates: list[dict[str, str]] = [
+        {
             "bank_name": account.bank_name,
             "number": account.account_number,
             "account_name": account.account_holder_name,
+            "pool_id": str(account.id),
+        }
+        for account in pool_accounts
+    ]
+    configured_accounts = await get_deposit_accounts(db)
+    known_numbers = {candidate["number"] for candidate in candidates}
+    for configured in configured_accounts:
+        bank_name = str(
+            configured.get("bank_name")
+            or configured.get("label")
+            or configured.get("value")
+            or ""
+        ).strip()
+        account_number = str(configured.get("account_number") or "").strip()
+        account_name = str(configured.get("account_name") or "").strip()
+        if (
+            str(configured.get("currency") or "").upper() == "KRW"
+            and "toss" in f"{bank_name} {configured.get('label', '')} {configured.get('value', '')}".lower()
+            and account_number
+            and account_name
+            and account_number not in known_numbers
+        ):
+            candidates.append({
+                "bank_name": bank_name or "토스페이",
+                "number": account_number,
+                "account_name": account_name,
+            })
+            known_numbers.add(account_number)
+
+    if txn.bank_account_number:
+        existing = next(
+            (candidate for candidate in candidates if candidate["number"] == txn.bank_account_number),
+            None,
+        )
+        if existing:
+            return {
+                "bank_name": existing["bank_name"],
+                "number": existing["number"],
+                "account_name": existing["account_name"],
+            }
+
+    if candidates:
+        latest_result = await db.execute(
+            select(Transactions.bank_account_number)
+            .where(
+                Transactions.currency == "KRW",
+                Transactions.bank_account_number.is_not(None),
+            )
+            .order_by(Transactions.id.desc())
+            .limit(1)
+        )
+        latest_number = str(latest_result.scalar_one_or_none() or "").strip()
+        account = next(
+            (candidate for candidate in candidates if candidate["number"] != latest_number),
+            candidates[0],
+        )
+        pool_account = next(
+            (candidate for candidate in pool_accounts if candidate.account_number == account["number"]),
+            None,
+        )
+        now = datetime.now(timezone.utc)
+        if pool_account:
+            pool_account.last_assigned_at = now
+            pool_account.last_assigned_transaction_id = txn.id
+            pool_account.updated_at = now
+        txn.bank_name = account["bank_name"]
+        txn.bank_account_number = account["number"]
+        txn.bank_account_name = account["account_name"]
+        await db.commit()
+        return {
+            "bank_name": account["bank_name"],
+            "number": account["number"],
+            "account_name": account["account_name"],
         }
 
     virtual_account = PaymentwallService.generate_krw_virtual_account(
