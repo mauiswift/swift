@@ -627,11 +627,12 @@ async def _create_reusable_payment_attempt(
     """Create an independent payment attempt for a fixed reusable payment link."""
     reference = f"{template.external_id}-PAY-{uuid.uuid4().hex[:12].upper()}"
     now = datetime.now(timezone.utc)
+    currency = (template.currency or "PHP").strip().upper()
     payment = Transactions(
         user_id=template.user_id,
         transaction_type="payment_link",
         amount=float(template.amount or 0.0),
-        currency=template.currency or "PHP",
+        currency=currency,
         external_id=reference,
         status="pending",
         description=template.description or "Payment link payment",
@@ -1164,7 +1165,7 @@ async def redirect_hosted_gcash(
     identifier: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Redirect the Korea-hosted GCash handoff to the provider app URI."""
+    """Redirect legacy GCash links to the hosted QR payment page."""
     stmt = select(Transactions).where(
         func.lower(Transactions.external_id) == identifier.lower(),
         func.lower(Transactions.currency) == "php",
@@ -1174,10 +1175,14 @@ async def redirect_hosted_gcash(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
 
-    target = str(txn.payment_url or "").strip()
-    if not target.lower().startswith("gcash://"):
+    target = str(txn.qr_code_url or txn.payment_url or "").strip()
+    if not target:
         raise HTTPException(status_code=404, detail="GCash app link is not available")
-    return RedirectResponse(url=target, status_code=307)
+    hosted_url = (
+        f"/checkout/{quote(str(txn.external_id), safe='')}/gcash"
+        f"?payment_method=qrph&qr={quote(target, safe='')}"
+    )
+    return RedirectResponse(url=hosted_url, status_code=307)
 
 
 @router.get("/checkout/{identifier}")
