@@ -33,6 +33,7 @@ from services.event_bus import payment_event_bus
 from services.bot_settings import Bot_settingsService
 from services.wallets import WalletsService
 from services.currency_service import CurrencyService
+from services.checkout_urls import build_checkout_url
 from services.payment_gateway import gateway as payment_gateway
 from services.app_settings import get_usdt_php_rate, get_krw_bank_name, get_krw_account_holder_name
 from services.bitgo_service import BitGoConfigurationError, assign_usdt_address
@@ -866,6 +867,11 @@ async def _send_currency_prompt(tg: "TelegramService", chat_id: str, first_name:
 
 def _currency_symbol(currency: str) -> str:
     return _CURRENCY_SYMBOLS.get(currency.upper(), currency.upper())
+
+
+def _self_hosted_payment_url(reference: str, currency: str) -> str:
+    """Return the merchant-facing checkout URL served by SwiftPay."""
+    return build_checkout_url(reference, currency)
 
 
 async def _send_usdt_trade_quote(
@@ -2227,8 +2233,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await tg.send_message(chat_id, f"❌ {currency} payment link was not created.\n\n" f"Reason: {result.get('error', 'Payment provider is not configured')}" )
                         return {"status": "ok"}
                     data = result.get("data") or {}
-                    payment_url = data.get("payment_url") or data.get("checkout_url") or ""
                     payment_id = data.get("payment_id") or data.get("transaction_id") or reference_id
+                    payment_url = _self_hosted_payment_url(reference_id, currency)
                     caption = (
                         f"✅ <b>{currency} Payment Link Created</b>\n━━━━━━━━━━━━━━━━━━━━\n"
                         f"💰 Amount: <b>{_currency_symbol(currency)}{amount:,.2f} {currency}</b>\n📝 {description}\n"
@@ -2660,7 +2666,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
 
                     data = result.get("data") or {}
-                    payment_url = data.get("payment_url") or data.get("checkout_url") or ""
+                    payment_url = _self_hosted_payment_url(reference_id, currency)
                     payment_id = data.get("payment_id") or data.get("transaction_id") or reference_id
                     caption = (
                         f"✅ <b>{currency} Payment Link Created</b>\n"
@@ -2720,14 +2726,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
 
                     data = res.get("data") or {}
-                    payment_url = (
-                        data.get("customerRedirectUrl")
-                        or data.get("customer_redirect_url")
-                        or data.get("paymentUrl")
-                        or data.get("payment_url")
-                        or ""
-                    )
                     gateway_id = data.get("paymentId") or data.get("payment_id") or data.get("transaction_id") or ""
+                    payment_url = _self_hosted_payment_url(reference_no, currency)
 
                     # Persist transaction record
                     try:

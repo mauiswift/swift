@@ -1213,6 +1213,18 @@ def test_settings_mask_sensitive_values():
         _validate_setting_key("bad-key")
 
 
+def test_bot_payment_links_use_self_hosted_checkout():
+    with patch.object(
+        telegram_router,
+        "build_checkout_url",
+        return_value="https://kr.swiftpay.site/checkout/link-123",
+    ) as build_url:
+        result = telegram_router._self_hosted_payment_url("link-123", "PHP")
+
+    assert result == "https://kr.swiftpay.site/checkout/link-123"
+    build_url.assert_called_once_with("link-123", "PHP")
+
+
 def test_usdt_trade_quote_uses_selected_currency_and_wallet_link():
     tg = MagicMock()
     tg.send_message = AsyncMock()
