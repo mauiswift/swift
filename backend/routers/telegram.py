@@ -809,19 +809,33 @@ def _mask_card_number(card_number: str) -> str:
     if len(digits) <= 8:
         return f"{digits[:4]}{'*' * (len(digits) - 4)}"
     return f"{digits[:4]}{'*' * (len(digits) - 8)}{digits[-4:]}"
-def _start_kb() -> dict:
-    """Quick-action keyboard using command text Telegram can route directly."""
+
+
+def _reply_keyboard(rows: List[List[str]]) -> dict:
+    """Build a consistent Telegram reply keyboard from command labels."""
     return {
-        "keyboard": [
-            [{"text": "/link"}, {"text": "/scanqr"}],
-            [{"text": "/alipay"}, {"text": "/wechat"}],
-            [{"text": "/wallet"}, {"text": "/status"}],
-            [{"text": "/send"}, {"text": "/disburse"}],
-            [{"text": "/deposit"}, {"text": "/topup"}],
-        ],
+        "keyboard": [[{"text": label} for label in row] for row in rows],
         "resize_keyboard": True,
         "one_time_keyboard": False,
     }
+
+
+def _inline_button(text: str, *, callback_data: Optional[str] = None, url: Optional[str] = None) -> dict:
+    """Build one validated inline button."""
+    if bool(callback_data) == bool(url):
+        raise ValueError("Inline buttons require exactly one action")
+    return {"text": text, "callback_data": callback_data} if callback_data else {"text": text, "url": url}
+
+
+def _start_kb() -> dict:
+    """Quick-action keyboard using command text Telegram can route directly."""
+    return _reply_keyboard([
+        ["/link", "/scanqr"],
+        ["/alipay", "/wechat"],
+        ["/wallet", "/status"],
+        ["/send", "/disburse"],
+        ["/deposit", "/topup"],
+    ])
 
 
 _SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
@@ -999,31 +1013,35 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
     kb = {
         "inline_keyboard": [
             [
-                {"text": _t(str(chat_id), "📊 Dashboard", "📊 仪表板", db_lang=selected_lang), "callback_data": "action:dashboard"},
-                {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "url": _dashboard_url("wallet")}
+                _inline_button(_t(str(chat_id), "📊 Dashboard", "📊 仪表板", db_lang=selected_lang), callback_data="action:dashboard"),
+                _inline_button(_t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), url=_dashboard_url("wallet"))
             ],
             [
-                {"text": _t(str(chat_id), "💳 Payments", "💳 支付", db_lang=selected_lang), "url": _dashboard_url("payments")},
-                {"text": _t(str(chat_id), "🏦 Disbursements", "🏦 出款", db_lang=selected_lang), "url": _dashboard_url("disbursements")}
+                _inline_button(_t(str(chat_id), "💳 Payments", "💳 支付", db_lang=selected_lang), url=_dashboard_url("payments")),
+                _inline_button(_t(str(chat_id), "🏦 Disbursements", "🏦 出款", db_lang=selected_lang), url=_dashboard_url("disbursements"))
             ],
             [
-                {"text": _t(str(chat_id), "📈 Reports", "📈 报表", db_lang=selected_lang), "url": _dashboard_url("reports")},
-                {"text": _t(str(chat_id), "⚙️ Settings", "⚙️ 设置", db_lang=selected_lang), "callback_data": "action:settings"}
+                _inline_button(_t(str(chat_id), "📈 Reports", "📈 报表", db_lang=selected_lang), url=_dashboard_url("reports")),
+                _inline_button(_t(str(chat_id), "⚙️ Settings", "⚙️ 设置", db_lang=selected_lang), callback_data="action:settings")
             ],
             [
-                {"text": _t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), "callback_data": "wizard:/topup"},
-                {"text": _t(str(chat_id), "💸 Payout", "💸 出款", db_lang=selected_lang), "callback_data": "wizard:/disburse"}
+                _inline_button(_t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), callback_data="wizard:/topup"),
+                _inline_button(_t(str(chat_id), "💸 Payout", "💸 出款", db_lang=selected_lang), callback_data="wizard:/disburse")
             ],
             [
-                {"text": _t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), "callback_data": "wizard:/link"},
-                {"text": _t(str(chat_id), "📷 QRPH", "📷 QRPH", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
+                _inline_button(_t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), callback_data="wizard:/link"),
+                _inline_button(_t(str(chat_id), "📷 QRPH", "📷 QRPH", db_lang=selected_lang), callback_data="wizard:/scanqr")
             ],
             [
-                {"text": _t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), "callback_data": "wizard:/deposit"},
-                {"text": _t(str(chat_id), "📋 Status", "📋 查询", db_lang=selected_lang), "callback_data": "wizard:/status"}
+                _inline_button(_t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), callback_data="wizard:/deposit"),
+                _inline_button(_t(str(chat_id), "📋 Status", "📋 查询", db_lang=selected_lang), callback_data="wizard:/status")
             ],
             [
-               {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"}
+                _inline_button(_t(str(chat_id), "🟢 Buy USDT", "🟢 买入 USDT", db_lang=selected_lang), callback_data="wizard:/buyusdt"),
+                _inline_button(_t(str(chat_id), "🔴 Sell USDT", "🔴 卖出 USDT", db_lang=selected_lang), callback_data="wizard:/sellusdt")
+            ],
+            [
+               _inline_button(_t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), url=f"https://t.me/{settings.telegram_bot_username}?startgroup=true")
             ]
         ]
     }
@@ -1034,41 +1052,31 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
 
 def _pay_kb() -> dict:
     """Quick-action keyboard shown after payment creation commands."""
-    return {
-        "keyboard": [
-            [{"text": "/link"}, {"text": "/scanqr"}],
-            [{"text": "/alipay"}, {"text": "/wechat"}],
-            [{"text": "/status"}, {"text": "/help"}],
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": False,
-    }
+    return _reply_keyboard([
+        ["/link", "/scanqr"],
+        ["/alipay", "/wechat"],
+        ["/status", "/help"],
+    ])
 
 
 def _wallet_kb() -> dict:
     """Quick-action keyboard shown after wallet commands."""
-    return {
-        "keyboard": [
-            [{"text": "/send"}, {"text": "/disburse"}],
-            [{"text": "/deposit"}, {"text": "/topup"}],
-            [{"text": "/wallet"}, {"text": "/status"}],
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": False,
-    }
+    return _reply_keyboard([
+        ["/buyusdt", "/sellusdt"],
+        ["/send", "/disburse"],
+        ["/deposit", "/topup"],
+        ["/wallet", "/status"],
+    ])
 
 
 def _info_kb() -> dict:
     """Quick-action keyboard shown after info/report commands."""
-    return {
-        "keyboard": [
-            [{"text": "/link"}, {"text": "/scanqr"}],
-            [{"text": "/wallet"}, {"text": "/status"}],
-            [{"text": "/help"}, {"text": "/start"}],
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": False,
-    }
+    return _reply_keyboard([
+        ["/link", "/scanqr"],
+        ["/buyusdt", "/sellusdt"],
+        ["/wallet", "/status"],
+        ["/help", "/start"],
+    ])
 
 # ---------- PIN session store ----------
 # chat_id → expiry datetime (UTC). Sessions last 2 hours.

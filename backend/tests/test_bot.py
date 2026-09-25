@@ -1181,6 +1181,24 @@ class TestWizardAnswerValidation:
         ) is None
 
 
+def test_bot_keyboards_share_command_button_shape():
+    keyboard = telegram_router._wallet_kb()
+    labels = [button["text"] for row in keyboard["keyboard"] for button in row]
+    assert ["/buyusdt", "/sellusdt"] == labels[:2]
+    assert keyboard["resize_keyboard"] is True
+    assert telegram_router._inline_button("Buy", callback_data="wizard:/buyusdt") == {
+        "text": "Buy",
+        "callback_data": "wizard:/buyusdt",
+    }
+
+
+def test_inline_button_requires_one_action():
+    with pytest.raises(ValueError):
+        telegram_router._inline_button("Invalid")
+    with pytest.raises(ValueError):
+        telegram_router._inline_button("Invalid", callback_data="a", url="https://example.com")
+
+
 def test_usdt_trade_quote_uses_selected_currency_and_wallet_link():
     tg = MagicMock()
     tg.send_message = AsyncMock()
