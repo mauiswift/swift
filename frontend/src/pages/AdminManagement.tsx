@@ -55,6 +55,7 @@ interface AdminUser {
   name: string | null;
   is_active: boolean;
   is_super_admin: boolean;
+  role: string;
   can_manage_payments: boolean;
   can_manage_disbursements: boolean;
   can_view_reports: boolean;
@@ -932,19 +933,29 @@ const defaultForm = {
   email: '',
   password: '',
   name: '',
-  is_super_admin: false,
-  can_manage_payments: true,
-  can_manage_disbursements: true,
-  can_view_reports: true,
-  can_manage_wallet: true,
-  can_manage_transactions: true,
-  can_manage_bot: false,
-  can_approve_topups: false,
-  can_manage_team: false,
-  can_credit_wallet: false,
-  can_debit_wallet: false,
-  can_freeze_wallet: false,
-  can_unfreeze_wallet: false,
+  role: 'admin',
+};
+
+const ADMIN_ROLE_OPTIONS = [
+  { value: 'owner', label: 'Owner' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'operator', label: 'Operator' },
+  { value: 'viewer', label: 'Viewer' },
+  { value: 'developer', label: 'Developer' },
+  { value: 'approver', label: 'Approver' },
+  { value: 'super_admin', label: 'Invited super admin' },
+] as const;
+
+const ROLE_PERMISSION_PRESETS: Record<string, Set<string>> = {
+  owner: new Set(PERMISSION_DEFINITIONS.map(({ key }) => key)),
+  admin: new Set(PERMISSION_DEFINITIONS.map(({ key }) => key)),
+  manager: new Set(['can_manage_team', 'can_manage_payments', 'can_manage_disbursements', 'can_view_reports', 'can_manage_wallet', 'can_manage_transactions']),
+  operator: new Set(['can_manage_payments', 'can_manage_disbursements', 'can_manage_transactions']),
+  viewer: new Set(['can_view_reports', 'can_manage_transactions']),
+  developer: new Set(['can_manage_bot']),
+  approver: new Set(['can_view_reports', 'can_manage_transactions', 'can_approve_topups']),
+  super_admin: new Set(PERMISSION_DEFINITIONS.map(({ key }) => key)),
 };
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
@@ -975,10 +986,10 @@ function PermissionBadge({
   };
 
   return (
-    <button
-      type="button"
+    <span
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
       onClick={onClick}
-      disabled={!interactive}
       aria-pressed={interactive ? active : undefined}
       className={`motion-interactive inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold shadow-sm
         ${active
@@ -989,7 +1000,7 @@ function PermissionBadge({
     >
       <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-current' : 'bg-slate-300'}`} />
       {label}
-    </button>
+    </span>
   );
 }
 
@@ -1133,7 +1144,7 @@ function AdminCard({
   isSuperAdmin,
   currentUserId,
   onToggleActive,
-  onTogglePermission,
+  onChangeRole,
   onDelete,
   onEditBank,
   onEditApiKeys,
@@ -1144,7 +1155,7 @@ function AdminCard({
   isSuperAdmin: boolean;
   currentUserId?: string | number;
   onToggleActive: (a: AdminUser) => void;
-  onTogglePermission: (a: AdminUser, key: keyof AdminUser) => void;
+  onChangeRole: (a: AdminUser, role: string) => void;
   onDelete: (a: AdminUser) => void;
   onEditBank: (a: AdminUser) => void;
   onEditApiKeys: (a: AdminUser) => void;
@@ -1153,6 +1164,7 @@ function AdminCard({
 }) {
   const permissionCount = PERMISSION_KEYS.filter(({ key }) => Boolean(admin[key])).length;
   const displayName = admin.name || admin.telegram_username || `Merchant ID: ${admin.telegram_id}`;
+  const roleLabel = ADMIN_ROLE_OPTIONS.find(option => option.value === admin.role)?.label || admin.role || 'Admin';
 
   return (
     <Card className={`border-slate-200 transition-all duration-300 hover:shadow-md ${
@@ -1187,6 +1199,9 @@ function AdminCard({
                       SUPER
                     </Badge>
                   )}
+                  <Badge className="border-slate-200 bg-slate-50 text-slate-600 text-[9px] font-semibold uppercase tracking-widest px-2 h-5">
+                    {roleLabel}
+                  </Badge>
                   <Badge className={`text-[9px] font-semibold uppercase tracking-widest px-2 h-5 border ${
                     admin.is_active
                       ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
@@ -1202,21 +1217,16 @@ function AdminCard({
 
           {isSuperAdmin && (
             <div className="flex flex-wrap items-center gap-1 shrink-0 sm:justify-end">
-              <button
-                type="button"
-                onClick={() => onTogglePermission(admin, 'is_super_admin')}
+              <label className="sr-only" htmlFor={`admin-role-${admin.id}`}>Role for {displayName}</label>
+              <select
+                id={`admin-role-${admin.id}`}
+                value={admin.role || 'admin'}
                 disabled={String(admin.telegram_id) === String(currentUserId)}
-                title={admin.is_super_admin ? 'Remove Super Admin' : 'Make Super Admin'}
-                aria-label={`${admin.is_super_admin ? 'Remove' : 'Grant'} super admin access for ${admin.name || admin.telegram_username || admin.telegram_id}`}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold transition-all ${
-                  admin.is_super_admin
-                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-200 hover:text-amber-700'
-                } disabled:cursor-not-allowed disabled:opacity-50`}
+                onChange={event => onChangeRole(admin, event.target.value)}
+                className="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Crown className="h-4 w-4" />
-                {admin.is_super_admin ? 'Super Admin' : 'Make Super'}
-              </button>
+                {ADMIN_ROLE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
               <button
                 type="button"
                 onClick={() => onEditPassword(admin)}
@@ -1280,17 +1290,29 @@ function AdminCard({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {PERMISSION_KEYS.map(({ key, label, color }) => (
-            <PermissionBadge
-              key={key}
-              active={admin[key] as boolean}
-              label={label}
-              color={color}
-              onClick={() => onTogglePermission(admin, key)}
-              interactive={isSuperAdmin}
-            />
-          ))}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {(['People & access', 'Payments & configuration', 'Approvals & wallets', 'Governance'] as const).map(group => {
+            const permissions = PERMISSION_KEYS.filter(({ key }) => (
+              PERMISSION_DEFINITIONS.find(definition => definition.key === key)?.group === group
+            ));
+            if (!permissions.length) return null;
+            return (
+              <div key={group} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{group}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {permissions.map(({ key, label, color }) => (
+                    <PermissionBadge
+                      key={key}
+                      active={admin[key] as boolean}
+                      label={label}
+                      color={color}
+                      interactive={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
           <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-slate-400" />{permissionCount} permissions enabled</span>
@@ -1445,9 +1467,11 @@ function FeeSettingsModal({
 
 function UserManagementTab({
   isSuperAdmin,
+  canManageTeam,
   onError,
 }: {
   isSuperAdmin: boolean;
+  canManageTeam: boolean;
   onError: (msg: string) => void;
 }) {
   const { user: currentUser } = useAuth();
@@ -1507,7 +1531,7 @@ function UserManagementTab({
   };
 
   const handleVipGoldChange = async (member: RegisteredUser) => {
-    if (!isSuperAdmin || !member.telegram_id) return;
+    if (!canManageTeam || !member.telegram_id) return;
     try {
       const res = await authenticatedFetch(`/api/v1/team/members/${encodeURIComponent(member.telegram_id)}/vip-gold`, {
         method: 'PATCH',
@@ -1522,7 +1546,7 @@ function UserManagementTab({
   };
 
   const handleUserStatusChange = async (member: RegisteredUser) => {
-    if (!isSuperAdmin || !member.admin_id) return;
+    if (!canManageTeam || !member.admin_id) return;
     try {
       const res = await authenticatedFetch(`/api/v1/admin-users/${member.admin_id}`, {
         method: 'PATCH',
@@ -1537,12 +1561,12 @@ function UserManagementTab({
   };
 
   const handleUserRoleChange = async (member: RegisteredUser, role: string) => {
-    if (!isSuperAdmin || !member.admin_id || !role || String(member.telegram_id) === String(currentUser?.id)) return;
+    if (!canManageTeam || !member.admin_id || !role || String(member.telegram_id) === String(currentUser?.id)) return;
     try {
       const res = await authenticatedFetch(`/api/v1/admin-users/${member.admin_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, is_super_admin: role === 'super_admin' }),
+        body: JSON.stringify({ role }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchUsers();
@@ -2991,19 +3015,28 @@ export default function AdminManagement() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const canManagePayments = isSuperAdmin || Boolean(user?.permissions?.can_manage_payments);
-  const canManageDisbursements = isSuperAdmin || Boolean(user?.permissions?.can_manage_disbursements);
-  const canViewReports = isSuperAdmin || Boolean(user?.permissions?.can_view_reports);
-  const canManageWallet = isSuperAdmin || Boolean(user?.permissions?.can_manage_wallet);
-  const canManageTransactions = isSuperAdmin || Boolean(user?.permissions?.can_manage_transactions);
-  const canManageBot = isSuperAdmin || Boolean(user?.permissions?.can_manage_bot);
-  const canApproveTopups = isSuperAdmin || Boolean(user?.permissions?.can_approve_topups);
-  const canManageTeam = isSuperAdmin || Boolean(user?.permissions?.can_manage_team);
-  const canAccessAdminUsers = isSuperAdmin;
-  const canAccessUserManagement = isSuperAdmin || canManageTeam;
-  const canAccessApprovalsAndWallets = isSuperAdmin || canApproveTopups || canManageWallet || canManagePayments || canManageDisbursements || canManageTransactions;
-  const canAccessPaymentsAndConfiguration = isSuperAdmin || canManagePayments || canManageWallet || canManageDisbursements || canManageTransactions || canManageBot;
-  const canAccessGovernance = isSuperAdmin || canViewReports || canManageTeam;
+  const canManagePayments = Boolean(user?.permissions?.can_manage_payments);
+  const canManageDisbursements = Boolean(user?.permissions?.can_manage_disbursements);
+  const canViewReports = Boolean(user?.permissions?.can_view_reports);
+  const canManageWallet = Boolean(user?.permissions?.can_manage_wallet);
+  const canManageTransactions = Boolean(user?.permissions?.can_manage_transactions);
+  const canManageBot = Boolean(user?.permissions?.can_manage_bot);
+  const canApproveTopups = Boolean(user?.permissions?.can_approve_topups);
+  const canManageTeam = Boolean(user?.permissions?.can_manage_team);
+  const canAccessAdminUsers = isSuperAdmin && canManageTeam;
+  const canAccessUserManagement = canManageTeam;
+  const canAccessCryptoRequests = canApproveTopups;
+  const canAccessWalletControl = canManageWallet;
+  const canAccessOperations = canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot;
+  const canAccessTossApprovals = canManageWallet;
+  const canAccessPaymentChannels = canManagePayments || canManageDisbursements;
+  const canAccessWalletSettings = canManageWallet;
+  const canAccessBitgo = canManageWallet;
+  const canAccessCheckoutDesign = canManagePayments;
+  const canAccessPlatformSettings = canManagePayments || canManageWallet;
+  const canAccessApprovalsAndWallets = canAccessCryptoRequests || canAccessWalletControl || canAccessOperations || canAccessTossApprovals;
+  const canAccessPaymentsAndConfiguration = canAccessPaymentChannels || canAccessWalletSettings || canAccessBitgo || canAccessCheckoutDesign || canAccessPlatformSettings;
+  const canAccessGovernance = canViewReports || canManageTeam;
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -3144,7 +3177,14 @@ export default function AdminManagement() {
       const res = await authenticatedFetch('/api/v1/admin-users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          telegram_id: form.telegram_id || undefined,
+          telegram_username: form.telegram_username || undefined,
+          email: form.email.trim(),
+          password: form.password,
+          name: form.name.trim(),
+          role: form.role,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       setForm(defaultForm);
@@ -3172,18 +3212,18 @@ export default function AdminManagement() {
     }
   };
 
-  const handleTogglePermission = async (admin: AdminUser, key: keyof AdminUser) => {
+  const handleChangeRole = async (admin: AdminUser, role: string) => {
     if (!isSuperAdmin) return;
     try {
       const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [key]: !admin[key] }),
+        body: JSON.stringify({ role }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchAdmins();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to update permission');
+      setError(e instanceof Error ? e.message : 'Failed to update admin role');
     }
   };
 
@@ -3269,63 +3309,63 @@ export default function AdminManagement() {
       group: 'People & access',
       description: 'View and manage roles for all registered platform users.'
     }] : []),
-    ...(canAccessApprovalsAndWallets ? [{
+    ...(canAccessCryptoRequests ? [{
       id: 'crypto',
       label: 'Crypto Requests',
       icon: <Bitcoin className="h-4 w-4" />,
       group: 'Approvals & wallets',
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
-    ...(canAccessApprovalsAndWallets ? [{
+    ...(canAccessWalletControl ? [{
       id: 'wallet-control',
       label: 'Wallet Control',
       icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
       group: 'Approvals & wallets',
       description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
     }] : []),
-    ...(canAccessApprovalsAndWallets ? [{
+    ...(canAccessOperations ? [{
       id: 'operations',
       label: 'Operational workflows',
       icon: <RefreshCw className="h-4 w-4" />,
       group: 'Approvals & wallets',
       description: 'Open payment, deposit, withdrawal, verification, broadcast, and bot operations.'
     }] : []),
-    ...(canAccessApprovalsAndWallets ? [{
+    ...(canAccessTossApprovals ? [{
       id: 'toss-approvals',
       label: 'TOSS Bank approvals',
       icon: <CheckCircle className="h-4 w-4" />,
       group: 'Approvals & wallets',
       description: 'Review and approve TOSS Bank virtual account applications.'
     }] : []),
-    ...(canAccessPaymentsAndConfiguration ? [{
+    ...(canAccessPaymentChannels ? [{
       id: 'payment-channels',
       label: 'Payment Channels',
       icon: <Power className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
-    ...(canAccessPaymentsAndConfiguration ? [{
+    ...(canAccessWalletSettings ? [{
       id: 'wallet-settings',
       label: 'Wallet Settings',
       icon: <WrenchIcon className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
-    ...(canAccessPaymentsAndConfiguration ? [{
+    ...(canAccessBitgo ? [{
       id: 'bitgo',
       label: 'BitGo USDT',
       icon: <Bitcoin className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.'
     }] : []),
-    ...(canAccessPaymentsAndConfiguration ? [{
+    ...(canAccessCheckoutDesign ? [{
       id: 'checkout-design',
       label: 'Checkout Design',
       icon: <Palette className="h-4 w-4" />,
       group: 'Payments & configuration',
       description: 'Customize the public checkout appearance.'
     }] : []),
-    ...(canAccessPaymentsAndConfiguration ? [{
+    ...(canAccessPlatformSettings ? [{
       id: 'platform-settings',
       label: 'Platform settings',
       icon: <WrenchIcon className="h-4 w-4" />,
@@ -3385,7 +3425,7 @@ export default function AdminManagement() {
                   </p>
                 </div>
               </div>
-              {selectedTab === 'admins' && isSuperAdmin && (
+              {selectedTab === 'admins' && canAccessAdminUsers && (
                 <Button
                   onClick={() => setShowAdd(!showAdd)}
                   className={`gap-2 text-sm font-semibold h-10 sm:h-11 px-4 sm:px-6 rounded-lg sm:rounded-xl whitespace-nowrap transition-all ${
@@ -3450,7 +3490,7 @@ export default function AdminManagement() {
               </div>
             )}
 
-            {isSuperAdmin && selectedTab === 'admins' && (
+            {canAccessAdminUsers && selectedTab === 'admins' && (
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <AdminSummaryCard
                   label="Administrators"
@@ -3483,7 +3523,7 @@ export default function AdminManagement() {
               </div>
             )}
 
-            {isSuperAdmin && selectedTab === 'admins' && (
+            {canAccessAdminUsers && selectedTab === 'admins' && (
               <Card className="border border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-5 sm:p-6">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -3501,7 +3541,7 @@ export default function AdminManagement() {
                       { id: 'bitgo', label: 'BitGo USDT', detail: 'Address assignment and transfer monitoring', icon: <Bitcoin className="h-4 w-4" /> },
                       { id: 'platform-settings', label: 'Platform settings', detail: 'Currencies, fees, and backup tools', icon: <WrenchIcon className="h-4 w-4" /> },
                       { id: 'audit-logs', label: 'Audit logs', detail: 'Review administrative activity', icon: <FileText className="h-4 w-4" /> },
-                    ].map(action => (
+                    ].filter(action => tabs.some(tab => tab.id === action.id)).map(action => (
                       <button
                         key={action.id}
                         type="button"
@@ -3526,7 +3566,7 @@ export default function AdminManagement() {
             )}
 
             {/* Maintenance Mode Toggle (super admin only) */}
-            {isSuperAdmin && (
+            {canAccessPlatformSettings && (
               <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between gap-6 flex-wrap">
@@ -3580,7 +3620,7 @@ export default function AdminManagement() {
               </Card>
             )}
 
-            {isSuperAdmin && selectedTab === 'admins' && (
+            {canAccessPlatformSettings && selectedTab === 'admins' && (
               <Card className="border border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -3646,10 +3686,10 @@ export default function AdminManagement() {
             )}
 
             {/* ── Admin Users Tab ── */}
-            {selectedTab === 'admins' && (
+            {selectedTab === 'admins' && canAccessAdminUsers && (
               <div className="space-y-6">
                 {/* Add Admin Form */}
-                {showAdd && isSuperAdmin && (
+                {showAdd && canAccessAdminUsers && (
                   <Card className="bg-white border-slate-200 shadow-xl shadow-slate-200/50 animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
                     <CardHeader className="pb-4 pt-6 px-6 border-b border-slate-50 bg-slate-50/50">
                       <CardTitle className="text-slate-900 text-[15px] font-semibold flex items-center gap-2 uppercase tracking-tight">
@@ -3717,40 +3757,28 @@ export default function AdminManagement() {
                       </div>
 
                       <div className="space-y-4">
-                      <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Permission Level</label>
-                      <div className="flex flex-wrap gap-x-6 gap-y-4">
-                        <div className="flex items-center gap-3 cursor-pointer select-none group">
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={form.is_super_admin}
-                            aria-label="Super Administrator"
-                            onClick={() => setForm(f => ({ ...f, is_super_admin: !f.is_super_admin }))}
-                            className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
-                          >
-                            <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_super_admin ? 'left-5' : 'left-1'}`} />
-                          </button>
-                          <span className={`text-[13px] font-semibold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
-                        </div>
-                        <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-                        <div className="flex flex-wrap gap-x-6 gap-y-3">
-                          {PERMISSION_KEYS.map(({ key, label }) => (
-                            <label key={key} className="flex items-center gap-2.5 cursor-pointer select-none group">
-                              <div className="relative flex items-center justify-center">
-                                <input
-                                  id={`admin-permission-${key}`}
-                                  type="checkbox"
-                                  checked={form[key as keyof typeof form] as boolean}
-                                  onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
-                                  className="peer h-5 w-5 rounded-lg border-slate-200 bg-white text-[#FF6B00] focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
-                                />
-                              </div>
-                              <span className="text-[13px] font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">{label}</span>
-                            </label>
+                        <label htmlFor="admin-role" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Role</label>
+                        <select
+                          id="admin-role"
+                          value={form.role}
+                          onChange={event => setForm(current => ({ ...current, role: event.target.value }))}
+                          className="h-11 w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
+                        >
+                          {ADMIN_ROLE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                        <p className="text-xs text-slate-500">Permissions are assigned by role and cannot be edited individually.</p>
+                        <div className="flex flex-wrap gap-2">
+                          {PERMISSION_DEFINITIONS.map(({ key, label, color }) => (
+                            <PermissionBadge
+                              key={key}
+                              active={ROLE_PERMISSION_PRESETS[form.role]?.has(key) ?? false}
+                              label={label}
+                              color={color}
+                              interactive={false}
+                            />
                           ))}
                         </div>
                       </div>
-                    </div>
                   <div className="flex items-center gap-3 pt-4">
                     <Button
                       type="button"
@@ -3840,7 +3868,7 @@ export default function AdminManagement() {
                         isSuperAdmin={isSuperAdmin}
                         currentUserId={user?.id}
                         onToggleActive={handleToggleActive}
-                        onTogglePermission={handleTogglePermission}
+                        onChangeRole={handleChangeRole}
                         onDelete={handleDelete}
                         onEditBank={setEditingBankAdmin}
                         onEditApiKeys={setEditingApiKeysAdmin}
@@ -3863,7 +3891,7 @@ export default function AdminManagement() {
                               isSuperAdmin={isSuperAdmin}
                               currentUserId={user?.id}
                               onToggleActive={handleToggleActive}
-                              onTogglePermission={handleTogglePermission}
+                              onChangeRole={handleChangeRole}
                               onDelete={handleDelete}
                               onEditBank={setEditingBankAdmin}
                               onEditApiKeys={setEditingApiKeysAdmin}
@@ -3880,42 +3908,42 @@ export default function AdminManagement() {
             )}
 
             {/* ── User Management Tab ── */}
-            {selectedTab === 'users' && (
-              <UserManagementTab isSuperAdmin={isSuperAdmin} onError={setError} />
+            {selectedTab === 'users' && canAccessUserManagement && (
+              <UserManagementTab isSuperAdmin={isSuperAdmin} canManageTeam={canManageTeam} onError={setError} />
             )}
 
-            {selectedTab === 'audit-logs' && isSuperAdmin && (
+            {selectedTab === 'audit-logs' && canAccessGovernance && (
               <AuditLogsTab onError={setError} />
             )}
 
             {/* ── Crypto Requests Tab ── */}
-            {selectedTab === 'crypto' && isSuperAdmin && (
+            {selectedTab === 'crypto' && canAccessCryptoRequests && (
               <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
             )}
 
             {/* ── Unified Wallet Control Tab ── */}
-            {selectedTab === 'wallet-control' && isSuperAdmin && (
+            {selectedTab === 'wallet-control' && canAccessWalletControl && (
               <WalletControlTab onError={setError} />
             )}
-            {selectedTab === 'operations' && isSuperAdmin && (
+            {selectedTab === 'operations' && canAccessOperations && (
               <AdminOperationsTab />
             )}
-            {selectedTab === 'toss-approvals' && isSuperAdmin && (
+            {selectedTab === 'toss-approvals' && canAccessTossApprovals && (
               <TossAccountApprovalsPanel />
             )}
-            {selectedTab === 'payment-channels' && isSuperAdmin && (
+            {selectedTab === 'payment-channels' && canAccessPaymentChannels && (
               <PaymentChannelsTab onError={setError} />
             )}
-            {selectedTab === 'wallet-settings' && isSuperAdmin && (
+            {selectedTab === 'wallet-settings' && canAccessWalletSettings && (
               <WalletSettingsTab onError={setError} />
             )}
-            {selectedTab === 'bitgo' && isSuperAdmin && (
+            {selectedTab === 'bitgo' && canAccessBitgo && (
               <BitGoWalletTab onError={setError} />
             )}
-            {selectedTab === 'checkout-design' && isSuperAdmin && (
+            {selectedTab === 'checkout-design' && canAccessCheckoutDesign && (
               <CheckoutDesignTab onError={setError} />
             )}
-            {selectedTab === 'platform-settings' && isSuperAdmin && (
+            {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
               <PlatformSettingsTab onError={setError} />
             )}
 
@@ -3925,7 +3953,7 @@ export default function AdminManagement() {
             )}
 
             {/* ── Team Members Tab ── */}
-            {selectedTab === 'team-members' && isSuperAdmin && (
+            {selectedTab === 'team-members' && canManageTeam && (
               <TeamMembersTab />
             )}
           </div>

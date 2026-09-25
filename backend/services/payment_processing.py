@@ -104,6 +104,10 @@ class PaymentProcessor:
 
         normalized_status = str(status or "").strip().lower()
         if normalized_status in {"paid", "completed", "success", "succeeded", "executed"}:
+            # A customer payment can remain pending locally while it waits for
+            # super-admin approval. Keep the provider's receipt timestamp so
+            # approval screens can distinguish received funds from unpaid ones.
+            txn.paid_at = txn.paid_at or datetime.now(timezone.utc)
             if is_customer_payment(txn) and txn.approval_status != "approved":
                 txn.approval_status = "pending"
                 txn.status = "pending"

@@ -26,7 +26,7 @@ export default function PaymentLinksList() {
 
   const filteredLinks = useMemo(() => {
     const currencyLinks = links.filter(
-      (link) =>       link.currency.toUpperCase() === 'PHP',
+      (link) => link.currency.toUpperCase() === currentCurrency,
     );
     if (!searchTerm.trim()) {
       return currencyLinks;
@@ -39,7 +39,7 @@ export default function PaymentLinksList() {
         .toLowerCase()
         .includes(lowerTerm)
     );
-  }, [links, searchTerm]);
+  }, [currentCurrency, links, searchTerm]);
 
   return (
     <Layout>

@@ -24,6 +24,25 @@ export type PaymentLink = {
   bankAccountDetails?: PaymentLinkBankAccount;
 };
 
+export type PaymentStatus = 'paid' | 'pending' | 'failed';
+
+const PAID_PAYMENT_STATUSES = new Set(['paid', 'completed', 'executed', 'success', 'succeeded']);
+const PENDING_PAYMENT_STATUSES = new Set(['pending', 'processing', 'created', 'in_progress', 'in-progress']);
+
+export function normalizePaymentStatus(status?: string | null): PaymentStatus {
+  const normalized = String(status || 'pending').trim().toLowerCase();
+  if (PAID_PAYMENT_STATUSES.has(normalized)) return 'paid';
+  if (PENDING_PAYMENT_STATUSES.has(normalized)) return 'pending';
+  return 'failed';
+}
+
+export function getPaymentStatusLabel(status?: string | null): string {
+  const normalized = String(status || 'pending').trim().toLowerCase();
+  if (normalizePaymentStatus(normalized) === 'paid') return 'Paid';
+  if (normalizePaymentStatus(normalized) === 'pending') return 'Pending';
+  return normalized.replace(/[_-]+/g, ' ') || 'Failed';
+}
+
 const STORAGE_KEY = 'swiftpay_payment_links';
 
 const defaultLinks: PaymentLink[] = [

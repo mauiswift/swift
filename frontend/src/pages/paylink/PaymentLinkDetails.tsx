@@ -4,7 +4,14 @@ import { ChevronLeft, Copy, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { getIdentifiedPaymentLinkUrl, getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
+import {
+  getIdentifiedPaymentLinkUrl,
+  getPaymentLink,
+  getPaymentStatusLabel,
+  normalizePaymentStatus,
+  togglePaymentLinkStatus,
+  PaymentLink,
+} from '@/lib/paymentLinks';
 import { updatePaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
@@ -75,9 +82,9 @@ export default function PaymentLinkDetails() {
   const permanentLinkUrl = getIdentifiedPaymentLinkUrl(link, window.location.origin);
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
   const krwBankAccount = link.bankAccountDetails;
-  const paymentStatus = String(link.paymentStatus || 'pending').toLowerCase();
-  const isPaid = paymentStatus === 'paid' || paymentStatus === 'completed' || paymentStatus === 'executed';
-  const isPaymentPending = paymentStatus === 'pending' || paymentStatus === 'processing';
+  const paymentStatus = normalizePaymentStatus(link.paymentStatus);
+  const isPaid = paymentStatus === 'paid';
+  const isPaymentPending = paymentStatus === 'pending';
 
   return (
     <Layout>
@@ -287,7 +294,7 @@ export default function PaymentLinkDetails() {
                 <td className="px-8 py-5">
                   <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold border ${isPaid ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : isPaymentPending ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-500' : isPaymentPending ? 'bg-amber-500' : 'bg-red-500'}`} />
-                    {isPaid ? 'Paid' : isPaymentPending ? 'Pending' : paymentStatus}
+                    {getPaymentStatusLabel(link.paymentStatus)}
                   </span>
                 </td>
               </tr>

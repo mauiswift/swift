@@ -42,6 +42,10 @@ async def test_create_and_mark_payment_flow():
         )
         assert updated["status"] == "pending"
         assert updated["provider_reference"] == "prov-123"
+        fetched = await session.get(Transactions, payment["transaction_id"])
+        assert fetched is not None
+        assert fetched.paid_at is not None
+        assert is_payment_received(fetched) is True
 
     await engine.dispose()
 
