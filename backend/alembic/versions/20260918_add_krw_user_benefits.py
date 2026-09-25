@@ -3,7 +3,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "20260918_add_krw_user_benefits"
-down_revision = "20260918_add_toss_virtual_account_application"
+down_revision = "20260918_toss_virtual"
 branch_labels = None
 depends_on = None
 
