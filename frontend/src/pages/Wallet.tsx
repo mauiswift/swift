@@ -1180,7 +1180,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 </p>
                 <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-500" aria-live="polite">
                   <span className={`h-2 w-2 rounded-full ${walletEventsConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                  {walletEventsConnected ? 'Live wallet updates enabled' : 'Connecting to live wallet updates…'}
+                  {walletEventsConnected ? 'Instapay' : 'Connecting to live wallet updates…'}
                 </div>
               </div>
             </div>
