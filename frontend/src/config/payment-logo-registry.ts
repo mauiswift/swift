@@ -1,11 +1,16 @@
 /** Canonical bank assets and aliases returned by different bank APIs. */
-export const normalizeBrandKey = (value: string): string =>
-  String(value ?? '')
-    .trim()
+export const normalizeBrandKey = (value: string): string => {
+  const raw = String(value ?? '').trim();
+  const aliases: Record<string, string> = {
+    '토스페이': 'tosspay',
+    '토스뱅크': 'tossbank',
+  };
+  return (aliases[raw] || raw)
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '');
+};
 
 export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation', 'bnorphmxxx', 'ornnphm1xxx'],
@@ -60,6 +65,7 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = Object.fromE
 
 export const resolveBrandLogoPath = (value: string): string => {
   const key = normalizeBrandKey(value);
+  if (!key) return '';
   return OFFICIAL_BRAND_LOGO_REGISTRY[key]
     || Object.entries(OFFICIAL_BRAND_LOGO_REGISTRY).find(([alias]) => key.startsWith(alias) || alias.startsWith(key))?.[1]
     || '';
