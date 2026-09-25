@@ -8,17 +8,17 @@ export const normalizeBrandKey = (value: string): string =>
     .replace(/[^a-z0-9]+/g, '');
 
 export const BANK_LOGO_ALIASES: Record<string, string[]> = {
-  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation'],
-  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc', 'bankofthephilippineislandscorporation'],
-  '/logos/metrobank.svg': ['metrobank', 'metrobankphilippines', 'mbtc', 'metropolitanbank', 'metropolitanbankandtrust', 'metropolitanbankandtrustcompany'],
-  '/logos/unionbank.svg': ['unionbank', 'unionbankofthephilippines', 'unionbankofthephilippinesinc', 'unionbankofthephilippinescorporation'],
-  '/logos/security-bank.svg': ['securitybank', 'security_bank', 'secbank', 'secbankph', 'securitybankcorp', 'securitybankcorporation'],
-  '/logos/landbank.png': ['landbank', 'ldb', 'landbankph', 'landbankphilippines', 'landbankofthephilippines', 'landbankofthephilippinesinc'],
-  '/logos/dbp.svg': ['dbp', 'developmentbank', 'developmentbankofthephils', 'developmentbankofthephilippines'],
-  '/logos/rcbc.svg': ['rcbc', 'rizalcommercialbankingcorporation'],
-  '/logos/psbank.svg': ['psbank', 'psb', 'philippinesavingsbank', 'philippinesavingsbankinc'],
-  '/logos/asia-united-bank.png': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation'],
-  '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation'],
+  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation', 'bnorphmxxx'],
+  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc', 'bankofthephilippineislandscorporation', 'bopiphmxxx'],
+  '/logos/metrobank.svg': ['metrobank', 'metrobankphilippines', 'mbtc', 'metropolitanbank', 'metropolitanbankandtrust', 'metropolitanbankandtrustcompany', 'mbtcphmmxxx'],
+  '/logos/unionbank.svg': ['unionbank', 'unionbankofthephilippines', 'unionbankofthephilippinesinc', 'unionbankofthephilippinescorporation', 'ubphphmmxxx'],
+  '/logos/security-bank.svg': ['securitybank', 'security_bank', 'secbank', 'secbankph', 'securitybankcorp', 'securitybankcorporation', 'setcphmmxxx'],
+  '/logos/landbank.png': ['landbank', 'ldb', 'landbankph', 'landbankphilippines', 'landbankofthephilippines', 'landbankofthephilippinesinc', 'tlbpphmmxxx'],
+  '/logos/dbp.svg': ['dbp', 'developmentbank', 'developmentbankofthephils', 'developmentbankofthephilippines', 'dbphphmmxxx'],
+  '/logos/rcbc.svg': ['rcbc', 'rizalcommercialbankingcorporation', 'rcbcphmmxxx'],
+  '/logos/psbank.svg': ['psbank', 'psb', 'philippinesavingsbank', 'philippinesavingsbankinc', 'phbmphmmxxx'],
+  '/logos/asia-united-bank.png': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation', 'aubkphmmxxx'],
+  '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation', 'ewbcphmmxxx'],
   '/logos/netbank.png': ['netbank', 'net_bank'],
   '/logos/bsp.svg': ['bsp', 'bangkosentralngpilipinas', 'centralbankofthephilippines'],
   '/logos/gcash.png': ['gcash', 'gcashwallet'],
@@ -30,7 +30,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/mastercard.svg': ['mastercard'],
   '/logos/unionpay.svg': ['unionpay', 'unionpaynetwork', 'unionpayinternational'],
   '/logos/card.svg': ['card', 'swiftpayorder', 'paymentlink'],
-  '/logos/alipay.png': ['alipay', 'alipayqr', 'alipaypay'],
+  '/logos/alipay.png': ['alipay', 'alipayqr', 'alipaypay', 'aphiphm2xxx'],
   '/logos/wechat.png': ['wechat', 'wechatpay', 'wechatqr'],
   '/logos/qrph.svg': ['qrph', 'qr'],
   '/logos/kb-kookmin.svg': ['kb', 'kookminbank', 'kbkookminbank'],
@@ -59,5 +59,7 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = Object.fromE
 
 export const resolveBrandLogoPath = (value: string): string => {
   const key = normalizeBrandKey(value);
-  return OFFICIAL_BRAND_LOGO_REGISTRY[key] || '';
+  return OFFICIAL_BRAND_LOGO_REGISTRY[key]
+    || Object.entries(OFFICIAL_BRAND_LOGO_REGISTRY).find(([alias]) => key.startsWith(alias) || alias.startsWith(key))?.[1]
+    || '';
 };
