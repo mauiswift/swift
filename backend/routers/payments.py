@@ -1271,11 +1271,17 @@ async def get_checkout_payment(
         elif (txn.currency or "").upper() == "KRW":
             virtual_account = PaymentwallService.generate_krw_virtual_account(
                 user_id=str(txn.user_id),
-                reference_id=str(txn.external_id or txn.id),
+                # Bind the account to the persisted payment session, not the
+                # merchant reference. A user can reuse a reference while
+                # creating a new checkout and must still receive a new account.
+                reference_id=f"session-{txn.id}",
             )
-            bank_name = txn.bank_name or bank_name or virtual_account["bank_name"]
-            bank_account_number = txn.bank_account_number or bank_account_number or virtual_account["number"]
-            bank_account_name = txn.bank_account_name or bank_account_name or virtual_account["account_name"]
+            # KRW collection accounts are session-scoped. Never reuse a
+            # merchant settlement account or a previously stored account
+            # number for a new checkout session.
+            bank_name = virtual_account["bank_name"]
+            bank_account_number = virtual_account["number"]
+            bank_account_name = virtual_account["account_name"]
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)

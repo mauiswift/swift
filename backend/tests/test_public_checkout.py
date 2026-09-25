@@ -149,10 +149,23 @@ def test_krw_checkout_does_not_expose_security_bank():
         assert payload["bank_name"] == "Toss Bank"
         expected_account = PaymentwallService.generate_krw_virtual_account(
             user_id="demo-user",
-            reference_id=txn.external_id,
+            reference_id=f"session-{txn.id}",
         )
         assert payload["bank_account_number"] == expected_account["number"]
         assert "security" not in payload["bank_name"].casefold()
+
+
+def test_krw_checkout_account_changes_between_payment_sessions():
+    first = PaymentwallService.generate_krw_virtual_account(
+        user_id="same-user",
+        reference_id="session-101",
+    )
+    second = PaymentwallService.generate_krw_virtual_account(
+        user_id="same-user",
+        reference_id="session-102",
+    )
+
+    assert first["number"] != second["number"]
 
 
 def test_legacy_gcash_redirect_uses_internal_swiftpay_gcash_page():
