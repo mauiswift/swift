@@ -1025,6 +1025,10 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 _inline_button(_t(str(chat_id), "⚙️ Settings", "⚙️ 设置", db_lang=selected_lang), callback_data="action:settings")
             ],
             [
+                _inline_button(_t(str(chat_id), "💱 Change Currency", "💱 切换货币", db_lang=selected_lang), callback_data="action:currency"),
+                _inline_button(_t(str(chat_id), "❓ Help", "❓ 帮助", db_lang=selected_lang), callback_data="action:help")
+            ],
+            [
                 _inline_button(_t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), callback_data="wizard:/topup"),
                 _inline_button(_t(str(chat_id), "💸 Payout", "💸 出款", db_lang=selected_lang), callback_data="wizard:/disburse")
             ],
@@ -1785,6 +1789,18 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         "━━━━━━━━━━━━━━━━━━━━\n"
                         "Adjust account preferences, security, and bot configuration from the dashboard flow.\n\n"
                         "Use <code>/setpin</code> or <code>/help</code> to continue.",
+                    )
+                elif action == "currency":
+                    await _send_currency_prompt(tg, cq_chat_id, cq_first_name)
+                elif action == "help":
+                    await _send_bot_response(
+                        tg,
+                        cq_chat_id,
+                        "Quick Help",
+                        "Use the buttons for dashboard modules and wallet actions. "
+                        "Sensitive transfers and USDT conversions require the secure wallet flow.",
+                        next_step="Choose an action below or send /help for the full command list.",
+                        reply_markup=_start_kb(),
                     )
                 elif action == "merchant_center":
                     await tg.send_message(

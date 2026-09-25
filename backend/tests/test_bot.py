@@ -1190,6 +1190,10 @@ def test_bot_keyboards_share_command_button_shape():
         "text": "Buy",
         "callback_data": "wizard:/buyusdt",
     }
+    panel_buttons = telegram_router._start_kb()
+    panel_labels = [button["text"] for row in panel_buttons["keyboard"] for button in row]
+    assert "/buyusdt" not in panel_labels
+    assert "/topup" in panel_labels
 
 
 def test_inline_button_requires_one_action():
