@@ -1307,6 +1307,16 @@ export default function Checkout() {
                     </div>
                     <p className="mt-4 text-xs font-bold text-slate-900">{isHighValuePhp ? 'Scan with a QRPh-enabled banking app' : 'QR로 송금 정보 불러오기'}</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-700">{isHighValuePhp ? 'Verify the bank details and send the exact amount shown above.' : '계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.'}</p>
+                    {!isHighValuePhp && (
+                      <button
+                        type="button"
+                        onClick={openTossApp}
+                        className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0064FF] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0052d6]"
+                      >
+                        <Smartphone className="h-4 w-4" aria-hidden="true" />
+                        {checkoutText('Open Toss app', '토스 앱 열기')}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
