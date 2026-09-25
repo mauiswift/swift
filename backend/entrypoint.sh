@@ -108,6 +108,15 @@ async def normalize_migration_versions() -> None:
     engine = create_async_engine(database_url)
     try:
         async with engine.begin() as connection:
+            version_table_exists = await connection.scalar(
+                text("SELECT to_regclass('alembic_version')")
+            )
+            if version_table_exists is None:
+                print(
+                    "[entrypoint] alembic_version does not exist yet; "
+                    "skipping migration marker normalization"
+                )
+                return
             versions = {
                 row[0]
                 for row in (
