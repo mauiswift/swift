@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { client } from '@/lib/api';
 import {
   ResponsiveContainer,
@@ -230,7 +231,7 @@ export default function ImprovedCheckout() {
               <div className="space-y-6">
                 {/* DIGITAL WALLETS */}
                 <ResponsiveCard>
-                  <ResponsiveHeading3>💳 Digital Wallets</ResponsiveHeading3>
+                  <ResponsiveHeading3>Digital Wallets</ResponsiveHeading3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                     {['GCash', 'Maya', 'PayMaya'].map((wallet) => (
                       <button
@@ -245,6 +246,7 @@ export default function ImprovedCheckout() {
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
+                        <PaymentBrandLogo brand={wallet} size="md" className="mx-auto mb-2" />
                         <p className="font-medium text-sm sm:text-base">{wallet}</p>
                       </button>
                     ))}
@@ -253,7 +255,7 @@ export default function ImprovedCheckout() {
 
                 {/* BANK TRANSFER */}
                 <ResponsiveCard>
-                  <ResponsiveHeading3>🏦 Bank Transfer</ResponsiveHeading3>
+                  <ResponsiveHeading3>Bank Transfer</ResponsiveHeading3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                     {['BDO', 'BPI', 'PNB', 'Metrobank', 'Chinabank', 'SecurityBank'].map((bank) => (
                       <button
@@ -268,6 +270,7 @@ export default function ImprovedCheckout() {
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
+                        <PaymentBrandLogo brand={bank} size="md" className="mx-auto mb-2" />
                         <p className="font-medium text-sm sm:text-base">{bank}</p>
                       </button>
                     ))}

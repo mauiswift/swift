@@ -583,6 +583,21 @@ class SwiftPayService:
             logger.exception("SwiftPay get_payment_status_by_reference exception")
             return {"success": False, "error": str(exc)}
 
+    async def get_order_status(
+        self,
+        *,
+        reference_no: Optional[str] = None,
+        payment_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Resolve a SwiftPay order status using its payment ID or reference."""
+        if payment_id:
+            result = await self.get_payment_status(payment_id)
+            if result.get("success"):
+                return result
+        if reference_no:
+            return await self.get_payment_status_by_reference(reference_no)
+        return {"success": False, "error": "SwiftPay reference_no or payment_id is required"}
+
     async def generate_qrph(
         self,
         *,

@@ -103,7 +103,17 @@ class PaymentProcessor:
             raise LookupError(f"payment {payment_id} not found")
 
         normalized_status = str(status or "").strip().lower()
-        if normalized_status in {"paid", "completed", "success", "succeeded", "executed"}:
+        if normalized_status in {
+            "paid",
+            "completed",
+            "complete",
+            "success",
+            "successful",
+            "succeeded",
+            "successfully_paid",
+            "executed",
+            "settled",
+        }:
             # A customer payment can remain pending locally while it waits for
             # super-admin approval. Keep the provider's receipt timestamp so
             # approval screens can distinguish received funds from unpaid ones.

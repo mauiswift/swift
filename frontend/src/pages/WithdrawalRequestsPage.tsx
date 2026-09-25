@@ -7,6 +7,7 @@ import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { fmtCurrency } from '@/lib/format';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface WithdrawalRequest {
   id: number;
@@ -209,14 +210,14 @@ export default function WithdrawalRequestsPage() {
               const isActive = activeId === req.id;
               const currency = normalizeCurrency(req.currency || 'PHP');
               const isPHP = currency !== 'USDT' || !!req.bank_code;
-              const icon = isPHP ? '🏦' : '💎';
+              const brand = isPHP ? (req.bank_code || 'Bank transfer') : 'USDT';
               
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
                     {['pending', 'processing', 'transferring'].includes(req.status) && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="mt-3 h-4 w-4 rounded border-border" aria-label={`Select request ${req.id}`} />}
-                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-xl">
-                      {icon}
+                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                      <PaymentBrandLogo brand={brand} size="sm" className="h-9 w-9 border-0 bg-transparent p-0 shadow-none" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

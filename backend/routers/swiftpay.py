@@ -303,11 +303,32 @@ async def get_swiftpay_transaction_status(
                 )
 
                 if sp_status and sp_status.get("success"):
-                    sp_payment_status = (sp_status.get("data", {}).get("status") or "").upper()
+                    status_data = sp_status.get("data") or {}
+                    if isinstance(status_data, list):
+                        status_data = status_data[0] if status_data else {}
+                    if not isinstance(status_data, dict):
+                        status_data = {}
+                    sp_payment_status = str(
+                        status_data.get("status")
+                        or status_data.get("payment_status")
+                        or status_data.get("paymentStatus")
+                        or status_data.get("state")
+                        or status_data.get("payment_state")
+                        or ""
+                    ).strip().upper()
                     response["swiftpay_api_status"] = sp_payment_status
 
                     # If SwiftPay shows payment as paid but DB shows pending, sync it
-                    if sp_payment_status in {"EXECUTED", "PAID", "COMPLETED", "SUCCESS"}:
+                    if sp_payment_status in {
+                        "EXECUTED",
+                        "PAID",
+                        "COMPLETED",
+                        "COMPLETE",
+                        "SUCCESS",
+                        "SUCCESSFUL",
+                        "SUCCEEDED",
+                        "SETTLED",
+                    }:
                         logger.info(f"Syncing payment {txn.id}: SwiftPay status={sp_payment_status}, marking as paid")
                         await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
                         response["status"] = "paid"
@@ -415,7 +436,25 @@ async def swiftpay_webhook(
         await db.commit()
         logger.info("SwiftPay webhook: updated xendit_id for transaction %s", txn.id)
 
-    terminal_paid = payment_status in {"EXECUTED", "PAID", "COMPLETED", "SUCCESS", "SUCCEEDED"} or (payload.get("x_disbursement_status") or "").upper() in {"EXECUTED", "PAID", "COMPLETED", "SUCCESS", "SUCCEEDED"}
+    terminal_paid = payment_status in {
+        "EXECUTED",
+        "PAID",
+        "COMPLETED",
+        "COMPLETE",
+        "SUCCESS",
+        "SUCCESSFUL",
+        "SUCCEEDED",
+        "SETTLED",
+    } or (payload.get("x_disbursement_status") or "").upper() in {
+        "EXECUTED",
+        "PAID",
+        "COMPLETED",
+        "COMPLETE",
+        "SUCCESS",
+        "SUCCESSFUL",
+        "SUCCEEDED",
+        "SETTLED",
+    }
     terminal_failed = payment_status in {"CANCELED", "REJECTED", "EXPIRED"} or (payload.get("x_disbursement_status") in {"CANCELED", "REJECTED", "EXPIRED", "FAILED"})
 
     if terminal_paid:

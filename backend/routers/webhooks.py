@@ -61,7 +61,16 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
             "merchant_reference",
             "merchantReferenceNo",
         )
-        status = _payload_value(payload, "x_payment_status", "status", "payment_status", "paymentStatus")
+        status = _payload_value(
+            payload,
+            "x_payment_status",
+            "status",
+            "payment_status",
+            "paymentStatus",
+            "payment_state",
+            "paymentState",
+            "result",
+        )
         payment_id = _payload_value(payload, "x_payment_id", "payment_id", "paymentId", "id")
         amount = _payload_value(payload, "amount", "paid_amount", "paidAmount")
         
@@ -70,11 +79,14 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # Map SwiftPay status to our internal status
         status_map = {
             "success": "completed",
+            "successful": "completed",
             "succeeded": "completed",
+            "complete": "completed",
             "completed": "completed",
             "executed": "completed",
             "paid": "completed",
             "successfully_paid": "completed",
+            "settled": "completed",
             "pending": "pending",
             "failed": "failed",
             "cancelled": "cancelled",
@@ -168,7 +180,15 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         payload = await request.json()
         
         order_id = _payload_value(payload, "order_id", "orderId", "checkout_id", "checkoutId", "reference_no", "referenceNo")
-        status = _payload_value(payload, "status", "payment_status", "paymentStatus")
+        status = _payload_value(
+            payload,
+            "status",
+            "payment_status",
+            "paymentStatus",
+            "payment_state",
+            "paymentState",
+            "result",
+        )
         transaction_id = _payload_value(payload, "transaction_id", "transactionId", "payment_id", "paymentId", "id")
         amount = _payload_value(payload, "amount", "paid_amount", "paidAmount")
         payment_method = _payload_value(payload, "payment_method", "paymentMethod", "method")
@@ -180,9 +200,11 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             "success": "completed",
             "successful": "completed",
             "succeeded": "completed",
+            "complete": "completed",
             "completed": "completed",
             "paid": "completed",
             "successfully_paid": "completed",
+            "settled": "completed",
             "pending": "pending",
             "failed": "failed",
             "cancelled": "cancelled",

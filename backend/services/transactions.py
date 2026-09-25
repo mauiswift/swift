@@ -30,6 +30,17 @@ APPROVABLE_PAYMENT_STATUSES = {
     "unpaid",
     "awaiting_payment",
 }
+RECEIVED_PAYMENT_STATUSES = {
+    "paid",
+    "completed",
+    "complete",
+    "success",
+    "successful",
+    "succeeded",
+    "successfully_paid",
+    "executed",
+    "settled",
+}
 NON_CUSTOMER_PAYMENT_TYPES = {
     "disbursement",
     "swiftpay_disbursement",
@@ -62,7 +73,7 @@ def is_payment_received(txn: Transactions) -> bool:
         return False
     status = str(txn.status or "").lower()
     approval_status = str(txn.approval_status or "").lower()
-    return bool(txn.paid_at) or status in {"paid", "completed"} or approval_status == "approved"
+    return bool(txn.paid_at) or status in RECEIVED_PAYMENT_STATUSES or approval_status == "approved"
 
 
 def publish_payment_link_created(txn: Transactions, user_name: Optional[str] = None) -> None:

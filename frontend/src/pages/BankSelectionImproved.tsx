@@ -24,13 +24,13 @@ import {
 } from '@/lib/responsive';
 import { ResponsiveInput } from '@/components/ResponsiveForm';
 import { ResponsiveCard, ResponsiveBadge } from '@/components/ResponsiveCards';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface Bank {
   code: string;
   name: string;
   shortName: string;
   category: 'major' | 'regional' | 'digital';
-  logo: string;
   processingTime: string;
   popular: boolean;
   featured: boolean;
@@ -46,7 +46,6 @@ const BANKS: Bank[] = [
     name: 'BDO Unibank',
     shortName: 'BDO',
     category: 'major',
-    logo: '🏦',
     processingTime: '5-30 min',
     popular: true,
     featured: true,
@@ -60,7 +59,6 @@ const BANKS: Bank[] = [
     name: 'BPI',
     shortName: 'BPI',
     category: 'major',
-    logo: '🏦',
     processingTime: '5-30 min',
     popular: true,
     featured: true,
@@ -74,7 +72,6 @@ const BANKS: Bank[] = [
     name: 'Metrobank',
     shortName: 'MBT',
     category: 'major',
-    logo: '🏦',
     processingTime: '10-30 min',
     popular: true,
     featured: false,
@@ -88,7 +85,6 @@ const BANKS: Bank[] = [
     name: 'Philippine National Bank',
     shortName: 'PNB',
     category: 'major',
-    logo: '🏦',
     processingTime: '10-30 min',
     popular: true,
     featured: false,
@@ -102,7 +98,6 @@ const BANKS: Bank[] = [
     name: 'Union Bank',
     shortName: 'UB',
     category: 'major',
-    logo: '🏦',
     processingTime: '5-30 min',
     popular: false,
     featured: false,
@@ -116,7 +111,6 @@ const BANKS: Bank[] = [
     name: 'Security Bank',
     shortName: 'SB',
     category: 'major',
-    logo: '🏦',
     processingTime: '10-30 min',
     popular: false,
     featured: false,
@@ -130,7 +124,6 @@ const BANKS: Bank[] = [
     name: 'GCash',
     shortName: 'GCash',
     category: 'digital',
-    logo: '💳',
     processingTime: 'Instant',
     popular: true,
     featured: true,
@@ -144,7 +137,6 @@ const BANKS: Bank[] = [
     name: 'Maya',
     shortName: 'Maya',
     category: 'digital',
-    logo: '💳',
     processingTime: 'Instant',
     popular: true,
     featured: false,
@@ -158,7 +150,6 @@ const BANKS: Bank[] = [
     name: 'Chinabank',
     shortName: 'CB',
     category: 'regional',
-    logo: '🏦',
     processingTime: '15-45 min',
     popular: false,
     featured: false,
@@ -172,7 +163,6 @@ const BANKS: Bank[] = [
     name: 'Land Bank of the Philippines',
     shortName: 'LBP',
     category: 'regional',
-    logo: '🏦',
     processingTime: '15-45 min',
     popular: false,
     featured: false,
@@ -203,7 +193,7 @@ const BankCard: React.FC<BankCardProps> = ({ bank, selected, onSelect }) => {
         <div className="flex-1 min-w-0">
           {/* Bank Header */}
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl sm:text-3xl">{bank.logo}</span>
+            <PaymentBrandLogo brand={bank.name} size="lg" className="h-12 w-16 border-0 shadow-none" />
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-sm sm:text-base text-gray-900 truncate">
                 {bank.shortName}
@@ -381,7 +371,7 @@ export default function BankSelectionPage() {
             {filteredBanks.featured.length > 0 && (
               <BankSection
                 title="Recommended"
-                icon="🌟"
+                icon={<TrendingUp className="h-5 w-5 text-amber-500" />}
                 description="Fast and reliable options recommended for you"
                 banks={filteredBanks.featured}
                 selectedBank={selectedBank}
@@ -393,7 +383,7 @@ export default function BankSelectionPage() {
             {filteredBanks.popular.length > 0 && (
               <BankSection
                 title="Major Banks"
-                icon="🏦"
+                icon={<Building2 className="h-5 w-5 text-blue-600" />}
                 description="Top banks in the Philippines"
                 banks={filteredBanks.popular}
                 selectedBank={selectedBank}
@@ -405,7 +395,7 @@ export default function BankSelectionPage() {
             {filteredBanks.digital.length > 0 && (
               <BankSection
                 title="Digital Wallets"
-                icon="📱"
+                icon={<Phone className="h-5 w-5 text-emerald-600" />}
                 description="Instant transfers via mobile wallets"
                 banks={filteredBanks.digital}
                 selectedBank={selectedBank}
@@ -417,7 +407,7 @@ export default function BankSelectionPage() {
             {filteredBanks.other.length > 0 && (
               <BankSection
                 title="Other Banks"
-                icon="🏢"
+                icon={<MapPin className="h-5 w-5 text-slate-600" />}
                 description="Regional and specialized banks"
                 banks={filteredBanks.other}
                 selectedBank={selectedBank}
@@ -454,7 +444,7 @@ export default function BankSelectionPage() {
               {selectedBank ? (
                 <>
                   <div className="text-center py-6">
-                    <span className="text-5xl block mb-3">{selectedBank.logo}</span>
+                    <PaymentBrandLogo brand={selectedBank.name} size="lg" className="mx-auto mb-3 h-16 w-24" />
                     <h3 className="text-xl font-bold">{selectedBank.shortName}</h3>
                     <p className="text-sm text-gray-600 mt-1">
                       {selectedBank.name}
@@ -506,7 +496,7 @@ export default function BankSelectionPage() {
               {/* INFO PANEL */}
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-6">
                 <h4 className="font-semibold text-sm text-blue-900 mb-2">
-                  💡 Tips for Success
+                  Tips for Success
                 </h4>
                 <ul className="text-xs text-blue-900 space-y-1">
                   <li>• Have your account details ready</li>

@@ -163,7 +163,7 @@ const PRESET_BUTTONS = [
     category: 'Top Up',
     buttons: [
       { label: '⬆️ Top Up', callback_data: 'wizard:/topup' },
-      { label: '🏦 Bank Deposit', callback_data: 'wizard:/deposit' },
+      { label: 'Bank Deposit', callback_data: 'wizard:/deposit' },
     ]
   },
 ];

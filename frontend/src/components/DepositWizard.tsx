@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { buildAuthHeaders } from '@/lib/api';
-import { Clipboard, Loader2, Banknote, Landmark } from 'lucide-react';
+import { Clipboard, Loader2 } from 'lucide-react';
 import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const getDepositDestinations = (
   currency: string = 'PHP',
@@ -235,7 +236,6 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {walletTopUpOptions.map((option) => {
-                const Icon = option.icon === 'banknote' ? Banknote : Landmark;
                 return (
                   <button
                     key={option.value}
@@ -248,9 +248,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                        <Icon className="h-4 w-4" />
-                      </div>
+                      <PaymentBrandLogo brand={option.label} size="sm" className="h-9 w-12 border-0 shadow-none" />
                       <div>
                         <p className="font-semibold text-sm text-foreground">{option.label}</p>
                         <p className="text-[10px] text-slate-500 mt-1">{option.description}</p>
@@ -316,10 +314,13 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                   <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1">
                     <img src={companyLogoUrl} alt={selectedDestination.account_name || 'Company logo'} className="h-full w-full object-contain" />
                   </div>
-                ) : getBankLogo(selectedDestination.label) ? (
-                  <img src={getBankLogo(selectedDestination.label)} alt="" className="h-9 w-9 object-contain" />
                 ) : (
-                  <Landmark className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                  <PaymentBrandLogo
+                    brand={selectedDestination.label}
+                    logoUrl={getBankLogo(selectedDestination.label)}
+                    size="md"
+                    className="h-10 w-16"
+                  />
                 )}
                 <div>
                   <p className="text-xs font-medium text-slate-500">{isKrwFlow ? 'Receiving bank' : 'Company banking'}</p>
