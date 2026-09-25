@@ -73,9 +73,9 @@ DEFAULT_DEPOSIT_ACCOUNTS = [
         "currency": "PHP",
     },
     {
-        "value": "Instant VA",
-        "label": "Instant VA",
-        "bank_name": "Toss Bank",
+        "value": "Account Number",
+        "label": "Account Number",
+        "bank_name": "토스페이",
         "account_number": "1908-1618-8260",
         "account_name": "SwiftPay Ventures Inc.",
         "currency": "KRW",

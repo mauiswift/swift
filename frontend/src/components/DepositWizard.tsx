@@ -65,7 +65,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
     () => destinations || getDepositDestinations(
       normalizedCurrency,
       userId || 'swiftpay-krw-virtual-account',
-      bankName || 'Toss Bank',
+      bankName || '토스페이',
       accountHolderName || 'SwiftPay Ventures Inc.',
     ),
     [normalizedCurrency, userId, bankName, accountHolderName, destinations],

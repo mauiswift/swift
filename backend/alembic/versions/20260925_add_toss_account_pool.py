@@ -12,7 +12,7 @@ def upgrade() -> None:
     op.create_table(
         "toss_account_pool",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("bank_name", sa.String(length=128), nullable=False, server_default="Toss Bank"),
+        sa.Column("bank_name", sa.String(length=128), nullable=False, server_default="토스페이"),
         sa.Column("account_number", sa.String(length=64), nullable=False),
         sa.Column("account_holder_name", sa.String(length=256), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),

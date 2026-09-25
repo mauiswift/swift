@@ -13,7 +13,7 @@ class TossAccountPool(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    bank_name = Column(String(128), nullable=False, default="Toss Bank")
+    bank_name = Column(String(128), nullable=False, default="토스페이", server_default="토스페이")
     account_number = Column(String(64), nullable=False, unique=True)
     account_holder_name = Column(String(256), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")

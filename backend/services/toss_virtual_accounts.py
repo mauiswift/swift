@@ -15,7 +15,7 @@ def create_toss_virtual_account(
     account_number = f"{account_number[:3]}-{account_number[3:7]}-{account_number[7:]}"
     holder = account_holder_name.strip() or "SwiftPay Merchant"
     return {
-        "bank_name": "Toss Bank",
+        "bank_name": "토스페이",
         "account_number": account_number,
         "account_holder_name": holder,
         "currency": "KRW",

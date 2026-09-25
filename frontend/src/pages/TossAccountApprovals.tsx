@@ -60,7 +60,7 @@ export function TossAccountApprovalsPanel() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending_review' | 'active' | 'suspended'>('all');
   const [pool, setPool] = useState<TossPoolAccount[]>([]);
-  const [poolForm, setPoolForm] = useState({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
+  const [poolForm, setPoolForm] = useState({ bank_name: '토스페이', account_number: '', account_holder_name: '', is_active: true });
   const [editingPoolId, setEditingPoolId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -95,7 +95,7 @@ export function TossAccountApprovalsPanel() {
       toast.error(response.data?.detail || 'Unable to save TOSS pool account.');
       return;
     }
-    setPoolForm({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
+    setPoolForm({ bank_name: '토스페이', account_number: '', account_holder_name: '', is_active: true });
     toast.success(editingPoolId ? 'TOSS pool account updated.' : 'TOSS pool account added.');
     setEditingPoolId(null);
     await load();
@@ -136,7 +136,7 @@ export function TossAccountApprovalsPanel() {
     const account = item.application.virtual_account;
     if (!account?.account_number) return;
     const copied = await copyTextToClipboard(
-      `${account.bank_name || 'Toss Bank'}\n${account.account_number}\n${account.account_holder_name || ''}`,
+      `${account.bank_name || '토스페이'}\n${account.account_number}\n${account.account_holder_name || ''}`,
     );
     if (copied) toast.success('Account details copied.');
     else toast.error('Unable to copy account details.');
@@ -145,7 +145,7 @@ export function TossAccountApprovalsPanel() {
   const openAccountControl = (item: TossApplication) => {
     const account = item.application.virtual_account || {};
     setAccountForm({
-      bank_name: account.bank_name || 'Toss Bank',
+      bank_name: account.bank_name || '토스페이',
       account_number: account.account_number || '',
       account_holder_name: account.account_holder_name || item.application.legal_name || item.name || '',
       status: account.status || 'active',
@@ -233,7 +233,7 @@ export function TossAccountApprovalsPanel() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">TOSS payment account pool</h2>
-                <p className="mt-1 text-sm text-slate-600">Add active Toss Bank accounts here. Each new KRW payment session is assigned the least recently used active account.</p>
+                <p className="mt-1 text-sm text-slate-600">Add active 토스페이 accounts here. Each new KRW payment session is assigned the least recently used active account.</p>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700">{pool.filter((account) => account.is_active).length} active</span>
             </div>

@@ -104,7 +104,7 @@ def test_krw_qr_generates_session_specific_toss_bank_account_details():
         reference_id="order-790",
     )
 
-    assert first["bank_account"]["bank_name"] == "Toss Bank"
+    assert first["bank_account"]["bank_name"] == "토스페이"
     assert first["bank_account"]["account_type"] == "virtual_account"
     assert first["bank_account"]["number"] != second["bank_account"]["number"]
     assert first["bank_account"] == service.create_krw_bank_transfer_qr(

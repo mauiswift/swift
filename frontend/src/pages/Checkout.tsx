@@ -1371,11 +1371,11 @@ export default function Checkout() {
                       {[
                         [checkoutText('Bank', '은행'), manualDepositBankName],
                         [checkoutText('Account name', '예금주'), manualDepositAccountName],
-                        [checkoutText('Account number', swiftpayVirtualAccountEnabled ? 'Instant VA' : '계좌번호'), manualDepositAccountNumber],
+                        [checkoutText('Account number', 'Account Number'), manualDepositAccountNumber],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-xl border border-[#dce7f5] bg-white px-4 py-3.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">{label}</p>
-                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' || label === 'Instant VA' ? 'font-mono' : ''}`}>{value}</p>
+                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' || label === 'Account Number' ? 'font-mono' : ''}`}>{value}</p>
                         </div>
                       ))}
                     </div>

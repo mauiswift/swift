@@ -317,7 +317,7 @@ class TossVirtualAccountControlRequest(BaseModel):
 
 
 class TossAccountPoolRequest(BaseModel):
-    bank_name: str = Field(default="Toss Bank", min_length=2, max_length=128)
+    bank_name: str = Field(default="토스페이", min_length=2, max_length=128)
     account_number: str = Field(min_length=6, max_length=64)
     account_holder_name: str = Field(min_length=2, max_length=256)
     is_active: bool = True

@@ -55,7 +55,7 @@ describe('isPaymentChannelEnabled', () => {
   });
 
   it('uses the configured TOSS fallback for empty KRW bank names', () => {
-    expect(normalizeKrwBankName('')).toBe('Toss Bank');
-    expect(normalizeKrwBankName(null)).toBe('Toss Bank');
+    expect(normalizeKrwBankName('')).toBe('토스페이');
+    expect(normalizeKrwBankName(null)).toBe('토스페이');
   });
 });

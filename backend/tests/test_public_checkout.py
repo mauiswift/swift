@@ -146,7 +146,7 @@ def test_krw_checkout_does_not_expose_security_bank():
 
         assert response.status_code == 200
         payload = response.json()
-        assert payload["bank_name"] == "Toss Bank"
+        assert payload["bank_name"] == "토스페이"
         expected_account = PaymentwallService.generate_krw_virtual_account(
             user_id="demo-user",
             reference_id=f"session-{txn.id}",
