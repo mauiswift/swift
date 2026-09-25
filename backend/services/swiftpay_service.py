@@ -604,29 +604,44 @@ class SwiftPayService:
         # Type is a query parameter
         request_url = f"{url}?type={qr_type}"
 
-        payload = {
-            "x_access_key": self.access_key,
-            "x_reference_no": reference_no,
-            "x_amount": self._format_amount(amount),
-            "x_currency": currency
-        }
-        payload["signature"] = self._sign_payload(payload)
+        base_reference = (reference_no or "").strip() or f"swiftpay-qr-{uuid.uuid4().hex[:12]}"
+        for attempt in range(1, 4):
+            current_reference = base_reference if attempt == 1 else f"{base_reference}-{uuid.uuid4().hex[:6]}"
+            payload = {
+                "x_access_key": self.access_key,
+                "x_reference_no": current_reference,
+                "x_amount": self._format_amount(amount),
+                "x_currency": currency,
+            }
+            payload["signature"] = self._sign_payload(payload)
 
-        logger.info("SwiftPay generate_qrph %s payload=%s", request_url, payload)
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                resp = await client.post(request_url, json=payload)
+            logger.info("SwiftPay generate_qrph %s reference=%s", request_url, current_reference)
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.post(request_url, json=payload)
 
-            text = resp.text or ""
-            if resp.status_code >= 400:
-                logger.warning("SwiftPay generate_qrph failed %s %s", resp.status_code, text)
-                return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
+                text = resp.text or ""
+                if resp.status_code >= 400:
+                    logger.warning("SwiftPay generate_qrph failed %s %s", resp.status_code, text)
+                    try:
+                        parsed = resp.json() if text else {}
+                    except Exception:
+                        parsed = {}
+                    error_code = parsed.get("errorCode") if isinstance(parsed, dict) else None
+                    if error_code == "DUPLICATED_REFERENCE_NO" and attempt < 3:
+                        logger.warning(
+                            "SwiftPay duplicate QRPH reference detected; retrying with %s",
+                            current_reference,
+                        )
+                        continue
+                    return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
 
-            data = resp.json() if text else {}
-            return {"success": True, "data": data}
-        except Exception as exc:
-            logger.exception("SwiftPay generate_qrph exception")
-            return {"success": False, "error": str(exc)}
+                data = resp.json() if text else {}
+                return {"success": True, "data": data, "reference_no": current_reference}
+            except Exception as exc:
+                logger.exception("SwiftPay generate_qrph exception")
+                return {"success": False, "error": str(exc)}
+        return {"success": False, "error": "Could not create SwiftPay QRPH checkout"}
 
     async def send_disbursement(
         self,

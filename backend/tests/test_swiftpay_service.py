@@ -235,6 +235,34 @@ async def test_generate_qrph_generates_php_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generate_qrph_retries_duplicate_reference(monkeypatch):
+    svc = SwiftPayService()
+    references = []
+
+    class RetryClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            references.append(json["x_reference_no"])
+            if len(references) == 1:
+                return DummyResponse(
+                    status_code=400,
+                    json_data={"errorCode": "DUPLICATED_REFERENCE_NO"},
+                )
+            return DummyResponse(status_code=200, json_data={"qrCode": "php-qr"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", RetryClient)
+
+    result = await svc.generate_qrph(amount=1, reference_no="existing-ref", currency="PHP")
+
+    assert result["success"] is True
+    assert references[0] == "existing-ref"
+    assert references[1] != references[0]
+    assert result["reference_no"] == references[1]
+
+
+@pytest.mark.asyncio
 async def test_generate_qrph_rejects_non_php_before_provider_call(monkeypatch):
     svc = SwiftPayService()
     result = await svc.generate_qrph(

@@ -1584,6 +1584,12 @@ async def select_checkout_institution(
 
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
+        provider_reference = qr_result.get("reference_no")
+        if provider_reference and provider_reference != txn.external_id:
+            # A duplicate reference is retried with a provider-safe suffix.
+            # Keep the alias locally so the webhook can still resolve this
+            # payment back to the public checkout transaction.
+            txn.xendit_id = provider_reference
         txn.transaction_type = "alipay_qr" if institution_code == "ALIPAY" else "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
