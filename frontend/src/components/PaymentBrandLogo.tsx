@@ -24,6 +24,12 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
     .map(part => part[0])
     .join('')
     .toUpperCase() || 'PM';
+  const fallbackTone = [
+    'from-blue-50 to-indigo-100 text-indigo-700',
+    'from-emerald-50 to-teal-100 text-teal-700',
+    'from-amber-50 to-orange-100 text-orange-700',
+    'from-violet-50 to-fuchsia-100 text-violet-700',
+  ][brandKey.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 4];
   const logoPath = failedProviderLogo
     ? undefined
     : (failedOfficialLogo ? logoUrl : (officialLogoPath || logoUrl));
@@ -39,8 +45,8 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
 
   if (!logoPath) {
     return (
-      <span className={cn('inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600', sizeClass, className)} role="img" aria-label={`${brandName} logo`}>
-        {isWallet ? <WalletCards className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" /> : <Building2 className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />}
+      <span className={cn('inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-gradient-to-br text-[10px] font-bold uppercase tracking-wide', fallbackTone, sizeClass, className)} role="img" aria-label={`${brandName} logo`}>
+        {isWallet ? <WalletCards className="h-3.5 w-3.5 opacity-70" aria-hidden="true" /> : <Building2 className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />}
         <span>{fallbackLabel}</span>
       </span>
     );

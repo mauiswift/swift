@@ -8,8 +8,8 @@ export const normalizeBrandKey = (value: string): string =>
     .replace(/[^a-z0-9]+/g, '');
 
 export const BANK_LOGO_ALIASES: Record<string, string[]> = {
-  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation', 'bnorphmxxx'],
-  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc', 'bankofthephilippineislandscorporation', 'bopiphmxxx'],
+  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation', 'bnorphmxxx', 'ornnphm1xxx'],
+  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc', 'bankofthephilippineislandscorporation', 'bopiphmxxx', 'bpdiphm1xxx'],
   '/logos/metrobank.svg': ['metrobank', 'metrobankphilippines', 'mbtc', 'metropolitanbank', 'metropolitanbankandtrust', 'metropolitanbankandtrustcompany', 'mbtcphmmxxx'],
   '/logos/unionbank.svg': ['unionbank', 'unionbankofthephilippines', 'unionbankofthephilippinesinc', 'unionbankofthephilippinescorporation', 'ubphphmmxxx'],
   '/logos/security-bank.svg': ['securitybank', 'security_bank', 'secbank', 'secbankph', 'securitybankcorp', 'securitybankcorporation', 'setcphmmxxx'],
@@ -19,11 +19,12 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/psbank.svg': ['psbank', 'psb', 'philippinesavingsbank', 'philippinesavingsbankinc', 'phbmphmmxxx'],
   '/logos/asia-united-bank.png': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation', 'aubkphmmxxx'],
   '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation', 'ewbcphmmxxx'],
-  '/logos/netbank.png': ['netbank', 'net_bank'],
+  '/logos/netbank.png': ['netbank', 'net_bank', 'cuobphm1xxx'],
+  '/logos/diskartech.png': ['diskartech', 'rcbcdigital'],
   '/logos/bsp.svg': ['bsp', 'bangkosentralngpilipinas', 'centralbankofthephilippines'],
   '/logos/gcash.png': ['gcash', 'gcashwallet'],
-  '/logos/maya.svg': ['maya', 'paymaya', 'mayawallet'],
-  '/logos/grab.svg': ['grab', 'grabpay'],
+  '/logos/maya.svg': ['maya', 'paymaya', 'mayawallet', 'mydbphm2xxx', 'paphphm1xxx'],
+  '/logos/grab.svg': ['grab', 'grabpay', 'ghpesgsgxxx'],
   '/logos/instapay.png': ['instapay', 'instapayph', 'instapaynetwork', 'pesonet', 'pesonetph'],
   '/logos/va.svg': ['virtualaccount', 'va', 'virtual', 'banktransfer', 'bankdeposit'],
   '/logos/visa.svg': ['visa'],
