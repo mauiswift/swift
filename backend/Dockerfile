@@ -1,4 +1,5 @@
 # ── Stage 1: Build the React frontend ───────────────────────────────────────
+ARG PY_BASE_IMAGE=public.ecr.aws/docker/library/python:3.11-slim
 FROM cgr.dev/chainguard/node:latest-dev AS frontend-builder
 
 USER root
@@ -25,7 +26,7 @@ COPY frontend/ .
 RUN pnpm build
 
 # ── Stage 2: Python backend ──────────────────────────────────────────────────
-ARG PY_BASE_IMAGE=public.ecr.aws/docker/library/python:3.11-slim
+ARG PY_BASE_IMAGE
 FROM ${PY_BASE_IMAGE}
 
 WORKDIR /app/backend

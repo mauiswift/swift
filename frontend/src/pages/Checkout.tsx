@@ -1471,8 +1471,37 @@ export default function Checkout() {
                         </button>
                       </div>
                     ) : isPhp && (
-                      <div className="space-y-3">
-                        <p className="text-center text-xs text-slate-500">{checkoutText('Choose a local bank or wallet below.', '아래에서 현지 은행이나 전자지갑을 선택하세요.')}</p>
+                      <div className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+                        <div className="bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] px-5 py-5 text-white sm:px-6">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
+                                {checkoutText('PHP checkout', 'PHP 결제')}
+                              </p>
+                              <h3 className="mt-1 text-lg font-semibold">
+                                {checkoutText('Choose how you want to pay', '결제 방법을 선택하세요')}
+                              </h3>
+                              <p className="mt-1 text-xs leading-5 text-blue-100">
+                                {checkoutText('Use QRPH, GCash, or a local bank such as BDO, BPI, Landbank, or RCBC.', 'QRPH, GCash 또는 BDO, BPI, Landbank, RCBC 같은 현지 은행을 이용하세요.')}
+                              </p>
+                            </div>
+                            <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-blue-200" aria-hidden="true" />
+                          </div>
+                        </div>
+                        <div className="grid gap-2 p-3 text-[11px] font-medium text-slate-600 sm:grid-cols-3 sm:p-4">
+                          <div className="rounded-xl bg-blue-50 px-3 py-2.5 text-center">
+                            <QrCode className="mx-auto mb-1 h-4 w-4 text-blue-700" aria-hidden="true" />
+                            {checkoutText('QRPH payments', 'QRPH 결제')}
+                          </div>
+                          <div className="rounded-xl bg-orange-50 px-3 py-2.5 text-center">
+                            <Smartphone className="mx-auto mb-1 h-4 w-4 text-orange-600" aria-hidden="true" />
+                            {checkoutText('GCash wallet', 'GCash 지갑')}
+                          </div>
+                          <div className="rounded-xl bg-slate-100 px-3 py-2.5 text-center">
+                            <Building2 className="mx-auto mb-1 h-4 w-4 text-slate-600" aria-hidden="true" />
+                            {checkoutText('Bank redirect', '은행 결제')}
+                          </div>
+                        </div>
                       </div>
                     )}
                     {/* QRPH first for PHP checkout */}
