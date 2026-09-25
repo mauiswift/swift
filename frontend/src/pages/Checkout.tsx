@@ -222,6 +222,7 @@ export default function Checkout() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showQRPhModal, setShowQRPhModal] = useState(false);
+  const [qrInstructionApp, setQrInstructionApp] = useState<'toss' | null>(null);
   const openAmount = searchParams.get('open_amount') === '1';
   const [enteredAmount, setEnteredAmount] = useState('');
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
@@ -813,10 +814,12 @@ export default function Checkout() {
   };
 
   const openKoreanPaymentApp = (app: 'toss' | 'kakao') => {
-    const appUrl = app === 'toss'
-      ? (txn?.toss_deep_link || 'supertoss://toss/pay')
-      : 'kakaopay://';
-    window.location.assign(appUrl);
+    if (app === 'toss') {
+      setQrInstructionApp('toss');
+      setShowQRPhModal(true);
+      return;
+    }
+    window.location.assign('kakaopay://');
   };
 
   const openMagpieCardCheckout = async () => {
@@ -2066,12 +2069,26 @@ export default function Checkout() {
       </Dialog>
 
       {/* QRPH Modal Dialog */}
-      <Dialog open={showQRPhModal} onOpenChange={setShowQRPhModal}>
+      <Dialog
+        open={showQRPhModal}
+        onOpenChange={open => {
+          setShowQRPhModal(open);
+          if (!open) setQrInstructionApp(null);
+        }}
+      >
         <DialogContent className="max-w-md">
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="text-center space-y-2">
-              <h2 className="text-xl font-semibold text-slate-900">{usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay'}</h2>
-              <p className="text-sm text-slate-500">{checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}</p>
+              <h2 className="text-xl font-semibold text-slate-900">
+                {qrInstructionApp === 'toss'
+                  ? 'Pay with Toss'
+                  : (usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay')}
+              </h2>
+              <p className="text-sm text-slate-500">
+                {qrInstructionApp === 'toss'
+                  ? 'Open Toss, choose QR scan, and scan this QRPH code to complete payment.'
+                  : checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}
+              </p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
               {usesHighValuePhpQr ? (
