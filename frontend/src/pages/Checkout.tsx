@@ -23,6 +23,7 @@ import {
   CreditCard,
   Store,
   ExternalLink,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
@@ -252,6 +253,7 @@ export default function Checkout() {
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
   const [openAmountSubmitted, setOpenAmountSubmitted] = useState(false);
   const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
+  const [phpBankSearch, setPhpBankSearch] = useState('');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
@@ -713,6 +715,10 @@ export default function Checkout() {
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH', 'ALIPAY'].includes(institutionCode(i)));
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'ALIPAY', 'QRPH'].includes(institutionCode(i)));
+  const filteredBanks = banks.filter(bank => {
+    const query = phpBankSearch.trim().toLowerCase();
+    return !query || `${bank.name} ${institutionCode(bank)}`.toLowerCase().includes(query);
+  });
   const handleStartCheckout = async (institutionCode?: string) => {
     const selectedInstitutionCode = institutionCode?.trim().toUpperCase() || '';
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
@@ -1684,18 +1690,39 @@ export default function Checkout() {
                     {/* Banks */}
                     {banks.length > 0 && (
                       <div className="space-y-4 pt-6 border-t border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                            <Building2 className="h-4 w-4" aria-hidden="true" />
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                              <Building2 className="h-4 w-4" aria-hidden="true" />
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">{checkoutText('Banks', '은행')}</p>
+                              <p className="text-[11px] text-slate-400">{checkoutText('Secure bank redirect', '안전한 은행 결제')}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">{checkoutText('Banks', '은행')}</p>
-                            <p className="text-[11px] text-slate-400">{checkoutText('Secure bank redirect', '안전한 은행 결제')}</p>
+                          {banks.length > 4 && (
+                            <label className="relative block sm:w-56">
+                              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                              <span className="sr-only">{checkoutText('Search banks', '은행 검색')}</span>
+                              <input
+                                type="search"
+                                value={phpBankSearch}
+                                onChange={event => setPhpBankSearch(event.target.value)}
+                                placeholder={checkoutText('Search banks', '은행 검색')}
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/20"
+                              />
+                            </label>
+                          )}
+                        </div>
+                        {filteredBanks.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                            {filteredBanks.map(renderInstitutionButton)}
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                          {banks.map(renderInstitutionButton)}
-                        </div>
+                        ) : (
+                          <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-xs text-slate-500">
+                            {checkoutText('No matching banks found.', '일치하는 은행이 없습니다.')}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
