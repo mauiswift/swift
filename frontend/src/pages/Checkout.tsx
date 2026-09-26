@@ -549,7 +549,7 @@ export default function Checkout() {
 
   const isPaid = txn?.status === 'paid';
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
-  const isPending = txn?.status === 'pending';
+  const isPending = ['pending', 'created'].includes(String(txn?.status || '').trim().toLowerCase());
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
   const phpEquivalent = currencyCode === 'PHP'
     ? Number(txn.amount || 0)
@@ -1327,7 +1327,7 @@ export default function Checkout() {
               </div>
             )}
 
-            {isPending && isManualDeposit && !isUsdt && (
+            {isPending && isManualDeposit && !isUsdt && (!isKrw || paymentMethodParam === 'bank_transfer') && (
               <div className="overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
                 <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
                   <div className="flex flex-wrap items-start justify-between gap-5">
@@ -1539,7 +1539,7 @@ export default function Checkout() {
                   </p>
                 </div>
 
-                {loadingInstitutions ? (
+                {loadingInstitutions && !isKrw ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
                   </div>

@@ -86,6 +86,19 @@ describe('admin management navigation', () => {
 
     expect(sections.flatMap(section => section.items.map(item => item.path))).not.toContain('/admin-management');
   });
+
+  it('does not show the duplicate roles and permissions destination in the dashboard navigation', () => {
+    const { sections } = buildAdminNavigation(
+      { ...noPermissions, is_super_admin: true },
+      true,
+      'en',
+      key => key,
+    );
+    const paths = sections.flatMap(section => section.items.map(item => item.path));
+
+    expect(paths).toContain('/admin-management');
+    expect(paths).not.toContain('/roles');
+  });
 });
 
 describe('dashboard navigation grouping', () => {

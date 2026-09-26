@@ -349,7 +349,7 @@ export default function SuperAdminPaymentApprovalMobile() {
               <dl className="mt-4 space-y-3 text-sm">
                 <div><dt className="text-xs text-slate-400">Store</dt><dd className="font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || reviewPayment.customer_name || 'Unknown'}</dd></div>
                 <div><dt className="text-xs text-slate-400">Date &amp; time</dt><dd className="font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</dd></div>
-                <div><dt className="text-xs text-slate-400">Payment and approval status</dt><dd className="mt-1"><PaymentStatus payment={reviewPayment} /></dd></div>
+                <div><dt className="text-xs text-slate-400">Payment status</dt><dd className="mt-1"><PaymentStatus payment={reviewPayment} /></dd></div>
                 <div><dt className="text-xs text-slate-400">Received at</dt><dd className="font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</dd></div>
                 <div><dt className="text-xs text-slate-400">Customer</dt><dd className="font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</dd></div>
                 <div><dt className="text-xs text-slate-400">Reference</dt><dd className="font-mono text-xs text-slate-800">{reviewPayment.external_id || `#${reviewPayment.id}`}</dd></div>

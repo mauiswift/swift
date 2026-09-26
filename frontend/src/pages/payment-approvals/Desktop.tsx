@@ -411,7 +411,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       <div><p className="text-xs text-slate-400">Customer</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</p></div>
                       <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(Number(reviewPayment.amount) || 0, reviewPayment.currency || 'PHP')}</p></div>
                       <div><p className="text-xs text-slate-400">Submitted</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
-                      <div className="col-span-2"><p className="text-xs text-slate-400">Payment and approval status</p><div className="mt-1"><PaymentStatus payment={reviewPayment} /></div></div>
+                      <div className="col-span-2"><p className="text-xs text-slate-400">Payment status</p><div className="mt-1"><PaymentStatus payment={reviewPayment} /></div></div>
                       <div><p className="text-xs text-slate-400">Received at</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</p></div>
                       <div className="col-span-2"><p className="text-xs text-slate-400">Reference</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
                     </div>

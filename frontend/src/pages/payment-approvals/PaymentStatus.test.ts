@@ -1,22 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { isApprovalPaymentReceived } from '@/lib/paymentApprovalStatus';
+import { getApprovalPaymentStatus } from '@/lib/paymentApprovalStatus';
 
 describe('approval payment status', () => {
-  it('shows a received payment as paid when local status is still pending approval', () => {
-    expect(isApprovalPaymentReceived({
+  it('uses the actual payment status instead of the transaction or review status', () => {
+    expect(getApprovalPaymentStatus({
       status: 'pending',
-      payment_status: 'pending',
-      approval_status: 'pending',
-      payment_received: true,
-    })).toBe(true);
+      payment_status: 'failed',
+    })).toBe('failed');
   });
 
-  it('shows an unpaid pending payment as awaiting payment', () => {
-    expect(isApprovalPaymentReceived({
-      status: 'pending',
-      payment_status: 'pending',
-      approval_status: 'pending',
-      payment_received: false,
-    })).toBe(false);
+  it('falls back to the transaction payment status when no separate status is returned', () => {
+    expect(getApprovalPaymentStatus({ status: 'pending' })).toBe('pending');
+  });
+
+  it('uses unknown when the API returns no payment status', () => {
+    expect(getApprovalPaymentStatus({ status: '' })).toBe('unknown');
   });
 });
