@@ -42,6 +42,7 @@ import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatTransactionDate, getTransactionStatus, getTransactionTypeLabel } from '@/lib/transactions';
+import './PaymentActivity.css';
 
 interface Transaction {
   id: number;
@@ -218,18 +219,16 @@ export default function Transactions() {
 
   return (
     <Layout connected={connected}>
-      <SiteContainer className="!max-w-none !px-2 py-5 space-y-4 sm:!px-6 sm:py-10 sm:space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 p-5 shadow-sm relative overflow-hidden animate-fade-in-up">
-        <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-blue-200/30 blur-2xl" />
-        <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-cyan-200/30 blur-2xl" />
-        <div className="relative z-10 flex items-center justify-between gap-3 flex-wrap">
+      <SiteContainer className="payment-workspace !max-w-none !px-2 py-5 space-y-4 sm:!px-6 sm:py-8 sm:space-y-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{ui.title}</h1>
             <p className="text-sm text-slate-500 mt-1">{ui.description}</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs text-slate-600">
-              {connected ? <Wifi className="h-3.5 w-3.5 text-emerald-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-500" />}
+            <div className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-600">
+              {connected ? <Wifi className="h-3.5 w-3.5 text-slate-600" /> : <WifiOff className="h-3.5 w-3.5 text-slate-400" />}
               {connected ? ui.live : ui.offline}
             </div>
             <Button
@@ -238,12 +237,12 @@ export default function Transactions() {
               size="sm"
               onClick={() => { setLoading(true); void fetchTransactions(); }}
               aria-label="Refresh transactions"
-              className="h-9 w-9 border-slate-200 bg-white/90 p-0"
+              className="h-9 w-9 border-slate-200 bg-white p-0"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
             <Link to="/pay-by-link/new">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 btn-hover-lift transition-smooth">
+              <Button className="bg-slate-900 hover:bg-slate-700 text-white shrink-0">
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{ui.newPayment}</span>
               </Button>
@@ -254,7 +253,6 @@ export default function Transactions() {
 
         {/* Filters */}
         <Card className="bg-white border border-slate-200 mb-6 shadow-sm animate-fade-in-up animate-stagger-1">
-          <div className="h-1 w-full bg-gradient-to-r from-blue-400/70 to-cyan-200/20" />
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
@@ -310,26 +308,25 @@ export default function Transactions() {
         </Card>
 
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:p-4">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+            <CheckCircle2 className="h-4 w-4 text-slate-600" />
             <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => getDisplayStatus(txn) === 'paid').length}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 sm:text-xs">{ui.success}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-xs">{ui.success}</p>
           </div>
-          <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 sm:p-4">
-            <Clock3 className="h-4 w-4 text-amber-600" />
+          <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+            <Clock3 className="h-4 w-4 text-slate-600" />
             <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => ['pending', 'processing'].includes(getDisplayStatus(txn))).length}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 sm:text-xs">{ui.processing}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-xs">{ui.processing}</p>
           </div>
-          <div className="rounded-2xl border border-red-100 bg-red-50/70 p-3 sm:p-4">
-            <XCircle className="h-4 w-4 text-red-600" />
+          <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+            <XCircle className="h-4 w-4 text-slate-600" />
             <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => ['failed', 'expired', 'cancelled'].includes(getDisplayStatus(txn))).length}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-red-700 sm:text-xs">{ui.failed}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-xs">{ui.failed}</p>
           </div>
         </div>
 
         {/* Transaction List */}
         <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-2">
-          <div className="h-1 w-full bg-gradient-to-r from-slate-300/80 to-blue-100/30" />
           <CardContent className="p-0">
             {loading ? (
               <LoadingSpinner message="Fetching records" />

@@ -6,6 +6,7 @@ import { authApi } from '@/lib/auth';
 import type { WalletBalance } from '@/api/wallet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import './PaymentActivity.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -389,7 +390,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
   );
 
   return (
-    <Card className="bg-white border border-slate-200 shadow-sm">
+    <Card className="payment-workspace payment-workspace__history bg-white border border-slate-200 shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Receipt className="h-4 w-4 text-slate-600" />
@@ -424,7 +425,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
           </div>
         ) : (
           <div className="space-y-1">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <div className="wallet-transaction-header grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <span>{isKorean ? '거래 종류' : 'Transaction'}</span>
               <span>{isKorean ? '날짜 및 시간' : 'Date and time'}</span>
               <span>{isKorean ? '금액' : 'Amount'}</span>
@@ -435,7 +436,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
               const meta = getTransactionMeta(txn);
               const rowContent = (
-                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
+                <div className="wallet-transaction-row grid w-full items-center gap-3">
                   <p className="truncate text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
                   <p className="whitespace-nowrap text-[11px] text-slate-500">
                     {txn.created_at ? new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH') : '—'}

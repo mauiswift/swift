@@ -23,7 +23,7 @@ export default function StoreProfile() {
   const [logoUrl, setLogoUrl] = useState('');
   const [slug, setSlug] = useState('');
   const [storeSlug, setStoreSlug] = useState('3');
-  const [shopUrl, setShopUrl] = useState('https://drl-itsolutions.atoms.world/');
+  const [shopUrl, setShopUrl] = useState('https://kr.swiftpay.site/');
   const [platform, setPlatform] = useState('Custom');
   const [dailyStats, setDailyStats] = useState(false);
   const [collectionCurrency, setCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');

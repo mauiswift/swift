@@ -6,6 +6,7 @@ import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import '../PaymentActivity.css';
 
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
@@ -136,7 +137,7 @@ export default function CreatePaymentLink() {
 
   return (
     <Layout>
-      <div className="page-enter">
+      <div className="payment-workspace page-enter w-full space-y-5">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
             <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
@@ -145,7 +146,7 @@ export default function CreatePaymentLink() {
         </div>
 
         {/* Title */}
-        <div className="flex items-center gap-4 mb-10">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/pay-by-link')}
             className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"
@@ -155,7 +156,7 @@ export default function CreatePaymentLink() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크 만들기' : 'Create payment link'}</h1>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm sm:p-8 max-w-[640px]">
           <p className="text-[13px] text-slate-500 mb-6 leading-relaxed">
             {isKorean ? `${currency} 결제 링크를 만들고 사용 가능한 결제 수단으로 결제받을 수 있습니다.` : `Create a ${currency} payment link and accept available payment methods.`}
           </p>
@@ -249,12 +250,12 @@ export default function CreatePaymentLink() {
               <p className="text-sm text-rose-600 mb-2">{error}</p>
             ) : null}
 
-            <div className="pt-8">
+            <div className="pt-2">
               <button
                 type="button"
                 onClick={handleGenerate}
                 data-guide-target="payment-link-generate"
-                className="bg-[#111111] text-white px-8 py-3 rounded-lg font-semibold text-[13px] shadow-sm hover:bg-black transition-colors"
+                className="bg-slate-900 text-white px-8 py-3 rounded-lg font-semibold text-[13px] hover:bg-slate-700 transition-colors"
               >
                 {isKorean ? '링크 생성' : 'Generate link'}
               </button>

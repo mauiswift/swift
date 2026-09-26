@@ -9,6 +9,7 @@ import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
+import '../PaymentActivity.css';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div className="page-enter w-full">
+      <div className="payment-workspace page-enter w-full space-y-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment links'}</h1>
 
@@ -74,14 +75,14 @@ export default function PaymentLinksList() {
                   toast.error('Unable to copy default payment link');
                 }
               }}
-              className="h-9 inline-flex items-center gap-2 border border-[#FF6B00] bg-orange-50 text-[#C2410C] rounded-lg px-4 text-[12px] font-semibold shadow-sm hover:bg-orange-100"
+              className="h-9 inline-flex items-center gap-2 border border-slate-300 bg-white text-slate-700 rounded-lg px-4 text-[12px] font-semibold hover:bg-slate-50"
             >
               <CircleDollarSign size={15} /> {isKorean ? '영구 링크' : 'Permanent Link'}
             </button>
             <button
               type="button"
               onClick={() => navigate('/pay-by-link/new')}
-              className="h-9 inline-flex items-center gap-2 bg-[#111111] text-white rounded-lg px-4 text-[12px] font-semibold shadow-sm"
+              className="h-9 inline-flex items-center gap-2 bg-slate-900 text-white rounded-lg px-4 text-[12px] font-semibold hover:bg-slate-700"
             >
               <Plus size={16} /> {isKorean ? '새로 만들기' : 'New'}
             </button>

@@ -1,0 +1,131 @@
+.admin-dashboard {
+  --admin-accent: 15 23 42;
+}
+
+.admin-dashboard__header {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.admin-dashboard [class*="bg-amber-"],
+.admin-dashboard [class*="bg-blue-"],
+.admin-dashboard [class*="bg-cyan-"],
+.admin-dashboard [class*="bg-emerald-"],
+.admin-dashboard [class*="bg-green-"],
+.admin-dashboard [class*="bg-indigo-"],
+.admin-dashboard [class*="bg-lime-"],
+.admin-dashboard [class*="bg-orange-"],
+.admin-dashboard [class*="bg-pink-"],
+.admin-dashboard [class*="bg-purple-"],
+.admin-dashboard [class*="bg-red-"],
+.admin-dashboard [class*="bg-rose-"],
+.admin-dashboard [class*="bg-teal-"],
+.admin-dashboard [class*="bg-violet-"],
+.admin-dashboard [class*="bg-yellow-"] {
+  background-color: #f1f5f9 !important;
+  background-image: none !important;
+}
+
+.admin-dashboard [class*="bg-amber-"][class*="text-white"],
+.admin-dashboard [class*="bg-blue-"][class*="text-white"],
+.admin-dashboard [class*="bg-cyan-"][class*="text-white"],
+.admin-dashboard [class*="bg-emerald-"][class*="text-white"],
+.admin-dashboard [class*="bg-green-"][class*="text-white"],
+.admin-dashboard [class*="bg-indigo-"][class*="text-white"],
+.admin-dashboard [class*="bg-lime-"][class*="text-white"],
+.admin-dashboard [class*="bg-orange-"][class*="text-white"],
+.admin-dashboard [class*="bg-pink-"][class*="text-white"],
+.admin-dashboard [class*="bg-purple-"][class*="text-white"],
+.admin-dashboard [class*="bg-red-"][class*="text-white"],
+.admin-dashboard [class*="bg-rose-"][class*="text-white"],
+.admin-dashboard [class*="bg-teal-"][class*="text-white"],
+.admin-dashboard [class*="bg-violet-"][class*="text-white"],
+.admin-dashboard [class*="bg-yellow-"][class*="text-white"] {
+  background-color: #0f172a !important;
+}
+
+.admin-dashboard [class*="text-amber-"],
+.admin-dashboard [class*="text-blue-"],
+.admin-dashboard [class*="text-cyan-"],
+.admin-dashboard [class*="text-emerald-"],
+.admin-dashboard [class*="text-green-"],
+.admin-dashboard [class*="text-indigo-"],
+.admin-dashboard [class*="text-lime-"],
+.admin-dashboard [class*="text-orange-"],
+.admin-dashboard [class*="text-pink-"],
+.admin-dashboard [class*="text-purple-"],
+.admin-dashboard [class*="text-red-"],
+.admin-dashboard [class*="text-rose-"],
+.admin-dashboard [class*="text-teal-"],
+.admin-dashboard [class*="text-violet-"],
+.admin-dashboard [class*="text-yellow-"] {
+  color: #475569 !important;
+}
+
+.admin-dashboard [class*="border-amber-"],
+.admin-dashboard [class*="border-blue-"],
+.admin-dashboard [class*="border-cyan-"],
+.admin-dashboard [class*="border-emerald-"],
+.admin-dashboard [class*="border-green-"],
+.admin-dashboard [class*="border-indigo-"],
+.admin-dashboard [class*="border-lime-"],
+.admin-dashboard [class*="border-orange-"],
+.admin-dashboard [class*="border-pink-"],
+.admin-dashboard [class*="border-purple-"],
+.admin-dashboard [class*="border-red-"],
+.admin-dashboard [class*="border-rose-"],
+.admin-dashboard [class*="border-teal-"],
+.admin-dashboard [class*="border-violet-"],
+.admin-dashboard [class*="border-yellow-"] {
+  border-color: #e2e8f0 !important;
+}
+
+.admin-dashboard [class*="from-[#FF6B00]"],
+.admin-dashboard [class*="bg-[#FF6B00]"],
+.admin-dashboard [class*="bg-[#E66000]"] {
+  background-color: #0f172a !important;
+  background-image: none !important;
+}
+
+.admin-dashboard [class*="shadow-orange-"],
+.admin-dashboard [class*="shadow-amber-"],
+.admin-dashboard [class*="shadow-blue-"],
+.admin-dashboard [class*="shadow-purple-"] {
+  box-shadow: none !important;
+}
+
+.admin-dashboard__content .premium-surface {
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-dashboard__content .premium-surface:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+}
+
+.admin-dashboard input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.admin-dashboard select,
+.admin-dashboard textarea {
+  border-radius: 0.75rem;
+}
+
+.admin-dashboard input:focus,
+.admin-dashboard select:focus,
+.admin-dashboard textarea:focus {
+  border-color: rgb(var(--admin-accent));
+  box-shadow: 0 0 0 3px rgb(var(--admin-accent) / 0.1);
+  outline: none;
+}
+
+.admin-dashboard__content button[class~='bg-blue-600'],
+.admin-dashboard__content button[class~='bg-purple-600'] {
+  background-color: #0f172a;
+  color: #fff;
+  box-shadow: none;
+}
+
+.admin-dashboard__content button[class~='hover:bg-blue-700']:hover,
+.admin-dashboard__content button[class~='hover:bg-purple-700']:hover {
+  background-color: #334155;
+}
