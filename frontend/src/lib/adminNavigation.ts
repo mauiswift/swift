@@ -47,12 +47,9 @@ export interface AdminNavigation {
 }
 
 export function canAccessSuperAdminControls(
-  user: { isSuperAdmin?: boolean; permissions?: UserPermissions | null } | null | undefined,
+  user: { isSuperAdmin?: boolean } | null | undefined,
 ): boolean {
-  return Boolean(
-    user?.isSuperAdmin
-      && user?.permissions?.can_manage_team,
-  );
+  return Boolean(user?.isSuperAdmin);
 }
 
 function visible(
@@ -84,7 +81,7 @@ export function buildAdminNavigation(
   isVipGold = false,
 ): AdminNavigation {
   const isKorean = language === 'ko';
-  const isPlatformSuperAdmin = canAccessSuperAdminControls({ isSuperAdmin, permissions });
+  const isPlatformSuperAdmin = canAccessSuperAdminControls({ isSuperAdmin });
   const label = (key: string, fallback: string) => {
     const translated = translate(key);
     return translated || fallback;

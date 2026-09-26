@@ -52,13 +52,20 @@ describe('payment approval navigation', () => {
   });
 
   it('keeps payment approval available to platform super admins', () => {
-    const permissions = {
-      ...noPermissions,
-      is_super_admin: true,
-      can_manage_team: true,
-    };
+    const permissions = { ...noPermissions, is_super_admin: true };
 
     expect(hasNavigationItem(permissions, true)).toBe(true);
+  });
+
+  it('shows platform controls to super admins without team-management permission', () => {
+    const { sections } = buildAdminNavigation(
+      { ...noPermissions, is_super_admin: true },
+      true,
+      'en',
+      key => key,
+    );
+
+    expect(sections.flatMap(section => section.items.map(item => item.path))).toContain('/admin-management');
   });
 });
 
@@ -89,7 +96,6 @@ describe('dashboard navigation grouping', () => {
   it('keeps super-admin destinations available in the simplified groups', () => {
     const permissions: UserPermissions = {
       ...noPermissions,
-      can_manage_team: true,
       can_manage_wallet: true,
       can_view_reports: true,
     };

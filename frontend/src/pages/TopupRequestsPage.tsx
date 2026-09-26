@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
@@ -46,6 +46,8 @@ export default function TopupRequestsPage() {
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [activeId, setActiveId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [requestsError, setRequestsError] = useState('');
+  const hasLoadedRequests = useRef(false);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number>(58.0);
   const [rateSource, setRateSource] = useState('');
   const [rateLoading, setRateLoading] = useState(false);
@@ -185,21 +187,34 @@ export default function TopupRequestsPage() {
     }
   };
 
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
+  const fetchRequests = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
       const url = filter ? `/api/v1/topup?status=${filter}` : '/api/v1/topup';
       const res = await fetch(url, { credentials: 'include', headers: authHeaders() });
-      if (res.ok) { const d = await res.json(); setRequests(d.items || []); }
-    } catch (e) { console.error(e); }
-    setLoading(false);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.detail || `Failed to load top-up requests (${res.status}).`);
+      }
+      if (!Array.isArray(data?.items)) {
+        throw new Error('The server returned an invalid top-up request list.');
+      }
+      setRequests(data.items);
+      setRequestsError('');
+    } catch (e) {
+      console.error('Top-up request fetch failed:', e);
+      setRequestsError(e instanceof Error ? e.message : 'Failed to load top-up requests.');
+    } finally {
+      hasLoadedRequests.current = true;
+      setLoading(false);
+    }
   }, [filter]);
 
   useEffect(() => {
     fetchRate();
     fetchAddress();
-    fetchRequests();
-    const id = setInterval(fetchRequests, 30000);
+    void fetchRequests(!hasLoadedRequests.current);
+    const id = setInterval(() => void fetchRequests(), 30000);
     return () => clearInterval(id);
   }, [fetchRate, fetchAddress, fetchRequests]);
 
@@ -220,7 +235,7 @@ export default function TopupRequestsPage() {
       if (res.ok) {
         toast.success(`Top-up ${action}d successfully`);
         setNotes(prev => { const n = { ...prev }; delete n[id]; return n; }); setActiveId(null);
-        fetchRequests();
+        void fetchRequests();
       } else {
         const d = await res.json();
         setError(d.detail || `Failed to ${action}`);
@@ -262,7 +277,7 @@ export default function TopupRequestsPage() {
             </div>
             {selectedIds.length > 0 && filter === 'pending' && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
           </div>
-          <button onClick={fetchRequests} type="button" aria-label="Refresh top-up requests" title="Refresh top-up requests"
+          <button onClick={() => void fetchRequests()} type="button" aria-label="Refresh top-up requests" title="Refresh top-up requests"
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
@@ -402,6 +417,18 @@ export default function TopupRequestsPage() {
         </div>
 
         {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">{error}</p>}
+        {requestsError && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <span>{requestsError}{requests.length > 0 ? ' Showing previously loaded requests.' : ''}</span>
+            <button
+              type="button"
+              onClick={() => void fetchRequests()}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 px-3 py-1.5 font-medium hover:bg-red-500/10"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Retry
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-3">
@@ -417,7 +444,7 @@ export default function TopupRequestsPage() {
               </div>
             ))}
           </div>
-        ) : visibleRequests.length === 0 ? (
+        ) : visibleRequests.length === 0 && requestsError ? null : visibleRequests.length === 0 ? (
           <div className="bg-background border border-border/40 rounded-2xl p-12 flex flex-col items-center text-center">
             <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center mb-3">
               <DollarSign className="h-6 w-6 text-muted-foreground" />

@@ -26,7 +26,8 @@ const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'))
 import {
   Wallet, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown
+  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown,
+  RefreshCw,
 } from 'lucide-react';
 import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -377,9 +378,11 @@ interface WalletTransactionHistoryProps {
   currency: string;
   transactions: WalletTxn[];
   loading: boolean;
+  error: boolean;
+  onRetry: () => void;
 }
 
-const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }: WalletTransactionHistoryProps & { isKorean: boolean }) => {
+const WalletTransactionHistory = ({ currency, transactions, loading, error, onRetry, isKorean }: WalletTransactionHistoryProps & { isKorean: boolean }) => {
   const safeTransactions = useMemo(
     () => dedupeRecords(Array.isArray(transactions) ? transactions.filter(Boolean) : []),
     [transactions],
@@ -406,6 +409,13 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                 <div className="h-4 w-20 bg-slate-200 rounded" />
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <span>Unable to load {currency} transaction history.</span>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            </Button>
           </div>
         ) : safeTransactions.length === 0 ? (
           <div className="text-center py-6">
@@ -472,6 +482,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [balanceLoadErrors, setBalanceLoadErrors] = useState<string[]>([]);
+  const [transactionLoadErrors, setTransactionLoadErrors] = useState<string[]>([]);
+  const [withdrawRequestsLoadError, setWithdrawRequestsLoadError] = useState(false);
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
   const [usdtRateSource, setUsdtRateSource] = useState('');
@@ -584,11 +597,17 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   const ensureWalletIsOperational = useCallback((currency: string, actionLabel: string) => {
     const normalizedCurrency = String(currency || '').toUpperCase();
-    const frozenBalance = normalizedCurrency === 'USDT'
-      ? usdtBalance
-      : normalizedCurrency === 'PHP'
-        ? phpBalance
-        : collectionBalance;
+    const usesCollectionBalance = normalizedCurrency === selectedCollectionCurrency;
+    const frozenBalance = usesCollectionBalance
+      ? collectionBalance
+      : normalizedCurrency === 'USDT'
+        ? usdtBalance
+        : phpBalance;
+
+    if (!frozenBalance) {
+      toast.error(`Unable to verify your ${normalizedCurrency} wallet balance. Refresh the page before ${actionLabel.toLowerCase()}.`);
+      return false;
+    }
 
     if (frozenBalance?.is_frozen) {
       setWalletFrozenDialogOpen(true);
@@ -597,7 +616,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     }
 
     return true;
-  }, [collectionBalance, phpBalance, usdtBalance]);
+  }, [collectionBalance, phpBalance, selectedCollectionCurrency, usdtBalance]);
 
   const openBuyUsdt = () => {
     if (!canTradeUsdtForPhp) {
@@ -635,6 +654,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         }),
       ]);
 
+      const failedBalances: string[] = [];
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
         setPhpBalance({
           balance: normalizeNumericValue(phpRes.value.data.balance),
@@ -644,6 +664,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           is_frozen: Boolean(phpRes.value.data.is_frozen),
           freeze_reason: phpRes.value.data.freeze_reason ?? null,
         });
+      } else {
+        setPhpBalance(null);
+        failedBalances.push('php');
       }
       if (usdtRes.status === 'fulfilled' && usdtRes.value?.data?.balance != null) {
         setUsdtBalance({
@@ -654,6 +677,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           is_frozen: Boolean(usdtRes.value.data.is_frozen),
           freeze_reason: usdtRes.value.data.freeze_reason ?? null,
         });
+      } else {
+        setUsdtBalance(null);
+        failedBalances.push('usdt');
       }
       if (collectionRes.status === 'fulfilled' && collectionRes.value?.data?.balance != null) {
         setCollectionBalance({
@@ -664,16 +690,31 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           is_frozen: Boolean(collectionRes.value.data.is_frozen),
           freeze_reason: collectionRes.value.data.freeze_reason ?? null,
         });
+      } else {
+        setCollectionBalance(null);
+        failedBalances.push('collection');
       }
+      setBalanceLoadErrors([...new Set(failedBalances)]);
+      const failedTransactions: string[] = [];
       if (phpTxnRes.status === 'fulfilled' && Array.isArray(phpTxnRes.value?.data?.items)) {
         setPhpTransactions(dedupeRecords(phpTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
+      } else {
+        setPhpTransactions([]);
+        failedTransactions.push('php');
       }
       if (usdtTxnRes.status === 'fulfilled' && Array.isArray(usdtTxnRes.value?.data?.items)) {
         setUsdtTransactions(dedupeRecords(usdtTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
+      } else {
+        setUsdtTransactions([]);
+        failedTransactions.push('usdt');
       }
       if (collectionTxnRes.status === 'fulfilled' && Array.isArray(collectionTxnRes.value?.data?.items)) {
         setCollectionTransactions(dedupeRecords(collectionTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
+      } else {
+        setCollectionTransactions([]);
+        failedTransactions.push('collection');
       }
+      setTransactionLoadErrors(failedTransactions);
       const fallbackKrwBanks = () => setBankOptions(KRW_BANKS);
 
       const bankPayload = banksRes.status === 'fulfilled'
@@ -697,6 +738,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           bank_name: request.bank_name || request.bank_code || 'Bank',
           request_type: request.request_type || (request.currency === 'USD' ? 'usdt_trc20' : 'php_bank'),
         }))));
+        setWithdrawRequestsLoadError(false);
+      } else {
+        setWithdrawRequests([]);
+        setWithdrawRequestsLoadError(true);
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
@@ -1148,6 +1193,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
   const safeWithdrawRequests = dedupeRecords(Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : []);
+  const failedBalanceLabels = [
+    ...(balanceLoadErrors.includes('php') ? ['PHP wallet data'] : []),
+    ...(balanceLoadErrors.includes('usdt') ? ['USDT wallet'] : []),
+    ...(balanceLoadErrors.includes('collection') ? [`${selectedCollectionCurrency} wallet`] : []),
+  ];
   const {
     sourceCurrency: conversionSourceCurrency,
     availableSource,
@@ -1187,6 +1237,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         </div>
 
         {/* Balance Cards */}
+        {failedBalanceLabels.length > 0 && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <span>
+              Unable to verify {failedBalanceLabels.join(' and ')}. Balance-dependent actions remain unavailable until the data can be refreshed.
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={() => void fetchData()}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {!cryptoOnly && (
           /* PHP Balance */
@@ -1203,16 +1263,18 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
+                ) : balanceLoadErrors.includes('collection') || !collectionBalance
+                  ? 'Unavailable'
+                  : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{balanceLoadErrors.includes('collection') || !collectionBalance ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'pending_balance'), selectedCollectionCurrency)}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{balanceLoadErrors.includes('collection') || !collectionBalance ? 'Unavailable' : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'pending_balance'), selectedCollectionCurrency)}</p>
                 </div>
               </div>
               {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
@@ -1265,6 +1327,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               currency={selectedCollectionCurrency}
               transactions={collectionTransactions}
               loading={loading}
+              error={transactionLoadErrors.includes('collection')}
+              onRetry={() => void fetchData()}
               isKorean={isKoreanWallet}
             />
           </div>
@@ -1285,16 +1349,18 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
+                ) : balanceLoadErrors.includes('usdt') || !usdtBalance
+                  ? 'Unavailable'
+                  : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">${fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{balanceLoadErrors.includes('usdt') || !usdtBalance ? 'Unavailable' : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))}`}</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">${fmtUsd(getWalletBalanceValue(usdtBalance, 'pending_balance'))}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{balanceLoadErrors.includes('usdt') || !usdtBalance ? 'Unavailable' : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'pending_balance'))}`}</p>
                 </div>
               </div>
               {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
@@ -1373,6 +1439,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               currency="USDT"
               transactions={usdtTransactions}
               loading={loading}
+              error={transactionLoadErrors.includes('usdt')}
+              onRetry={() => void fetchData()}
               isKorean={isKoreanWallet}
             />
           </div>
@@ -2076,6 +2144,13 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                         </div>
                       </div>
                     ))}
+                  </div>
+                ) : withdrawRequestsLoadError ? (
+                  <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800">
+                    <span>Unable to load withdrawal requests.</span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void fetchData()}>
+                      <RefreshCw className="mr-2 h-4 w-4" /> Retry
+                    </Button>
                   </div>
                 ) : safeWithdrawRequests.length === 0 ? (
                   <div className="text-center py-12">

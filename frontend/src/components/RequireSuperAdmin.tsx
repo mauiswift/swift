@@ -22,7 +22,7 @@ export default function RequireSuperAdmin({ children }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!canAccessSuperAdminControls({ isSuperAdmin, permissions: user.permissions })) {
+  if (!canAccessSuperAdminControls({ isSuperAdmin })) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">

@@ -67,7 +67,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   const canAccessProtectedRoute = permission
     ? hasPermission(user.permissions, permission)
       || (allowVipGold && vipStatus.isVipGold)
-      || (allowPlatformSuperAdmin && canAccessSuperAdminControls({ isSuperAdmin, permissions: user.permissions }))
+      || (allowPlatformSuperAdmin && canAccessSuperAdminControls({ isSuperAdmin }))
     : isAdmin || hasDashboardAccess(user.permissions);
 
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page
