@@ -61,3 +61,44 @@ describe('payment approval navigation', () => {
     expect(hasNavigationItem(permissions, true)).toBe(true);
   });
 });
+
+describe('dashboard navigation grouping', () => {
+  it('groups available pages into overview, payments, and management', () => {
+    const permissions: UserPermissions = {
+      ...noPermissions,
+      can_manage_payments: true,
+      can_manage_disbursements: true,
+      can_view_reports: true,
+      can_manage_wallet: true,
+      can_approve_topups: true,
+    };
+    const { sections } = buildAdminNavigation(permissions, false, 'en', key => key);
+
+    expect(sections.map(section => section.label)).toEqual(['OVERVIEW', 'PAYMENTS', 'MANAGEMENT']);
+    expect(sections[0].items.map(item => item.path)).toEqual(['/dashboard', '/reports']);
+    expect(sections[1].items.map(item => item.path)).toEqual([
+      '/wallet',
+      '/cryptocurrency',
+      '/payments',
+      '/pay-by-link',
+      '/disbursements',
+    ]);
+    expect(sections[2].items.map(item => item.path)).toEqual(['/payment-approvals']);
+  });
+
+  it('keeps super-admin destinations available in the simplified groups', () => {
+    const permissions: UserPermissions = {
+      ...noPermissions,
+      can_manage_team: true,
+      can_manage_wallet: true,
+      can_view_reports: true,
+    };
+    const { sections } = buildAdminNavigation(permissions, true, 'en', key => key);
+    const paths = sections.flatMap(section => section.items.map(item => item.path));
+
+    expect(paths).toContain('/reports');
+    expect(paths).toContain('/admin-management');
+    expect(paths).toContain('/kyb-registrations');
+    expect(paths).toContain('/broadcasts');
+  });
+});

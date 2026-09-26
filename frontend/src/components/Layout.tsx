@@ -230,8 +230,8 @@ export default function Layout({ children }: LayoutProps) {
         "lg:sticky lg:top-0 lg:z-20 lg:h-screen",
         // Responsive widths with better flexibility
         collapsed
-          ? "w-20 lg:w-20" // Collapsed width
-          : "w-[min(85vw,280px)] sm:w-[min(70vw,300px)] lg:w-72 xl:w-80"
+          ? "w-16 lg:w-16"
+          : "w-[min(85vw,280px)] sm:w-[min(70vw,300px)] lg:w-64"
       )}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -247,7 +247,7 @@ export default function Layout({ children }: LayoutProps) {
               label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setSidebarCollapsed(!collapsed)}
               variant="ghost"
-              className="hidden h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white xl:flex"
+              className="hidden h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white lg:flex"
               aria-pressed={collapsed}
             >
               {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -255,7 +255,7 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </div>
 
-        <nav aria-label="Dashboard navigation" className="scrollbar-thin scrollbar-dark min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-2 sm:px-3">
+        <nav aria-label="Dashboard navigation" className="scrollbar-thin scrollbar-dark min-h-0 flex-1 space-y-3 overflow-y-auto px-2 pb-4 pt-2 sm:px-3">
           {sections.map((section, si) => (
             <div key={section.label || `primary-${si}`}>
               {section.label && !collapsed && (
