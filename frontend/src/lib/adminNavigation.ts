@@ -111,7 +111,7 @@ export function buildAdminNavigation(
     {
       label: sectionLabel('MANAGEMENT', '관리'),
       items: filterItems([
-        { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
+        { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOrPermission: 'can_manage_team' },
         { label: label('nav_roles', 'Roles & Permissions'), icon: ShieldCheck, path: '/roles', superAdminOnly: true },
         { label: label('nav_approvals', 'Payment Approvals'), icon: ClipboardCheck, path: '/payment-approvals', superAdminOrPermission: 'can_approve_topups' },
         { label: label('nav_bank_deposits', 'Bank Deposits'), icon: Banknote, path: '/bank-deposits', superAdminOnly: true },

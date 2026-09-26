@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
 import { client } from '@/lib/api';
 import { PERMISSION_DEFINITIONS } from '@/lib/permissions';
+import { ROLE_PERMISSION_PRESETS } from '@/lib/adminRolePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1276,17 +1277,6 @@ const ADMIN_ROLE_OPTIONS = [
   { value: 'approver', label: 'Approver' },
   { value: 'super_admin', label: 'Invited super admin' },
 ] as const;
-
-const ROLE_PERMISSION_PRESETS: Record<string, Set<string>> = {
-  owner: new Set(PERMISSION_DEFINITIONS.map(({ key }) => key)),
-  admin: new Set(PERMISSION_DEFINITIONS.map(({ key }) => key)),
-  manager: new Set(['can_manage_team', 'can_manage_payments', 'can_manage_disbursements', 'can_view_reports', 'can_manage_wallet', 'can_manage_transactions']),
-  operator: new Set(['can_manage_payments', 'can_manage_disbursements', 'can_manage_transactions']),
-  viewer: new Set(['can_view_reports', 'can_manage_transactions']),
-  developer: new Set(['can_manage_bot']),
-  approver: new Set(['can_view_reports', 'can_manage_transactions', 'can_approve_topups']),
-  super_admin: new Set(PERMISSION_DEFINITIONS.map(({ key }) => key)),
-};
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
@@ -3354,19 +3344,19 @@ export default function AdminManagement() {
   const canApproveTopups = Boolean(user?.permissions?.can_approve_topups);
   const canManageTeam = Boolean(user?.permissions?.can_manage_team);
   const canAccessAdminUsers = isSuperAdmin && canManageTeam;
-  const canAccessUserManagement = canManageTeam;
-  const canAccessCryptoRequests = canApproveTopups;
-  const canAccessWalletControl = canManageWallet;
-  const canAccessOperations = canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot;
-  const canAccessTossApprovals = canManageWallet;
-  const canAccessPaymentChannels = canManagePayments || canManageDisbursements;
-  const canAccessWalletSettings = canManageWallet;
-  const canAccessBitgo = canManageWallet;
-  const canAccessCheckoutDesign = canManagePayments;
-  const canAccessPlatformSettings = canManagePayments || canManageWallet;
+  const canAccessUserManagement = isSuperAdmin;
+  const canAccessCryptoRequests = isSuperAdmin && canApproveTopups;
+  const canAccessWalletControl = isSuperAdmin && canManageWallet;
+  const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
+  const canAccessTossApprovals = isSuperAdmin && canManageWallet;
+  const canAccessPaymentChannels = isSuperAdmin && (canManagePayments || canManageDisbursements);
+  const canAccessWalletSettings = isSuperAdmin && canManageWallet;
+  const canAccessBitgo = isSuperAdmin && canManageWallet;
+  const canAccessCheckoutDesign = isSuperAdmin && canManagePayments;
+  const canAccessPlatformSettings = isSuperAdmin && (canManagePayments || canManageWallet);
   const canAccessApprovalsAndWallets = canAccessCryptoRequests || canAccessWalletControl || canAccessOperations || canAccessTossApprovals;
   const canAccessPaymentsAndConfiguration = canAccessPaymentChannels || canAccessWalletSettings || canAccessBitgo || canAccessCheckoutDesign || canAccessPlatformSettings;
-  const canAccessGovernance = canViewReports || canManageTeam;
+  const canAccessGovernance = isSuperAdmin;
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -3391,6 +3381,10 @@ export default function AdminManagement() {
   const [editingFeesAdmin, setEditingFeesAdmin] = useState<AdminUser | null>(null);
 
   const fetchAdmins = useCallback(async () => {
+    if (!canAccessAdminUsers) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await authenticatedFetch('/api/v1/admin-users');
@@ -3401,7 +3395,7 @@ export default function AdminManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canAccessAdminUsers]);
 
   const fetchMaintenanceMode = useCallback(async () => {
     try {
@@ -3454,12 +3448,16 @@ export default function AdminManagement() {
   };
 
   useEffect(() => {
-    fetchAdmins();
+    if (canAccessAdminUsers) {
+      void fetchAdmins();
+    }
     fetchMaintenanceMode();
-    fetchCollectionFee();
-    const id = setInterval(fetchAdmins, 30000);
-    return () => clearInterval(id);
-  }, [fetchAdmins, fetchMaintenanceMode, fetchCollectionFee]);
+    if (isSuperAdmin) void fetchCollectionFee();
+    const id = canAccessAdminUsers ? setInterval(() => void fetchAdmins(), 30000) : undefined;
+    return () => {
+      if (id !== undefined) clearInterval(id);
+    };
+  }, [canAccessAdminUsers, fetchAdmins, fetchMaintenanceMode, fetchCollectionFee, isSuperAdmin]);
 
   const handleSaveCollectionFee = async () => {
     const value = Number(additionalFeePercent);
@@ -3731,7 +3729,7 @@ export default function AdminManagement() {
       description: 'Review and permanently clear payment transactions and disbursements for test-mode merchants.'
     }] : []),
   ];
-  const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : 'admins';
+  const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'admins';
   const selectedTabMeta = tabs.find(tab => tab.id === selectedTab);
 
   return (

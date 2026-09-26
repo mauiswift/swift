@@ -69,6 +69,25 @@ describe('payment approval navigation', () => {
   });
 });
 
+describe('admin management navigation', () => {
+  it('shows team managers the admin management workspace', () => {
+    const { sections } = buildAdminNavigation(
+      { ...noPermissions, can_manage_team: true },
+      false,
+      'en',
+      key => key,
+    );
+
+    expect(sections.flatMap(section => section.items.map(item => item.path))).toContain('/admin-management');
+  });
+
+  it('keeps the admin management workspace hidden without team or super-admin access', () => {
+    const { sections } = buildAdminNavigation(noPermissions, false, 'en', key => key);
+
+    expect(sections.flatMap(section => section.items.map(item => item.path))).not.toContain('/admin-management');
+  });
+});
+
 describe('dashboard navigation grouping', () => {
   it('groups available pages into overview, payments, and management', () => {
     const permissions: UserPermissions = {

@@ -236,7 +236,7 @@ function AuthAwareContent() {
       <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute permission="can_manage_wallet"><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute permission="can_manage_bot"><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
-      <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
+      <Route path="/admin-management" element={<ProtectedAdminRoute permission="can_manage_team" allowPlatformSuperAdmin><AdminManagement /></ProtectedAdminRoute>} />
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
       <Route path="/downline-management" element={<ProtectedAdminRoute permission="can_manage_team" allowVipGold><DownlineManagement /></ProtectedAdminRoute>} />
       <Route path="/withdrawals" element={<RequireSuperAdmin><WithdrawalRequestsPage /></RequireSuperAdmin>} />
