@@ -14,11 +14,13 @@ from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import CurrencyConverter, MagpieService
 from services.paymentwall_service import PaymentwallService
 from services.transactions import TransactionsService
+from services.toss_account_pool import assign_toss_account_to_transaction
 from services.app_settings import (
     get_enabled_collection_currencies,
     get_payment_channels,
     get_wallet_currency_limits,
     get_deposit_accounts,
+    is_toss_bank_account,
 )
 from services.user_benefits import get_krw_benefits
 from services.checkout_urls import build_checkout_url, checkout_host
@@ -51,10 +53,7 @@ async def _select_manual_transfer_account(db: AsyncSession, currency: str, amoun
         ]
         toss_accounts = [
             account for account in accounts
-            if "toss" in " ".join(
-                str(account.get(key, "")).strip().lower()
-                for key in ("value", "label", "bank_name")
-            )
+            if is_toss_bank_account(account)
         ]
         accounts = toss_accounts
     eligible = [
@@ -541,8 +540,6 @@ class PaymentGateway:
         reference_id = external_id or f"manual-{transaction_type}-{_uuid.uuid4().hex[:12]}"
         checkout_url = build_checkout_url(reference_id, currency)
         transfer_account = {}
-        if currency == "KRW" and db is not None:
-            transfer_account = await _select_manual_transfer_account(db, currency, amount)
         if currency == "KRW" and not transfer_account:
             virtual_account = PaymentwallService.generate_krw_virtual_account(
                 user_id=user_id,
@@ -592,6 +589,10 @@ class PaymentGateway:
             },
             status="pending",
         )
+        if currency == "KRW":
+            pool_account = await assign_toss_account_to_transaction(db, txn)
+            if pool_account:
+                bank_account.update(pool_account)
         return {
             "success": True,
             "data": {

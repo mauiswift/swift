@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from services import app_settings
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
 from services.checkout_urls import build_checkout_url
@@ -199,7 +200,7 @@ async def test_set_deposit_accounts_accepts_numeric_string_minimum_amount(monkey
 
 
 @pytest.mark.asyncio
-async def test_krw_manual_deposit_account_is_one_stable_toss_account_per_user(monkeypatch):
+async def test_krw_manual_deposit_account_chooses_only_from_toss_accounts(monkeypatch):
     from services import app_settings
 
     accounts = [
@@ -233,9 +234,61 @@ async def test_krw_manual_deposit_account_is_one_stable_toss_account_per_user(mo
     first = await app_settings.get_user_manual_deposit_account(None, "user-1", "KRW")
     second = await app_settings.get_user_manual_deposit_account(None, "user-1", "KRW")
 
-    assert first == second
-    assert first["bank_name"] == "Toss Bank"
-    assert first["account_number"] != "777-888-999"
+    assert first["account_number"] in {"111-222-333", "444-555-666"}
+    assert second["account_number"] in {"111-222-333", "444-555-666"}
+
+
+@pytest.mark.asyncio
+async def test_krw_manual_deposit_avoids_account_from_last_deposit(monkeypatch):
+    accounts = [
+        {
+            "value": "toss-primary",
+            "label": "Toss Bank",
+            "bank_name": "Toss Bank",
+            "account_number": "111-222-333",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+        {
+            "value": "toss-secondary",
+            "label": "Toss Bank",
+            "bank_name": "Toss Bank",
+            "account_number": "444-555-666",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+    ]
+    monkeypatch.setattr(app_settings, "get_deposit_accounts", AsyncMock(return_value=accounts))
+    monkeypatch.setattr(app_settings.random, "choice", lambda choices: choices[0])
+
+    class FakeDb:
+        async def scalar(self, statement):
+            return "111-222-333"
+
+    account = await app_settings.get_user_manual_deposit_account(FakeDb(), "user-1", "KRW")
+
+    assert account is not None
+    assert account["account_number"] == "444-555-666"
+
+
+@pytest.mark.asyncio
+async def test_krw_manual_deposit_recognizes_korean_toss_bank_name(monkeypatch):
+    accounts = [
+        {
+            "value": "Account Number",
+            "label": "Account Number",
+            "bank_name": "토스페이",
+            "account_number": "1908-1618-8260",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+        },
+    ]
+    monkeypatch.setattr(app_settings, "get_deposit_accounts", AsyncMock(return_value=accounts))
+
+    account = await app_settings.get_user_manual_deposit_account(None, "user-kr", "KRW")
+
+    assert account is not None
+    assert account["account_number"] == "1908-1618-8260"
 
 
 @pytest.mark.asyncio

@@ -18,10 +18,9 @@ from models.transactions import Transactions
 from models.auth import User
 from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
-from models.toss_account_pool import TossAccountPool
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
-from services.app_settings import get_payment_channels, get_deposit_accounts
+from services.app_settings import get_payment_channels
 from services.url_shortener import URLShortenerService
 from io import BytesIO
 import qrcode
@@ -30,7 +29,8 @@ import logging
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.magpie_services import CurrencyConverter, MagpieService
-from services.payment_gateway import gateway, _select_manual_transfer_account
+from services.payment_gateway import gateway
+from services.toss_account_pool import assign_toss_account_to_transaction
 from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
@@ -43,128 +43,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 
-
-async def _get_toss_account_for_transaction(db: AsyncSession, txn: Transactions) -> dict[str, str]:
-    """Return the pool account assigned to this checkout session."""
-    result = await db.execute(
-        select(TossAccountPool)
-        .where(TossAccountPool.is_active.is_(True))
-        .order_by(TossAccountPool.last_assigned_at.asc().nullsfirst(), TossAccountPool.id.asc())
-        .with_for_update()
-    )
-    pool_accounts = result.scalars().all()
-    reference = str(txn.external_id or "").strip()
-    if txn.bank_account_number and txn.bank_account_reference == reference:
-        assigned = await db.scalar(
-            select(TossAccountPool).where(
-                TossAccountPool.account_number == txn.bank_account_number,
-                TossAccountPool.last_assigned_transaction_id == txn.id,
-            )
-        )
-        if assigned:
-            return {
-                "bank_name": assigned.bank_name,
-                "number": assigned.account_number,
-                "account_name": assigned.account_holder_name,
-            }
-
-    candidates: list[dict[str, str]] = [
-        {
-            "bank_name": account.bank_name,
-            "number": account.account_number,
-            "account_name": account.account_holder_name,
-            "pool_id": str(account.id),
-        }
-        for account in pool_accounts
-    ]
-    configured_accounts = await get_deposit_accounts(db)
-    known_numbers = {candidate["number"] for candidate in candidates}
-    for configured in configured_accounts:
-        bank_name = str(
-            configured.get("bank_name")
-            or configured.get("label")
-            or configured.get("value")
-            or ""
-        ).strip()
-        account_number = str(configured.get("account_number") or "").strip()
-        account_name = str(configured.get("account_name") or "").strip()
-        account_identity = f"{bank_name} {configured.get('label', '')} {configured.get('value', '')}".lower()
-        if (
-            str(configured.get("currency") or "").upper() == "KRW"
-            and ("toss" in account_identity or "토스" in account_identity or "tosspay" in account_identity)
-            and account_number
-            and account_name
-            and account_number not in known_numbers
-        ):
-            candidates.append({
-                "bank_name": bank_name or "토스페이",
-                "number": account_number,
-                "account_name": account_name,
-            })
-            known_numbers.add(account_number)
-
-    if txn.bank_account_number and txn.bank_account_reference == reference:
-        existing = next(
-            (candidate for candidate in candidates if candidate["number"] == txn.bank_account_number),
-            None,
-        )
-        if existing:
-            return {
-                "bank_name": existing["bank_name"],
-                "number": existing["number"],
-                "account_name": existing["account_name"],
-            }
-
-    if candidates:
-        latest_result = await db.execute(
-            select(Transactions.bank_account_number)
-            .where(
-                Transactions.currency == "KRW",
-                Transactions.bank_account_number.is_not(None),
-            )
-            .order_by(Transactions.id.desc())
-            .limit(1)
-        )
-        latest_number = str(latest_result.scalar_one_or_none() or "").strip()
-        previous_number = str(txn.bank_account_number or "").strip()
-        rotation_candidates = [
-            candidate for candidate in candidates
-            if candidate["number"] not in {latest_number, previous_number}
-        ]
-        if not rotation_candidates:
-            rotation_candidates = [
-                candidate for candidate in candidates
-                if candidate["number"] != previous_number
-            ] or candidates
-        account = next(
-            (candidate for candidate in rotation_candidates if candidate["number"] != latest_number),
-            rotation_candidates[0],
-        )
-        pool_account = next(
-            (candidate for candidate in pool_accounts if candidate.account_number == account["number"]),
-            None,
-        )
-        now = datetime.now(timezone.utc)
-        if pool_account:
-            pool_account.last_assigned_at = now
-            pool_account.last_assigned_transaction_id = txn.id
-            pool_account.updated_at = now
-        txn.bank_name = account["bank_name"]
-        txn.bank_account_number = account["number"]
-        txn.bank_account_name = account["account_name"]
-        txn.bank_account_reference = reference
-        await db.commit()
-        return {
-            "bank_name": account["bank_name"],
-            "number": account["number"],
-            "account_name": account["account_name"],
-        }
-
-    virtual_account = PaymentwallService.generate_krw_virtual_account(
-        user_id=str(txn.user_id),
-        reference_id=reference or f"session-{txn.id}",
-    )
-    return virtual_account
 
 SWIFTPAY_INSTITUTION_PREFIXES = {
     "BDO": ("BNORPHM",),
@@ -795,9 +673,6 @@ async def create_open_amount_payment_request(
         raise HTTPException(status_code=404, detail="Reusable payment link not found")
 
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
-    transfer_account = {}
-    if str(reusable.currency or "").upper() == "KRW":
-        transfer_account = await _select_manual_transfer_account(db, "KRW", payload.amount)
     payment = Transactions(
         user_id=reusable.user_id,
         transaction_type="open_amount_payment",
@@ -808,11 +683,13 @@ async def create_open_amount_payment_request(
         approval_status="pending",
         description="Customer-entered amount payment",
         payment_url=build_checkout_url(request_reference, reusable.currency),
-        **transfer_account,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
     db.add(payment)
+    if str(reusable.currency or "").upper() == "KRW":
+        await db.flush()
+        await assign_toss_account_to_transaction(db, payment)
     await db.commit()
     await db.refresh(payment)
     publish_payment_link_created(payment)
@@ -1421,7 +1298,12 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            virtual_account = await _get_toss_account_for_transaction(db, txn)
+            virtual_account = await assign_toss_account_to_transaction(db, txn)
+            if virtual_account is None:
+                virtual_account = PaymentwallService.generate_krw_virtual_account(
+                    user_id=str(txn.user_id),
+                    reference_id=str(txn.external_id or f"session-{txn.id}"),
+                )
             bank_name = virtual_account["bank_name"]
             bank_account_number = virtual_account["number"]
             bank_account_name = virtual_account["account_name"]

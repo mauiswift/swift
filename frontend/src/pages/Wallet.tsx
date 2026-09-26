@@ -885,14 +885,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   useEffect(() => {
     if (!user) return;
 
-    client.get('/api/v1/app-settings/deposit-accounts').then((bankRes) => {
+    client.get('/api/v1/bank-deposits/accounts').then((bankRes) => {
       if (bankRes.ok && Array.isArray(bankRes.data?.accounts)) {
         const accounts = bankRes.data.accounts;
         setDepositAccounts(accounts);
-        const krwAccounts = accounts.filter((account: { currency?: string; minimum_amount?: number }) => account.currency === 'KRW' && !account.minimum_amount);
-        const krwAccount = krwAccounts.length
-          ? krwAccounts[Math.floor(Math.random() * krwAccounts.length)]
-          : null;
+        const krwAccount = accounts.find((account: { currency?: string }) => account.currency === 'KRW') || null;
         setAssignedKrwAccount(krwAccount);
         setKrwBankName(krwAccount?.label || '');
         setKrwAccountHolderName(krwAccount?.account_name || '');
@@ -1648,7 +1645,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                     </div>
                   )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-                    <p className="text-sm font-semibold text-slate-700 mb-4">{isKoreanWallet ? '수취 은행 계좌' : 'Receiving bank accounts'}</p>
+                    <p className="text-sm font-semibold text-slate-700 mb-4">{isKoreanWallet ? '수취 은행 계좌' : isKrwFlow ? 'Receiving bank account' : 'Receiving bank accounts'}</p>
                     <div className="space-y-3">
                       {walletDepositDestinations.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
@@ -1692,7 +1689,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       userId={user?.id}
                       bankName={krwBankName}
                       accountHolderName={krwAccountHolderName}
-                      destinations={isKrwFlow ? depositAccounts.filter(account => account.currency === 'KRW') : undefined}
+                      destinations={isKrwFlow ? (assignedKrwAccount ? [assignedKrwAccount] : []) : undefined}
                       companyLogoUrl={platformBranding?.logoUrl}
                     />
                   </React.Suspense>

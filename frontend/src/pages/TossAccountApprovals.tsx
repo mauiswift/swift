@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { copyTextToClipboard } from '@/lib/clipboard';
 
 type TossApplication = {
@@ -233,14 +234,18 @@ export function TossAccountApprovalsPanel() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">TOSS payment account pool</h2>
-                <p className="mt-1 text-sm text-slate-600">Add active 토스페이 accounts here. Each new KRW payment session is assigned the least recently used active account.</p>
+                <p className="mt-1 text-sm text-slate-600">Add active 토스페이 accounts here. Each new KRW payment session randomly uses an active account and avoids the account assigned to the previous session whenever another is available.</p>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700">{pool.filter((account) => account.is_active).length} active</span>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-5">
               <Input value={poolForm.bank_name} onChange={(event) => setPoolForm({ ...poolForm, bank_name: event.target.value })} placeholder="Bank name" />
               <Input value={poolForm.account_number} onChange={(event) => setPoolForm({ ...poolForm, account_number: event.target.value })} placeholder="Account number" />
               <Input value={poolForm.account_holder_name} onChange={(event) => setPoolForm({ ...poolForm, account_holder_name: event.target.value })} placeholder="Account holder name" />
+              <label className="flex items-center gap-2 rounded-md border border-input bg-white px-3 text-sm text-slate-700">
+                <Switch checked={poolForm.is_active} onCheckedChange={(isActive) => setPoolForm({ ...poolForm, is_active: isActive })} />
+                Available for checkout
+              </label>
               <Button onClick={() => void savePoolAccount()}><Building2 size={14} className="mr-2" />{editingPoolId ? 'Save account' : 'Add account'}</Button>
             </div>
             {pool.length > 0 && (

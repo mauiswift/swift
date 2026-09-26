@@ -1,9 +1,9 @@
 """App Settings Service - manages application configuration values stored in database."""
 
 import json
-import hashlib
 import logging
 import math
+import random
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -51,6 +51,7 @@ from core.constants import (
 )
 from core.constants import FEES_ENABLED
 from models.app_settings import AppSettings
+from models.bank_deposit_requests import BankDepositRequest
 from models.admin_users import AdminUser
 from services.exchange_rate_service import fetch_live_usdt_php_rate
 
@@ -126,16 +127,23 @@ async def get_deposit_accounts(db: AsyncSession) -> list[dict]:
     return configured
 
 
+def is_toss_bank_account(account: dict) -> bool:
+    identity = " ".join(
+        str(account.get(key, "")).strip().casefold()
+        for key in ("value", "label", "bank_name")
+    )
+    return any(identifier in identity for identifier in ("toss", "토스"))
+
+
 async def get_user_manual_deposit_account(
     db: AsyncSession,
     user_id: str,
     currency: str,
 ) -> dict | None:
-    """Return one stable manual-deposit account for a wallet owner.
+    """Return one manual-deposit account, avoiding the user's last KRW account.
 
-    Wallet deposits must not expose the platform's full account pool. The
-    account is stable for a given user while the configured account pool
-    remains unchanged; checkout payments use a separate random allocator.
+    Wallet deposits must not expose the platform's full account pool.
+    Checkout sessions use the separate active Toss pool.
     """
     normalized_currency = str(currency or "").strip().upper()
     accounts = [
@@ -148,16 +156,47 @@ async def get_user_manual_deposit_account(
         return None
     toss_accounts = [
         account for account in accounts
-        if "toss" in " ".join(
-            str(account.get(key, "")).strip().lower()
-            for key in ("value", "label", "bank_name")
-        )
+        if is_toss_bank_account(account)
     ]
     if normalized_currency == "KRW" and not toss_accounts:
         return None
     eligible = toss_accounts or accounts
-    digest = hashlib.sha256(f"{normalized_currency}:{user_id}".encode("utf-8")).digest()
-    return dict(eligible[int.from_bytes(digest[:8], "big") % len(eligible)])
+    if normalized_currency == "KRW" and db is not None:
+        last_used = await db.scalar(
+            select(BankDepositRequest.account_number)
+            .where(
+                BankDepositRequest.chat_id == str(user_id),
+                BankDepositRequest.currency == "KRW",
+            )
+            .order_by(BankDepositRequest.id.desc())
+            .limit(1)
+        )
+        alternatives = [
+            account for account in eligible
+            if str(account.get("account_number", "")).strip() != str(last_used or "").strip()
+        ]
+        if alternatives:
+            eligible = alternatives
+    return dict(random.choice(eligible))
+
+
+async def is_valid_manual_deposit_account(
+    db: AsyncSession,
+    currency: str,
+    account_number: str,
+) -> bool:
+    """Check whether an account number belongs to the configured deposit pool."""
+    normalized_currency = str(currency or "").strip().upper()
+    normalized_number = str(account_number or "").strip()
+    if not normalized_number:
+        return False
+    return any(
+        str(account.get("currency", "")).strip().upper() == normalized_currency
+        and str(account.get("account_number", "")).strip() == normalized_number
+        and str(account.get("account_name", "")).strip()
+        and (normalized_currency != "KRW" or is_toss_bank_account(account))
+        for account in await get_deposit_accounts(db)
+    )
 
 
 async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[dict]:

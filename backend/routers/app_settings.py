@@ -40,6 +40,7 @@ from services.app_settings import (
     set_deposit_rules,
     get_deposit_accounts,
     set_deposit_accounts,
+    is_toss_bank_account,
     get_usdt_php_rate_details,
     get_wallet_limits,
     set_wallet_limits,
@@ -612,10 +613,7 @@ async def get_toss_bank_accounts_endpoint(
     accounts = [
         account for account in await get_deposit_accounts(db)
         if str(account.get("currency", "")).strip().upper() == "KRW"
-        and "toss" in " ".join(
-            str(account.get(key, "")).strip().lower()
-            for key in ("value", "label", "bank_name")
-        )
+        and is_toss_bank_account(account)
     ]
     return {"accounts": accounts}
 
@@ -632,10 +630,7 @@ async def set_toss_bank_accounts_endpoint(
         raise HTTPException(status_code=400, detail="At least one Toss Bank account is required.")
     if any(
         str(account.get("currency", "")).strip().upper() != "KRW"
-        or "toss" not in " ".join(
-            str(account.get(key, "")).strip().lower()
-            for key in ("value", "label", "bank_name")
-        )
+        or not is_toss_bank_account(account)
         for account in body.accounts
     ):
         raise HTTPException(status_code=400, detail="Only KRW Toss Bank accounts may be configured here.")
@@ -645,16 +640,19 @@ async def set_toss_bank_accounts_endpoint(
             account for account in existing
             if not (
                 str(account.get("currency", "")).strip().upper() == "KRW"
-                and "toss" in " ".join(
-                    str(account.get(key, "")).strip().lower()
-                    for key in ("value", "label", "bank_name")
-                )
+                and is_toss_bank_account(account)
             )
         ]
         accounts = await set_deposit_accounts(db, non_toss + body.accounts)
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"accounts": [account for account in accounts if str(account.get("currency", "")).upper() == "KRW" and "toss" in str(account.get("label", "")).lower()]}
+    return {
+        "accounts": [
+            account
+            for account in accounts
+            if str(account.get("currency", "")).upper() == "KRW" and is_toss_bank_account(account)
+        ]
+    }
 
 
 @router.put("/deposit-accounts")

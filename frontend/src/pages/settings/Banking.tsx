@@ -76,7 +76,7 @@ export default function Banking() {
   const [tossAccountsLoading, setTossAccountsLoading] = useState(false);
   const [tossAccountsSaving, setTossAccountsSaving] = useState(false);
   const [usdtDepositAddress, setUsdtDepositAddress] = useState('');
-  const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user));
+  const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user || undefined));
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingSignature = useRef(false);
   const [signatureData, setSignatureData] = useState('');
@@ -174,7 +174,7 @@ export default function Banking() {
   };
 
   const openTossWizard = () => {
-    setTossForm(createTossForm(user));
+    setTossForm(createTossForm(user || undefined));
     setSignatureData('');
     setTossStep(1);
     setTossWizardOpen(true);
@@ -458,12 +458,12 @@ export default function Banking() {
           <div className="app-panel max-w-3xl p-5 sm:p-8 mt-6">
             <div className="flex items-start justify-between gap-4 mb-6">
               <div>
-                <h2 className="text-[16px] font-semibold text-slate-900">TOSS Bank checkout accounts</h2>
+                <h2 className="text-[16px] font-semibold text-slate-900">TOSS Bank manual deposit account</h2>
                 <p className="text-[13px] text-slate-500 mt-1">
-                  New checkout sessions rotate through this pool. Manual KRW deposits keep one stable account per user.
+                  KRW wallet deposits use these details. Checkout sessions are assigned separately from the TOSS payment account pool in TOSS Bank Account Applications.
                 </p>
               </div>
-              <Button type="button" variant="outline" onClick={addTossAccount}>Add account</Button>
+              <Button type="button" variant="outline" onClick={addTossAccount}>Add deposit account</Button>
             </div>
             {tossAccountsLoading ? (
               <p className="text-sm text-slate-500">Loading Toss Bank accounts...</p>
@@ -476,7 +476,7 @@ export default function Banking() {
                   </div>
                 ))}
                 <Button type="button" onClick={saveTossAccounts} disabled={tossAccountsSaving || !tossAccounts.length} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
-                  {tossAccountsSaving ? 'Saving...' : 'Save Toss account pool'}
+                  {tossAccountsSaving ? 'Saving...' : 'Save deposit account details'}
                 </Button>
               </div>
             )}

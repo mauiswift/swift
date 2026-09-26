@@ -20,11 +20,10 @@ from utils.datetime import serialize_utc_datetime
 from schemas.auth import UserResponse
 from services.magpie_services import MagpieService
 from services.app_settings import get_payment_channels
-from services.app_settings import get_deposit_accounts
 from services.swiftpay_service import SwiftPayService
 from services.ph_banks_service import PHBanksService
-from services.payment_gateway import _is_security_bank_name, _select_manual_transfer_account
 from services.paymentwall_service import PaymentwallService
+from services.toss_account_pool import assign_toss_account_to_transaction
 from services.transactions import publish_payment_link_created
 from services.checkout_urls import build_checkout_url
 
@@ -211,18 +210,6 @@ async def select_checkout_institution_compat(
         bank_name = txn.bank_name
         bank_account_number = txn.bank_account_number
         bank_account_name = txn.bank_account_name
-        if (txn.currency or "").upper() == "KRW" and not bank_account_number:
-            configured_accounts = [
-                account for account in await get_deposit_accounts(db)
-                if str(account.get("currency", "")).upper() == "KRW"
-                and str(account.get("account_number", "")).strip()
-                and str(account.get("account_name", "")).strip()
-            ]
-            if configured_accounts:
-                configured_account = configured_accounts[0]
-                bank_name = configured_account.get("label") or configured_account.get("value") or bank_name
-                bank_account_number = configured_account.get("account_number")
-                bank_account_name = configured_account.get("account_name")
         return {
             "success": True,
             "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
@@ -493,9 +480,6 @@ async def create_open_amount_payment_request_compat(
         raise HTTPException(status_code=422, detail="Payment amount must be a positive number")
 
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
-    transfer_account = {}
-    if str(reusable.currency or "").upper() == "KRW":
-        transfer_account = await _select_manual_transfer_account(db, "KRW", amount)
     payment = Transactions(
         user_id=reusable.user_id,
         transaction_type="open_amount_payment",
@@ -506,11 +490,13 @@ async def create_open_amount_payment_request_compat(
         approval_status="pending",
         description="Customer-entered amount payment",
         payment_url=build_checkout_url(request_reference, reusable.currency),
-        **transfer_account,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
     db.add(payment)
+    if str(reusable.currency or "").upper() == "KRW":
+        await db.flush()
+        await assign_toss_account_to_transaction(db, payment)
     await db.commit()
     await db.refresh(payment)
     publish_payment_link_created(payment)
@@ -575,27 +561,15 @@ async def get_checkout_payment_compat(
     bank_account_number = None
     bank_account_name = None
     if (txn.currency or "").upper() == "KRW":
-        if not txn.bank_account_number or _is_security_bank_name(txn.bank_name):
-            configured_account = await _select_manual_transfer_account(db, "KRW", float(txn.amount or 0))
-            if configured_account:
-                bank_name = configured_account.get("bank_name") or bank_name
-                bank_account_number = configured_account.get("bank_account_number")
-                bank_account_name = configured_account.get("bank_account_name")
-                txn.bank_name = bank_name
-                txn.bank_account_number = bank_account_number
-                txn.bank_account_name = bank_account_name
-                await db.commit()
-        virtual_account = PaymentwallService.generate_krw_virtual_account(
-            user_id=str(txn.user_id),
-            reference_id=str(txn.external_id or txn.id),
-        )
-        bank_name = txn.bank_name or bank_name or virtual_account["bank_name"]
-        bank_account_number = txn.bank_account_number or bank_account_number or virtual_account["number"]
-        bank_account_name = txn.bank_account_name or bank_account_name or virtual_account["account_name"]
-        if _is_security_bank_name(bank_name):
-            bank_name = virtual_account["bank_name"]
-            bank_account_number = virtual_account["number"]
-            bank_account_name = virtual_account["account_name"]
+        toss_account = await assign_toss_account_to_transaction(db, txn)
+        if toss_account is None:
+            toss_account = PaymentwallService.generate_krw_virtual_account(
+                user_id=str(txn.user_id),
+                reference_id=str(txn.external_id or txn.id),
+            )
+        bank_name = toss_account["bank_name"]
+        bank_account_number = toss_account["number"]
+        bank_account_name = toss_account["account_name"]
 
     return {
         "success": True,

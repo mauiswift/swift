@@ -25,6 +25,7 @@ from services.app_settings import (
     get_deposit_rules,
     get_deposit_accounts,
     get_user_manual_deposit_account,
+    is_valid_manual_deposit_account,
 )
 
 logger = logging.getLogger(__name__)
@@ -132,9 +133,8 @@ async def create_bank_deposit_request(
             detail=f"Incoming amount exceeds the {deposit_currency} maximum of {limits['max_incoming']:,.2f}.",
         )
     if deposit_currency == "KRW":
-        assigned_account = await get_user_manual_deposit_account(db, str(current_user.id), "KRW")
-        if not assigned_account or account_number.strip() != str(assigned_account.get("account_number", "")).strip():
-            raise HTTPException(status_code=400, detail="Use the KRW TOSS account assigned to your wallet.")
+        if not await is_valid_manual_deposit_account(db, "KRW", account_number):
+            raise HTTPException(status_code=400, detail="Use the KRW TOSS account shown for your deposit.")
 
     receipt_path: Optional[str] = None
     if receipt and receipt.filename:

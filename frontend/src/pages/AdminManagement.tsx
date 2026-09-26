@@ -331,6 +331,11 @@ const createDepositAccount = (number: number): DepositAccount => ({
   minimum_amount: undefined,
 });
 
+const isTossDepositAccount = (account: DepositAccount) => (
+  account.currency.toUpperCase() === 'KRW'
+  && /toss|토스/i.test(`${account.value} ${account.label}`)
+);
+
 function PlatformSettingsTab({ onError }: { onError: (message: string) => void }) {
   const [currencies, setCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
   const [conversionFee, setConversionFee] = useState('1');
@@ -785,6 +790,17 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     setAccountDialogOpen(true);
   };
 
+  const openNewTossDepositAccount = () => {
+    setEditingAccountIndex(null);
+    setAccountDraft({
+      ...createDepositAccount(depositAccounts.length + 1),
+      value: 'Toss Bank',
+      label: 'Toss Bank',
+      currency: 'KRW',
+    });
+    setAccountDialogOpen(true);
+  };
+
   const openEditAccount = (index: number) => {
     setEditingAccountIndex(index);
     setAccountDraft({ ...depositAccounts[index] });
@@ -799,6 +815,13 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     }
     setAccountDialogOpen(false);
   };
+
+  const tossDepositAccounts = depositAccounts
+    .map((account, index) => ({ account, index }))
+    .filter(({ account }) => isTossDepositAccount(account));
+  const otherDepositAccounts = depositAccounts
+    .map((account, index) => ({ account, index }))
+    .filter(({ account }) => !isTossDepositAccount(account));
 
   const fields: Array<{ key: keyof WalletLimitValues; label: string; help: string }> = [
     { key: 'max_incoming', label: 'Maximum incoming amount', help: 'Maximum amount accepted in one incoming transaction.' },
@@ -900,9 +923,9 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       <section id="deposit-accounts" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-slate-900">Receiving accounts</h3>
+            <h3 className="text-base font-bold text-slate-900">Deposit account settings</h3>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Manage the bank details presented to customers when they deposit. KRW accounts with minimum amounts are used for eligible high-value deposits.
+              Manage deposit destinations. Toss Bank accounts form a random-selection pool; each deposit session shows just one selected account to the customer.
             </p>
           </div>
           <Button
@@ -912,15 +935,70 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             onClick={openNewAccount}
           >
             <Plus className="h-4 w-4" />
-            Add account
+            Add other account
           </Button>
         </div>
-        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
-          {depositAccounts.length === 0 ? (
+        <div className="mt-5 rounded-xl border border-orange-200 bg-orange-50/70 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">Toss Bank KRW deposit account pool</h4>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
+                Add the accounts eligible for KRW wallet deposits. The system randomly assigns one account per deposit session and displays only that account. When possible, it avoids the user’s previous deposit account.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full shrink-0 gap-2 border-orange-200 text-[#C2410C] hover:bg-white sm:w-auto"
+              onClick={openNewTossDepositAccount}
+            >
+              <Plus className="h-4 w-4" />
+              Add Toss account
+            </Button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {tossDepositAccounts.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-orange-200 bg-white/70 px-4 py-5 text-center text-xs text-slate-500">
+                No Toss Bank deposit accounts configured.
+              </p>
+            ) : (
+              tossDepositAccounts.map(({ account, index }) => (
+                  <div key={`${account.value}-${index}`} className="flex flex-col gap-3 rounded-lg border border-orange-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900">{account.account_number || 'Account number not set'}</p>
+                      <p className="mt-1 text-xs text-slate-500">{account.account_name || 'Account holder not set'}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditAccount(index)}
+                        className="motion-interactive inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-label={`Edit ${account.account_number || 'Toss deposit account'}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
+                        className="motion-interactive inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                        aria-label={`Remove ${account.account_number || 'Toss deposit account'}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+        <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
+          {otherDepositAccounts.length === 0 ? (
             <div className="bg-slate-50 px-4 py-8 text-center">
               <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
-              <p className="mt-2 text-sm font-semibold text-slate-700">No receiving accounts yet</p>
-              <p className="mt-1 text-xs text-slate-500">Add an account to show deposit instructions to customers.</p>
+              <p className="mt-2 text-sm font-semibold text-slate-700">No other receiving accounts</p>
+              <p className="mt-1 text-xs text-slate-500">Toss Bank deposit accounts are managed in the pool above.</p>
             </div>
           ) : (
             <Table>
@@ -935,7 +1013,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {depositAccounts.map((account, index) => (
+                {otherDepositAccounts.map(({ account, index }) => (
                   <TableRow key={`${account.value}-${index}`} className="align-top">
                     <TableCell className="min-w-40">
                       <p className="font-semibold text-slate-900">{account.label || 'Untitled account'}</p>
@@ -992,7 +1070,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           )}
         </div>
         <p className="mt-3 text-xs leading-5 text-slate-500">
-          Customers see these details in Wallet &gt; Deposit when choosing a bank destination. Telegram uses them as a fallback when no super-admin receiving account is configured. The minimum amount controls which KRW destination is selected for high-value deposits.
+          Other receiving accounts are managed separately from the Toss Bank pool. Minimum amounts can be used to select a destination for eligible high-value deposits.
         </p>
       </section>
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
