@@ -53,7 +53,11 @@ export default function AccountSecure() {
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [unlinkLoading, setUnlinkLoading] = useState(false);
   const [linkingInstructions, setLinkingInstructions] = useState(false);
-  const [telegramBotName, setTelegramBotName] = useState('');
+  const configuredTelegramBot = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)
+    ?.replace(/^@/, '')
+    .trim();
+  const [telegramBotName, setTelegramBotName] = useState(configuredTelegramBot || '');
+  const [telegramBotConfigError, setTelegramBotConfigError] = useState(false);
   const [linking, setLinking] = useState(false);
   const [googleLinkStatus, setGoogleLinkStatus] = useState<{ linked: boolean; google_email?: string }>({ linked: false });
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -88,11 +92,24 @@ export default function AccountSecure() {
     if (user) {
       fetchTelegramStatus();
       fetch('/api/v1/auth/telegram-login-config')
-        .then((response) => response.ok ? response.json() : null)
-        .then((data) => setTelegramBotName(data?.bot_username || ''))
-        .catch(() => setTelegramBotName(''));
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Telegram login is not configured');
+          return response.json();
+        })
+        .then((data) => {
+          const botName = String(data?.bot_username || '').replace(/^@/, '').trim();
+          if (botName) {
+            setTelegramBotName(botName);
+            setTelegramBotConfigError(false);
+          } else if (!configuredTelegramBot) {
+            setTelegramBotConfigError(true);
+          }
+        })
+        .catch(() => {
+          if (!configuredTelegramBot) setTelegramBotConfigError(true);
+        });
     }
-  }, [user]);
+  }, [configuredGoogleClientId, configuredTelegramBot, user]);
 
   useEffect(() => {
     if (!googleClientId || googleLinkStatus.linked) return;
@@ -335,7 +352,13 @@ export default function AccountSecure() {
                   <div className="flex items-center justify-center gap-2 py-3 text-[13px] text-slate-500">
                     <Loader2 size={16} className="animate-spin" /> Linking Telegram account...
                   </div>
-                ) : null}
+                ) : (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-[12px] text-rose-700" role="alert">
+                    {telegramBotConfigError
+                      ? 'Telegram linking is temporarily unavailable. Please refresh this page or contact support.'
+                      : 'Loading the Telegram linking button...'}
+                  </div>
+                )}
 
                 <p className="text-[12px] text-slate-500 text-center">
                   💡 Tip: You can also link by logging in with Telegram on the login page
