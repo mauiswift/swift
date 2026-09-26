@@ -6,6 +6,7 @@ import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { fmtCurrency } from '@/lib/format';
+import PaymentStatus from './PaymentStatus';
 
 interface PendingPayment {
   id: string;
@@ -19,6 +20,7 @@ interface PendingPayment {
   user_name?: string;
   description: string;
   status: string;
+  approval_status?: string | null;
   payment_received?: boolean;
   payment_received_at?: string | null;
   created_at: string;
@@ -337,9 +339,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                         <p className="text-[12px] text-slate-600 max-w-xs truncate">
                           {payment.description}
                         </p>
-                        <span className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${payment.payment_received ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-                          {payment.payment_received ? 'Payment received' : 'Not received'}
-                        </span>
+                        <PaymentStatus payment={payment} compact />
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
@@ -409,7 +409,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       <div><p className="text-xs text-slate-400">Customer</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</p></div>
                       <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(Number(reviewPayment.amount) || 0, reviewPayment.currency || 'PHP')}</p></div>
                       <div><p className="text-xs text-slate-400">Submitted</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
-                      <div><p className="text-xs text-slate-400">Payment status</p><p className={`mt-1 font-semibold ${reviewPayment.payment_received ? 'text-emerald-700' : 'text-amber-700'}`}>{reviewPayment.payment_received ? 'Payment received' : 'Not received'}</p></div>
+                      <div className="col-span-2"><p className="text-xs text-slate-400">Payment and approval status</p><div className="mt-1"><PaymentStatus payment={reviewPayment} /></div></div>
                       <div><p className="text-xs text-slate-400">Received at</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</p></div>
                       <div className="col-span-2"><p className="text-xs text-slate-400">Reference</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
                     </div>
