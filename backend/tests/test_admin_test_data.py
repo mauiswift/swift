@@ -65,6 +65,7 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
                     ),
                 ]
             )
+            await session.flush()
             session.add_all(
                 [
                     Transactions(
@@ -77,6 +78,19 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
                     for user_id in ("test-merchant", "live-merchant", "test-super-admin")
                 ]
             )
+            test_merchant = await session.scalar(
+                select(AdminUser).where(AdminUser.telegram_id == "test-merchant")
+            )
+            assert test_merchant is not None
+            session.add(
+                Transactions(
+                    user_id=str(test_merchant.id),
+                    transaction_type="payment_link",
+                    amount=125,
+                    currency="PHP",
+                    status="pending",
+                )
+            )
             session.add_all(
                 [
                     Disbursements(
@@ -88,13 +102,21 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
                     for user_id in ("test-merchant", "live-merchant", "test-super-admin")
                 ]
             )
+            session.add(
+                Disbursements(
+                    user_id=str(test_merchant.id),
+                    amount=75,
+                    currency="PHP",
+                    status="pending",
+                )
+            )
             await session.commit()
 
             preview = await preview_test_data(_user(is_super_admin=True), session)
             assert preview == {
                 "eligible_test_merchants": 1,
-                "payment_transactions": 1,
-                "disbursements": 1,
+                "payment_transactions": 2,
+                "disbursements": 2,
             }
 
             result = await clear_test_data(
@@ -104,8 +126,8 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
             )
             assert result == {
                 "success": True,
-                "payment_transactions": 1,
-                "disbursements": 1,
+                "payment_transactions": 2,
+                "disbursements": 2,
             }
 
             remaining_transactions = await session.scalar(

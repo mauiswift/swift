@@ -4,7 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import delete, func, select
+from sqlalchemy import cast, delete, func, select, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -23,9 +23,16 @@ class ClearTestDataRequest(BaseModel):
 
 
 def _test_mode_merchant_ids():
-    return select(AdminUser.telegram_id).where(
+    eligible_test_merchants = (
         AdminUser.test_mode.is_(True),
         AdminUser.is_super_admin.is_(False),
+    )
+    return select(AdminUser.telegram_id.label("user_id")).where(
+        *eligible_test_merchants
+    ).union(
+        select(cast(AdminUser.id, String).label("user_id")).where(
+            *eligible_test_merchants
+        )
     )
 
 
