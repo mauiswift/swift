@@ -27,6 +27,8 @@ import {
 } from '@/components/ui/table';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
+import { AdminSidebar } from '@/components/admin/AdminManagementNavigation';
+import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
 import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
 import { toast } from 'sonner';
 import {
@@ -163,8 +165,6 @@ interface CryptoTopupRequest {
   reviewed_at: string | null;
   created_at: string | null;
 }
-
-type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'bitgo' | 'checkout-design' | 'platform-settings' | 'operations' | 'toss-approvals' | 'team-invitations' | 'team-members' | 'audit-logs' | 'test-data-cleanup';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -1321,98 +1321,6 @@ function PermissionBadge({
       <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-current' : 'bg-slate-300'}`} />
       {label}
     </span>
-  );
-}
-
-function AdminSidebar({
-  tabs,
-  active,
-  onChange,
-}: {
-  tabs: { id: string; label: string; icon: React.ReactNode; count?: number; description?: string; group?: string }[];
-  active: string;
-  onChange: (id: string) => void;
-}) {
-  const activeTab = tabs.find((tab) => tab.id === active);
-  const groupedTabs = tabs.reduce<Array<{ id: string; label: string; items: typeof tabs }>>((groups, tab) => {
-    const label = tab.group || 'General';
-    const groupId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'general';
-    const group = groups.find((item) => item.label === label);
-    if (group) {
-      group.items.push(tab);
-    } else {
-      groups.push({ id: groupId, label, items: [tab] });
-    }
-    return groups;
-  }, []);
-
-  return (
-    <nav aria-label="Administration sections" className="w-full shrink-0 lg:sticky lg:top-24 lg:w-72">
-      <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-1 lg:overflow-y-auto">
-        {groupedTabs.map((group) => (
-          <section key={group.id} aria-labelledby={`admin-group-${group.id}`}>
-            <h2 id={`admin-group-${group.id}`} className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">
-              {group.label}
-            </h2>
-            <div className="space-y-1">
-              {group.items.map((tab) => {
-                const isActive = active === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => onChange(tab.id)}
-                    aria-current={isActive ? 'page' : undefined}
-                    aria-label={tab.description ? `${tab.label}: ${tab.description}` : tab.label}
-                    className={`motion-interactive group relative flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${
-                      isActive ? 'border-orange-200 bg-orange-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    {isActive && <span className="absolute bottom-2 left-0 top-2 w-0.5 rounded-full bg-[#FF6B00]" aria-hidden="true" />}
-                    <div className={`rounded-lg p-2 transition-colors ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'}`}>
-                      {tab.icon}
-                    </div>
-                    <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold ${isActive ? 'text-[#C2410C]' : 'text-slate-700 group-hover:text-slate-900'}`}>{tab.label}</span>
-                    {tab.count !== undefined && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      {/* Mobile: compact section selector */}
-      <div className="lg:hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <label htmlFor="admin-section-select" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-          Administration section
-        </label>
-        <div className="relative">
-          <select
-            id="admin-section-select"
-            value={active}
-            onChange={(event) => onChange(event.target.value)}
-            className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10"
-          >
-            {groupedTabs.map((group) => (
-              <optgroup key={group.id} label={group.label}>
-                {group.items.map((tab) => (
-                  <option key={tab.id} value={tab.id}>
-                    {tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden="true" />
-        </div>
-        {activeTab?.description && (
-          <p className="mt-2 px-1 text-xs leading-5 text-slate-500">
-            {activeTab.description}
-          </p>
-        )}
-      </div>
-    </nav>
   );
 }
 
@@ -3621,114 +3529,22 @@ export default function AdminManagement() {
   const filteredActiveAdmins = filteredAdmins.filter((admin) => admin.is_active);
   const filteredInactiveAdmins = filteredAdmins.filter((admin) => !admin.is_active);
 
-  const tabs = [
-    ...(canAccessAdminUsers ? [{
-      id: 'admins',
-      label: 'Admin Users',
-      icon: <ShieldCheck className="h-4 w-4" />,
-      count: admins.length,
-      group: 'People & access',
-      description: 'Manage dashboard administrators and their specific permissions.'
-    }] : []),
-    ...(canAccessUserManagement ? [{
-      id: 'users',
-      label: 'User Management',
-      icon: <Users className="h-4 w-4" />,
-      group: 'People & access',
-      description: 'View and manage roles for all registered platform users.'
-    }] : []),
-    ...(canAccessCryptoRequests ? [{
-      id: 'crypto',
-      label: 'Crypto Requests',
-      icon: <Bitcoin className="h-4 w-4" />,
-      group: 'Approvals & wallets',
-      description: 'Review and approve USDT top-up requests from users.'
-    }] : []),
-    ...(canAccessWalletControl ? [{
-      id: 'wallet-control',
-      label: 'Wallet Control',
-      icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
-      group: 'Approvals & wallets',
-      description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
-    }] : []),
-    ...(canAccessOperations ? [{
-      id: 'operations',
-      label: 'Operational workflows',
-      icon: <RefreshCw className="h-4 w-4" />,
-      group: 'Approvals & wallets',
-      description: 'Open payment, deposit, withdrawal, verification, broadcast, and bot operations.'
-    }] : []),
-    ...(canAccessTossApprovals ? [{
-      id: 'toss-approvals',
-      label: 'TOSS Bank approvals',
-      icon: <CheckCircle className="h-4 w-4" />,
-      group: 'Approvals & wallets',
-      description: 'Review and approve TOSS Bank virtual account applications.'
-    }] : []),
-    ...(canAccessPaymentChannels ? [{
-      id: 'payment-channels',
-      label: 'Payment Channels',
-      icon: <Power className="h-4 w-4" />,
-      group: 'Payments & configuration',
-      description: 'Control checkout, withdrawal, and disbursement channels by currency.'
-    }] : []),
-    ...(canAccessWalletSettings ? [{
-      id: 'wallet-settings',
-      label: 'Wallet Settings',
-      icon: <WrenchIcon className="h-4 w-4" />,
-      group: 'Payments & configuration',
-      description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
-    }] : []),
-    ...(canAccessBitgo ? [{
-      id: 'bitgo',
-      label: 'BitGo USDT',
-      icon: <Bitcoin className="h-4 w-4" />,
-      group: 'Payments & configuration',
-      description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.'
-    }] : []),
-    ...(canAccessCheckoutDesign ? [{
-      id: 'checkout-design',
-      label: 'Checkout Design',
-      icon: <Palette className="h-4 w-4" />,
-      group: 'Payments & configuration',
-      description: 'Customize the public checkout appearance.'
-    }] : []),
-    ...(canAccessPlatformSettings ? [{
-      id: 'platform-settings',
-      label: 'Platform settings',
-      icon: <WrenchIcon className="h-4 w-4" />,
-      group: 'Payments & configuration',
-      description: 'Manage collection currencies, conversion fees, and database backups.'
-    }] : []),
-    ...(canManageTeam ? [{
-      id: 'team-invitations',
-      label: 'Team Invitations',
-      icon: <Mail className="h-4 w-4" />,
-      group: 'Teams',
-      description: 'Manage pending team invites and organization access.'
-    }] : []),
-    ...(canManageTeam ? [{
-      id: 'team-members',
-      label: 'Team Members',
-      icon: <Users className="h-4 w-4" />,
-      group: 'Teams',
-      description: 'Manage existing team members within your organization.'
-    }] : []),
-    ...(canAccessGovernance ? [{
-      id: 'audit-logs',
-      label: 'Audit Logs',
-      icon: <FileText className="h-4 w-4" />,
-      group: 'Governance',
-      description: 'Review administrative activity and export audit history.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'test-data-cleanup',
-      label: 'Test data cleanup',
-      icon: <Trash2 className="h-4 w-4" />,
-      group: 'Governance',
-      description: 'Review and permanently clear payment transactions and disbursements for test-mode merchants.'
-    }] : []),
-  ];
+  const tabs = buildAdminTabs({
+    canAccessAdminUsers,
+    canAccessUserManagement,
+    canAccessCryptoRequests,
+    canAccessWalletControl,
+    canAccessOperations,
+    canAccessTossApprovals,
+    canAccessPaymentChannels,
+    canAccessWalletSettings,
+    canAccessBitgo,
+    canAccessCheckoutDesign,
+    canAccessPlatformSettings,
+    canManageTeam,
+    canAccessGovernance,
+    isSuperAdmin,
+  }, admins.length);
   const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'admins';
   const selectedTabMeta = tabs.find(tab => tab.id === selectedTab);
 
@@ -3807,7 +3623,7 @@ export default function AdminManagement() {
               <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-6">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 rounded-lg bg-orange-50 p-2 text-[#C2410C]">
-                    {selectedTabMeta.icon}
+                    <selectedTabMeta.icon className={`h-4 w-4 ${selectedTabMeta.iconClassName || ''}`} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
