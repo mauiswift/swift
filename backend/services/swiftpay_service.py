@@ -635,6 +635,89 @@ class SwiftPayService:
             return await self.get_payment_status_by_reference(reference_no)
         return {"success": False, "error": "SwiftPay reference_no or payment_id is required"}
 
+    def _basic_auth_headers(self) -> Dict[str, str]:
+        credentials = base64.b64encode(
+            f"{self.access_key}:{self.secret_key}".encode("utf-8")
+        ).decode("ascii")
+        return {
+            "Authorization": f"Basic {credentials}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+    @staticmethod
+    def _parse_payment_link_response(response: httpx.Response) -> Dict[str, Any]:
+        try:
+            data = response.json() if response.text else {}
+        except ValueError:
+            data = {}
+
+        if response.status_code >= 400:
+            detail = ""
+            if isinstance(data, dict):
+                detail = str(data.get("message") or data.get("detail") or data.get("error") or "")
+            detail = detail or (response.text or "").strip()[:500]
+            return {
+                "success": False,
+                "status_code": response.status_code,
+                "error": detail or f"SwiftPay API error ({response.status_code})",
+            }
+        if not isinstance(data, dict):
+            return {
+                "success": False,
+                "status_code": 502,
+                "error": "SwiftPay returned an invalid payment-link response",
+            }
+        return {"success": True, "data": data}
+
+    async def create_payment_link(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a provider-hosted payment link using SwiftPay's Basic Auth API."""
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        url = f"{self.base_url}/api/payments/links"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(url, json=payload, headers=self._basic_auth_headers())
+        except httpx.TransportError:
+            logger.warning("SwiftPay create payment link transport failure", exc_info=True)
+            return {"success": False, "status_code": 502, "error": "Unable to reach SwiftPay payment-link service"}
+        return self._parse_payment_link_response(response)
+
+    async def get_payment_link(self, code: str) -> Dict[str, Any]:
+        """Read a provider-hosted payment link by its immutable code."""
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        url = f"{self.base_url}/api/payments/links/{quote(code, safe='')}"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers=self._basic_auth_headers())
+        except httpx.TransportError:
+            logger.warning("SwiftPay read payment link transport failure", exc_info=True)
+            return {"success": False, "status_code": 502, "error": "Unable to reach SwiftPay payment-link service"}
+        return self._parse_payment_link_response(response)
+
+    async def invalidate_payment_link(self, code: str) -> Dict[str, Any]:
+        """Irreversibly invalidate a provider-hosted payment link."""
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        url = f"{self.base_url}/api/payments/links/{quote(code, safe='')}/invalidate"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.delete(url, headers=self._basic_auth_headers())
+        except httpx.TransportError:
+            logger.warning("SwiftPay invalidate payment link transport failure", exc_info=True)
+            return {"success": False, "status_code": 502, "error": "Unable to reach SwiftPay payment-link service"}
+        if response.status_code >= 400:
+            return self._parse_payment_link_response(response)
+        try:
+            data = response.json() if response.text else {}
+        except ValueError:
+            data = {}
+        return {"success": True, "data": data}
+
     async def generate_qrph(
         self,
         *,

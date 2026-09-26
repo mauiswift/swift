@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 import pytest
 import httpx
 from pathlib import Path
@@ -85,6 +86,121 @@ async def test_create_order_calls_swiftpay(monkeypatch):
     )
     assert result["success"] is True
     assert result["data"]["customerRedirectUrl"] == "https://pay.swiftpay.ph/redirect"
+
+
+@pytest.mark.asyncio
+async def test_payment_link_service_uses_documented_basic_auth_endpoints(monkeypatch):
+    svc = SwiftPayService()
+    requests = []
+
+    class PaymentLinkClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            requests.append(("POST", url, json, headers))
+            return DummyResponse(json_data={"code": "PL-test", "paymentUrl": "https://pay.example/PL-test"})
+
+        async def get(self, url, headers=None):
+            requests.append(("GET", url, None, headers))
+            return DummyResponse(json_data={"code": "PL-test", "linkStatus": "ACTIVE"})
+
+        async def delete(self, url, headers=None):
+            requests.append(("DELETE", url, None, headers))
+            return DummyResponse(status_code=204, text="")
+
+    monkeypatch.setattr(httpx, "AsyncClient", PaymentLinkClient)
+    payload = {"amount": 100.5, "currency": "PHP", "referenceNo": "link-ref"}
+
+    created = await svc.create_payment_link(payload)
+    fetched = await svc.get_payment_link("PL/test")
+    invalidated = await svc.invalidate_payment_link("PL-test")
+
+    assert created == {
+        "success": True,
+        "data": {"code": "PL-test", "paymentUrl": "https://pay.example/PL-test"},
+    }
+    assert fetched["data"]["linkStatus"] == "ACTIVE"
+    assert invalidated == {"success": True, "data": {}}
+    assert requests[0][0:3] == ("POST", f"{svc.base_url}/api/payments/links", payload)
+    assert requests[0][3]["Authorization"] == "Basic QUJDMTIzOlNFQ1JFVA=="
+    assert requests[1][1] == f"{svc.base_url}/api/payments/links/PL%2Ftest"
+    assert requests[2][1] == f"{svc.base_url}/api/payments/links/PL-test/invalidate"
+
+
+def test_payment_link_routes_create_read_and_invalidate_with_local_ownership(monkeypatch):
+    reference_no = f"test-link-{uuid.uuid4().hex}"
+    code = f"PL-{uuid.uuid4().hex[:12]}"
+    captured_payload = {}
+
+    async def create_payment_link(payload):
+        captured_payload.update(payload)
+        return {
+            "success": True,
+            "data": {
+                "code": code,
+                "paymentUrl": f"https://pay.example/{code}",
+                "linkStatus": "ACTIVE",
+                "amount": payload["amount"],
+                "currency": payload["currency"],
+            },
+        }
+
+    async def get_payment_link(requested_code):
+        assert requested_code == code
+        return {"success": True, "data": {"code": code, "linkStatus": "ACTIVE"}}
+
+    async def invalidate_payment_link(requested_code):
+        assert requested_code == code
+        return {"success": True, "data": {"code": code, "linkStatus": "INACTIVE"}}
+
+    monkeypatch.setattr(SwiftPayService, "create_payment_link", create_payment_link)
+    monkeypatch.setattr(SwiftPayService, "get_payment_link", get_payment_link)
+    monkeypatch.setattr(SwiftPayService, "invalidate_payment_link", invalidate_payment_link)
+
+    with TestClient(app) as client:
+        empty_reference = client.post(
+            "/api/v1/swiftpay/payment-links",
+            json={"amount": 125.5, "currency": "PHP", "referenceNo": "   "},
+        )
+        assert empty_reference.status_code == 422
+
+        created = client.post(
+            "/api/v1/swiftpay/payment-links",
+            json={
+                "amount": 125.5,
+                "currency": "PHP",
+                "referenceNo": reference_no,
+                "title": "Test link",
+                "validUntil": "2030-01-02T03:04:05+02:00",
+            },
+        )
+        assert created.status_code == 200
+        assert created.json()["data"]["code"] == code
+        assert captured_payload == {
+            "amount": 125.5,
+            "currency": "PHP",
+            "referenceNo": reference_no,
+            "title": "Test link",
+            "validUntil": "2030-01-02T01:04:05Z",
+        }
+
+        fetched = client.get(f"/api/v1/swiftpay/payment-links/{code}")
+        assert fetched.status_code == 200
+        assert fetched.json()["data"]["linkStatus"] == "ACTIVE"
+
+        invalidated = client.delete(f"/api/v1/swiftpay/payment-links/{code}")
+        assert invalidated.status_code == 200
+        assert invalidated.json()["data"]["linkStatus"] == "INACTIVE"
+
+        not_owned = client.get("/api/v1/swiftpay/payment-links/not-owned")
+        assert not_owned.status_code == 404
 
 
 @pytest.mark.asyncio

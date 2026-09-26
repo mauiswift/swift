@@ -1,5 +1,8 @@
 import logging
-from typing import Any, Dict, Optional
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -9,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
+from models.transactions import Transactions
 from services.swiftpay_service import SwiftPayService
 from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
@@ -65,6 +69,45 @@ class SwiftPayQRResponse(BaseModel):
     error: Optional[str] = None
 
 
+class SwiftPayPaymentLinkRequest(BaseModel):
+    amount: Decimal = Field(..., gt=0)
+    currency: Literal["PHP", "USD", "EUR"]
+    title: Optional[str] = Field(None, max_length=100)
+    referenceNo: Optional[str] = Field(None, max_length=50)
+    validUntil: Optional[datetime] = None
+    customerName: Optional[str] = Field(None, max_length=150)
+    description: Optional[str] = Field(None, max_length=500)
+
+
+def _raise_payment_link_error(result: Dict[str, Any]) -> None:
+    status_code = result.get("status_code")
+    if status_code == 400:
+        raise HTTPException(status_code=400, detail=result.get("error", "Invalid payment link request"))
+    if status_code == 404:
+        raise HTTPException(status_code=404, detail=result.get("error", "Payment link not found"))
+    if status_code == 401:
+        raise HTTPException(status_code=502, detail="SwiftPay rejected the configured merchant credentials")
+    raise HTTPException(status_code=502, detail=result.get("error", "SwiftPay payment-link request failed"))
+
+
+async def _get_owned_payment_link(
+    code: str,
+    user_id: str,
+    db: AsyncSession,
+) -> Transactions:
+    result = await db.execute(
+        select(Transactions).where(
+            Transactions.user_id == user_id,
+            Transactions.transaction_type == "payment_link",
+            Transactions.xendit_id == code,
+        )
+    )
+    transaction = result.scalars().first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Payment link not found")
+    return transaction
+
+
 @router.get("/config")
 async def get_swiftpay_config(
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
@@ -77,6 +120,130 @@ async def get_swiftpay_config(
         "base_url": service.base_url,
         "callback_url": service.callback_url,
     }
+
+
+@router.post("/payment-links")
+async def create_swiftpay_payment_link(
+    payload: SwiftPayPaymentLinkRequest,
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a SwiftPay-hosted payment link for PHP, USD, or EUR."""
+    if payload.referenceNo is None:
+        reference_no = f"swiftpay-link-{uuid.uuid4().hex[:20]}"
+    else:
+        reference_no = payload.referenceNo.strip()
+        if not reference_no:
+            raise HTTPException(status_code=422, detail="referenceNo cannot be empty")
+
+    existing = await db.execute(
+        select(Transactions.id).where(
+            Transactions.user_id == str(current_user.id),
+            Transactions.transaction_type == "payment_link",
+            Transactions.external_id == reference_no,
+        ).limit(1)
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="A payment link already uses this referenceNo")
+
+    provider_payload: Dict[str, Any] = {
+        "amount": float(payload.amount),
+        "currency": payload.currency,
+        "referenceNo": reference_no,
+    }
+    if payload.title is not None:
+        provider_payload["title"] = payload.title
+    if payload.customerName is not None:
+        provider_payload["customerName"] = payload.customerName
+    if payload.description is not None:
+        provider_payload["description"] = payload.description
+    valid_until = payload.validUntil
+    if valid_until is not None:
+        if valid_until.tzinfo is None:
+            valid_until = valid_until.replace(tzinfo=timezone.utc)
+        valid_until = valid_until.astimezone(timezone.utc)
+        provider_payload["validUntil"] = valid_until.isoformat().replace("+00:00", "Z")
+
+    result = await SwiftPayService().create_payment_link(provider_payload)
+    if not result.get("success"):
+        _raise_payment_link_error(result)
+
+    link = result.get("data") or {}
+    code = str(link.get("code") or "").strip()
+    payment_url = str(link.get("paymentUrl") or "").strip()
+    if not code or not payment_url:
+        logger.error("SwiftPay payment-link creation returned no code or paymentUrl")
+        raise HTTPException(status_code=502, detail="SwiftPay returned an incomplete payment-link response")
+
+    now = datetime.now(timezone.utc)
+    transaction = Transactions(
+        user_id=str(current_user.id),
+        transaction_type="payment_link",
+        external_id=reference_no,
+        xendit_id=code,
+        amount=float(payload.amount),
+        currency=payload.currency,
+        status="pending",
+        approval_status="pending",
+        title=payload.title,
+        order_no=reference_no,
+        description=payload.description or payload.title or "",
+        customer_name=payload.customerName or "",
+        payment_url=payment_url,
+        expires_at=valid_until,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(transaction)
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.exception("Could not persist SwiftPay payment link code=%s", code)
+        raise HTTPException(
+            status_code=500,
+            detail="SwiftPay created the payment link, but the local record could not be saved",
+        ) from exc
+
+    return {"success": True, "data": link, "transaction_id": transaction.id}
+
+
+@router.get("/payment-links/{code}")
+async def get_swiftpay_payment_link(
+    code: str,
+    current_user: UserResponse = Depends(get_payment_user("payments:read")),
+    db: AsyncSession = Depends(get_db),
+):
+    await _get_owned_payment_link(code, str(current_user.id), db)
+    result = await SwiftPayService().get_payment_link(code)
+    if not result.get("success"):
+        _raise_payment_link_error(result)
+    return {"success": True, "data": result.get("data")}
+
+
+@router.delete("/payment-links/{code}")
+async def invalidate_swiftpay_payment_link(
+    code: str,
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    transaction = await _get_owned_payment_link(code, str(current_user.id), db)
+    result = await SwiftPayService().invalidate_payment_link(code)
+    if not result.get("success"):
+        _raise_payment_link_error(result)
+
+    transaction.status = "cancelled"
+    transaction.updated_at = datetime.now(timezone.utc)
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.exception("Could not persist invalidated SwiftPay payment link code=%s", code)
+        raise HTTPException(
+            status_code=500,
+            detail="SwiftPay invalidated the payment link, but the local record could not be updated",
+        ) from exc
+    return {"success": True, "data": result.get("data") or {"code": code, "linkStatus": "INACTIVE"}}
 
 
 @router.post("/create-order")
