@@ -764,13 +764,17 @@ def _validate_wizard_answer(cmd: str, param: Dict, raw: str) -> Optional[str]:
 def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]] = None, start_step: int = 0, currency: Optional[str] = None) -> str:
     """Initialise pending state for cmd and return the first prompt."""
     currency = (currency or _wizard_currency(chat_id, cmd)).upper()
-    _pending[chat_id] = {
-        "cmd": cmd,
-        "step": start_step,
-        "data": initial_data.copy() if initial_data else {},
-    }
-
     steps = _CMD_STEPS.get(cmd, [])
+    pending_state = _pending.get(chat_id)
+    if pending_state and pending_state["cmd"] == cmd and pending_state["step"] < len(steps):
+        start_step = pending_state["step"]
+    else:
+        _pending[chat_id] = {
+            "cmd": cmd,
+            "step": start_step,
+            "data": initial_data.copy() if initial_data else {},
+        }
+
     total_steps = len(steps)
     current_step_num = start_step + 1
 
@@ -1030,7 +1034,7 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 _inline_button(_t(str(chat_id), "❓ Help", "❓ 帮助", ko="❓ 도움말", db_lang=selected_lang), callback_data="action:help")
             ],
             [
-                _inline_button(_t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", ko="🔗 결제 링크", db_lang=selected_lang), callback_data="wizard:/link"),
+                    _inline_button(_t(str(chat_id), "🔗 Create Payment Link", "🔗 创建付款链接", ko="🔗 결제 링크 만들기", db_lang=selected_lang), callback_data="action:create_payment_link"),
                 _inline_button(_t(str(chat_id), "📷 QRPH", "📷 QRPH", ko="📷 QRPH", db_lang=selected_lang), callback_data="wizard:/scanqr")
             ],
             [
@@ -1443,6 +1447,83 @@ async def _safe_log(db: AsyncSession, chat_id: str, username: str, text: str):
             pass
 
 
+async def _create_bot_payment_link(
+    tg: "TelegramService",
+    db: AsyncSession,
+    chat_id: str,
+    username: str,
+    amount: float,
+    description: str,
+    source_text: str,
+) -> None:
+    currency = await _get_user_currency(db, chat_id)
+    reference_no = f"link-{uuid.uuid4().hex[:12]}"
+    result = await payment_gateway.create_payment(
+        db,
+        user_id=f"tg-{chat_id}",
+        amount=amount,
+        description=description,
+        transaction_type="payment_link",
+        customer_name=username,
+        customer_email="",
+        external_id=reference_no,
+        payment_methods=[],
+        currency=currency,
+    )
+
+    if not result.get("success"):
+        error = result.get("error", "Unknown SwiftPay error")
+        await tg.send_message(
+            chat_id,
+            f"❌ {currency} payment link was not created.\n"
+            "No payment was recorded.\n\n"
+            f"Reason: {error}\n\n"
+            "Please verify the payment provider settings, then try again.",
+        )
+        await _safe_log(db, chat_id, username, source_text)
+        return
+
+    data = result.get("data") or {}
+    gateway_id = data.get("paymentId") or data.get("payment_id") or data.get("transaction_id") or ""
+    payment_url = _self_hosted_payment_url(reference_no, currency)
+    optional_txn_line = ""
+    try:
+        from services.transactions import TransactionsService
+
+        txn = await TransactionsService(db).create_transaction(
+            user_id=f"tg-{chat_id}",
+            transaction_type="payment_link",
+            amount=amount,
+            external_id=result.get("reference_no") or reference_no,
+            gateway_id=gateway_id,
+            description=description,
+            customer_name=username,
+            customer_email="",
+            payment_url=payment_url,
+            status="pending",
+            currency=currency,
+        )
+        optional_txn_line = f"🆔 <code>{txn.external_id}</code>\n\n"
+    except Exception:
+        logger.exception("Failed to persist Telegram payment link")
+
+    caption = (
+        f"✅ <b>Payment Link Created</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"💰 Amount: <b>{_currency_symbol(currency)}{amount:,.2f} {currency}</b>\n"
+        f"📝 {description}\n"
+        f"{optional_txn_line}"
+        "🔗 Open the SwiftPay checkout page below to complete the payment."
+    )
+    keyboard = {
+        "inline_keyboard": [[
+            _inline_button("🔗 Open SwiftPay Checkout", url=payment_url),
+        ]]
+    }
+    await tg.send_message(chat_id, caption, reply_markup=keyboard)
+    await _safe_log(db, chat_id, username, source_text)
+
+
 async def _safe_db_op(db: AsyncSession, operation_name: str, coro):
     """Run a DB coroutine safely. Returns True on success, False on failure."""
     try:
@@ -1752,7 +1833,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             elif cq_data.startswith("action:"):
                 await tg.answer_callback_query(cq_id)
                 action = cq_data.split(":", 1)[1]
-                if action == "dashboard":
+                if action == "create_payment_link":
+                    await tg.send_message(cq_chat_id, _wizard_start(cq_chat_id, "/link"))
+                elif action == "dashboard":
                     await tg.send_message(
                         cq_chat_id,
                         "📊 <b>Dashboard</b>\n"
@@ -2228,6 +2311,26 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         )
                 except (TypeError, ValueError):
                     await tg.send_message(chat_id, "❌ Please enter a valid amount.")
+                return {"status": "ok"}
+
+            if cmd == "/link":
+                try:
+                    amount = float(collected.get("amount", 0))
+                    description = str(collected.get("description", "Payment link"))
+                    if amount <= 0:
+                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
+                        return {"status": "ok"}
+                    await _create_bot_payment_link(
+                        tg,
+                        db,
+                        chat_id,
+                        username,
+                        amount,
+                        description,
+                        f"/link {amount} {description}",
+                    )
+                except (TypeError, ValueError):
+                    await tg.send_message(chat_id, "❌ Invalid payment link details.")
                 return {"status": "ok"}
 
             if cmd == "/linkkrw":
@@ -2714,77 +2817,15 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
 
                     description = parts[2] if len(parts) > 2 else "Payment link"
-
-                    currency = await _get_user_currency(db, chat_id)
-                    reference_no = f"link-{uuid.uuid4().hex[:12]}"
-                    res = await payment_gateway.create_payment(
+                    await _create_bot_payment_link(
+                        tg,
                         db,
-                        user_id=f"tg-{chat_id}",
-                        amount=amount,
-                        description=description,
-                        transaction_type="payment_link",
-                        customer_name=username,
-                        customer_email="",
-                        external_id=reference_no,
-                        payment_methods=[],
-                        currency=currency,
+                        chat_id,
+                        username,
+                        amount,
+                        description,
+                        text,
                     )
-
-                    if not res.get("success"):
-                        error = res.get("error", "Unknown SwiftPay error")
-                        await tg.send_message(
-                            chat_id,
-                            f"❌ {currency} payment link was not created.\n"
-                            "No payment was recorded.\n\n"
-                            f"Reason: {error}\n\n"
-                            "Please verify the payment provider settings, then try again.",
-                        )
-                        await _safe_log(db, chat_id, username, text)
-                        return {"status": "ok"}
-
-                    data = res.get("data") or {}
-                    gateway_id = data.get("paymentId") or data.get("payment_id") or data.get("transaction_id") or ""
-                    payment_url = _self_hosted_payment_url(reference_no, currency)
-
-                    # Persist transaction record
-                    try:
-                        from services.transactions import TransactionsService
-
-                        txn_svc = TransactionsService(db)
-                        txn = await txn_svc.create_transaction(
-                            user_id=f"tg-{chat_id}",
-                            transaction_type="payment_link",
-                            amount=amount,
-                            external_id=res.get("reference_no") or reference_no,
-                            gateway_id=gateway_id,
-                            description=description,
-                            customer_name=username,
-                            customer_email="",
-                            payment_url=payment_url,
-                            status="pending",
-                            currency=currency,
-                        )
-                    except Exception as e:
-                        logger.error("Failed to persist /link transaction: %s", e, exc_info=True)
-
-                    optional_txn_line = ''
-                    if 'txn' in locals():
-                        try:
-                            optional_txn_line = f"🆔 <code>{txn.external_id}</code>\n\n"
-                        except Exception:
-                            optional_txn_line = ''
-
-                    caption = (
-                        f"✅ <b>Payment Link Created</b>\n"
-                        f"━━━━━━━━━━━━━━━━━━━━\n"
-                        f"💰 Amount: <b>{_currency_symbol(currency)}{amount:,.2f} {currency}</b>\n"
-                        f"📝 {description}\n"
-                        f"{optional_txn_line}"
-                        f"🔗 Open the payment page below to complete the payment."
-                    )
-                    keyboard = {"inline_keyboard": [[{"text": "🔗 Open Payment", "url": payment_url}]]} if payment_url else None
-                    await tg.send_message(chat_id, caption, reply_markup=keyboard)
-                    await _safe_log(db, chat_id, username, text)
                     return {"status": "ok"}
                 except ValueError:
                     await tg.send_message(chat_id, "❌ Invalid amount.")

@@ -274,6 +274,7 @@ const getUsdtConversionSummary = (
     convertibleSource,
     convertibleUsdt,
     requestedUsdtAmount: safeRequestedAmount,
+    estimatedUsdtAmount: safeRequestedAmount,
     requiredSource,
     canConvert: safeRequestedAmount >= minimumPurchase
       && Boolean(conversionRate)
@@ -730,6 +731,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     onWalletUpdate: handleLiveWalletUpdate,
   });
 
+  const minimumUsdtPurchase = 0;
   const usdtConversion = getUsdtConversionSummary(
     selectedCollectionCurrency,
     phpBalance,
@@ -737,9 +739,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     buyUsdtRate,
     Number(buyUsdtAmount),
     conversionFeeRate,
-    0,
+    minimumUsdtPurchase,
   );
-  const minimumUsdtPurchase = 0;
 
   useEffect(() => {
     fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
@@ -861,6 +862,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           details: {
             source: 'usdt_purchase_shortfall',
             required_usdt: usdtConversion.requestedUsdtAmount,
+            eligible_balance: usdtConversion.convertibleSource,
+            shortfall_balance: shortfall,
             eligible_balance: usdtConversion.convertibleSource,
             shortfall_balance: shortfall,
           },
@@ -1154,7 +1157,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     retainedBalance: sourceReserve,
     conversionRate,
     convertibleSource,
-    requiredSource: requiredSourceForUsdt,
     canConvert: canConvertToUsdt,
     shortfallSource: usdtShortfallSource,
   } = usdtConversion;

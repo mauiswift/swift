@@ -8,17 +8,24 @@ import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { hasDashboardAccess, hasPermission, PermissionKey } from '@/lib/permissions';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useVipGoldStatus } from '@/hooks/useVipGoldStatus';
+import { canAccessSuperAdminControls } from '@/lib/adminNavigation';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
   permission?: PermissionKey;
+  allowVipGold?: boolean;
+  allowPlatformSuperAdmin?: boolean;
 }
 
 const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   children,
   permission,
+  allowVipGold = false,
+  allowPlatformSuperAdmin = false,
 }) => {
   const { user, loading, isAdmin, isSuperAdmin, login } = useAuth();
+  const vipStatus = useVipGoldStatus(allowVipGold ? user?.id : undefined);
   const { language } = useLanguage();
   const isKorean = language === 'ko';
   const location = useLocation();
@@ -33,12 +40,34 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
+  if (allowVipGold && vipStatus.isLoading && !vipStatus.isError) {
+    return <LoadingSpinner message={isKorean ? '권한을 확인하는 중...' : 'Verifying permissions...'} />;
+  }
+
   if (user.must_change_password) {
     return <Navigate to="/change-password" replace state={{ from: location.pathname + location.search }} />;
   }
 
+  if (
+    allowVipGold
+    && vipStatus.isError
+    && !hasPermission(user.permissions, 'can_manage_team')
+  ) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <p className="max-w-md text-center text-sm text-red-700" role="alert">
+          {isKorean
+            ? 'VIP Gold 권한을 확인하지 못했습니다. 페이지를 새로고침해 주세요.'
+            : 'Unable to verify VIP Gold access. Please reload the page and try again.'}
+        </p>
+      </div>
+    );
+  }
+
   const canAccessProtectedRoute = permission
     ? hasPermission(user.permissions, permission)
+      || (allowVipGold && vipStatus.isVipGold)
+      || (allowPlatformSuperAdmin && canAccessSuperAdminControls({ isSuperAdmin, permissions: user.permissions }))
     : isAdmin || hasDashboardAccess(user.permissions);
 
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page

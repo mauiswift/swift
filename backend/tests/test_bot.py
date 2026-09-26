@@ -596,6 +596,130 @@ class TestTelegramWebhook:
         assert "Disbursements" in markup
         assert "Reports" in markup
 
+    def test_payment_link_wizard_button_resumes_in_progress_flow(self):
+        chat_id = "payment-link-resume-test"
+        telegram_router._pending.pop(chat_id, None)
+        telegram_router._pending[chat_id] = {
+            "cmd": "/link",
+            "step": 1,
+            "data": {"amount": "500"},
+        }
+
+        try:
+            prompt = telegram_router._wizard_start(chat_id, "/link")
+
+            assert "Step 2 of 2" in prompt
+            assert "description" in prompt.lower()
+            assert telegram_router._pending[chat_id]["data"] == {"amount": "500"}
+        finally:
+            telegram_router._pending.pop(chat_id, None)
+
+    def test_start_panel_payment_link_button_opens_creation_wizard(self):
+        captured = {}
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            captured["reply_markup"] = reply_markup
+            return {"success": True, "message_id": 1}
+
+        with patch("routers.telegram.WalletsService") as wallet_service_cls, patch.object(
+            telegram_router.TelegramService,
+            "send_message",
+            new=fake_send_message,
+        ):
+            wallet_service_cls.return_value.get_balance = AsyncMock(return_value={"balance": 42.0})
+            asyncio.run(telegram_router._send_start_panel(None, "123", "Test", lang="en"))
+
+        buttons = captured["reply_markup"]["inline_keyboard"]
+        pay_link_button = next(
+            button
+            for row in buttons
+            for button in row
+            if button.get("callback_data") == "action:create_payment_link"
+        )
+        assert pay_link_button["text"] == "🔗 Create Payment Link"
+
+    def test_bot_payment_link_button_generates_self_hosted_checkout(self):
+        tg = MagicMock()
+        tg.send_message = AsyncMock()
+        db = MagicMock()
+        transaction = MagicMock()
+        transaction.external_id = "link-test"
+        checkout_url_builder = MagicMock(
+            side_effect=lambda reference, currency: f"https://swiftpay.ph/checkout/{reference}"
+        )
+
+        with (
+            patch.object(telegram_router, "_get_user_currency", new=AsyncMock(return_value="PHP")),
+            patch.object(
+                telegram_router.payment_gateway,
+                "create_payment",
+                new=AsyncMock(return_value={
+                    "success": True,
+                    "data": {"payment_id": "payment-test"},
+                }),
+            ),
+            patch.object(
+                telegram_router,
+                "_self_hosted_payment_url",
+                new=checkout_url_builder,
+            ),
+            patch(
+                "services.transactions.TransactionsService.create_transaction",
+                new=AsyncMock(return_value=transaction),
+            ),
+        ):
+            asyncio.run(
+                telegram_router._create_bot_payment_link(
+                    tg,
+                    db,
+                    "123",
+                    "merchant",
+                    500,
+                    "Test payment",
+                    "/link 500 Test payment",
+                )
+            )
+
+        checkout_url_builder.assert_called_once()
+        reference = checkout_url_builder.call_args.args[0]
+        assert checkout_url_builder.call_args.args[1] == "PHP"
+        keyboard = tg.send_message.await_args.kwargs["reply_markup"]
+        assert keyboard["inline_keyboard"][0][0] == {
+            "text": "🔗 Open SwiftPay Checkout",
+            "url": f"https://swiftpay.ph/checkout/{reference}",
+        }
+
+    def test_payment_link_button_callback_starts_guided_wizard(self, client):
+        sent = {}
+
+        async def capture_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            sent["chat_id"] = chat_id
+            sent["text"] = text
+            return {"success": True, "message_id": 1}
+
+        payload = {
+            "callback_query": {
+                "id": "payment-link-callback-test",
+                "from": {"id": 123, "first_name": "Test"},
+                "data": "action:create_payment_link",
+            }
+        }
+        telegram_router._pending.pop("123", None)
+
+        with (
+            patch.object(telegram_router.TelegramService, "send_message", new=capture_send_message),
+            patch.object(telegram_router.TelegramService, "answer_callback_query", new=AsyncMock()),
+        ):
+            response = client.post("/api/v1/telegram/webhook", json=payload)
+
+        try:
+            assert response.status_code == 200
+            assert sent["chat_id"] == "123"
+            assert "Enter the <b>amount</b>" in sent["text"]
+            assert telegram_router._pending["123"]["cmd"] == "/link"
+        finally:
+            telegram_router._pending.pop("123", None)
+
     def test_dashboard_command_returns_summary_metrics(self, client):
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/dashboard"))
         assert r.status_code == 200

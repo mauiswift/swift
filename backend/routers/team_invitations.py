@@ -47,13 +47,25 @@ class DownlinePasswordRequest(BaseModel):
     confirm_password: str
 
 
+async def _is_active_vip_gold(user_id: str, db: AsyncSession) -> bool:
+    admin_id = await db.scalar(
+        select(AdminUser.id).where(
+            AdminUser.telegram_id == user_id,
+            AdminUser.is_active.is_(True),
+            AdminUser.vip_gold.is_(True),
+        )
+    )
+    return admin_id is not None
+
+
 @router.get("/downline")
 async def list_downline(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List the authenticated user's referral downline and network totals."""
-    if not current_user.permissions or not current_user.permissions.can_manage_team:
+    has_team_permission = bool(current_user.permissions and current_user.permissions.can_manage_team)
+    if not has_team_permission and not await _is_active_vip_gold(str(current_user.id), db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view downline")
 
     service = DownlineService(db)
@@ -1201,7 +1213,7 @@ async def get_vip_status(
 ):
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
     from services.downline import DownlineService
-    own_vip_gold = bool(admin and admin.vip_gold)
+    own_vip_gold = bool(admin and admin.is_active and admin.vip_gold)
     inherited_vip_gold = await DownlineService(db).has_vip_gold_upline(str(current_user.id))
     return {
         "vip_gold": own_vip_gold,

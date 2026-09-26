@@ -51,12 +51,15 @@ class PaymentApprovalRequest(BaseModel):
     reason: Optional[str] = None
 
 
-def _require_super_admin(user: UserResponse) -> None:
-    """Ensure user is a super admin, raise 403 otherwise."""
-    if not (user.permissions and user.permissions.is_super_admin):
+def _require_payment_approval_access(user: UserResponse) -> None:
+    """Ensure user is a super admin or has explicit payment approval permission."""
+    if not (
+        user.permissions
+        and (user.permissions.is_super_admin or user.permissions.can_approve_topups)
+    ):
         raise HTTPException(
             status_code=403,
-            detail="Super admin access required for payment approval"
+            detail="Payment approval permission required"
         )
 
 
@@ -73,7 +76,7 @@ async def list_pending_payment_approvals(
     Returns pending payment links sorted by creation date.
     Automatically sends Telegram notifications to super admins about new pending payments.
     """
-    _require_super_admin(current_user)
+    _require_payment_approval_access(current_user)
 
     try:
         result = await db.execute(
@@ -185,7 +188,7 @@ async def approve_payment_link(
     - Credits user's wallet with payment amount
     - Records approval audit trail
     """
-    _require_super_admin(current_user)
+    _require_payment_approval_access(current_user)
 
     result = await db.execute(
         select(Transactions).where(Transactions.id == txn_id).with_for_update()
@@ -319,7 +322,7 @@ async def reject_payment_link(
     - Records rejection reason
     - Does NOT credit wallet (payment not accepted)
     """
-    _require_super_admin(current_user)
+    _require_payment_approval_access(current_user)
 
     result = await db.execute(
         select(Transactions).where(Transactions.id == txn_id).with_for_update()

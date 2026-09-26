@@ -15,6 +15,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { buildAdminNavigation, type AdminNavItem } from '@/lib/adminNavigation';
 import { BrandMark } from '@/components/BrandLogo';
+import { useVipGoldStatus } from '@/hooks/useVipGoldStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -71,6 +72,7 @@ export default function Layout({ children }: LayoutProps) {
     }
   });
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
+  const { isVipGold } = useVipGoldStatus(user?.id);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
@@ -78,7 +80,7 @@ export default function Layout({ children }: LayoutProps) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const permissions = user?.permissions;
-  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string);
+  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string, isVipGold);
 
   useEffect(() => {
     try {

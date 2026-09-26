@@ -38,6 +38,7 @@ interface DownlineActivity {
 export default function DownlineManagement() {
   const { collectionCurrency } = useCollectionCurrency();
   const { user, isSuperAdmin } = useAuth();
+  const canManageTeam = Boolean(user?.permissions?.can_manage_team);
   const isKrw = collectionCurrency === 'KRW' && !isSuperAdmin;
   const [members, setMembers] = useState<DownlineMember[]>([]);
   const [stats, setStats] = useState<DownlineStats | null>(null);
@@ -377,7 +378,7 @@ export default function DownlineManagement() {
                     <th className="px-5 py-3">{isKrw ? '등급' : 'Level'}</th>
                     <th className="px-5 py-3">{isKrw ? '상태' : 'Status'}</th>
                     <th className="px-5 py-3">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</th>
-                    <th className="px-5 py-3 text-right">{isKrw ? '작업' : 'Actions'}</th>
+                    {canManageTeam && <th className="px-5 py-3 text-right">{isKrw ? '작업' : 'Actions'}</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -387,7 +388,7 @@ export default function DownlineManagement() {
                       <td className="px-5 py-4 text-slate-600">{member.level}{member.is_direct ? (isKrw ? ' (직접)' : ' (direct)') : ''}</td>
                       <td className="px-5 py-4"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${member.status === 'active' ? 'bg-emerald-50 text-emerald-700' : member.status === 'suspended' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{statusLabel(member.status)}</span></td>
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
-                      <td className="px-5 py-4">
+                      {canManageTeam && <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
                           <button type="button" title={isKrw ? '상세 보기' : 'View details'} aria-label={`${isKrw ? '상세 보기' : 'View details'}: ${member.name || member.user_id}`} onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); setDownlinePassword(''); setDownlinePasswordConfirm(''); void loadActivity(member); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"><Eye className="h-4 w-4" /></button>
                           <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} aria-label={`${member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}: ${member.name || member.user_id}`} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50">
@@ -395,7 +396,7 @@ export default function DownlineManagement() {
                           </button>
                           {member.pending_commissions > 0 && <button type="button" title={isKrw ? '커미션 승인' : 'Approve commissions'} aria-label={`${isKrw ? '커미션 승인' : 'Approve commissions'}: ${member.name || member.user_id}`} disabled={busyMemberId === member.id} onClick={() => approveCommissions(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"><WalletCards className="h-4 w-4 text-blue-600" /></button>}
                         </div>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>
@@ -404,7 +405,7 @@ export default function DownlineManagement() {
           )}
         </div>
       </div>
-      {selectedMember && (
+      {selectedMember && canManageTeam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" aria-labelledby="downline-member-title">
             <div className="flex items-start justify-between">

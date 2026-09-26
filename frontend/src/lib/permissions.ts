@@ -41,7 +41,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: 'can_debit_wallet', label: 'Debit wallet', description: 'Remove funds from user wallets.', group: 'Approvals & wallets', color: 'yellow' },
   { key: 'can_freeze_wallet', label: 'Freeze wallet', description: 'Freeze user wallet activity.', group: 'Approvals & wallets', color: 'indigo' },
   { key: 'can_unfreeze_wallet', label: 'Unfreeze wallet', description: 'Restore frozen wallet activity.', group: 'Approvals & wallets', color: 'cyan' },
-  { key: 'can_approve_topups', label: 'Approve top-ups', description: 'Approve or reject wallet top-up requests.', group: 'Approvals & wallets', color: 'teal' },
+  { key: 'can_approve_topups', label: 'Payment and top-up approvals', description: 'Approve pending payment links and wallet top-up requests.', group: 'Approvals & wallets', color: 'teal' },
   { key: 'can_manage_bot', label: 'Bot settings', description: 'Configure bot and developer settings.', group: 'Payments & configuration', color: 'slate' },
   { key: 'can_view_reports', label: 'Reports', description: 'View operational and financial reports.', group: 'Governance', color: 'yellow' },
 ];
