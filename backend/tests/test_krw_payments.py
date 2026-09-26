@@ -350,6 +350,60 @@ class TestKRWDisbursementRequest:
         assert disbursement.xendit_id == "swiftpay-krw-payout-456"
         create_provider_disbursement.assert_awaited_once()
 
+    @pytest.mark.asyncio
+    async def test_duplicate_php_reference_keeps_withdrawal_reserved_for_reconciliation(self):
+        from routers.wallet import approve_withdrawal
+        from services.swiftpay_service import SwiftPayService
+
+        disbursement = Disbursements(
+            id=789,
+            user_id="merchant-1",
+            external_id="payout-review-789",
+            amount=500,
+            currency="PHP",
+            bank_code="BDO",
+            account_number="1234567890",
+            account_name="Jane Doe",
+            status="processing",
+        )
+        db = AsyncMock()
+        db.execute.return_value = Mock(
+            scalar_one_or_none=Mock(return_value=disbursement)
+        )
+        current_user = Mock(
+            id="super-admin-1",
+            permissions=Mock(is_super_admin=True),
+        )
+        duplicate_response = {
+            "success": False,
+            "code": "DUPLICATE_MERCHANT_REFERENCE_NO",
+            "already_submitted": True,
+            "reference_no": disbursement.external_id,
+            "error": "SwiftPay already has this disbursement reference; provider status must be reconciled",
+        }
+
+        with patch.object(
+            SwiftPayService,
+            "send_disbursement",
+            new=AsyncMock(return_value=duplicate_response),
+        ) as send_disbursement, patch(
+            "routers.wallet.WalletsService"
+        ) as wallet_service, patch(
+            "routers.wallet.TransactionsService"
+        ) as transaction_service:
+            wallet_service.return_value.refund_wallet_debit = AsyncMock()
+            transaction_service.return_value.create_transaction = AsyncMock()
+            response = await approve_withdrawal(789, current_user, db)
+
+        assert response["success"] is True
+        assert response["status"] == "transferring"
+        assert "awaiting SwiftPay reconciliation" in response["message"]
+        assert disbursement.external_id == "payout-review-789"
+        assert disbursement.status == "transferring"
+        send_disbursement.assert_awaited_once()
+        wallet_service.return_value.refund_wallet_debit.assert_not_awaited()
+        db.commit.assert_awaited_once()
+
 
 class TestKRWPaymentService:
     """Test KRW payment service."""

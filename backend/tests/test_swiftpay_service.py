@@ -157,7 +157,7 @@ async def test_create_order_payload_structure(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_send_disbursement_retries_duplicate_merchant_reference(monkeypatch):
+async def test_send_disbursement_does_not_retry_duplicate_reference_with_new_id(monkeypatch):
     svc = SwiftPayService()
     references = []
 
@@ -173,15 +173,13 @@ async def test_send_disbursement_retries_duplicate_merchant_reference(monkeypatc
 
         async def post(self, url, json=None, headers=None):
             references.append(json["merchantReferenceNo"])
-            if len(references) == 1:
-                return DummyResponse(
-                    status_code=400,
-                    json_data={
-                        "errorCode": "DUPLICATE_MERCHANT_REFERENCE_NO",
-                        "errorMessage": "Duplicate merchant reference no",
-                    },
-                )
-            return DummyResponse(status_code=200, json_data={"status": "PENDING"})
+            return DummyResponse(
+                status_code=400,
+                json_data={
+                    "errorCode": "DUPLICATE_MERCHANT_REFERENCE_NO",
+                    "errorMessage": "Duplicate merchant reference no",
+                },
+            )
 
     monkeypatch.setattr(
         httpx,
@@ -199,11 +197,11 @@ async def test_send_disbursement_retries_duplicate_merchant_reference(monkeypatc
         phone="09171234567",
     )
 
-    assert result["success"] is True
-    assert len(references) == 2
-    assert references[0] == "disb-existing"
-    assert references[1] != references[0]
-    assert result["reference_no"] == references[1]
+    assert result["success"] is False
+    assert result["code"] == "DUPLICATE_MERCHANT_REFERENCE_NO"
+    assert result["already_submitted"] is True
+    assert result["reference_no"] == "disb-existing"
+    assert references == ["disb-existing"]
 
 
 @pytest.mark.asyncio

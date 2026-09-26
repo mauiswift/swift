@@ -1264,11 +1264,21 @@ async def approve_withdrawal(
 			note=disb.description or "Super admin PHP disbursement",
 			currency="PHP",
 		)
+		already_submitted = (
+			provider_result.get("code") == "DUPLICATE_MERCHANT_REFERENCE_NO"
+			and provider_result.get("already_submitted") is True
+		)
 		if not provider_result.get("success"):
-			provider_error = provider_result.get("error", "SwiftPay disbursement failed")
-			await _refund_withdrawal(db, disb, provider_error)
-			await db.commit()
-			raise HTTPException(status_code=502, detail=provider_error)
+			if already_submitted:
+				logger.warning(
+					"SwiftPay already has PHP withdrawal reference %s; keeping funds reserved for reconciliation",
+					disb.external_id,
+				)
+			else:
+				provider_error = provider_result.get("error", "SwiftPay disbursement failed")
+				await _refund_withdrawal(db, disb, provider_error)
+				await db.commit()
+				raise HTTPException(status_code=502, detail=provider_error)
 		provider_reference = provider_result.get("reference_no")
 		if provider_reference and provider_reference != disb.external_id:
 			original_reference = disb.external_id
@@ -1359,7 +1369,11 @@ async def approve_withdrawal(
 		"success": True,
 		"id": disb.id,
 		"status": disb.status,
-		"message": f"{disb.amount:,.2f} {currency} withdrawal processed successfully",
+		"message": (
+			f"{disb.amount:,.2f} {currency} withdrawal is awaiting SwiftPay reconciliation"
+			if currency == "PHP" and already_submitted
+			else f"{disb.amount:,.2f} {currency} withdrawal processed successfully"
+		),
 		"amount": disb.amount,
 		"currency": currency,
 		"reference_id": disb.external_id,
