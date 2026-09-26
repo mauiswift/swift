@@ -20,6 +20,7 @@ interface PendingPayment {
   user_name?: string;
   description: string;
   status: string;
+  payment_status?: string | null;
   approval_status?: string | null;
   payment_received?: boolean;
   payment_received_at?: string | null;
@@ -319,7 +320,8 @@ export default function SuperAdminPaymentApprovalMobile() {
                 <div className="border-t border-slate-100 pt-3 flex gap-2">
                   <button
                     onClick={() => { setReviewNote(''); setReviewPayment(payment); }}
-                    disabled={approving === payment.id}
+                    disabled={approving === payment.id || !payment.payment_received}
+                    title={!payment.payment_received ? 'Payment must be received before approval' : undefined}
                     className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-xs font-semibold border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-50"
                   >
                     {approving === payment.id ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Approve'}
@@ -359,7 +361,7 @@ export default function SuperAdminPaymentApprovalMobile() {
               <p className="mt-3 text-xs text-amber-700">Approving authorizes this payment request to proceed. Verify the details first.</p>
               <div className="mt-5 flex justify-end gap-2">
                 <button type="button" onClick={() => setReviewPayment(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
-                <button type="button" onClick={() => void approvePayment(reviewPayment.id)} disabled={approving === reviewPayment.id} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{approving === reviewPayment.id && <Loader2 size={15} className="animate-spin" />}Approve payment</button>
+                <button type="button" onClick={() => void approvePayment(reviewPayment.id)} disabled={approving === reviewPayment.id || !reviewPayment.payment_received} title={!reviewPayment.payment_received ? 'Payment must be received before approval' : undefined} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{approving === reviewPayment.id && <Loader2 size={15} className="animate-spin" />}Approve payment</button>
               </div>
             </div>
           </div>

@@ -27,7 +27,12 @@ from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
-from services.transactions import is_customer_payment, is_payment_received
+from services.transactions import (
+    RECEIVED_PAYMENT_STATUSES,
+    get_payment_status,
+    is_customer_payment,
+    is_payment_received,
+)
 from services.action_confirmation import ActionConfirmationService, ActionType
 from utils.datetime import serialize_utc_datetime
 
@@ -41,7 +46,7 @@ APPROVABLE_PAYMENT_STATUSES = (
     "unpaid",
     "awaiting_payment",
 )
-EXTERNALLY_PAID_STATUSES = ("paid", "completed")
+EXTERNALLY_PAID_STATUSES = tuple(RECEIVED_PAYMENT_STATUSES)
 RETRYABLE_SETTLEMENT_STATUSES = ("failed",)
 
 
@@ -157,6 +162,7 @@ async def list_pending_payment_approvals(
                     ),
                     "description": txn.description or "",
                     "status": txn.status,
+                    "payment_status": get_payment_status(txn),
                     "approval_status": getattr(txn, 'approval_status', 'pending'),
                     "payment_received": is_payment_received(txn),
                     "payment_received_at": serialize_utc_datetime(txn.paid_at) or "",
@@ -216,6 +222,11 @@ async def approve_payment_link(
         raise HTTPException(
             status_code=400,
             detail="Payment link already approved",
+        )
+    if not is_payment_received(txn):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Payment has not been received; current payment status is {get_payment_status(txn) or 'unknown'}.",
         )
 
     try:

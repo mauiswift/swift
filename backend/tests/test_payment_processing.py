@@ -8,7 +8,24 @@ from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from models.transactions import Transactions
 from services.payment_processing import PaymentProcessor
-from services.transactions import TransactionsService, is_payment_received
+from services.transactions import (
+    TransactionsService,
+    get_payment_status,
+    is_payment_received,
+)
+
+
+def test_payment_status_is_separate_from_admin_approval_state():
+    awaiting_payment = Transactions(status="pending", paid_at=None)
+    provider_confirmed = Transactions(
+        status="pending",
+        paid_at=datetime.now(timezone.utc),
+    )
+    provider_succeeded = Transactions(status="succeeded", paid_at=None)
+
+    assert get_payment_status(awaiting_payment) == "pending"
+    assert get_payment_status(provider_confirmed) == "paid"
+    assert get_payment_status(provider_succeeded) == "succeeded"
 
 
 @pytest.mark.asyncio
@@ -413,6 +430,40 @@ async def test_admin_approval_service_marks_customer_payment_approved_once():
         assert txn.approved_at is not None
 
         assert not await service.approve_payment_link(txn, approved_by="admin-2")
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_admin_approval_accepts_provider_success_statuses():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-success",
+            transaction_type="payment",
+            amount=250.0,
+            currency="PHP",
+            external_id="pay-success-1",
+            status="succeeded",
+            approval_status="pending",
+            paid_at=datetime.now(timezone.utc),
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        service = TransactionsService(session)
+        assert await service.approve_payment_link(txn, approved_by="admin-1", note="Verified")
+        assert txn.status == "paid"
+        assert txn.approval_status == "approved"
+        assert txn.approved_by == "admin-1"
 
     await engine.dispose()
 

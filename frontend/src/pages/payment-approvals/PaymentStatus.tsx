@@ -2,6 +2,7 @@ import { CheckCircle2, Clock3, CreditCard, XCircle } from 'lucide-react';
 
 export interface ApprovalPaymentStatusRecord {
   status: string;
+  payment_status?: string | null;
   approval_status?: string | null;
   payment_received?: boolean;
 }
@@ -12,15 +13,20 @@ interface PaymentStatusProps {
 }
 
 function getPaymentState(payment: ApprovalPaymentStatusRecord) {
-  if (payment.payment_received) {
+  const status = String(payment.payment_status || payment.status || '').trim().toLowerCase();
+  const isReceived = Boolean(payment.payment_received)
+    || ['paid', 'completed', 'complete', 'success', 'successful', 'succeeded', 'successfully_paid', 'executed', 'settled'].includes(status);
+  if (isReceived) {
+    const normalizedLabel = status.replaceAll('_', ' ');
     return {
-      label: 'Payment received',
+      label: normalizedLabel
+        ? normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1)
+        : 'Paid',
       className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
       Icon: CheckCircle2,
     };
   }
 
-  const status = String(payment.status || '').trim().toLowerCase();
   if (['failed', 'cancelled', 'canceled', 'expired'].includes(status)) {
     return {
       label: status.charAt(0).toUpperCase() + status.slice(1),

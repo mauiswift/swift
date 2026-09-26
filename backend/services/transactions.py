@@ -41,6 +41,16 @@ RECEIVED_PAYMENT_STATUSES = {
     "executed",
     "settled",
 }
+
+
+def is_approvable_transaction_status(txn: Transactions) -> bool:
+    """Return whether a transaction is in a status that can be approved."""
+    if txn is None:
+        return False
+    status = str(txn.status or "").lower()
+    return status in APPROVABLE_PAYMENT_STATUSES or status in RECEIVED_PAYMENT_STATUSES
+
+
 NON_CUSTOMER_PAYMENT_TYPES = {
     "disbursement",
     "swiftpay_disbursement",
@@ -74,6 +84,16 @@ def is_payment_received(txn: Transactions) -> bool:
     status = str(txn.status or "").lower()
     approval_status = str(txn.approval_status or "").lower()
     return bool(txn.paid_at) or status in RECEIVED_PAYMENT_STATUSES or approval_status == "approved"
+
+
+def get_payment_status(txn: Transactions) -> str:
+    """Return the payment outcome separately from its admin approval state."""
+    status = str(txn.status or "").strip().lower()
+    if status in RECEIVED_PAYMENT_STATUSES:
+        return status
+    if txn.paid_at:
+        return "paid"
+    return status
 
 
 def publish_payment_link_created(txn: Transactions, user_name: Optional[str] = None) -> None:
@@ -700,7 +720,7 @@ class TransactionsService(BaseService[Transactions]):
             txn.approved_by = None
             txn.approved_at = None
             txn.updated_at = datetime.now(timezone.utc)
-        if txn.status not in APPROVABLE_PAYMENT_STATUSES:
+        if not is_approvable_transaction_status(txn):
             return False
         if txn.approval_status == "approved":
             return False
