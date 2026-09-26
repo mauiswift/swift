@@ -456,6 +456,7 @@ async def get_wallet_limits(db: AsyncSession) -> dict[str, dict[str, float]]:
                             configured[currency][key] = parsed
                     except (TypeError, ValueError):
                         continue
+    configured["PHP"]["minimum_balance"] = 0.0
     return configured
 
 
@@ -477,6 +478,7 @@ async def set_wallet_limits(
             if not math.isfinite(value) or value < 0:
                 raise ValueError(f"{currency} {key} must be zero or greater")
             normalized[currency][key] = round(value, 2)
+    normalized["PHP"]["minimum_balance"] = 0.0
     await _set_setting(db, WALLET_SETTINGS_KEY, json.dumps(normalized, sort_keys=True))
     return normalized
 

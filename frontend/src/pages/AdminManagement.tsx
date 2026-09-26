@@ -830,6 +830,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     { key: 'max_withdrawal_daily', label: 'Maximum withdrawal per day', help: 'Total withdrawal amount allowed from 00:00 UTC each day.' },
     { key: 'max_withdrawal_monthly', label: 'Maximum withdrawal per month', help: 'Total withdrawal amount allowed from the first day of each month.' },
   ];
+  const visibleFields = fields.filter(field => !(currency === 'PHP' && field.key === 'minimum_balance'));
 
   return (
     <div className="space-y-5">
@@ -901,7 +902,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           ))}
         </div>
         <div className="mt-5 grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {fields.map(field => (
+          {visibleFields.map(field => (
             <label key={field.key} className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition-colors focus-within:border-orange-300 focus-within:bg-white">
               <span className="text-sm font-semibold text-slate-800">{field.label}</span>
               <span className="mt-1 min-h-10 text-xs leading-5 text-slate-500">{field.help}</span>
@@ -919,6 +920,11 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             </label>
           ))}
         </div>
+        {currency === 'PHP' && (
+          <p className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            PHP wallets have no minimum maintaining balance; withdrawals can use the full available balance.
+          </p>
+        )}
       </section>
       <section id="deposit-accounts" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
