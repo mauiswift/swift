@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +43,7 @@ from models.usdt_send_requests import UsdtSendRequest
 from models.kyb_registrations import KybRegistration
 from models.kyc_verifications import KycVerification
 from models.admin_users import AdminUser
+from models.bot_settings import Bot_settings
 from models.custom_roles import CustomRole
 from models.merchant_api_config import MerchantApiConfig
 
@@ -464,6 +465,17 @@ class BotConfigUpdate(BaseModel):
     maintenance_message: Optional[str] = None
     commands_enabled: Optional[str] = None
     whatsapp_number: Optional[str] = None
+    official_channel_username: Optional[str] = None
+
+    @field_validator("official_channel_username")
+    @classmethod
+    def validate_official_channel_username(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        username = value.strip().lstrip("@")
+        if username and not re.fullmatch(r"[A-Za-z0-9_]{5,32}", username):
+            raise ValueError("Enter a valid Telegram channel username.")
+        return username
 
 
 def _require_super_admin(current_user: UserResponse):
@@ -1008,6 +1020,21 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
     points_label = _t(str(chat_id), "POINTS", "积分", ko="포인트", db_lang=selected_lang)
     official_channel_label = _t(str(chat_id), "Official channel", "官方频道", ko="공식 채널", db_lang=selected_lang)
     action_prompt = _t(str(chat_id), "Choose an action below to get started.", "选择下方操作开始使用。", ko="아래에서 원하는 작업을 선택하세요.", db_lang=selected_lang)
+    official_channel_username = "PayBotPH"
+    if db is not None:
+        channel_result = await db.execute(
+            select(Bot_settings.official_channel_username)
+            .where(Bot_settings.official_channel_username.is_not(None))
+            .order_by(
+                Bot_settings.updated_at.is_(None),
+                Bot_settings.updated_at.desc(),
+                Bot_settings.id.desc(),
+            )
+            .limit(1)
+        )
+        configured_channel = channel_result.scalar_one_or_none()
+        if configured_channel is not None:
+            official_channel_username = str(configured_channel).strip().lstrip("@")
 
     text = (
         f"🛡️ <b>SwiftPay Philippines ✅</b>\n"
@@ -1016,7 +1043,10 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
         f"🆔 <b>{id_label}:</b> <code>{chat_id}</code>\n\n"
         f"{_currency_symbol(selected_currency)} <b>{selected_currency} :</b> {selected_bal:,.2f}\n"
         f"💎 <b>{points_label} :</b> 0.00\n\n"
-        f"📢 <b>{official_channel_label} :</b> @PayBotPH\n"
+    ) + (
+        f"📢 <b>{official_channel_label} :</b> @{_escape_html(official_channel_username)}\n"
+        if official_channel_username else ""
+    ) + (
         f"✨ <i>{action_prompt}</i>"
     )
 
@@ -1570,6 +1600,11 @@ async def get_bot_config(
         "maintenance_message": obj.maintenance_message or "",
         "commands_enabled": obj.commands_enabled or "",
         "whatsapp_number": obj.whatsapp_number or "",
+        "official_channel_username": (
+            obj.official_channel_username
+            if obj.official_channel_username is not None
+            else "PayBotPH"
+        ),
     }
 
 
@@ -1605,6 +1640,11 @@ async def update_bot_config(
         "maintenance_message": obj.maintenance_message or "",
         "commands_enabled": obj.commands_enabled or "",
         "whatsapp_number": obj.whatsapp_number or "",
+        "official_channel_username": (
+            obj.official_channel_username
+            if obj.official_channel_username is not None
+            else "PayBotPH"
+        ),
     }
 
 

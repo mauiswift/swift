@@ -755,20 +755,41 @@ class SwiftPayService:
             "Accept": "application/json"
         }
 
-        logger.info("SwiftPay send_disbursement %s reference=%s", url, base_reference)
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                resp = await client.post(url, json=payload, headers=headers)
-
-            text = resp.text or ""
-            # Documentation says HTTP 200 with empty body means scheduled.
-            if resp.status_code == 200 and not text.strip():
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            logger.info(
+                "SwiftPay send_disbursement %s reference=%s attempt=%s",
+                url,
+                base_reference,
+                attempt,
+            )
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.post(url, json=payload, headers=headers)
+            except httpx.TransportError as exc:
+                logger.warning(
+                    "SwiftPay disbursement request transport error for reference=%s attempt=%s: %s",
+                    base_reference,
+                    attempt,
+                    exc,
+                )
+                if attempt < max_attempts:
+                    continue
+                return await self._reconcile_disbursement_reference(base_reference)
+            except Exception as exc:
+                logger.exception(
+                    "SwiftPay disbursement request failed unexpectedly for reference=%s",
+                    base_reference,
+                )
                 return {
-                    "success": True,
-                    "data": {"status": "PENDING"},
+                    "success": False,
+                    "code": "SWIFTPAY_SUBMISSION_UNCERTAIN",
+                    "submission_unknown": True,
                     "reference_no": base_reference,
+                    "error": str(exc),
                 }
 
+            text = resp.text or ""
             if resp.status_code >= 400:
                 logger.warning("SwiftPay send_disbursement failed %s %s", resp.status_code, text)
                 try:
@@ -780,24 +801,93 @@ class SwiftPayService:
                     "DUPLICATED_REFERENCE_NO",
                 }
                 if duplicate:
-                    logger.warning(
-                        "SwiftPay already has disbursement reference %s; refusing to submit under a new reference",
+                    return await self._reconcile_disbursement_reference(
                         base_reference,
+                        already_submitted=True,
                     )
-                    return {
-                        "success": False,
-                        "code": "DUPLICATE_MERCHANT_REFERENCE_NO",
-                        "already_submitted": True,
-                        "reference_no": base_reference,
-                        "error": "SwiftPay already has this disbursement reference; provider status must be reconciled",
-                    }
+
+                if (resp.status_code == 429 or resp.status_code >= 500) and attempt < max_attempts:
+                    continue
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    return await self._reconcile_disbursement_reference(base_reference)
                 return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
 
-            data = resp.json() if text else {"status": "PENDING"}
-            return {"success": True, "data": data, "reference_no": base_reference}
-        except Exception as exc:
-            logger.exception("SwiftPay send_disbursement exception")
-            return {"success": False, "error": str(exc)}
+            # A successful response means SwiftPay accepted the request even if its
+            # response body is malformed or omits the UUID needed for later polling.
+            if resp.status_code == 200 and not text.strip():
+                data: Dict[str, Any] = {"status": "PENDING"}
+            else:
+                try:
+                    data = resp.json() if text else {"status": "PENDING"}
+                except ValueError:
+                    data = {}
+            if not isinstance(data, dict):
+                data = {}
+            data.setdefault("status", "PENDING")
+
+            result = {
+                "success": True,
+                "data": data,
+                "reference_no": base_reference,
+            }
+            if not isinstance(data, dict) or not data.get("id"):
+                result["reconciliation_required"] = True
+            return result
+
+        return await self._reconcile_disbursement_reference(base_reference)
+
+    async def _reconcile_disbursement_reference(
+        self,
+        reference_no: str,
+        *,
+        already_submitted: bool = False,
+    ) -> Dict[str, Any]:
+        """Resolve a previously submitted transfer by its idempotency reference."""
+        result = await self.get_disbursements(
+            {"merchantReferenceNo": reference_no, "pageNo": 0, "pageSize": 10}
+        )
+        not_found = False
+        if result.get("success"):
+            data = result.get("data")
+            records = data.get("result", []) if isinstance(data, dict) else data
+            if isinstance(records, list):
+                for record in records:
+                    if (
+                        isinstance(record, dict)
+                        and str(record.get("merchantReferenceNo") or "") == reference_no
+                    ):
+                        return {
+                            "success": True,
+                            "data": record,
+                            "reference_no": reference_no,
+                            "already_submitted": True,
+                        }
+                not_found = True
+
+        logger.warning(
+            "SwiftPay could not confirm disbursement reference=%s; leaving it for reconciliation",
+            reference_no,
+        )
+        reconciliation_result = {
+            "success": False,
+            "code": (
+                "DUPLICATE_MERCHANT_REFERENCE_NO"
+                if already_submitted
+                else "SWIFTPAY_SUBMISSION_UNCERTAIN"
+            ),
+            "submission_unknown": True,
+            "reference_no": reference_no,
+            "error": "SwiftPay submission could not be confirmed; provider status must be reconciled",
+        }
+        if already_submitted:
+            reconciliation_result["already_submitted"] = True
+        if not_found:
+            reconciliation_result["not_found"] = True
+        return reconciliation_result
+
+    async def get_disbursement_by_reference(self, reference_no: str) -> Dict[str, Any]:
+        """Find one provider disbursement by its merchant idempotency reference."""
+        return await self._reconcile_disbursement_reference(reference_no)
 
     async def get_disbursement_by_id(self, disb_id: str) -> Dict[str, Any]:
         """Read Disbursement By Id (Step 4)."""
@@ -837,9 +927,7 @@ class SwiftPayService:
 
         url = f"{self.base_url}/api/disbursements"
 
-        # Note: Documentation says "Body" for GET request in Read Disbursements,
-        # but also lists merchantId, merchantReferenceNo, etc.
-        # Usually GET requests use query params. I'll use query params first.
+        # The provider's criteria object is serialized as query parameters.
 
         auth_str = f"{self.access_key}:{self.secret_key}"
         auth_bytes = auth_str.encode("utf-8")

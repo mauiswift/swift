@@ -100,6 +100,7 @@ interface BotConfig {
   maintenance_message: string;
   commands_enabled: string;
   whatsapp_number: string;
+  official_channel_username: string;
 }
 
 // Bot commands reference - active merchant payment commands
@@ -290,6 +291,7 @@ export default function BotSettings() {
     payment_success_message: '', payment_failed_message: '',
     payment_pending_message: '', maintenance_message: '', commands_enabled: '',
     whatsapp_number: '',
+    official_channel_username: 'PayBotPH',
   });
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
@@ -429,7 +431,7 @@ export default function BotSettings() {
 
   const handleResetConfig = () => {
     if (botConfig) setLocalConfig(botConfig);
-    else setLocalConfig({ bot_status: 'inactive', maintenance_mode: 'off', welcome_message_en: '', welcome_message_zh: '', payment_success_message: '', payment_failed_message: '', payment_pending_message: '', maintenance_message: '', commands_enabled: '', whatsapp_number: '' });
+    else setLocalConfig({ bot_status: 'inactive', maintenance_mode: 'off', welcome_message_en: '', welcome_message_zh: '', payment_success_message: '', payment_failed_message: '', payment_pending_message: '', maintenance_message: '', commands_enabled: '', whatsapp_number: '', official_channel_username: 'PayBotPH' });
     toast.info('Changes discarded');
   };
 
@@ -704,9 +706,20 @@ export default function BotSettings() {
 
                 {/* Social Channel Numbers */}
                 <Card className="bg-card border-border">
-                  <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><Globe className="h-5 w-5 text-green-400" />Social Sign-up Channels</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><Globe className="h-5 w-5 text-green-400" />Public Channels</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">Configure social platform contact details shown as alternative sign-up and login options on the registration page.</p>
+                    <p className="text-sm text-muted-foreground">Configure the official Telegram channel shown in the bot start panel and the social contact used on the registration page.</p>
+                    <div>
+                      <Label className="text-muted-foreground mb-1.5 block">Official Telegram Channel</Label>
+                      <Input
+                        type="text"
+                        placeholder="PayBotPH"
+                        value={localConfig.official_channel_username}
+                        onChange={(e) => setLocalConfig(prev => ({ ...prev, official_channel_username: e.target.value.replace(/^@/, '') }))}
+                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">Enter the channel username, with or without @. Leave blank to hide the channel from the bot start panel.</p>
+                    </div>
                     <div>
                       <Label className="text-muted-foreground mb-1.5 block">WhatsApp Number</Label>
                       <Input

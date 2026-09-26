@@ -160,6 +160,7 @@ async def test_create_order_payload_structure(monkeypatch):
 async def test_send_disbursement_does_not_retry_duplicate_reference_with_new_id(monkeypatch):
     svc = SwiftPayService()
     references = []
+    lookups = []
 
     class DuplicateReferenceClient:
         def __init__(self, *args, **kwargs):
@@ -187,6 +188,11 @@ async def test_send_disbursement_does_not_retry_duplicate_reference_with_new_id(
         lambda *args, **kwargs: DuplicateReferenceClient(*args, **kwargs),
     )
 
+    async def missing_disbursement(params):
+        lookups.append(params)
+        return {"success": True, "data": {"result": []}}
+
+    monkeypatch.setattr(svc, "get_disbursements", missing_disbursement)
     result = await svc.send_disbursement(
         reference_no="disb-existing",
         amount=100,
@@ -199,9 +205,106 @@ async def test_send_disbursement_does_not_retry_duplicate_reference_with_new_id(
 
     assert result["success"] is False
     assert result["code"] == "DUPLICATE_MERCHANT_REFERENCE_NO"
+    assert result["not_found"] is True
+    assert result["submission_unknown"] is True
     assert result["already_submitted"] is True
     assert result["reference_no"] == "disb-existing"
     assert references == ["disb-existing"]
+    assert lookups == [{"merchantReferenceNo": "disb-existing", "pageNo": 0, "pageSize": 10}]
+
+
+@pytest.mark.asyncio
+async def test_send_disbursement_retries_transport_error_with_same_reference(monkeypatch):
+    svc = SwiftPayService()
+    references = []
+
+    class RetryClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            references.append(json["merchantReferenceNo"])
+            if len(references) == 1:
+                raise httpx.ConnectError("connection reset")
+            return DummyResponse(status_code=200, json_data={"id": "swiftpay-id-123"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", RetryClient)
+    monkeypatch.setattr(
+        svc,
+        "get_disbursements",
+        lambda params: pytest.fail("A successful same-reference retry should not need reconciliation"),
+    )
+
+    result = await svc.send_disbursement(
+        reference_no="withdrawal-123",
+        amount=100,
+        bank_code="BDO",
+        account_number="1234567890",
+        account_name="Jane Doe",
+    )
+
+    assert result["success"] is True
+    assert result["data"]["id"] == "swiftpay-id-123"
+    assert result["reference_no"] == "withdrawal-123"
+    assert references == ["withdrawal-123", "withdrawal-123"]
+
+
+@pytest.mark.asyncio
+async def test_send_disbursement_reconciles_duplicate_reference_to_provider_record(monkeypatch):
+    svc = SwiftPayService()
+    references = []
+    provider_record = {
+        "id": "swiftpay-id-existing",
+        "merchantReferenceNo": "withdrawal-existing",
+        "status": "PENDING",
+    }
+
+    class DuplicateReferenceClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            references.append(json["merchantReferenceNo"])
+            return DummyResponse(
+                status_code=400,
+                json_data={"errorCode": "DUPLICATE_MERCHANT_REFERENCE_NO"},
+            )
+
+    async def find_existing(params):
+        assert params == {
+            "merchantReferenceNo": "withdrawal-existing",
+            "pageNo": 0,
+            "pageSize": 10,
+        }
+        return {"success": True, "data": {"result": [provider_record]}}
+
+    monkeypatch.setattr(httpx, "AsyncClient", DuplicateReferenceClient)
+    monkeypatch.setattr(svc, "get_disbursements", find_existing)
+
+    result = await svc.send_disbursement(
+        reference_no="withdrawal-existing",
+        amount=100,
+        bank_code="BDO",
+        account_number="1234567890",
+        account_name="Jane Doe",
+    )
+
+    assert result["success"] is True
+    assert result["already_submitted"] is True
+    assert result["data"] == provider_record
+    assert references == ["withdrawal-existing"]
 
 
 @pytest.mark.asyncio

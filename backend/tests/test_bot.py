@@ -459,6 +459,12 @@ def _webhook_body(text: str, chat_id: int = 99999, username: str = "testuser") -
 
 
 class TestTelegramWebhook:
+    def test_bot_config_normalizes_and_validates_channel_username(self):
+        config = telegram_router.BotConfigUpdate(official_channel_username="@SwiftPayUpdates")
+
+        assert config.official_channel_username == "SwiftPayUpdates"
+        with pytest.raises(ValueError, match="valid Telegram channel username"):
+            telegram_router.BotConfigUpdate(official_channel_username="https://t.me/SwiftPayUpdates")
     def test_bot_response_formatter_is_consistent(self):
         from routers.telegram import _bot_response
 
@@ -572,6 +578,27 @@ class TestTelegramWebhook:
         assert captured["chat_id"] == "123"
         assert "Deposit" in str(captured["reply_markup"])
         assert "充值" not in str(captured["reply_markup"])
+
+    def test_start_panel_uses_configured_official_channel(self):
+        captured = {}
+        query_result = MagicMock()
+        query_result.scalar_one_or_none.return_value = "@SwiftPayUpdates"
+        db = MagicMock()
+        db.execute = AsyncMock(return_value=query_result)
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            captured["text"] = text
+            return {"success": True, "message_id": 1}
+
+        with patch("routers.telegram.WalletsService") as wallet_service_cls, patch(
+            "routers.telegram._get_user_currency",
+            new=AsyncMock(return_value="PHP"),
+        ), patch.object(telegram_router.TelegramService, "send_message", new=fake_send_message):
+            wallet_service_cls.return_value.get_balance = AsyncMock(return_value={"balance": 42.0})
+            asyncio.run(telegram_router._send_start_panel(db, "123", "Test", lang="en"))
+
+        assert "@SwiftPayUpdates" in captured["text"]
+        assert "@PayBotPH" not in captured["text"]
 
     def test_start_panel_tracks_dashboard_features(self):
         captured = {}

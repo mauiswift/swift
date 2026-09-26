@@ -38,5 +38,6 @@ class Bot_settings(Base):
     messenger_verify_token      = Column(String, nullable=True)
     # WhatsApp contact number (used for social sign-up links)
     whatsapp_number             = Column(String, nullable=True)
+    official_channel_username   = Column(String, nullable=True, default='PayBotPH', server_default='PayBotPH')
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)

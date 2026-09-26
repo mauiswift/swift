@@ -404,6 +404,151 @@ class TestKRWDisbursementRequest:
         wallet_service.return_value.refund_wallet_debit.assert_not_awaited()
         db.commit.assert_awaited_once()
 
+    @pytest.mark.asyncio
+    async def test_php_approval_persists_swiftpay_disbursement_id(self):
+        from routers.wallet import approve_withdrawal
+        from services.swiftpay_service import SwiftPayService
+
+        disbursement = Disbursements(
+            id=790,
+            user_id="merchant-1",
+            external_id="payout-review-790",
+            amount=500,
+            currency="PHP",
+            bank_code="BDO",
+            account_number="1234567890",
+            account_name="Jane Doe",
+            status="processing",
+        )
+        db = AsyncMock()
+        db.execute.return_value = Mock(
+            scalar_one_or_none=Mock(return_value=disbursement)
+        )
+        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        provider_response = {
+            "success": True,
+            "reference_no": disbursement.external_id,
+            "data": {"id": "swiftpay-provider-id-790"},
+        }
+
+        with patch.object(
+            SwiftPayService,
+            "send_disbursement",
+            new=AsyncMock(return_value=provider_response),
+        ) as send_disbursement, patch(
+            "routers.wallet.TransactionsService"
+        ) as transaction_service:
+            transaction_service.return_value.create_transaction = AsyncMock()
+            response = await approve_withdrawal(790, current_user, db)
+
+        assert response["success"] is True
+        assert response["status"] == "transferring"
+        assert disbursement.external_id == "payout-review-790"
+        assert disbursement.xendit_id == "swiftpay-provider-id-790"
+        send_disbursement.assert_awaited_once()
+        db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_php_withdrawal_reconciliation_marks_provider_execution_complete(self):
+        from routers.wallet import reconcile_php_withdrawal
+        from services.swiftpay_service import SwiftPayService
+
+        disbursement = Disbursements(
+            id=791,
+            user_id="merchant-1",
+            external_id="payout-review-791",
+            xendit_id="swiftpay-provider-id-791",
+            amount=500,
+            currency="PHP",
+            bank_code="BDO",
+            account_number="1234567890",
+            account_name="Jane Doe",
+            status="transferring",
+        )
+        db = AsyncMock()
+        db.execute.return_value = Mock(
+            scalar_one_or_none=Mock(return_value=disbursement)
+        )
+        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        provider_response = {
+            "success": True,
+            "data": {
+                "id": "swiftpay-provider-id-791",
+                "merchantReferenceNo": disbursement.external_id,
+                "status": "EXECUTED",
+            },
+        }
+
+        with patch.object(
+            SwiftPayService, "is_configured", return_value=True
+        ), patch.object(
+            SwiftPayService,
+            "get_disbursement_by_id",
+            new=AsyncMock(return_value=provider_response),
+        ) as get_disbursement, patch(
+            "routers.wallet.credit_system_earnings",
+            new=AsyncMock(),
+        ):
+            response = await reconcile_php_withdrawal(791, current_user, db)
+
+        assert response["success"] is True
+        assert response["status"] == "completed"
+        assert disbursement.status == "completed"
+        assert disbursement.completed_at is not None
+        get_disbursement.assert_awaited_once_with("swiftpay-provider-id-791")
+        db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_php_withdrawal_reconciliation_retries_same_reference_when_provider_has_no_record(self):
+        from routers.wallet import reconcile_php_withdrawal
+        from services.swiftpay_service import SwiftPayService
+
+        disbursement = Disbursements(
+            id=792,
+            user_id="merchant-1",
+            external_id="payout-review-792",
+            amount=500,
+            currency="PHP",
+            bank_code="BDO",
+            account_number="1234567890",
+            account_name="Jane Doe",
+            status="transferring",
+        )
+        db = AsyncMock()
+        db.execute.return_value = Mock(
+            scalar_one_or_none=Mock(return_value=disbursement)
+        )
+        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        accepted_response = {
+            "success": True,
+            "reference_no": disbursement.external_id,
+            "data": {"id": "swiftpay-provider-id-792", "status": "PENDING"},
+        }
+
+        with patch.object(
+            SwiftPayService, "is_configured", return_value=True
+        ), patch.object(
+            SwiftPayService,
+            "get_disbursement_by_reference",
+            new=AsyncMock(return_value={"success": False, "not_found": True}),
+        ) as get_by_reference, patch.object(
+            SwiftPayService,
+            "send_disbursement",
+            new=AsyncMock(return_value=accepted_response),
+        ) as send_disbursement, patch(
+            "routers.wallet.TransactionsService"
+        ) as transaction_service:
+            transaction_service.return_value.create_transaction = AsyncMock()
+            response = await reconcile_php_withdrawal(792, current_user, db)
+
+        assert response["success"] is True
+        assert response["status"] == "transferring"
+        assert disbursement.xendit_id == "swiftpay-provider-id-792"
+        get_by_reference.assert_awaited_once_with("payout-review-792")
+        send_disbursement.assert_awaited_once()
+        assert send_disbursement.await_args.kwargs["reference_no"] == "payout-review-792"
+        db.commit.assert_awaited_once()
+
 
 class TestKRWPaymentService:
     """Test KRW payment service."""

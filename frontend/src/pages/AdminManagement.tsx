@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
 import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
+import { toast } from 'sonner';
 import {
   ShieldCheck,
   Plus,
@@ -42,6 +43,10 @@ import {
   Upload,
   Search,
   Palette,
+  Landmark,
+  Loader2,
+  Save,
+  Settings2,
 } from 'lucide-react';
 
 const authenticatedFetch = client.fetch;
@@ -648,6 +653,8 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
   const receivingCurrencies = ['PHP', 'KRW', 'CNY', 'HKD', 'USD', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
+  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
   const [depositRules, setDepositRules] = useState({
     bank_deposit_currencies: ['PHP', 'KRW'],
@@ -660,20 +667,25 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await authenticatedFetch('/api/v1/app-settings/wallet-limits');
-      if (!response.ok) throw new Error(await response.text());
-      setLimits((await response.json()).limits || {});
-      const rulesResponse = await authenticatedFetch('/api/v1/app-settings/deposit-rules');
-      if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
-      setDepositRules((await rulesResponse.json()).rules || depositRules);
-      const accountsResponse = await authenticatedFetch('/api/v1/app-settings/deposit-accounts');
-      if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
-      setDepositAccounts((await accountsResponse.json()).accounts || []);
+      const responses = await Promise.all([
+        authenticatedFetch('/api/v1/app-settings/wallet-limits'),
+        authenticatedFetch('/api/v1/app-settings/deposit-rules'),
+        authenticatedFetch('/api/v1/app-settings/deposit-accounts'),
+      ]);
+      const failedResponse = responses.find(response => !response.ok);
+      if (failedResponse) throw new Error(await failedResponse.text());
+      const [limitsData, rulesData, accountsData] = await Promise.all(responses.map(response => response.json()));
+      setLimits(limitsData.limits || {});
+      setDepositRules(current => ({ ...current, ...(rulesData.rules || {}) }));
+      setDepositAccounts(accountsData.accounts || []);
+      setLoaded(true);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
+    } finally {
+      setLoading(false);
     }
-
   }, [onError]);
 
   useEffect(() => { load(); }, [load]);
@@ -718,11 +730,18 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       });
       if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
       setDepositAccounts((await accountsResponse.json()).accounts || depositAccounts);
+      toast.success('Wallet settings saved');
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to save wallet settings');
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateAccount = (index: number, updates: Partial<DepositAccount>) => {
+    setDepositAccounts(accounts => accounts.map((account, itemIndex) => (
+      itemIndex === index ? { ...account, ...updates } : account
+    )));
   };
 
   const fields: Array<{ key: keyof WalletLimitValues; label: string; help: string }> = [
@@ -734,56 +753,106 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-slate-900">Wallet Settings</h2>
-          <p className="mt-1 text-sm text-slate-500">Super-admin controls for wallet limits and configured receiving accounts.</p>
-        </div>
-        <Button onClick={save} disabled={saving} className="w-full shrink-0 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">{saving ? 'Saving...' : 'Save changes'}</Button>
-      </div>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">Currency wallet limits</h3>
-            <p className="text-sm text-slate-500">Configure limits independently for each supported wallet currency.</p>
+    <div className="space-y-5">
+      <header className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-lg">
+        <div className="flex flex-col gap-5 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-400 ring-1 ring-orange-400/25">
+              <WalletIcon className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Platform controls</p>
+              <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">Wallet settings</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                Configure transaction limits, accepted deposit currencies, and the receiving accounts shown to customers.
+              </p>
+            </div>
           </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{currency} limits</span>
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">{currencies.length} wallet currencies</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">{depositAccounts.length} receiving accounts</span>
+            <Button onClick={save} disabled={loading || !loaded || saving} className="w-full gap-2 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? 'Saving…' : 'Save all settings'}
+            </Button>
+          </div>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 sm:grid-cols-4" role="group" aria-label="Wallet settings currency">
+        <nav aria-label="Wallet settings sections" className="flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 sm:px-7">
+          {[
+            { href: '#wallet-limits', label: 'Wallet limits', icon: <Settings2 className="h-3.5 w-3.5" /> },
+            { href: '#deposit-accounts', label: 'Receiving accounts', icon: <Landmark className="h-3.5 w-3.5" /> },
+            { href: '#deposit-rules', label: 'Deposit rules', icon: <DollarSign className="h-3.5 w-3.5" /> },
+          ].map(section => (
+            <a key={section.href} href={section.href} className="inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white">
+              {section.icon}{section.label}
+            </a>
+          ))}
+        </nav>
+      </header>
+      {loading ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#FF6B00]" />
+          <p className="mt-3 text-sm font-medium text-slate-600">Loading wallet configuration…</p>
+        </div>
+      ) : !loaded ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-semibold text-red-800">Wallet configuration could not be loaded.</p>
+          <p className="mt-1 text-xs text-red-700">Settings are unavailable, so saving is disabled to protect existing values.</p>
+          <Button type="button" variant="outline" onClick={load} className="mt-4 gap-2 border-red-300 text-red-800 hover:bg-red-100">
+            <RefreshCw className="h-4 w-4" />
+            Retry loading
+          </Button>
+        </div>
+      ) : (
+        <>
+      <section id="wallet-limits" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><Settings2 className="h-5 w-5" /></span>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Wallet limits</h3>
+              <p className="mt-1 text-sm text-slate-500">Configure balance and transaction limits independently for each wallet currency.</p>
+            </div>
+          </div>
+          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">{currency} configuration</span>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Wallet settings currency">
           {currencies.map(value => (
-            <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${currency === value ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-500 hover:bg-white/70 hover:text-slate-700'}`}>{value}</button>
+            <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive min-w-20 rounded-xl border px-4 py-2.5 text-sm font-bold transition ${currency === value ? 'border-orange-200 bg-orange-50 text-[#C2410C] shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}>{value}</button>
           ))}
         </div>
-        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
+        <div className="mt-5 grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
           {fields.map(field => (
-            <div key={field.key} className="min-w-0 space-y-1.5">
-              <label className="block text-sm font-semibold text-slate-700">{field.label} ({currency})</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={current[field.key] || ''}
-                onChange={event => update(field.key, event.target.value)}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
-              />
-              <p className="min-h-8 text-xs leading-4 text-slate-400">{field.help}</p>
-            </div>
+            <label key={field.key} className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition-colors focus-within:border-orange-300 focus-within:bg-white">
+              <span className="text-sm font-semibold text-slate-800">{field.label}</span>
+              <span className="mt-1 min-h-10 text-xs leading-5 text-slate-500">{field.help}</span>
+              <span className="mt-3 flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/5">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={current[field.key] || ''}
+                  onChange={event => update(field.key, event.target.value)}
+                  className="h-10 min-w-0 flex-1 rounded-lg bg-transparent px-3 text-sm font-bold text-slate-900 outline-none"
+                />
+                <span className="pr-3 text-xs font-bold text-slate-400">{currency}</span>
+              </span>
+            </label>
           ))}
         </div>
       </section>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section id="deposit-accounts" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
+            <h3 className="text-base font-bold text-slate-900">Receiving accounts</h3>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Add the receiving accounts that users should see when making a bank deposit. For KRW, one normal account is assigned randomly to each customer session. You can also configure high-value accounts with a minimum collection amount (for example, 400,000 KRW); one eligible account is then assigned randomly for that deposit. These details are also used in Telegram deposit instructions.
+              These details appear in customer bank-deposit instructions and Telegram. KRW deposits can be assigned an eligible account based on its minimum collection amount.
             </p>
           </div>
           <Button
             type="button"
             variant="outline"
-            className="w-full shrink-0 gap-2 sm:w-auto"
+            className="w-full shrink-0 gap-2 border-orange-200 text-[#C2410C] hover:bg-orange-50 sm:w-auto"
             onClick={() => setDepositAccounts(items => [...items, {
               value: `account-${items.length + 1}`,
               label: '',
@@ -806,119 +875,135 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           {depositAccounts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
               <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
-              <p className="mt-2 text-sm font-semibold text-slate-700">No receiving accounts configured</p>
+              <p className="mt-2 text-sm font-semibold text-slate-700">No receiving accounts yet</p>
               <p className="mt-1 text-xs text-slate-500">Add an account so users know where to send their deposits.</p>
             </div>
           ) : depositAccounts.map((account, index) => (
-            <div key={`${account.value}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
+            <article key={`${account.value}-${index}`} className="overflow-hidden rounded-xl border border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
-                  <span className="truncate text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#C2410C]">{String(index + 1).padStart(2, '0')}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900">{account.label || 'New receiving account'}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{account.currency} · {account.account_number || 'Account number not set'}</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
-                  className="motion-interactive inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                  className="motion-interactive inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
                   aria-label={`Remove ${account.label || 'receiving account'}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
                 </button>
               </div>
-              <div className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid items-start gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Account label</span>
-                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => updateAccount(index, { label: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Currency</span>
-                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
+                  <select value={account.currency} onChange={event => updateAccount(index, { currency: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
                     {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Bank or provider</span>
-                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                  <input value={account.value} placeholder="e.g. netbank" onChange={event => updateAccount(index, { value: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Account number</span>
-                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                  <input value={account.account_number} placeholder="Enter account number" onChange={event => updateAccount(index, { account_number: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">SWIFT/BIC (optional)</span>
-                  <input value={account.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, swift_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                  <input value={account.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => updateAccount(index, { swift_code: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Receiving currency (optional)</span>
-                  <select value={account.receiving_currency || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, receiving_currency: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
+                  <select value={account.receiving_currency || ''} onChange={event => updateAccount(index, { receiving_currency: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
                     <option value="">Same as collection</option>
                     {receivingCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Minimum collection amount (optional)</span>
-                  <input type="number" min="0" value={account.minimum_amount ?? ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, minimum_amount: event.target.value ? Number(event.target.value) : undefined } : item))} placeholder="e.g. 400000 KRW" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+                  <input type="number" min="0" step="0.01" value={account.minimum_amount ?? ''} onChange={event => updateAccount(index, { minimum_amount: event.target.value ? Number(event.target.value) : undefined })} placeholder={`Amount in ${account.currency}`} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Bank code (optional)</span>
-                  <input value={account.bank_code || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, bank_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+                  <input value={account.bank_code || ''} onChange={event => updateAccount(index, { bank_code: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Branch code (optional)</span>
-                  <input value={account.branch_code || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, branch_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900" />
+                  <input value={account.branch_code || ''} onChange={event => updateAccount(index, { branch_code: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
                 </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 sm:col-span-2 xl:col-span-4">
                   <span className="block">Bank address (optional)</span>
-                  <input value={account.bank_address || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, bank_address: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900" />
+                  <input value={account.bank_address || ''} onChange={event => updateAccount(index, { bank_address: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
                 </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 sm:col-span-2 xl:col-span-4">
                   <span className="block">Account holder name</span>
-                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => updateAccount(index, { account_name: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </section>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div>
-          <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
-          <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
+      <section id="deposit-rules" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><DollarSign className="h-5 w-5" /></span>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Deposit rules</h3>
+            <p className="mt-1 text-sm text-slate-500">Control accepted currencies, receipt uploads, and first-time USDT funding.</p>
+          </div>
         </div>
-        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
+        <div className="mt-5 grid items-start gap-4 md:grid-cols-2">
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Bank deposit currencies
             <input
               value={depositRules.bank_deposit_currencies.join(', ')}
               onChange={event => setDepositRules(current => ({ ...current, bank_deposit_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
-              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
               placeholder="PHP, KRW"
             />
+            <span className="block text-xs font-normal text-slate-400">Separate currency codes with commas.</span>
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Top-up currencies
             <input
               value={depositRules.topup_currencies.join(', ')}
               onChange={event => setDepositRules(current => ({ ...current, topup_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
-              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
               placeholder="PHP, USDT, KRW"
             />
+            <span className="block text-xs font-normal text-slate-400">Separate currency codes with commas.</span>
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Maximum receipt size (MB)
-            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" />
+            <span className="flex h-11 items-center rounded-xl border border-slate-200 bg-white focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/5">
+              <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="h-full min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm font-normal text-slate-900 outline-none" />
+              <span className="pr-3 text-xs font-semibold text-slate-400">MB</span>
+            </span>
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             First USDT top-up amount
-            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" />
+            <span className="flex h-11 items-center rounded-xl border border-slate-200 bg-white focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/5">
+              <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="h-full min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm font-normal text-slate-900 outline-none" />
+              <span className="pr-3 text-xs font-semibold text-slate-400">USDT</span>
+            </span>
           </label>
-          <label className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 md:col-span-2">
+          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 md:col-span-2">
             <input type="checkbox" className="h-4 w-4 accent-[#FF6B00]" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
-            Enforce first USDT top-up amount rule
+            Enforce the first USDT top-up amount rule
           </label>
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

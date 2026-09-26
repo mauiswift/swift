@@ -1268,10 +1268,15 @@ async def approve_withdrawal(
 			provider_result.get("code") == "DUPLICATE_MERCHANT_REFERENCE_NO"
 			and provider_result.get("already_submitted") is True
 		)
+		reconciliation_required = bool(
+			already_submitted
+			or provider_result.get("submission_unknown")
+			or provider_result.get("reconciliation_required")
+		)
 		if not provider_result.get("success"):
-			if already_submitted:
+			if reconciliation_required:
 				logger.warning(
-					"SwiftPay already has PHP withdrawal reference %s; keeping funds reserved for reconciliation",
+					"SwiftPay PHP withdrawal reference %s requires reconciliation; keeping funds reserved",
 					disb.external_id,
 				)
 			else:
@@ -1293,6 +1298,10 @@ async def approve_withdrawal(
 				.where(Wallet_transactions.reference_id == f"{original_reference}-fee")
 				.values(reference_id=f"{provider_reference}-fee")
 			)
+		provider_data = provider_result.get("data")
+		provider_id = provider_data.get("id") if isinstance(provider_data, dict) else None
+		if provider_id:
+			disb.xendit_id = str(provider_id)
 		disb.status = "transferring"
 	elif currency == "KRW":
 		from services.krw_payment_service import (
@@ -1339,7 +1348,7 @@ async def approve_withdrawal(
 		transaction_type="disbursement",
 		amount=disb.amount,
 		external_id=disb.external_id,
-		gateway_id=disb.external_id,
+		gateway_id=disb.xendit_id or disb.external_id,
 		description=disb.description or "Wallet withdrawal",
 		customer_name=disb.account_name or "",
 		status=disb.status,
@@ -1371,12 +1380,122 @@ async def approve_withdrawal(
 		"status": disb.status,
 		"message": (
 			f"{disb.amount:,.2f} {currency} withdrawal is awaiting SwiftPay reconciliation"
-			if currency == "PHP" and already_submitted
+			if currency == "PHP" and reconciliation_required
 			else f"{disb.amount:,.2f} {currency} withdrawal processed successfully"
 		),
 		"amount": disb.amount,
 		"currency": currency,
 		"reference_id": disb.external_id,
+	}
+
+
+@router.post("/admin/withdrawals/{disb_id}/reconcile")
+async def reconcile_php_withdrawal(
+	disb_id: int,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin review required")
+	disb_result = await db.execute(
+		select(Disbursements).where(Disbursements.id == disb_id).with_for_update()
+	)
+	disb = disb_result.scalar_one_or_none()
+	if not disb:
+		raise HTTPException(status_code=404, detail="Withdrawal not found")
+	if (disb.currency or "").upper() != "PHP":
+		raise HTTPException(status_code=400, detail="Provider reconciliation is only available for PHP withdrawals")
+	if disb.status != "transferring":
+		raise HTTPException(status_code=400, detail=f"Withdrawal is not awaiting provider reconciliation ({disb.status})")
+
+	service = SwiftPayService()
+	if not service.is_configured():
+		raise HTTPException(status_code=503, detail="SwiftPay is not configured")
+	if disb.xendit_id:
+		provider_result = await service.get_disbursement_by_id(disb.xendit_id)
+	else:
+		provider_result = await service.get_disbursement_by_reference(disb.external_id or "")
+		if provider_result.get("not_found"):
+			name_parts = [part for part in (disb.account_name or "").split() if part]
+			provider_result = await service.send_disbursement(
+				reference_no=disb.external_id or f"withdrawal-{disb.id}",
+				amount=float(disb.amount or 0),
+				bank_code=disb.bank_code or "",
+				account_number=disb.account_number or "",
+				first_name=name_parts[0] if name_parts else "Customer",
+				middle_name=" ".join(name_parts[1:-1]) if len(name_parts) > 2 else None,
+				last_name=name_parts[-1] if len(name_parts) > 1 else "Customer",
+				phone=disb.recipient_phone,
+				note=disb.description or "Super admin PHP disbursement",
+				currency="PHP",
+			)
+	if not provider_result.get("success"):
+		raise HTTPException(
+			status_code=502,
+			detail=provider_result.get("error", "Could not reconcile the SwiftPay disbursement"),
+		)
+
+	provider_data = provider_result.get("data")
+	if not isinstance(provider_data, dict):
+		raise HTTPException(status_code=502, detail="SwiftPay returned an invalid disbursement record")
+	provider_id = provider_data.get("id")
+	if provider_id:
+		disb.xendit_id = str(provider_id)
+	provider_status = str(provider_data.get("status") or "").strip().upper()
+	now = datetime.now(timezone.utc)
+	if provider_status in {"PENDING"}:
+		disb.status = "transferring"
+	elif provider_status == "EXECUTED":
+		disb.status = "completed"
+		disb.completed_at = now
+		disb.failure_reason = None
+	elif provider_status in {"REJECTED", "ERROR"}:
+		reason = str(provider_data.get("errorMessage") or f"SwiftPay disbursement {provider_status.lower()}")
+		await _refund_withdrawal(db, disb, reason)
+	else:
+		raise HTTPException(
+			status_code=502,
+			detail=f"SwiftPay returned an unsupported disbursement status: {provider_status or 'empty'}",
+		)
+
+	disb.updated_at = now
+	await db.execute(
+		update(Transactions)
+		.where(Transactions.external_id == disb.external_id)
+		.values(status=disb.status, xendit_id=disb.xendit_id)
+	)
+	await db.execute(
+		update(Wallet_transactions)
+		.where(Wallet_transactions.reference_id == disb.external_id)
+		.values(status=disb.status)
+	)
+	if disb.status == "completed" and disb.processing_fee:
+		await credit_system_earnings(
+			db=db,
+			amount=disb.processing_fee,
+			currency=disb.currency or "PHP",
+			reference_id=f"{disb.external_id}-system-fee",
+			note=f"Withdrawal earnings: {disb.processing_fee:,.2f} {disb.currency or 'PHP'}",
+		)
+		await db.execute(
+			update(Wallet_transactions)
+			.where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
+			.values(status="completed")
+		)
+	await db.commit()
+	return {
+		"success": True,
+		"id": disb.id,
+		"status": disb.status,
+		"provider_status": provider_status,
+		"provider_id": disb.xendit_id,
+		"message": (
+			f"{disb.amount:,.2f} PHP withdrawal completed"
+			if disb.status == "completed"
+			else "Withdrawal failed and reserved funds were refunded"
+			if disb.status == "failed"
+			else "Withdrawal is still processing at SwiftPay"
+		),
 	}
 
 
