@@ -762,6 +762,7 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
     "/disburse": [
         {"key": "bank",    "type": "str",   "prompt": "🏦 Enter the <b>bank or wallet code</b>:\n<i>Use /banks to see all supported InstaPay destinations. You can also enter a common alias such as GCASH, MAYA, BDO, or BPI.</i>"},
         {"key": "account", "type": "str",   "prompt": "🔢 Enter the <b>account / mobile number</b>:\n<i>e.g. 09XXXXXXXXX or 1234567890</i>"},
+        {"key": "phone",   "type": "str",   "prompt": "📱 Enter the recipient's <b>Philippine mobile number</b>:\n<i>Required by SwiftPay for payouts. If the account number above is a mobile number, this step is skipped automatically.</i>"},
         {"key": "name",    "type": "str",   "prompt": "👤 Enter the <b>account holder name</b>:\n<i>e.g. Juan Dela Cruz</i>"},
         {"key": "amount",  "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 1000</i>"},
     ],
@@ -801,6 +802,7 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
     "/withdraw": [
         {"key": "bank",    "type": "str",   "prompt": "🏦 Enter the <b>bank or wallet code</b>:\n<i>Use /banks to see all supported InstaPay destinations. You can also enter a common alias such as GCASH, MAYA, BDO, or BPI.</i>"},
         {"key": "account", "type": "str",   "prompt": "🔢 Enter the <b>beneficiary account number</b>:\n<i>Ensure this matches your bank records exactly.</i>"},
+        {"key": "phone",   "type": "str",   "prompt": "📱 Enter the recipient's <b>Philippine mobile number</b>:\n<i>Required by SwiftPay for payouts. If the account number above is a mobile number, this step is skipped automatically.</i>"},
         {"key": "name",    "type": "str",   "prompt": "👤 Enter the <b>legal account holder name</b>:\n<i>e.g. Juan Dela Cruz</i>"},
         {"key": "amount",  "type": "float", "prompt": "💰 Enter the <b>withdrawal amount</b> in PHP:\n<i>Minimum clearing: ₱100.00</i>"},
     ],
@@ -870,6 +872,11 @@ def _validate_wizard_answer(cmd: str, param: Dict, raw: str) -> Optional[str]:
     elif key == "username":
         if not re.fullmatch(r"@?[A-Za-z0-9_]{3,32}", value):
             return "Enter a valid Telegram username, such as @username."
+    elif key == "phone":
+        from services.swiftpay_service import SwiftPayService
+
+        if not SwiftPayService.normalize_philippine_mobile(value):
+            return "Enter a valid Philippine mobile number, such as 09103350434."
     elif key == "address":
         if not re.fullmatch(r"T[1-9A-HJ-NP-Za-km-z]{33}", value):
             return "Enter a valid TRC20 wallet address starting with T."
@@ -1462,7 +1469,8 @@ async def _process_withdrawal_request(
     account: str,
     name: str,
     amount: float,
-    cmd_label: str = "Withdrawal"
+    cmd_label: str = "Withdrawal",
+    recipient_phone: Optional[str] = None,
 ) -> None:
     """Process a withdrawal / disbursement request via WalletsService policy checks."""
     if amount <= 0:
@@ -1494,10 +1502,10 @@ async def _process_withdrawal_request(
         )
         return
 
-    recipient_phone = None
+    account_phone = SwiftPayService.normalize_philippine_mobile(account)
+    recipient_phone = SwiftPayService.normalize_philippine_mobile(recipient_phone or account)
     if institution_code in {"GCASH", "MAYA", "GXCHPHM2XXX", "PAPHPHM1XXX"}:
-        recipient_phone = SwiftPayService.normalize_philippine_mobile(account)
-        if not recipient_phone:
+        if not account_phone:
             await _send_bot_error(
                 tg,
                 chat_id,
@@ -1506,6 +1514,15 @@ async def _process_withdrawal_request(
                 title=f"{cmd_label} unavailable",
             )
             return
+    if not recipient_phone:
+        await _send_bot_error(
+            tg,
+            chat_id,
+            "SwiftPay requires the recipient's Philippine mobile number for every payout.",
+            next_step="Run /withdraw or /disburse without arguments and provide the recipient's mobile number in the wizard.",
+            title=f"{cmd_label} unavailable",
+        )
+        return
 
     try:
         result = await wallet_svc.withdraw_request(
@@ -2449,12 +2466,25 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             state["data"][param["key"]] = raw
 
                 state["step"] += 1
+                if (
+                    state["step"] < len(steps)
+                    and steps[state["step"]]["key"] == "phone"
+                ):
+                    from services.swiftpay_service import SwiftPayService
+
+                    account_phone = SwiftPayService.normalize_philippine_mobile(
+                        state["data"].get("account", "")
+                    )
+                    if account_phone:
+                        state["data"]["phone"] = account_phone
+                        state["step"] += 1
 
             # More steps outstanding?
             if state["step"] < len(steps):
                 next_param = steps[state["step"]]
-                total_steps = len(steps)
-                current_step_num = state["step"] + 1
+                phone_step_completed = "phone" in state["data"]
+                total_steps = len(steps) - int(phone_step_completed)
+                current_step_num = state["step"] + 1 - int(phone_step_completed)
 
                 await tg.send_message(
                     chat_id,
@@ -2646,7 +2676,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     account = str(collected.get("account", ""))
                     name = str(collected.get("name", ""))
                     amount = float(collected.get("amount", 0))
-                    await _process_withdrawal_request(tg, db, chat_id, username, bank, account, name, amount, "Withdrawal")
+                    await _process_withdrawal_request(
+                        tg, db, chat_id, username, bank, account, name, amount, "Withdrawal",
+                        recipient_phone=str(collected.get("phone", "")),
+                    )
                 except Exception as exc:
                     logger.error(f"/withdraw wizard completion error: {exc}", exc_info=True)
                     await tg.send_message(chat_id, "❌ An error occurred processing your withdrawal request.")
@@ -2658,7 +2691,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     account = str(collected.get("account", ""))
                     name = str(collected.get("name", ""))
                     amount = float(collected.get("amount", 0))
-                    await _process_withdrawal_request(tg, db, chat_id, username, bank, account, name, amount, "Disbursement")
+                    await _process_withdrawal_request(
+                        tg, db, chat_id, username, bank, account, name, amount, "Disbursement",
+                        recipient_phone=str(collected.get("phone", "")),
+                    )
                 except Exception as exc:
                     logger.error(f"/disburse wizard completion error: {exc}", exc_info=True)
                     await tg.send_message(chat_id, "❌ An error occurred processing your disbursement request.")

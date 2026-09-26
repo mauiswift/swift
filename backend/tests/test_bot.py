@@ -579,6 +579,39 @@ class TestTelegramWebhook:
         assert "Bank list unavailable" in sent_messages[0]
         assert "try /banks again shortly" in sent_messages[0]
 
+    def test_payout_wizard_uses_mobile_account_as_recipient_phone(self, client):
+        chat_id = 987654321
+        pending = telegram_router._pending
+        pending[str(chat_id)] = {
+            "cmd": "/disburse",
+            "step": 1,
+            "data": {"bank": "DCPHPHM1XXX"},
+        }
+        sent_messages = []
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            sent_messages.append(text)
+            return {"success": True, "message_id": len(sent_messages)}
+
+        try:
+            with (
+                patch.object(telegram_router, "_is_authorized_admin", new=AsyncMock(return_value=True)),
+                patch.object(telegram_router.TelegramService, "send_message", new=fake_send_message),
+            ):
+                response = client.post(
+                    "/api/v1/telegram/webhook",
+                    json=_webhook_body("09103350434", chat_id=chat_id),
+                )
+
+            assert response.status_code == 200
+            assert response.json()["status"] == "ok"
+            assert pending[str(chat_id)]["step"] == 3
+            assert pending[str(chat_id)]["data"]["phone"] == "+63-91-033-50434"
+            assert "Step 3 of 4" in sent_messages[-1]
+            assert "account holder name" in sent_messages[-1]
+        finally:
+            pending.pop(str(chat_id), None)
+
     def test_start_always_prompts_for_currency(self):
         captured = {}
 
@@ -1494,6 +1527,121 @@ class TestTelegramWithdrawalPhone:
         )
 
     @pytest.mark.asyncio
+    async def test_bank_account_mobile_is_sent_as_formatted_recipient_phone(self):
+        from routers.telegram import _process_withdrawal_request
+
+        tg = AsyncMock()
+        db = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock(
+            return_value={
+                "success": True,
+                "reference_id": "withdrawal-16",
+                "balance": 100,
+                "transaction_id": 16,
+            }
+        )
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service), patch(
+            "services.admin_notification_service.AdminNotificationService.notify_super_admins",
+            new=AsyncMock(return_value=[]),
+        ), patch("routers.telegram._get_bot_owner_id", return_value=None), patch(
+            "routers.telegram.payment_event_bus.publish"
+        ):
+            await _process_withdrawal_request(
+                tg,
+                db,
+                "123456789",
+                "testuser",
+                "DCPHPHM1XXX",
+                "09103350434",
+                "Den",
+                1.0,
+                "Disbursement",
+            )
+
+        wallet_service.withdraw_request.assert_awaited_once_with(
+            user_id="123456789",
+            amount=1.0,
+            bank_name="DCPHPHM1XXX",
+            bank_code="DCPHPHM1XXX",
+            account_number="09103350434",
+            account_name="Den",
+            recipient_phone="+63-91-033-50434",
+            note="Disbursement request via Telegram",
+        )
+
+    @pytest.mark.asyncio
+    async def test_non_mobile_bank_account_requires_recipient_phone_before_reserving(self):
+        from routers.telegram import _process_withdrawal_request
+
+        tg = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock()
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service):
+            await _process_withdrawal_request(
+                tg,
+                AsyncMock(),
+                "123456789",
+                "testuser",
+                "DCPHPHM1XXX",
+                "1234567890",
+                "Den",
+                1.0,
+                "Disbursement",
+            )
+
+        wallet_service.withdraw_request.assert_not_awaited()
+        assert "requires the recipient's Philippine mobile number" in tg.send_message.await_args.args[1]
+
+    @pytest.mark.asyncio
+    async def test_non_mobile_bank_account_uses_separately_supplied_phone(self):
+        from routers.telegram import _process_withdrawal_request
+
+        tg = AsyncMock()
+        db = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock(
+            return_value={
+                "success": True,
+                "reference_id": "withdrawal-bank-account",
+                "balance": 100,
+                "transaction_id": 17,
+            }
+        )
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service), patch(
+            "services.admin_notification_service.AdminNotificationService.notify_super_admins",
+            new=AsyncMock(return_value=[]),
+        ), patch("routers.telegram._get_bot_owner_id", return_value=None), patch(
+            "routers.telegram.payment_event_bus.publish"
+        ):
+            await _process_withdrawal_request(
+                tg,
+                db,
+                "123456789",
+                "testuser",
+                "DCPHPHM1XXX",
+                "1234567890",
+                "Den",
+                1.0,
+                "Disbursement",
+                recipient_phone="09103350434",
+            )
+
+        wallet_service.withdraw_request.assert_awaited_once_with(
+            user_id="123456789",
+            amount=1.0,
+            bank_name="DCPHPHM1XXX",
+            bank_code="DCPHPHM1XXX",
+            account_number="1234567890",
+            account_name="Den",
+            recipient_phone="+63-91-033-50434",
+            note="Disbursement request via Telegram",
+        )
+
+    @pytest.mark.asyncio
     async def test_invalid_maya_number_does_not_reserve_wallet_funds(self):
         from routers.telegram import _process_withdrawal_request
 
@@ -1573,6 +1721,14 @@ class TestWizardAnswerValidation:
         )
         assert telegram_router._validate_wizard_answer(
             "/deposit", {"key": "channel", "type": "str"}, "BNORPHMMXXX"
+        )
+
+    def test_validates_recipient_phone_wizard_answer(self):
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "phone", "type": "str"}, "09103350434"
+        ) is None
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "phone", "type": "str"}, "1234"
         )
 
     def test_accepts_valid_common_answers(self):
