@@ -376,24 +376,27 @@ async def create_magpie_method_checkout(
     payload: MagpieCheckoutMethodRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a Magpie session restricted to the selected CNY wallet."""
+    """Create a Magpie session for an eligible CNY or KRW wallet payment."""
     result = await db.execute(
         select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
     )
     txn = result.scalars().first()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
-    if (txn.currency or "").strip().upper() != "CNY":
-        raise HTTPException(status_code=400, detail="Wallet-specific Magpie checkout is only available for CNY payments")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"CNY", "KRW"}:
+        raise HTTPException(status_code=400, detail="Wallet-specific Magpie checkout is only available for CNY and KRW payments")
+    if currency == "KRW" and payload.payment_method != "alipay":
+        raise HTTPException(status_code=400, detail="Only Alipay is available for KRW wallet checkout")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
 
-    public_host = checkout_host("CNY")
+    public_host = checkout_host(currency)
     service = MagpieService()
     session = await service.create_session(
         amount_cents=int(round(float(txn.amount) * 100)),
-        currency="PHP",
-        product_name=txn.description or "CNY payment",
+        currency=currency,
+        product_name=txn.description or f"{currency} payment",
         success_url=f"{public_host}/checkout/{txn.external_id}?status=success",
         cancel_url=f"{public_host}/checkout/{txn.external_id}?status=cancel",
         client_reference_id=txn.external_id,
@@ -407,10 +410,20 @@ async def create_magpie_method_checkout(
     checkout_url = session.get("checkout_url") or session.get("payment_url") or data.get("checkout_url") or data.get("payment_url") or data.get("url")
     if not checkout_url:
         raise HTTPException(status_code=502, detail="Magpie did not return a checkout URL")
+    session_id = data.get("id")
+    if session_id:
+        txn.xendit_id = str(session_id)
     txn.payment_url = checkout_url
     txn.updated_at = datetime.now(timezone.utc)
     await db.commit()
-    return {"success": True, "checkout_url": checkout_url, "payment_url": checkout_url, "payment_method": payload.payment_method}
+    return {
+        "success": True,
+        "checkout_url": checkout_url,
+        "payment_url": checkout_url,
+        "payment_method": payload.payment_method,
+        "charge_amount": session.get("provider_amount"),
+        "charge_currency": session.get("provider_currency", "PHP"),
+    }
 
 
 @router.get("/checkout/{identifier}/magpie-wallet/config")

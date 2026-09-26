@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { buildAuthHeaders } from '@/lib/api';
 import { Clipboard, Loader2 } from 'lucide-react';
-import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
+import { getBankDisplayName } from '@/lib/bankBranding';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
 
 const getDepositDestinations = (
   currency: string = 'PHP',
@@ -315,12 +316,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                     <img src={companyLogoUrl} alt={selectedDestination.account_name || 'Company logo'} className="h-full w-full object-contain" />
                   </div>
                 ) : (
-                  <PaymentBrandLogo
-                    brand={selectedDestination.label}
-                    logoUrl={getBankLogo(selectedDestination.label)}
-                    size="md"
-                    className="h-10 w-16"
-                  />
+                  <BankLogo name={selectedDestination.label} code={selectedDestination.bank_code} size="md" />
                 )}
                 <div>
                   <p className="text-xs font-medium text-slate-500">{isKrwFlow ? 'Receiving bank' : 'Company banking'}</p>

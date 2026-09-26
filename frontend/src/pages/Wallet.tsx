@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
 import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
 import { KRW_BANKS } from '@/config/krw-banks';
@@ -30,7 +31,7 @@ import {
   CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown,
   RefreshCw,
 } from 'lucide-react';
-import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
+import { getBankDisplayName } from '@/lib/bankBranding';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 
@@ -1720,7 +1721,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div className="flex items-center gap-3">
-                              <PaymentBrandLogo brand={dest.label} logoUrl={getBankLogo(dest.label) || undefined} size="md" className="h-10 w-10 border-0 bg-transparent p-0 shadow-none" />
+                              <BankLogo name={dest.label} code={dest.bank_code} size="md" className="h-10 w-10" />
                               <div>
                                 <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '은행' : 'Bank'}</p>
                                 <p className="mt-1 font-semibold text-foreground">{getBankDisplayName(dest.label)}</p>
@@ -1993,10 +1994,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {(isKrwFlow ? KRW_BANKS.map(bank => bank.name) : PH_BANK_CATALOG.map((bank) => bank.name)).map(bank => {
+                    {(isKrwFlow ? KRW_BANKS : PH_BANK_CATALOG).map(bank => {
                       return (
-                        <div key={bank} className="flex items-center justify-center rounded-lg border border-slate-100 bg-white p-3 hover:bg-slate-50 transition-colors">
-                          <PaymentBrandLogo brand={bank} size="md" className="border-0 bg-transparent shadow-none p-0" />
+                        <div key={bank.code} className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white p-2 hover:bg-slate-50 transition-colors">
+                          <BankLogo name={bank.name} code={bank.code} size="sm" />
+                          <span className="min-w-0 truncate text-xs font-medium text-slate-700">{bank.name}</span>
                         </div>
                       );
                     })}

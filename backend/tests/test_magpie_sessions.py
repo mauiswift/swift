@@ -109,24 +109,33 @@ async def test_create_session_supports_krw_with_magpie_settlement_conversion(mon
     called = {"count": 0}
     captured = {}
 
+    async def fake_convert_live(amount, from_currency, to_currency):
+        assert (from_currency, to_currency) == ("KRW", "PHP")
+        return amount * 0.043
+
     async def fake_post(path, payload):
         called["count"] += 1
         captured["path"] = path
         captured["payload"] = payload
         return {"success": True, "data": {"checkout_url": "https://pay.magpie.im/session/krw"}}
 
+    monkeypatch.setattr(magpie_services.CurrencyConverter, "convert_live", fake_convert_live)
     monkeypatch.setattr(service, "_post", fake_post)
 
     result = await service.create_session(
-        amount_cents=1000,
+        amount_cents=100_000,
         currency="KRW",
         product_name="Test payment",
         success_url="https://swiftpay.site/success",
         cancel_url="https://swiftpay.site/cancel",
-        payment_method_types=["card"],
+        payment_method_types=["alipay"],
     )
 
     assert result["success"] is True
     assert captured["path"] == "/"
-    assert captured["payload"]["payment_method_types"] == ["card"]
+    assert captured["payload"]["payment_method_types"] == ["alipay"]
+    assert captured["payload"]["currency"] == "php"
+    assert captured["payload"]["line_items"][0]["amount"] == 4300
+    assert result["provider_amount"] == 43.0
+    assert result["provider_currency"] == "PHP"
     assert called["count"] == 1

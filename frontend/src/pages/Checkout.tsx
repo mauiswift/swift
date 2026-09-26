@@ -274,6 +274,7 @@ export default function Checkout() {
   const [cardFormError, setCardFormError] = useState<string | null>(null);
   const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
   const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
+  const [krwAlipayLoading, setKrwAlipayLoading] = useState(false);
   const [walletFormError, setWalletFormError] = useState<string | null>(null);
   const [digitalSignature, setDigitalSignature] = useState('');
   const [signatureError, setSignatureError] = useState('');
@@ -948,6 +949,39 @@ export default function Checkout() {
     }
   };
 
+  const openKrwAlipayCheckout = async () => {
+    if (!txn || krwAlipayLoading) return;
+    setKrwAlipayLoading(true);
+    try {
+      const response = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-method`,
+        { payment_method: 'alipay' },
+      );
+      if (
+        !response.ok
+        || !response.data?.success
+        || !response.data?.checkout_url
+        || !Number.isFinite(Number(response.data?.charge_amount))
+      ) {
+        throw new Error(response.data?.detail || response.data?.error || 'Unable to initialize Alipay checkout.');
+      }
+
+      const chargeAmount = Number(response.data.charge_amount);
+      const chargeCurrency = String(response.data.charge_currency || 'PHP').toUpperCase();
+      const confirmed = window.confirm(
+        checkoutText(
+          `Your KRW ${Number(txn.amount).toLocaleString()} payment will be converted to ${fmtCurrency(chargeAmount, chargeCurrency)} for Alipay. Continue?`,
+          `KRW ${Number(txn.amount).toLocaleString()} 결제 금액이 Alipay 결제를 위해 ${fmtCurrency(chargeAmount, chargeCurrency)}로 환산됩니다. 계속하시겠습니까?`,
+        ),
+      );
+      if (confirmed) window.location.assign(response.data.checkout_url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to initialize Alipay checkout.');
+    } finally {
+      setKrwAlipayLoading(false);
+    }
+  };
+
   const submitMagpieCard = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!txn || cardCheckoutLoading) return;
@@ -1494,7 +1528,7 @@ export default function Checkout() {
             )}
 
             {/* Payment Methods */}
-            {isPending && !isManualDeposit && (
+            {isPending && (!isManualDeposit || isKrw) && (
               <div className="space-y-6" style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
                 <div style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
                   <h2 className="text-[16px] font-semibold mb-1" style={{ color: checkoutDesign.heading_color }}>{checkoutText('Select Payment Channel', '결제 수단 선택')}</h2>
@@ -1653,6 +1687,32 @@ export default function Checkout() {
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Transfer KRW to the account shown on the next step.', '다음 단계에 표시되는 계좌로 KRW를 송금하세요.')}</p>
                           </div>
                           <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void openKrwAlipayCheckout()}
+                          disabled={krwAlipayLoading}
+                          className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg disabled:cursor-wait disabled:opacity-60"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-sky-50">
+                            <PaymentBrandLogo brand="Alipay" size="sm" className="border-0 bg-transparent p-0 shadow-none" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-base font-semibold text-slate-900">
+                              {krwAlipayLoading
+                                ? checkoutText('Preparing Alipay...', 'Alipay 결제를 준비 중...')
+                                : checkoutText('Pay with Alipay', 'Alipay로 결제')}
+                            </p>
+                            <p className="mt-1 text-[12px] leading-5 text-slate-500">
+                              {checkoutText(
+                                'KRW is converted to PHP at the current rate. Confirm the final charge before continuing.',
+                                '현재 환율로 KRW 금액을 PHP로 환산합니다. 계속하기 전에 최종 결제 금액을 확인하세요.',
+                              )}
+                            </p>
+                          </div>
+                          {krwAlipayLoading
+                            ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#00A0E9]" />
+                            : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />}
                         </button>
                       </div>
                     )}

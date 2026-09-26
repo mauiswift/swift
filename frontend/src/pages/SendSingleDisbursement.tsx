@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
 import { KRW_BANKS } from '@/config/krw-banks';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
@@ -393,7 +393,7 @@ export default function SendSingleDisbursement() {
                       <SelectContent className="bg-white border-slate-200 max-h-[300px]">
                         {banks.map(bank => (
                           <SelectItem key={bank.code} value={bank.code}>
-                            <span className="flex items-center gap-2"><PaymentBrandLogo brand={bank.code || bank.name} size="sm" />{bank.name}</span>
+                            <span className="flex items-center gap-2"><BankLogo name={bank.name} code={bank.code} size="sm" />{bank.name}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>

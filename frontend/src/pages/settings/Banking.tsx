@@ -17,7 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { KRW_BANKS } from '@/config/krw-banks';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const KOREA_CHANNELS = [
   { id: 'bank_transfer', label: 'Korean bank transfer', description: 'Manual KRW transfer with admin verification', tone: 'bg-blue-50 text-blue-700', available: true },
@@ -393,21 +394,30 @@ export default function Banking() {
               <div>
                 <Label htmlFor="settlement-bank-name">Korean bank</Label>
                 <div className="mt-1.5 flex items-center gap-3">
-                  <PaymentBrandLogo
-                    brand={selectedBank?.name || 'Bank'}
-                    logoUrl={selectedBank?.logo}
+                  <BankLogo
+                    name={selectedBank?.name || 'Bank'}
+                    code={selectedBank?.code}
                     size="sm"
-                    className="h-10 w-12 rounded-md"
+                    className="h-10 w-10 rounded-md"
                   />
-                  <select
-                    id="settlement-bank-name"
+                  <Select
                     value={settlementForm.bank_name}
-                    onChange={event => setSettlementForm(current => ({ ...current, bank_name: event.target.value }))}
-                    className="flex h-10 min-w-0 flex-1 rounded-md border border-input bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                    onValueChange={value => setSettlementForm(current => ({ ...current, bank_name: value }))}
                   >
-                    <option value="">Select a bank</option>
-                    {KRW_BANKS.map(bank => <option key={bank.code} value={bank.name}>{bank.name}</option>)}
-                  </select>
+                    <SelectTrigger id="settlement-bank-name" className="min-w-0 flex-1 bg-white text-slate-900">
+                      <SelectValue placeholder="Select a bank" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-80 bg-white">
+                      {KRW_BANKS.map(bank => (
+                        <SelectItem key={bank.code} value={bank.name}>
+                          <span className="flex items-center gap-2">
+                            <BankLogo name={bank.name} code={bank.code} size="sm" className="h-8 w-8 rounded-md" />
+                            <span>{bank.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div><Label htmlFor="settlement-account-number">Account number</Label><Input id="settlement-account-number" inputMode="numeric" autoComplete="off" value={settlementForm.bank_account_number} onChange={event => setSettlementForm(current => ({ ...current, bank_account_number: event.target.value }))} placeholder="Enter account number" className="mt-1.5 bg-white" /></div>

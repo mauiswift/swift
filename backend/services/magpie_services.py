@@ -797,6 +797,8 @@ class MagpieService:
                 "error": "Magpie did not return a hosted checkout URL for the selected payment channel",
             }
         result["data"] = {**data, "checkout_url": checkout_url}
+        result["provider_amount"] = round(provider_amount_cents / 100, 2)
+        result["provider_currency"] = provider_currency.upper()
         return result
 
     # Fallback methods for backward compatibility

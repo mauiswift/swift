@@ -24,7 +24,7 @@ import {
 } from '@/lib/responsive';
 import { ResponsiveInput } from '@/components/ResponsiveForm';
 import { ResponsiveCard, ResponsiveBadge } from '@/components/ResponsiveCards';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
 
 interface Bank {
   code: string;
@@ -193,7 +193,7 @@ const BankCard: React.FC<BankCardProps> = ({ bank, selected, onSelect }) => {
         <div className="flex-1 min-w-0">
           {/* Bank Header */}
           <div className="flex items-center gap-2 mb-2">
-            <PaymentBrandLogo brand={bank.name} size="lg" className="h-12 w-16 border-0 shadow-none" />
+            <BankLogo name={bank.name} code={bank.code} size="lg" className="rounded-lg" />
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-sm sm:text-base text-gray-900 truncate">
                 {bank.shortName}
