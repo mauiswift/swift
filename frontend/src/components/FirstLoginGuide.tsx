@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins, MousePointer2, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,14 +15,27 @@ export default function FirstLoginGuide() {
     () => (user ? `swiftpay:introduction-guide-hidden:${user.id}:${GUIDE_VERSION}` : ''),
     [user],
   );
+  const seenKey = useMemo(
+    () => (user ? `swiftpay:introduction-guide-seen:${user.id}:${GUIDE_VERSION}` : ''),
+    [user],
+  );
+  const shouldOpenOnboarding = Boolean(
+    user
+    && optOutKey
+    && seenKey
+    && localStorage.getItem(optOutKey) !== '1'
+    && localStorage.getItem(seenKey) !== '1',
+  );
   const [visible, setVisible] = useState(() => Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(() => shouldOpenOnboarding);
   const [step, setStep] = useState(0);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
   const [demonstrating, setDemonstrating] = useState(false);
   const [demoPhase, setDemoPhase] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const doNotShowAgainRef = useRef(false);
   const isKorean = language === 'ko';
   const ui = isKorean ? {
     liveGuide: '실시간 안내',
@@ -72,13 +85,20 @@ export default function FirstLoginGuide() {
 
   useEffect(() => {
     setStep(0);
-    setExpanded(false);
+    setExpanded(Boolean(
+      user
+      && optOutKey
+      && seenKey
+      && localStorage.getItem(optOutKey) !== '1'
+      && localStorage.getItem(seenKey) !== '1',
+    ));
     setDoNotShowAgain(false);
+    doNotShowAgainRef.current = false;
     setDemonstrating(false);
     setDemoPhase(0);
     setCompletedSteps([]);
     setVisible(Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
-  }, [user, optOutKey]);
+  }, [user, optOutKey, seenKey]);
 
   useEffect(() => {
     if (!demonstrating) return undefined;
@@ -90,6 +110,7 @@ export default function FirstLoginGuide() {
 
   const handleDoNotShowAgainChange = (checked: boolean) => {
     setDoNotShowAgain(checked);
+    doNotShowAgainRef.current = checked;
     if (!optOutKey) return;
     if (checked) {
       localStorage.setItem(optOutKey, '1');
@@ -100,12 +121,16 @@ export default function FirstLoginGuide() {
 
   const closeGuide = () => {
     setExpanded(false);
-    if (doNotShowAgain) setVisible(false);
+    setDemonstrating(false);
+    setDemoPhase(0);
+    if (seenKey) localStorage.setItem(seenKey, '1');
+    if (doNotShowAgainRef.current) setVisible(false);
   };
 
   const finish = () => {
     setVisible(false);
     setExpanded(false);
+    if (seenKey) localStorage.setItem(seenKey, '1');
   };
 
   const steps = isKorean ? [
@@ -285,11 +310,59 @@ export default function FirstLoginGuide() {
 
   const onboardingRoutePrefixes = ['/settings', '/pay-by-link', '/wallet', '/dashboard'];
   const guideHome = onboardingRoutePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
-  if (!user || !visible || (!demonstrating && !guideHome)) return null;
-  const showPanel = expanded || demonstrating;
+  const shouldShowGuide = Boolean(user && visible && (demonstrating || guideHome));
+  const showPanel = shouldShowGuide && (expanded || demonstrating);
+  const isWelcomeModal = shouldShowGuide && expanded && !demonstrating;
+  const containerClassName = isWelcomeModal
+    ? 'pointer-events-auto fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6'
+    : showPanel
+      ? 'pointer-events-auto fixed bottom-3 right-3 z-[110] flex max-h-[calc(100dvh-1.5rem)] w-[min(480px,calc(100vw-1.5rem))] min-w-0 justify-end overflow-x-hidden sm:bottom-5 sm:right-5'
+      : 'pointer-events-auto fixed bottom-4 right-4 z-[110]';
+
+  useEffect(() => {
+    if (!isWelcomeModal) return undefined;
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const panel = panelRef.current;
+    const focusableSelector = 'button:not([disabled]), input:not([disabled]), a[href], textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusFirstControl = () => panel?.querySelector<HTMLElement>(focusableSelector)?.focus();
+    const frame = window.requestAnimationFrame(focusFirstControl);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setExpanded(false);
+        setDemonstrating(false);
+        setDemoPhase(0);
+        if (seenKey) localStorage.setItem(seenKey, '1');
+        if (doNotShowAgainRef.current) setVisible(false);
+        return;
+      }
+      if (event.key !== 'Tab' || !panel) return;
+      const controls = Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector));
+      if (controls.length === 0) return;
+      const firstControl = controls[0];
+      const lastControl = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === firstControl) {
+        event.preventDefault();
+        lastControl.focus();
+      } else if (!event.shiftKey && document.activeElement === lastControl) {
+        event.preventDefault();
+        firstControl.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, [isWelcomeModal, seenKey]);
+
+  if (!shouldShowGuide) return null;
 
   return (
-    <div className={showPanel ? 'pointer-events-auto fixed bottom-4 right-4 z-[110] flex max-h-[calc(100dvh-2rem)] w-[min(480px,calc(100vw-2rem))] min-w-0 justify-end overflow-x-hidden sm:bottom-5 sm:right-5' : 'pointer-events-auto fixed bottom-4 right-4 z-[110]'} role={showPanel ? 'dialog' : undefined} aria-modal={showPanel ? true : undefined} aria-labelledby={showPanel ? 'first-login-guide-title' : undefined}>
+    <div className={containerClassName} role={isWelcomeModal ? 'dialog' : undefined} aria-modal={isWelcomeModal ? true : undefined} aria-labelledby={isWelcomeModal ? 'first-login-guide-title' : undefined}>
       <style>{`
         @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
@@ -314,7 +387,7 @@ export default function FirstLoginGuide() {
         }
         .swift-guide-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(37, 99, 235, .75); }
         @media (max-width: 640px) {
-          .swift-phone-guide { border-radius: 22px 22px 0 0; }
+          .swift-phone-guide { border-radius: 22px; }
           .swift-guide-scroll::-webkit-scrollbar { width: 5px; }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -347,7 +420,7 @@ export default function FirstLoginGuide() {
           {ui.gettingStarted}
         </button>
       )}
-      {showPanel && <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-auto max-h-[calc(100dvh-2rem)] w-full min-w-0 min-h-0 shrink-0 flex-col overflow-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} rounded-[22px] sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+      {showPanel && <div ref={panelRef} className={`pointer-events-auto swift-phone-guide relative box-border flex h-auto max-h-[calc(100dvh-1.5rem)] w-full min-w-0 min-h-0 shrink-0 flex-col overflow-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : 'sm:max-w-[620px]'} rounded-[22px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
         <button
           type="button"
           onClick={closeGuide}
