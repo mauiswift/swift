@@ -424,6 +424,12 @@ async def catch_all_spa(full_path: str):
                 "</body></html>"
     )
 
+
+@app.head("/", include_in_schema=False)
+async def head_root():
+    return await catch_all_spa("")
+
+
 if __name__ == "__main__":
     import uvicorn
     # Render binds to PORT

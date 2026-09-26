@@ -24,6 +24,14 @@ def test_get_qr_image(client):
     r = client.get("/api/v1/payments/qr/test-123")
     assert r.status_code == 200
     assert r.headers.get("content-type") == "image/png"
+
+
+def test_head_root_serves_spa_without_response_body(client):
+    response = client.head("/")
+
+    assert response.status_code == 200
+    assert response.headers.get("content-type", "").startswith("text/html")
+    assert response.content == b""
 """Payment integration tests
 
 Tests for:
