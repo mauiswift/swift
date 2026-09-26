@@ -38,16 +38,20 @@ def _resolve_bot_token() -> str:
     return ""
 
 
-# Shared in-memory store for user language preferences (chat_id -> "en" | "zh")
+# Shared in-memory store for user language preferences (chat_id -> language code)
 # Reset on server restart. Users are re-prompted on /start.
 user_lang: Dict[str, str] = {}
 user_currency: Dict[str, str] = {}
 
 
-def t(chat_id: str, en: str, zh: str = "", db_lang: Optional[str] = None) -> str:
+def t(chat_id: str, en: str, zh: str = "", db_lang: Optional[str] = None, *, ko: str = "") -> str:
     """Return the localised string based on the user's stored language."""
     if db_lang:
+        if db_lang == "ko" and ko:
+            return ko
         return zh if db_lang == "zh" and zh else en
+    if user_lang.get(str(chat_id)) == "ko" and ko:
+        return ko
     if user_lang.get(str(chat_id)) == "zh" and zh:
         return zh
     return en

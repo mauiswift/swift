@@ -102,6 +102,10 @@ class KRWPaymentLinkResponse(BaseModel):
     transaction_id: Optional[int] = None
     payment_link: Optional[str] = None
     payment_url: Optional[str] = None
+    gateway: Optional[str] = None
+    bank_account: Optional[Dict[str, str]] = None
+    approval_required: Optional[bool] = None
+    manual_verification: Optional[bool] = None
     reference_no: Optional[str] = None
     amount: Optional[float] = None
     currency: str = "KRW"
@@ -115,6 +119,7 @@ class KRWDisbursementResponse(BaseModel):
     """Response for KRW disbursement."""
     success: bool
     disbursement_id: Optional[int] = None
+    provider_reference: Optional[str] = None
     reference_no: Optional[str] = None
     amount: Optional[float] = None
     currency: str = "KRW"
@@ -348,6 +353,7 @@ class KRWPaymentService:
                         return KRWDisbursementResponse(
                             success=True,
                             disbursement_id=disbursement_id,
+                            provider_reference=str(data["id"]) if data.get("id") is not None else None,
                             reference_no=request.reference_no,
                             amount=request.amount,
                             status=data.get("status", "processing"),

@@ -785,19 +785,22 @@ export default function Checkout() {
         if (!response.ok) {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
         }
+        const paymentAttemptId = String(response.data?.external_id || checkoutIdentifier);
         if (['GCASH', 'QRPH', 'ALIPAY'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const qrPayload = response.data.qr_content || response.data.qr_code || '';
           if (!qrPayload) throw new Error('SwiftPay did not return a QR payload');
           setGcashDeepLink(null);
           setTxn(prev => prev ? {
             ...prev,
+            id: Number(response.data?.transaction_id || prev.id),
+            external_id: paymentAttemptId,
             payment_url: qrPayload,
             qr_code_url: qrPayload,
             transaction_type: selectedInstitutionCode === 'ALIPAY' ? 'alipay_qr' : 'swiftpay_qr',
           } : null);
           if (selectedInstitutionCode === 'GCASH') {
             const gcashPageUrl = new URL(
-              `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
+              `/checkout/${encodeURIComponent(paymentAttemptId)}/gcash`,
               window.location.origin,
             );
             gcashPageUrl.searchParams.set('payment_method', 'qrph');
@@ -807,7 +810,7 @@ export default function Checkout() {
           }
           if (selectedInstitutionCode === 'ALIPAY') {
             const alipayPageUrl = new URL(
-              `/checkout/${encodeURIComponent(checkoutIdentifier)}/alipay`,
+              `/checkout/${encodeURIComponent(paymentAttemptId)}/alipay`,
               window.location.origin,
             );
             alipayPageUrl.searchParams.set('payment_method', 'alipay');
@@ -818,6 +821,7 @@ export default function Checkout() {
             return;
           }
           setShowQRPhModal(true);
+          startPollingStatus(paymentAttemptId);
           return;
         }
         const redirectUrl = response.data?.redirect_url;
@@ -1447,7 +1451,12 @@ export default function Checkout() {
 
                     <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
                       <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                          <p>정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.</p>
+                      <p>
+                        {checkoutText(
+                          'Send the exact amount and include the order reference in the transfer note. A SwiftPay administrator will verify and approve the payment before its status is updated.',
+                          '정확한 금액을 보내고 주문번호를 입금 메모에 입력하세요. SwiftPay 관리자가 입금을 확인하고 승인한 후 결제 상태가 업데이트됩니다.',
+                        )}
+                      </p>
                     </div>
 
                   </div>

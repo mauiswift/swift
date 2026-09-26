@@ -309,7 +309,12 @@ async def _process_xend_request(
     # replaced by the merchant's default collection currency. The stored
     # currency is only a fallback for older clients that omit the field.
     effective_currency = (request.currency or store_currency or "PHP").upper()
-    if swift.is_configured() and effective_currency == "PHP" and any(m in SWIFT_METHODS for m in requested):
+    if (
+        transaction_type != "payment_link"
+        and swift.is_configured()
+        and effective_currency == "PHP"
+        and any(m in SWIFT_METHODS for m in requested)
+    ):
         # Build a reference_no using external_id when present
         import uuid as _uuid
         reference_no = request.external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
@@ -380,6 +385,8 @@ async def _process_xend_request(
         "descriptor": request.descriptor,
         "merchant_name": request.merchant_name,
     }
+    if transaction_type == "payment_link" and effective_currency == "PHP":
+        metadata["self_hosted_checkout"] = True
     if effective_currency == "KRW" and "bank_transfer" in requested:
         metadata["manual_krw_checkout"] = True
     if request.currency:

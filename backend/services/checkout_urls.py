@@ -7,7 +7,11 @@ SUPPORTED_CHECKOUT_CURRENCIES = frozenset({"PHP", "KRW", "CNY", "USDT"})
 
 def checkout_host(currency: str | None = None) -> str:
     """Return the shared public checkout host for every payment currency."""
-    configured = getattr(settings, "krw_checkout_host", "") or "https://kr.swiftpay.site"
+    configured = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "krw_checkout_host", "")
+        or "https://swiftpay.ph"
+    )
     host = configured.strip().rstrip("/")
     return host if host.startswith(("http://", "https://")) else f"https://{host}"
 

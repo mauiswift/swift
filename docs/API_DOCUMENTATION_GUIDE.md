@@ -225,6 +225,8 @@ Most entity routes support:
 - delete
 - batch create/update/delete for selected entities
 
+Disbursements are an exception: list/get remain available, while create reserves wallet funds and queues super-admin approval. Batch creation, direct updates, and deletes are disabled so payout status cannot bypass approval. Submit individual requests and use the wallet withdrawal approval flow.
+
 ## 6) Developer API Key Management (Scoped Keys)
 
 ### 6.1 Recommended Model

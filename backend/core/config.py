@@ -181,7 +181,7 @@ class Settings(BaseSettings):
     # Public URLs
     frontend_url: str = ""
     public_checkout_host: str = ""
-    krw_checkout_host: str = "https://kr.swiftpay.site"
+    krw_checkout_host: str = "https://swiftpay.ph"
     gcash_hosted_deep_link_host: str = "https://swiftpay.site"
 
     # Magpie / Checkout integrations

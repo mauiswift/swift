@@ -5,10 +5,11 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ConfigDict, BaseModel, field_validator
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from models.disbursements import Disbursements
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.disbursements import DisbursementsService
@@ -16,6 +17,9 @@ from dependencies.auth import get_current_user
 from schemas.auth import UserResponse
 from routers.base import BaseEntityRouter
 from core.constants import SUPPORTED_COLLECTION_CURRENCIES
+from services.wallets import WalletsService
+from services.admin_notification_service import AdminNotificationService
+from services.swiftpay_service import SwiftPayService
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -31,6 +35,7 @@ class DisbursementsData(BaseModel):
     bank_code: str = None
     account_number: str = None
     account_name: str = None
+    recipient_phone: Optional[str] = None
     description: str = None
     status: str = "processing"
     disbursement_type: str = None
@@ -58,6 +63,7 @@ class DisbursementsUpdateData(BaseModel):
     bank_code: Optional[str] = None
     account_number: Optional[str] = None
     account_name: Optional[str] = None
+    recipient_phone: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
     disbursement_type: Optional[str] = None
@@ -89,6 +95,7 @@ class DisbursementsResponse(BaseModel):
     bank_code: Optional[str] = None
     account_number: Optional[str] = None
     account_name: Optional[str] = None
+    recipient_phone: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
     disbursement_type: Optional[str] = None
@@ -142,9 +149,87 @@ entity_router = BaseEntityRouter(
     response_schema=DisbursementsResponse,
     list_response_schema=DisbursementsListResponse,
     batch_create_schema=DisbursementsBatchCreateRequest,
+    read_only=True,
 )
 
 router = entity_router.router
+
+
+@router.post("", response_model=DisbursementsResponse, status_code=201)
+async def create_disbursement_request(
+    data: DisbursementsData,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reserve wallet funds and submit a disbursement for super-admin approval."""
+    currency = data.currency.upper()
+    if currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="Wallet disbursements support PHP and KRW only")
+    if not data.bank_code or not data.account_number or not data.account_name:
+        raise HTTPException(status_code=422, detail="Bank code, account number, and account name are required")
+
+    bank_code = data.bank_code.strip()
+    recipient_phone = None
+    if currency == "PHP":
+        try:
+            bank_code = SwiftPayService.validate_external_bank_code(bank_code)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        recipient_phone = SwiftPayService.normalize_philippine_mobile(data.recipient_phone)
+        if not recipient_phone:
+            raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required")
+
+    try:
+        result = await WalletsService(db).withdraw_request(
+            user_id=str(current_user.id),
+            amount=data.amount,
+            bank_name=data.bank_code.strip(),
+            bank_code=bank_code,
+            account_number=data.account_number.strip(),
+            account_name=data.account_name.strip(),
+            recipient_phone=recipient_phone,
+            note=data.description or "Disbursement request",
+            currency=currency,
+            external_reference=data.external_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    disbursement = await db.scalar(
+        select(Disbursements).where(Disbursements.external_id == result["reference_id"])
+    )
+    if not disbursement:
+        logger.error("Withdrawal %s was saved without a disbursement record", result["reference_id"])
+        raise HTTPException(status_code=500, detail="Withdrawal was saved but its request record could not be loaded")
+
+    try:
+        await AdminNotificationService.notify_super_admins(
+            db=db,
+            notification_type="withdrawal_request",
+            title="New disbursement request",
+            message=f"A {currency} disbursement request for {data.amount:,.2f} is awaiting review.",
+            user_id=str(current_user.id),
+            user_name=current_user.name or data.account_name,
+            resource_type="disbursement",
+            resource_id=str(disbursement.id),
+            priority="high",
+            action_url="/withdrawals",
+        )
+    except Exception as exc:
+        logger.exception("Disbursement %s was saved but admin notification failed", disbursement.id)
+        raise HTTPException(
+            status_code=503,
+            detail="Withdrawal was saved as pending review, but admin notification failed. Do not resubmit; contact support.",
+        ) from exc
+    return disbursement
+
+
+@router.post("/batch", status_code=400)
+async def reject_batch_disbursements():
+    raise HTTPException(
+        status_code=400,
+        detail="Batch withdrawals are not supported; submit individual withdrawal requests for approval.",
+    )
 
 
 @router.post("/{id}/approve", response_model=DisbursementsResponse)
@@ -157,18 +242,12 @@ async def approve_disbursements(
     if not (current_user.permissions and current_user.permissions.is_super_admin):
         raise HTTPException(status_code=403, detail="Super admin approval required for disbursements")
 
-    service = DisbursementsService(db)
-    disb = await service.get_by_id(id)
+    from routers.wallet import approve_withdrawal
+
+    await approve_withdrawal(id, current_user, db)
+    disb = await DisbursementsService(db).get_by_id(id)
     if not disb:
-        raise HTTPException(status_code=404, detail="Disbursement not found")
-
-    if disb.status not in {"pending", "processing"}:
-        raise HTTPException(status_code=400, detail=f"Disbursement is already {disb.status}")
-
-    disb.status = "completed"
-    disb.updated_at = datetime.now(timezone.utc)
-    await db.commit()
-    await db.refresh(disb)
+        raise HTTPException(status_code=404, detail="Disbursement not found after approval")
     return disb
 
 
@@ -185,7 +264,14 @@ async def cancel_disbursements(
         raise HTTPException(status_code=404, detail="Disbursement not found")
 
     # Only owner or admin can cancel
-    if disb.user_id != str(current_user.id) and not current_user.permissions.can_manage_disbursements:
+    is_admin = bool(
+        current_user.permissions
+        and (
+            current_user.permissions.is_super_admin
+            or current_user.permissions.can_manage_disbursements
+        )
+    )
+    if disb.user_id != str(current_user.id) and not is_admin:
         raise HTTPException(status_code=403, detail="Not authorized to cancel this disbursement")
 
     if disb.status not in {"pending", "processing"}:

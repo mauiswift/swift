@@ -33,6 +33,7 @@ class BaseEntityRouter(Generic[ServiceType, CreateSchemaType, UpdateSchemaType, 
         response_schema: Type[ResponseSchemaType],
         list_response_schema: Type[ListResponseSchemaType],
         batch_create_schema: Optional[Type[BaseModel]] = None,
+        read_only: bool = False,
     ):
         self.router = APIRouter(prefix=prefix, tags=tags)
         self.service_class = service_class
@@ -41,6 +42,7 @@ class BaseEntityRouter(Generic[ServiceType, CreateSchemaType, UpdateSchemaType, 
         self.response_schema = response_schema
         self.list_response_schema = list_response_schema
         self.batch_create_schema = batch_create_schema
+        self.read_only = read_only
 
         self._add_routes()
 
@@ -115,66 +117,67 @@ class BaseEntityRouter(Generic[ServiceType, CreateSchemaType, UpdateSchemaType, 
                 logger.error(f"Error getting entity {id}: {e}")
                 raise HTTPException(status_code=500, detail="Internal server error")
 
-        @self.router.post("", response_model=self.response_schema, status_code=201)
-        async def create_entity(
-            data: self.create_schema,
-            current_user: UserResponse = Depends(get_current_user),
-            db: AsyncSession = Depends(get_db),
-        ):
-            service = self.service_class(db)
-            try:
-                return await service.create(data.model_dump(), user_id=str(current_user.id))
-            except Exception as e:
-                logger.error(f"Error creating entity: {e}")
-                raise HTTPException(status_code=500, detail="Internal server error")
-
-        if self.batch_create_schema:
-            @self.router.post("/batch", response_model=List[self.response_schema], status_code=201)
-            async def create_batch(
-                request: self.batch_create_schema,
+        if not self.read_only:
+            @self.router.post("", response_model=self.response_schema, status_code=201)
+            async def create_entity(
+                data: self.create_schema,
                 current_user: UserResponse = Depends(get_current_user),
                 db: AsyncSession = Depends(get_db),
             ):
                 service = self.service_class(db)
                 try:
-                    return await service.bulk_create([item.model_dump() for item in request.items], user_id=str(current_user.id))
+                    return await service.create(data.model_dump(), user_id=str(current_user.id))
                 except Exception as e:
-                    logger.error(f"Error in batch create: {e}")
-                    raise HTTPException(status_code=500, detail=f"Batch create failed: {e}")
+                    logger.error(f"Error creating entity: {e}")
+                    raise HTTPException(status_code=500, detail="Internal server error")
 
-        @self.router.put("/{id}", response_model=self.response_schema)
-        async def update_entity(
-            id: int,
-            data: self.update_schema,
-            current_user: UserResponse = Depends(get_current_user),
-            db: AsyncSession = Depends(get_db),
-        ):
-            service = self.service_class(db)
-            try:
-                update_dict = {k: v for k, v in data.model_dump().items() if v is not None}
-                result = await service.update(id, update_dict, user_id=str(current_user.id))
-                if not result:
-                    raise HTTPException(status_code=404, detail="Resource not found")
-                return result
-            except HTTPException:
-                raise
-            except Exception as e:
-                logger.error(f"Error updating entity {id}: {e}")
-                raise HTTPException(status_code=500, detail="Internal server error")
+            if self.batch_create_schema:
+                @self.router.post("/batch", response_model=List[self.response_schema], status_code=201)
+                async def create_batch(
+                    request: self.batch_create_schema,
+                    current_user: UserResponse = Depends(get_current_user),
+                    db: AsyncSession = Depends(get_db),
+                ):
+                    service = self.service_class(db)
+                    try:
+                        return await service.bulk_create([item.model_dump() for item in request.items], user_id=str(current_user.id))
+                    except Exception as e:
+                        logger.error(f"Error in batch create: {e}")
+                        raise HTTPException(status_code=500, detail=f"Batch create failed: {e}")
 
-        @self.router.delete("/{id}")
-        async def delete_entity(
-            id: int,
-            current_user: UserResponse = Depends(get_current_user),
-            db: AsyncSession = Depends(get_db),
-        ):
-            service = self.service_class(db)
-            try:
-                if not await service.delete(id, user_id=str(current_user.id)):
-                    raise HTTPException(status_code=404, detail="Resource not found")
-                return {"success": True, "id": id}
-            except HTTPException:
-                raise
-            except Exception as e:
-                logger.error(f"Error deleting entity {id}: {e}")
-                raise HTTPException(status_code=500, detail="Internal server error")
+            @self.router.put("/{id}", response_model=self.response_schema)
+            async def update_entity(
+                id: int,
+                data: self.update_schema,
+                current_user: UserResponse = Depends(get_current_user),
+                db: AsyncSession = Depends(get_db),
+            ):
+                service = self.service_class(db)
+                try:
+                    update_dict = {k: v for k, v in data.model_dump().items() if v is not None}
+                    result = await service.update(id, update_dict, user_id=str(current_user.id))
+                    if not result:
+                        raise HTTPException(status_code=404, detail="Resource not found")
+                    return result
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    logger.error(f"Error updating entity {id}: {e}")
+                    raise HTTPException(status_code=500, detail="Internal server error")
+
+            @self.router.delete("/{id}")
+            async def delete_entity(
+                id: int,
+                current_user: UserResponse = Depends(get_current_user),
+                db: AsyncSession = Depends(get_db),
+            ):
+                service = self.service_class(db)
+                try:
+                    if not await service.delete(id, user_id=str(current_user.id)):
+                        raise HTTPException(status_code=404, detail="Resource not found")
+                    return {"success": True, "id": id}
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    logger.error(f"Error deleting entity {id}: {e}")
+                    raise HTTPException(status_code=500, detail="Internal server error")

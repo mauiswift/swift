@@ -161,11 +161,18 @@ export default function CreatePaymentLink() {
           </p>
 
           <div className="mb-8 grid gap-3 sm:grid-cols-3">
-            {[
-              { icon: QrCode, title: 'GCash / QRPH', text: 'Fast QR checkout' },
-              { icon: Landmark, title: 'Bank transfer', text: 'Supported PH banks' },
-              { icon: ShieldCheck, title: 'Secure checkout', text: 'Hosted by SwiftPay' },
-            ].map(({ icon: Icon, title: cardTitle, text }) => (
+            {(currency === 'KRW'
+              ? [
+                  { icon: Landmark, title: 'Korean bank transfer', text: 'Manual payment verification' },
+                  { icon: ShieldCheck, title: 'Super-admin approval', text: 'Payment is approved after verification' },
+                  { icon: ShieldCheck, title: 'SwiftPay integrated', text: 'Self-hosted checkout on swiftpay.ph' },
+                ]
+              : [
+                  { icon: QrCode, title: 'GCash / QRPH', text: 'Fast QR checkout' },
+                  { icon: Landmark, title: 'Bank transfer', text: 'Supported PH banks' },
+                  { icon: ShieldCheck, title: 'SwiftPay integrated', text: 'Self-hosted checkout on swiftpay.ph' },
+                ]
+            ).map(({ icon: Icon, title: cardTitle, text }) => (
               <div key={cardTitle} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <Icon size={17} className="mb-2 text-[#FF6B00]" />
                 <p className="text-xs font-semibold text-slate-900">{cardTitle}</p>

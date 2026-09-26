@@ -1284,8 +1284,42 @@ async def approve_withdrawal(
 				.values(reference_id=f"{provider_reference}-fee")
 			)
 		disb.status = "transferring"
+	elif currency == "KRW":
+		from services.krw_payment_service import (
+			KRWBankInfo,
+			KRWDisbursementRequest,
+			KRWPaymentService,
+		)
+
+		provider_result = await KRWPaymentService().create_disbursement(
+			request=KRWDisbursementRequest(
+				amount=float(disb.amount or 0),
+				reference_no=disb.external_id or f"withdrawal-{disb.id}",
+				bank_info=KRWBankInfo(
+					bank_code=disb.bank_code or "",
+					bank_name=disb.bank_code or "",
+					account_number=disb.account_number or "",
+					account_name=disb.account_name or "",
+				),
+				description=disb.description or "Super admin KRW disbursement",
+			),
+			user_id=disb.user_id,
+		)
+		if not provider_result.success:
+			provider_error = provider_result.error or "SwiftPay KRW disbursement failed"
+			await _refund_withdrawal(db, disb, provider_error)
+			await db.commit()
+			raise HTTPException(status_code=502, detail=provider_error)
+		if provider_result.provider_reference:
+			disb.xendit_id = provider_result.provider_reference
+		provider_status = str(provider_result.status or "").strip().lower()
+		disb.status = (
+			"completed"
+			if provider_status in {"completed", "complete", "success", "successful", "succeeded", "settled"}
+			else "transferring"
+		)
 	else:
-		disb.status = "completed"
+		raise HTTPException(status_code=400, detail=f"Unsupported withdrawal currency: {currency}")
 	disb.processed_at = datetime.now(timezone.utc)
 	disb.updated_at = datetime.now(timezone.utc)
 	disb.approved_by = current_user.id

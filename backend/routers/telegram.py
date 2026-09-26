@@ -838,6 +838,7 @@ def _start_kb() -> dict:
 
 
 _SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
+_CURRENCY_SELECTION_CURRENCIES = ("PHP", "KRW")
 _CURRENCY_SYMBOLS = {"PHP": "₱", "CNY": "¥", "KRW": "₩", "USDT": "USDT "}
 
 
@@ -846,9 +847,6 @@ def _currency_kb() -> dict:
     return {
         "inline_keyboard": [[
             {"text": "🇵🇭 PHP", "callback_data": "currency:PHP"},
-            {"text": "🪙 USDT", "callback_data": "currency:USDT"},
-        ], [
-            {"text": "🇨🇳 CNY", "callback_data": "currency:CNY"},
             {"text": "🇰🇷 KRW", "callback_data": "currency:KRW"},
         ]]
     }
@@ -984,9 +982,13 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
     """Sends the dashboard panel using the selected language."""
     from services.wallets import WalletsService
 
-    selected_lang = (lang or _user_lang.get(str(chat_id)) or "en").lower()
+    selected_lang = lang or _user_lang.get(str(chat_id))
+    if not selected_lang:
+        admin = await _get_admin_user_record(db, chat_id)
+        selected_lang = getattr(admin, "language", None) or "en"
+        _user_lang[str(chat_id)] = selected_lang.lower()
+    selected_lang = selected_lang.lower()
     selected_currency = (currency or await _get_user_currency(db, chat_id)).upper()
-    is_zh = selected_lang == "zh"
     svc = WalletsService(db)
 
     # Fetch balances
@@ -997,10 +999,11 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
     except Exception as e:
         logger.error(f"Error fetching balances for start panel: {e}")
 
-    nickname_label = _t(str(chat_id), "Nickname", "昵称", db_lang=selected_lang)
-    id_label = _t(str(chat_id), "ID", "ID", db_lang=selected_lang)
-    points_label = _t(str(chat_id), "POINTS", "积分", db_lang=selected_lang)
-    official_channel_label = _t(str(chat_id), "Official channel", "官方频道", db_lang=selected_lang)
+    nickname_label = _t(str(chat_id), "Nickname", "昵称", ko="닉네임", db_lang=selected_lang)
+    id_label = _t(str(chat_id), "ID", "ID", ko="ID", db_lang=selected_lang)
+    points_label = _t(str(chat_id), "POINTS", "积分", ko="포인트", db_lang=selected_lang)
+    official_channel_label = _t(str(chat_id), "Official channel", "官方频道", ko="공식 채널", db_lang=selected_lang)
+    action_prompt = _t(str(chat_id), "Choose an action below to get started.", "选择下方操作开始使用。", ko="아래에서 원하는 작업을 선택하세요.", db_lang=selected_lang)
 
     text = (
         f"🛡️ <b>SwiftPay Philippines ✅</b>\n"
@@ -1010,29 +1013,29 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
         f"{_currency_symbol(selected_currency)} <b>{selected_currency} :</b> {selected_bal:,.2f}\n"
         f"💎 <b>{points_label} :</b> 0.00\n\n"
         f"📢 <b>{official_channel_label} :</b> @PayBotPH\n"
-        f"✨ <i>Choose an action below to get started.</i>"
+        f"✨ <i>{action_prompt}</i>"
     )
 
     kb = {
         "inline_keyboard": [
             [
-                _inline_button(_t(str(chat_id), "📊 Dashboard", "📊 仪表板", db_lang=selected_lang), callback_data="action:dashboard"),
-                _inline_button(_t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), url=_dashboard_url("wallet"))
+                _inline_button(_t(str(chat_id), "📊 Dashboard", "📊 仪表板", ko="📊 대시보드", db_lang=selected_lang), callback_data="action:dashboard"),
+                _inline_button(_t(str(chat_id), "💰 Wallet", "💰 钱包", ko="💰 지갑", db_lang=selected_lang), url=_dashboard_url("wallet"))
             ],
             [
-                _inline_button(_t(str(chat_id), "🔄 Refresh", "🔄 刷新", db_lang=selected_lang), callback_data="action:refresh"),
-                _inline_button(_t(str(chat_id), "💱 Currency", "💱 货币", db_lang=selected_lang), callback_data="action:currency")
+                _inline_button(_t(str(chat_id), "🔄 Refresh", "🔄 刷新", ko="🔄 새로고침", db_lang=selected_lang), callback_data="action:refresh"),
+                _inline_button(_t(str(chat_id), "💱 Currency", "💱 货币", ko="💱 통화", db_lang=selected_lang), callback_data="action:currency")
             ],
             [
-                _inline_button(_t(str(chat_id), "❓ Help", "❓ 帮助", db_lang=selected_lang), callback_data="action:help")
+                _inline_button(_t(str(chat_id), "❓ Help", "❓ 帮助", ko="❓ 도움말", db_lang=selected_lang), callback_data="action:help")
             ],
             [
-                _inline_button(_t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), callback_data="wizard:/link"),
-                _inline_button(_t(str(chat_id), "📷 QRPH", "📷 QRPH", db_lang=selected_lang), callback_data="wizard:/scanqr")
+                _inline_button(_t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", ko="🔗 결제 링크", db_lang=selected_lang), callback_data="wizard:/link"),
+                _inline_button(_t(str(chat_id), "📷 QRPH", "📷 QRPH", ko="📷 QRPH", db_lang=selected_lang), callback_data="wizard:/scanqr")
             ],
             [
-                _inline_button(_t(str(chat_id), "🟢 Buy USDT", "🟢 买入 USDT", db_lang=selected_lang), callback_data="wizard:/buyusdt"),
-                _inline_button(_t(str(chat_id), "🔴 Sell USDT", "🔴 卖出 USDT", db_lang=selected_lang), callback_data="wizard:/sellusdt")
+                _inline_button(_t(str(chat_id), "🟢 Buy USDT", "🟢 买入 USDT", ko="🟢 USDT 구매", db_lang=selected_lang), callback_data="wizard:/buyusdt"),
+                _inline_button(_t(str(chat_id), "🔴 Sell USDT", "🔴 卖出 USDT", ko="🔴 USDT 판매", db_lang=selected_lang), callback_data="wizard:/sellusdt")
             ],
         ]
     }
@@ -1379,7 +1382,17 @@ async def _process_withdrawal_request(
         f"🔢 账号: <code>{account}</code>\n"
         f"👤 姓名: {name}\n"
         f"🆔 参考: <code>{ext_id}</code>\n\n"
-        f"⏳ 请等待银行验证转账流程。"
+        f"⏳ 请等待银行验证转账流程。",
+        ko=(
+            f"✅ <b>{cmd_label} 신청이 접수되었습니다</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"💰 금액: <b>₱{amount:,.2f}</b>\n"
+            f"🏦 채널: {bank.upper()}\n"
+            f"🔢 계좌: <code>{account}</code>\n"
+            f"👤 이름: {name}\n"
+            f"🆔 참조 번호: <code>{ext_id}</code>\n\n"
+            f"⏳ 은행에서 이체를 확인할 때까지 기다려 주세요."
+        )
     )
     await tg.send_message(chat_id, msg)
 
@@ -1671,10 +1684,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             if cq_data.startswith("currency:"):
                 await tg.answer_callback_query(cq_id)
                 currency = cq_data.split(":", 1)[1].upper()
-                if currency not in _SUPPORTED_CURRENCIES:
+                if currency not in _CURRENCY_SELECTION_CURRENCIES:
                     return {"status": "ok"}
 
                 _user_currency[cq_chat_id] = currency
+                if currency == "KRW":
+                    _user_lang[cq_chat_id] = "ko"
 
                 # Persist to DB if the user exists
                 admin = None
@@ -1683,6 +1698,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     admin = _first_scalar(adm_res)
                     if admin:
                         admin.preferred_currency = currency
+                        if currency == "KRW":
+                            admin.language = "ko"
                         admin.updated_at = datetime.now(timezone.utc)
                         await db.commit()
                 except Exception as e:
@@ -1693,13 +1710,22 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     await _send_start_panel(db, cq_chat_id, cq_first_name, currency=currency)
                 else:
                     greeting = f"Hi {cq_first_name}! 👋" if cq_first_name else "👋 Hello!"
+                    if currency == "KRW":
+                        greeting = f"안녕하세요, {cq_first_name}님! 👋" if cq_first_name else "👋 안녕하세요!"
                     msg = (
                         f"🌟 <b>SwiftPay ✅</b>\n"
                         f"━━━━━━━━━━━━━━━━━━━━\n"
-                        f"{greeting} Your currency is set to <b>{currency}</b>.\n\n"
-                        f"This bot is currently available to <b>registered merchants</b> only.\n\n"
-                        f"📋 Self-service registration is not available in this bot.\n\n"
-                        f"👉 Please contact your SwiftPay administrator for merchant access."
+                        f"{greeting} " + (
+                            f"통화가 <b>{currency}</b>(으)로 설정되었습니다.\n\n"
+                            f"이 봇은 현재 <b>등록된 가맹점</b>만 이용할 수 있습니다.\n\n"
+                            f"📋 봇에서는 직접 가입할 수 없습니다.\n\n"
+                            f"👉 가맹점 이용은 SwiftPay 관리자에게 문의해 주세요."
+                            if currency == "KRW" else
+                            f"Your currency is set to <b>{currency}</b>.\n\n"
+                            f"This bot is currently available to <b>registered merchants</b> only.\n\n"
+                            f"📋 Self-service registration is not available in this bot.\n\n"
+                            f"👉 Please contact your SwiftPay administrator for merchant access."
+                        )
                     )
                     await tg.send_message(cq_chat_id, msg)
 
@@ -1983,7 +2009,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                        f"Type /help to explore all commands.",
                        f"✅ <b>欢迎回来，{_adm.name or username}！</b> 👋\n\n"
                        f"登录成功，会话有效期 2 小时。开始吧！💪\n\n"
-                       f"输入 /help 查看所有命令。"),
+                       f"输入 /help 查看所有命令。",
+                       ko=(
+                           f"✅ <b>다시 오신 것을 환영합니다, {_adm.name or username}님!</b> 👋\n\n"
+                           f"로그인되었습니다. 세션은 2시간 동안 유지됩니다. 시작해 볼까요? 💪\n\n"
+                           f"모든 명령어는 /help에서 확인할 수 있습니다."
+                       )),
                 )
             else:
                 # Wrong PIN
@@ -2054,7 +2085,13 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                    "✅ <b>PIN 设置成功！</b>\n\n"
                    "🔐 您的账户已受 PIN 保护。\n"
                    "下次使用 <code>/login [PIN]</code> 登录。\n\n"
-                   "当前会话已激活。"),
+                   "当前会话已激活。",
+                   ko=(
+                       "✅ <b>PIN이 설정되었습니다!</b>\n\n"
+                       "🔐 계정이 PIN으로 보호됩니다.\n"
+                       "다음 로그인 시 <code>/login [PIN]</code>을 사용하세요.\n\n"
+                       "현재 세션에 로그인되었습니다."
+                   )),
             )
             return {"status": "ok"}
 
@@ -2355,7 +2392,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             if text.startswith("/cancel"):
                 # /cancel always aborts the current wizard
                 del _pending[chat_id]
-                await tg.send_message(chat_id, _t(chat_id, "❌ Wizard cancelled.", "❌ 已取消。"))
+                await tg.send_message(chat_id, _t(chat_id, "❌ Wizard cancelled.", "❌ 已取消。", ko="❌ 작업이 취소되었습니다."))
                 return {"status": "ok"}
             # Any other new command: silently cancel wizard and process normally
             del _pending[chat_id]
@@ -3797,11 +3834,29 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /status [订单号] — 查询订单状态\n\n"
                 "💡 <b>提示：</b> 使用仪表板优先命令来模拟网页端体验。"
             )
+            help_ko = (
+                "📋 <b>SwiftPay 대시보드 명령어</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                "📊 <b>주요 메뉴</b>\n"
+                "  /dashboard — 대시보드\n"
+                "  /wallet — 지갑 잔액 및 거래 내역\n"
+                "  /payments — 결제 및 수금 현황\n"
+                "  /disbursements — 지급 및 정산 현황\n"
+                "  /reports — 분석 및 보고서\n\n"
+                "💳 <b>빠른 작업</b>\n"
+                "  /link [금액] [설명] — SwiftPay 결제 링크\n"
+                "  /scanqr — QRPH 결제\n"
+                "  /disburse — SwiftPay 지급\n"
+                "  /deposit — 은행 또는 지갑 입금\n"
+                "  /topup [금액] — USDT 충전\n"
+                "  /status [주문 ID] — 결제 상태 확인\n\n"
+                "💡 <b>팁:</b> 대시보드 관련 명령어로 웹 앱의 기능을 이용할 수 있습니다."
+            )
             await _send_bot_response(
                 tg,
                 chat_id,
                 "SwiftPay commands",
-                _t(chat_id, help_en, help_zh).replace("📋 <b>SwiftPay Dashboard Commands</b>\n━━━━━━━━━━━━━━━━━━━━\n\n", ""),
+                _t(chat_id, help_en, help_zh, ko=help_ko).replace("📋 <b>SwiftPay Dashboard Commands</b>\n━━━━━━━━━━━━━━━━━━━━\n\n", ""),
                 next_step="Start with /dashboard, or send /cancel to stop an active wizard.",
                 dashboard_module="dashboard",
             )
@@ -3907,7 +3962,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 chat_id,
                 _t(chat_id,
                    "🤔 Hmm, I don't recognise that command.\n\nType /help to see everything I can do! 😊",
-                   "🤔 没有找到该命令。\n\n输入 /help 查看所有可用命令！😊")
+                         "🤔 没有找到该命令。\n\n输入 /help 查看所有可用命令！😊",
+                         ko="🤔 알 수 없는 명령어입니다.\n\n사용 가능한 명령어는 /help에서 확인해 주세요! 😊")
             )
 
         # Log the interaction (safe — won't break if DB fails)

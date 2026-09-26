@@ -537,6 +537,19 @@ class TestTelegramWebhook:
         assert "Choose your currency" in captured["text"]
         assert "currency:PHP" in str(captured["reply_markup"])
         assert "currency:KRW" in str(captured["reply_markup"])
+        assert "currency:CNY" not in str(captured["reply_markup"])
+        assert "currency:USDT" not in str(captured["reply_markup"])
+
+    def test_telegram_translation_supports_korean(self):
+        from services.telegram_service import t, user_lang
+
+        user_lang["korean-test"] = "ko"
+        try:
+            assert t("korean-test", "Wallet", "钱包", ko="지갑") == "지갑"
+            assert t("korean-test", "Wallet", "钱包", db_lang="ko", ko="지갑") == "지갑"
+            assert t("korean-test", "Help", "帮助") == "Help"
+        finally:
+            user_lang.pop("korean-test", None)
 
     def test_start_panel_uses_english_labels_for_selected_language(self):
         captured = {}
@@ -1431,9 +1444,24 @@ class TestSwiftPayEndpointCompatibility:
             from types import SimpleNamespace
             return SimpleNamespace(id=3000)
 
+        async def fake_create_payment(db, *args, **kwargs):
+            captured["self_hosted_metadata"] = kwargs.get("metadata")
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": "swiftpay-payment_link",
+                    "transaction_id": 3000,
+                    "payment_url": "https://swiftpay.ph/checkout/swiftpay-payment_link",
+                    "checkout_url": "https://swiftpay.ph/checkout/swiftpay-payment_link",
+                    "gateway": "swiftpay_self_hosted",
+                },
+            }
+
         with patch("routers.xend.SwiftPayService.is_configured", return_value=True), patch(
             "routers.xend.SwiftPayService.create_order", new=fake_create_order
-        ), patch("routers.xend.TransactionsService.create_transaction", new=fake_create_transaction):
+        ), patch("routers.xend.TransactionsService.create_transaction", new=fake_create_transaction), patch(
+            "routers.xend.payment_gateway.create_payment", new=fake_create_payment
+        ):
             response = client.post(
                 endpoint,
                 headers=auth_headers,
@@ -1450,9 +1478,15 @@ class TestSwiftPayEndpointCompatibility:
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["success"] is True
-        assert body["data"]["gateway"] == "swiftpay"
-        assert body["data"]["payment_url"] == f"https://swiftpay.site/pay/swiftpay-{expected_type}"
-        assert captured["payment_type"] == expected_type
+        if expected_type == "payment_link":
+            assert body["data"]["gateway"] == "swiftpay_self_hosted"
+            assert body["data"]["payment_url"] == "https://swiftpay.ph/checkout/swiftpay-payment_link"
+            assert captured["self_hosted_metadata"]["self_hosted_checkout"] is True
+            assert "payment_type" not in captured
+        else:
+            assert body["data"]["gateway"] == "swiftpay"
+            assert body["data"]["payment_url"] == f"https://swiftpay.site/pay/swiftpay-{expected_type}"
+            assert captured["payment_type"] == expected_type
 
 
 class TestXenditCollectionFallback:
@@ -1914,8 +1948,8 @@ class TestBatchCreateOptimization:
         assert r.status_code == 201
         assert r.json() == []
 
-    def test_batch_create_disbursements(self, client, auth_headers):
-        """POST /batch should create multiple disbursements atomically."""
+    def test_batch_create_disbursements_is_rejected(self, client, auth_headers):
+        """Batch disbursements must not bypass wallet reservation and approval."""
         payload = {
             "items": [
                 {"amount": 500.0, "currency": "PHP", "bank_code": "BDO"},
@@ -1923,11 +1957,8 @@ class TestBatchCreateOptimization:
             ]
         }
         r = client.post("/api/v1/entities/disbursements/batch", json=payload, headers=auth_headers)
-        assert r.status_code == 201
-        data = r.json()
-        assert len(data) == 2
-        amounts = sorted(d["amount"] for d in data)
-        assert amounts == [500.0, 750.0]
+        assert r.status_code == 400
+        assert "submit individual withdrawal requests" in r.json()["detail"]
 
     def test_batch_create_refunds(self, client, auth_headers):
         """POST /batch should create multiple refunds atomically."""

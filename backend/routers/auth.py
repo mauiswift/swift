@@ -911,6 +911,14 @@ async def telegram_login_config():
     return {"bot_username": username}
 
 
+def _is_linked_telegram_account(telegram_id: Optional[str]) -> bool:
+    """Return whether the stored Telegram ID represents a real linked account."""
+    if telegram_id is None:
+        return False
+    cleaned = str(telegram_id).strip()
+    return bool(cleaned) and not cleaned.startswith("web-")
+
+
 @router.get("/telegram-link-status")
 async def telegram_link_status(
     current_user: UserResponse = Depends(get_current_user),
@@ -927,7 +935,7 @@ async def telegram_link_status(
     if not admin:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    linked = not str(admin.telegram_id).startswith("web-")
+    linked = _is_linked_telegram_account(admin.telegram_id)
     return {
         "linked": linked,
         "telegram_id": admin.telegram_id if linked else None,
@@ -992,7 +1000,7 @@ async def unlink_telegram_account(
     account = result.scalar_one_or_none()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
-    if str(account.telegram_id).startswith("web-"):
+    if not _is_linked_telegram_account(account.telegram_id):
         return {"success": True, "linked": False}
 
     account.telegram_id = f"web-{uuid.uuid4().hex}"

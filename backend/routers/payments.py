@@ -1279,6 +1279,21 @@ async def update_payment_status(
     current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
+    if str(payload.status or "").strip().lower() in {
+        "paid",
+        "completed",
+        "complete",
+        "success",
+        "successful",
+        "succeeded",
+        "successfully_paid",
+        "executed",
+        "settled",
+    }:
+        raise HTTPException(
+            status_code=400,
+            detail="Payment receipt status can only be set by a verified payment provider callback.",
+        )
     processor = PaymentProcessor(db)
     try:
         return await processor.update_payment_status(
@@ -1749,6 +1764,8 @@ async def select_checkout_institution(
 
         return {
             "success": True,
+            "transaction_id": txn.id,
+            "external_id": txn.external_id,
             "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
             "qr_code": qr_code,
             "qr_content": qr_content,
@@ -1812,10 +1829,17 @@ async def select_checkout_institution(
     if institution_code == "ALIPAY":
         return {
             "success": True,
+            "transaction_id": txn.id,
+            "external_id": txn.external_id,
             "payment_method": "alipay",
             "qr_content": redirect_url,
             "qr_code": redirect_url,
             "redirect_url": f"/checkout/{txn.external_id}?payment_method=alipay",
         }
 
-    return {"success": True, "redirect_url": redirect_url}
+    return {
+        "success": True,
+        "transaction_id": txn.id,
+        "external_id": txn.external_id,
+        "redirect_url": redirect_url,
+    }

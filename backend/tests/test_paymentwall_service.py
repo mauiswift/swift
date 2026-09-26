@@ -1,8 +1,11 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
+from services.checkout_urls import build_checkout_url
 
 
 def configured_service(monkeypatch):
@@ -312,6 +315,57 @@ async def test_krw_payment_link_does_not_require_600_usdt_benefit(monkeypatch):
 
     assert result["success"] is True
     assert result["data"]["approval_required"] is True
+
+
+@pytest.mark.asyncio
+async def test_php_payment_link_uses_self_hosted_checkout_and_defers_provider_order(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    db = SimpleNamespace()
+    gateway.swift = SimpleNamespace(
+        is_configured=Mock(return_value=True),
+        create_order=AsyncMock(),
+    )
+    gateway.magpie = SimpleNamespace(
+        api_key="magpie-test-key",
+        create_checkout=AsyncMock(),
+    )
+    transaction = SimpleNamespace(id=456, external_id="php-link-456")
+    created = {}
+
+    async def fake_create_transaction(self, **kwargs):
+        created.update(kwargs)
+        return transaction
+
+    monkeypatch.setattr(
+        "services.payment_gateway.get_wallet_currency_limits",
+        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    )
+    monkeypatch.setattr(
+        "services.payment_gateway.get_enabled_collection_currencies",
+        AsyncMock(return_value=["PHP", "KRW", "CNY", "USDT"]),
+    )
+    monkeypatch.setattr(
+        "services.payment_gateway.TransactionsService.create_transaction",
+        fake_create_transaction,
+    )
+
+    result = await gateway.create_payment(
+        db=db,
+        user_id="merchant-1",
+        amount=150,
+        transaction_type="payment_link",
+        external_id="php-link-456",
+        currency="PHP",
+        metadata={"self_hosted_checkout": True},
+    )
+
+    assert result["success"] is True
+    assert result["data"]["checkout_url"] == build_checkout_url("php-link-456", "PHP")
+    assert result["data"]["gateway"] == "swiftpay_self_hosted"
+    assert created["status"] == "pending"
+    assert created["external_id"] == "php-link-456"
+    gateway.swift.create_order.assert_not_awaited()
+    gateway.magpie.create_checkout.assert_not_awaited()
 
 
 @pytest.mark.asyncio

@@ -1,8 +1,9 @@
 """
-KRW Payment Links and Disbursements Router
+KRW Payment Links and Disbursements Router.
 
-Endpoints for creating and managing KRW payment links and disbursements
-via the SwiftPay API. Uses HTTP Basic Authentication as per SwiftPay spec.
+KRW payment links use SwiftPay's self-hosted checkout with manual bank-transfer
+verification and super-admin approval. Disbursement payouts go through the
+wallet withdrawal approval flow.
 
 Endpoints:
 - POST /api/v1/krw/payment-links - Create KRW payment link
@@ -13,7 +14,8 @@ Endpoints:
 
 import base64
 import logging
-from typing import List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,9 +32,12 @@ from services.krw_payment_service import (
     KRWDisbursementResponse,
     KOREAN_BANKS,
 )
-from services.checkout_urls import canonicalize_checkout_url
 from models.disbursements import Disbursements
+from models.transactions import Transactions
 from sqlalchemy import select
+from services.wallets import WalletsService
+from services.admin_notification_service import AdminNotificationService
+from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +76,7 @@ async def create_krw_payment_link(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Create a KRW payment link via SwiftPay API.
+    Create a SwiftPay-hosted KRW payment link for manual bank-transfer verification.
     
     Request body:
     ```json
@@ -94,53 +99,74 @@ async def create_krw_payment_link(
     {
         "success": true,
         "transaction_id": 123,
-        "payment_link": "https://pay.live.swiftpay.ph/checkout/abc123",
-        "payment_url": "https://pay.live.swiftpay.ph/checkout/abc123",
+        "payment_link": "https://swiftpay.ph/checkout/order-123",
+        "payment_url": "https://swiftpay.ph/checkout/order-123",
         "reference_no": "order-123",
         "amount": 50000,
         "currency": "KRW",
         "status": "pending",
+        "gateway": "swiftpay_self_hosted",
+        "manual_verification": true,
+        "approval_required": true,
         "expires_at": "2026-10-01T17:36:28Z"
     }
     ```
     """
     try:
-        service = KRWPaymentService()
-        
-        # Create payment link
-        response = await service.create_payment_link(
-            request=request,
+        result = await PaymentGateway(db).create_payment(
+            db,
             user_id=str(current_user.id),
-            db=db,
+            amount=request.amount,
+            description=request.description or "KRW Payment Link",
+            transaction_type="payment_link",
+            customer_name=request.customer_name or "",
+            customer_email=request.customer_email or "",
+            external_id=request.reference_no,
+            payment_methods=["bank_transfer"],
+            metadata={
+                "manual_krw_checkout": True,
+                "self_hosted_checkout": True,
+            },
+            currency="KRW",
         )
-        
-        # Store transaction if successful
-        if response.success:
-            response.payment_url = canonicalize_checkout_url(response.payment_url, "KRW")
-            response.payment_link = canonicalize_checkout_url(response.payment_link, "KRW")
-            from services.transactions import TransactionsService
-            txn_service = TransactionsService(db)
-            
-            try:
-                txn = await txn_service.create_transaction(
-                    user_id=str(current_user.id),
-                    transaction_type="payment_link",
-                    amount=request.amount,
-                    external_id=request.reference_no,
-                    gateway_id="swiftpay",
-                    description=request.description or "KRW Payment Link",
-                    customer_name=request.customer_name or "",
-                    customer_email=request.customer_email or "",
-                    payment_url=response.payment_url or "",
-                    status="pending",
-                    currency="KRW",
-                    idempotency_key=request.reference_no,
-                )
-                response.transaction_id = txn.id
-            except Exception as e:
-                logger.error(f"Error storing transaction: {e}")
-        
-        return response
+        if not result.get("success"):
+            return KRWPaymentLinkResponse(
+                success=False,
+                error=result.get("error", "KRW checkout could not be created"),
+                code="CHECKOUT_ERROR",
+            )
+
+        payment_data = result.get("data") or {}
+        payment_url = payment_data.get("checkout_url") or payment_data.get("payment_url")
+        if not payment_url:
+            logger.error("KRW self-hosted checkout returned no URL for %s", request.reference_no)
+            raise HTTPException(status_code=502, detail="KRW checkout could not be initialized")
+
+        expires_at = datetime.now(timezone.utc) + timedelta(days=request.expiry_days)
+        transaction_id = payment_data.get("transaction_id")
+        transaction = await db.get(Transactions, transaction_id) if transaction_id is not None else None
+        if not transaction:
+            logger.error("KRW self-hosted checkout transaction missing for %s", request.reference_no)
+            raise HTTPException(status_code=500, detail="KRW checkout transaction could not be loaded")
+        transaction.expires_at = expires_at
+        transaction.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        return KRWPaymentLinkResponse(
+            success=True,
+            transaction_id=transaction_id,
+            payment_link=payment_url,
+            payment_url=payment_url,
+            gateway="swiftpay_self_hosted",
+            bank_account=payment_data.get("bank_account"),
+            approval_required=True,
+            manual_verification=True,
+            reference_no=request.reference_no,
+            amount=request.amount,
+            currency="KRW",
+            status="pending",
+            expires_at=expires_at.isoformat(),
+        )
     
     except Exception as e:
         logger.exception(f"Error creating KRW payment link: {e}")
@@ -193,45 +219,50 @@ async def create_krw_disbursement(
     Status flow: pending → processing → completed (or failed)
     """
     try:
-        # Verify user has sufficient balance
-        from services.wallets import WalletsService
-        wallet_service = WalletsService(db)
-        
-        wallet = await wallet_service.get_or_create_wallet(str(current_user.id), "KRW")
-        if not wallet or float(wallet.balance or 0) < request.amount:
-            raise HTTPException(
-                status_code=402,
-                detail=f"Insufficient KRW balance. Required: ₩{request.amount:,.0f}, Available: ₩{float(wallet.balance or 0):,.0f}",
-            )
-        
-        # Create disbursement
-        service = KRWPaymentService()
-        response = await service.create_disbursement(
-            request=request,
+        result = await WalletsService(db).withdraw_request(
             user_id=str(current_user.id),
-            db=db,
+            amount=request.amount,
+            bank_name=request.bank_info.bank_name,
+            bank_code=request.bank_info.bank_code,
+            account_number=request.bank_info.account_number,
+            account_name=request.bank_info.account_name,
+            note=request.description or "KRW bank withdrawal",
+            currency="KRW",
+            external_reference=request.reference_no,
         )
-        
-        # Deduct from wallet if successful
-        if response.success:
-            try:
-                from sqlalchemy import update
-                from models.wallets import Wallets
-                
-                stmt = update(Wallets).where(
-                    Wallets.user_id == str(current_user.id),
-                    Wallets.currency == "KRW",
-                ).values(
-                    balance=Wallets.balance - request.amount
-                )
-                await db.execute(stmt)
-                await db.commit()
-            except Exception as e:
-                logger.error(f"Error deducting from wallet: {e}")
-                await db.rollback()
-        
-        return response
-    
+        disbursement = await db.scalar(
+            select(Disbursements).where(
+                Disbursements.external_id == result["reference_id"]
+            )
+        )
+        if not disbursement:
+            raise HTTPException(status_code=500, detail="Withdrawal request was not saved")
+
+        await AdminNotificationService.notify_super_admins(
+            db=db,
+            notification_type="withdrawal_request",
+            title="New KRW withdrawal request",
+            message=(
+                f"A KRW withdrawal request for {request.amount:,.2f} "
+                f"was submitted by {request.bank_info.account_name}."
+            ),
+            user_id=str(current_user.id),
+            user_name=request.bank_info.account_name,
+            resource_type="disbursement",
+            resource_id=str(disbursement.id),
+            priority="high",
+            action_url="/withdrawals",
+        )
+        return KRWDisbursementResponse(
+            success=True,
+            disbursement_id=disbursement.id,
+            reference_no=disbursement.external_id,
+            amount=float(disbursement.amount),
+            currency="KRW",
+            status=disbursement.status,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as e:

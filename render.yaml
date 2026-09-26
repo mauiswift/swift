@@ -19,11 +19,11 @@ services:
       - key: PYTHON_BACKEND_URL
         value: https://swiftpay-api.onrender.com
       - key: PUBLIC_CHECKOUT_HOST
-        value: https://kr.swiftpay.site
+        value: https://swiftpay.ph
       - key: FRONTEND_URL
-        value: https://kr.swiftpay.site
+        value: https://swiftpay.ph
       - key: TELEGRAM_MINI_APP_URL
-        value: https://kr.swiftpay.site/mini-app
+        value: https://swiftpay.ph/mini-app
       - key: SWIFTPAY_MODE
         value: production
       - key: SWIFTPAY_BASE_URL

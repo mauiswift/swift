@@ -10,31 +10,80 @@ from core.database import db_manager
 logger = logging.getLogger(__name__)
 
 
+def _format_payment_received_message(data: Dict[str, Any]) -> str:
+    """Build a detailed alert from the payment data captured on the transaction."""
+    fields = [
+        ("Payment record", data.get("payment_id")),
+        ("Payment reference", data.get("external_id")),
+        ("Gateway reference", data.get("gateway_reference")),
+        ("Gateway", data.get("gateway")),
+        ("Merchant ID", data.get("user_id")),
+        ("Customer", data.get("customer_name")),
+        ("Customer email", data.get("customer_email")),
+        ("Payer name", data.get("sender_name")),
+        ("Payer bank", data.get("sender_bank")),
+        ("Amount", f"{data.get('amount'):,.2f} {data.get('currency') or 'PHP'}" if data.get("amount") is not None else None),
+        (
+            "Original amount",
+            f"{data.get('original_amount'):,.2f} {data.get('original_currency')}"
+            if data.get("original_amount") is not None and data.get("original_currency")
+            else None,
+        ),
+        ("Payment type", data.get("transaction_type")),
+        ("Order number", data.get("order_no")),
+        ("Description", data.get("description")),
+        ("Status", data.get("status")),
+        ("Approval status", data.get("approval_status")),
+        ("Received at (UTC)", data.get("paid_at")),
+        ("Receiving bank", data.get("bank_name")),
+        ("Receiving account name", data.get("bank_account_name")),
+        ("Receiving account number", data.get("bank_account_number")),
+        ("Bank reference", data.get("bank_account_reference")),
+    ]
+    return "\n".join(f"{label}: {value}" for label, value in fields if value not in (None, ""))
+
+
 async def _handle_payment_created(data: Dict[str, Any]):
-    """Handle payment creation notification."""
+    """Create a dashboard notification without sending a premature bot alert."""
+    payment_id = data.get("payment_id")
+    if not payment_id:
+        return
+
     async with db_manager.async_session_maker() as db:
         await AdminNotificationService.notify_super_admins(
             db,
             notification_type="payment_created",
-            title=f"New Payment Request",
-            message=f"Payment of {data.get('amount', 'N/A')} {data.get('currency', 'PHP')} from {data.get('user_name', 'User')}",
+            title="New Payment Request",
+            message=(
+                f"Payment of {data.get('amount', 'N/A')} "
+                f"{data.get('currency', 'PHP')} from {data.get('user_name', 'User')}"
+            ),
             user_id=data.get("user_id"),
             user_name=data.get("user_name"),
             resource_type="payment",
-            resource_id=data.get("payment_id"),
-            metadata={"amount": data.get("amount"), "currency": data.get("currency"), "description": data.get("description")},
+            resource_id=str(payment_id),
+            metadata={
+                "amount": data.get("amount"),
+                "currency": data.get("currency"),
+                "description": data.get("description"),
+            },
             priority="normal",
-            action_url=f"/payments/{data.get('payment_id')}",
+            action_url=f"/payments/{payment_id}",
+            send_telegram=False,
         )
 
 
 async def _handle_payment_link_created(data: Dict[str, Any]):
-    """Handle payment-link creation notification."""
+    """Create a dashboard notification without sending a premature bot alert."""
+    payment_id = data.get("payment_id")
+    if not payment_id:
+        return
+
     async with db_manager.async_session_maker() as db:
         await AdminNotificationService.notify_super_admins(
             db,
             notification_type="payment_link_created",
-            title="New Payment Link Awaiting Approval",
+            title="New Payment Link Created",
             message=(
                 f"Payment link for {data.get('amount', 'N/A')} "
                 f"{data.get('currency', 'PHP')} from {data.get('user_name', 'User')}"
@@ -42,13 +91,37 @@ async def _handle_payment_link_created(data: Dict[str, Any]):
             user_id=data.get("user_id"),
             user_name=data.get("user_name"),
             resource_type="payment_link",
-            resource_id=data.get("payment_id"),
+            resource_id=str(payment_id),
             metadata={
                 "amount": data.get("amount"),
                 "currency": data.get("currency"),
                 "description": data.get("description"),
                 "external_id": data.get("external_id"),
             },
+            priority="normal",
+            action_url="/payment-approvals",
+            send_telegram=False,
+        )
+
+
+async def _handle_payment_received(data: Dict[str, Any]):
+    """Notify super admins only after the provider confirms receipt of a payment."""
+    payment_id = data.get("payment_id")
+    if not payment_id:
+        logger.warning("Payment receipt notification ignored because payment_id is missing")
+        return
+
+    async with db_manager.async_session_maker() as db:
+        await AdminNotificationService.notify_super_admins(
+            db,
+            notification_type="payment_received",
+            title="Payment Received — Awaiting Approval",
+            message=_format_payment_received_message(data),
+            user_id=data.get("user_id"),
+            user_name=data.get("customer_name") or data.get("user_id"),
+            resource_type="payment",
+            resource_id=str(payment_id),
+            metadata={key: value for key, value in data.items() if key != "event_type"},
             priority="high",
             action_url="/payment-approvals",
         )
@@ -157,6 +230,7 @@ def register_notification_handlers():
     """Register event handlers for admin notifications."""
     payment_event_bus.subscribe("payment_created", _handle_payment_created)
     payment_event_bus.subscribe("payment_link_created", _handle_payment_link_created)
+    payment_event_bus.subscribe("payment_received", _handle_payment_received)
     payment_event_bus.subscribe("withdrawal_request", _handle_withdrawal_request)
     payment_event_bus.subscribe("bank_deposit_request", _handle_bank_deposit_request)
     payment_event_bus.subscribe("kyb_application", _handle_kyb_application)

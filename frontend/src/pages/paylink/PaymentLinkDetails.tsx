@@ -147,7 +147,7 @@ export default function PaymentLinkDetails() {
                 <ol className="mb-5 list-decimal space-y-1 pl-5 text-xs text-amber-900">
                   <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
                   <li>아래 수취 은행, 계좌번호, SWIFT/BIC 정보를 정확히 입력하세요.</li>
-                  <li>송금 완료 후 이 결제 링크의 참조번호를 메모하고 영수증을 제출하세요.</li>
+                  <li>송금 메모에 이 결제 링크의 참조번호를 입력하세요. SwiftPay 관리자가 입금을 확인하고 승인한 후 결제 상태가 업데이트됩니다.</li>
                 </ol>
               )}
 

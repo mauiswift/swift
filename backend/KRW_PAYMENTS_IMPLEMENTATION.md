@@ -47,10 +47,12 @@ service = KRWPaymentService()
 RESTful endpoints for KRW payment operations:
 
 - `POST /api/v1/krw/payment-links` — Create payment link
-- `POST /api/v1/krw/disbursements` — Create disbursement
+- `POST /api/v1/krw/disbursements` — Reserve KRW wallet funds and queue a disbursement for super-admin approval
 - `GET /api/v1/krw/disbursements/{id}` — Get disbursement status
 - `POST /api/v1/krw/validate-bank-account` — Validate bank account
 - `GET /api/v1/krw/banks` — List supported Korean banks
+
+The disbursement request does not call the payout provider. A super admin must approve it first; rejection refunds the reserved wallet funds.
 
 ---
 

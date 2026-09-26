@@ -83,6 +83,7 @@ async def _select_manual_transfer_account(db: AsyncSession, currency: str, amoun
         "bank_name": str(account.get("label") or account.get("value") or "").strip(),
         "bank_account_number": str(account.get("account_number") or "").strip(),
         "bank_account_name": str(account.get("account_name") or "").strip(),
+        "swift_code": str(account.get("swift_code") or "").strip(),
     }
 
 def _kakao_card_deep_link(payment_url: str) -> str:
@@ -115,8 +116,8 @@ class PaymentGateway:
     """Unified gateway wrapper used by the dashboard and bot.
 
     Behavior:
-    - If SwiftPay is configured, use it to create an order and persist a transaction.
-    - Otherwise, create a pending internal transaction for manual verification.
+    - Use a pending local transaction for self-hosted checkouts.
+    - Start provider processing when the customer chooses a payment method.
     Returns a canonical dict with keys: success, data (payment_url, checkout_url, gateway, payment_id, reference_no)
     """
 
@@ -149,6 +150,8 @@ class PaymentGateway:
             if str(method).strip()
         ]
         manual_verification = bool((metadata or {}).get("manual_verification"))
+        self_hosted_checkout = bool((metadata or {}).get("self_hosted_checkout"))
+        force_manual_krw = bool((metadata or {}).get("manual_krw_checkout"))
         selected_currency = currency or (metadata or {}).get("currency")
         original_transaction_type = transaction_type
         currency = str(selected_currency).upper() if selected_currency else "PHP"
@@ -289,7 +292,6 @@ class PaymentGateway:
             }
 
         magpie_card_requested = bool((metadata or {}).get("magpie_card"))
-        force_manual_krw = bool((metadata or {}).get("manual_krw_checkout"))
         # 2. Prefer Magpie for CNY invoice/payment_link checkout sessions.
         # CNY must not fall through to SwiftPay, which only supports PHP
         # collection. Checkout Sessions are the live Magpie API surface and
@@ -303,6 +305,7 @@ class PaymentGateway:
 
         if (
             not manual_verification
+            and not self_hosted_checkout
             and not force_manual_krw
             and magpie_configured
             and has_magpie_checkout
@@ -452,7 +455,13 @@ class PaymentGateway:
 
         # SwiftPay's documented collection order contract supports PHP, USD,
         # and EUR. The caller must provide the amount in this currency.
-        if not manual_verification and self.swift.is_configured() and currency in {"PHP", "USD", "EUR"}:
+        if (
+            not manual_verification
+            and not self_hosted_checkout
+            and not force_manual_krw
+            and self.swift.is_configured()
+            and currency in {"PHP", "USD", "EUR"}
+        ):
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
@@ -523,8 +532,8 @@ class PaymentGateway:
                 },
             }
 
-        # Provider-less links and invoices use the internal checkout and remain
-        # pending until a super admin verifies the external payment.
+        # Self-hosted/manual links remain pending until the payment is received
+        # and approved through the admin payment workflow.
         if currency == "KRW" and transaction_type == "invoice" and not has_magpie_checkout and not force_manual_krw:
             return {"success": False, "error": "PhotonPay KRW checkout is not configured"}
 
@@ -543,11 +552,13 @@ class PaymentGateway:
                 "bank_name": virtual_account["bank_name"],
                 "bank_account_number": virtual_account["number"],
                 "bank_account_name": virtual_account["account_name"],
+                "swift_code": virtual_account["swift_code"],
             }
         bank_account = {
             "bank_name": transfer_account.get("bank_name", ""),
             "number": transfer_account.get("bank_account_number", ""),
             "account_name": transfer_account.get("bank_account_name", ""),
+            "swift_code": transfer_account.get("swift_code", ""),
         }
         if db is None:
             return {
@@ -557,7 +568,8 @@ class PaymentGateway:
                     "transaction_id": None,
                     "payment_url": checkout_url,
                     "checkout_url": checkout_url,
-                    "gateway": "manual_internal",
+                    "gateway": "swiftpay_self_hosted" if self_hosted_checkout or force_manual_krw else "manual_internal",
+                    "approval_required": True,
                     "bank_account": bank_account,
                 },
             }
@@ -573,7 +585,11 @@ class PaymentGateway:
             customer_name=customer_name,
             customer_email=customer_email,
             payment_url=checkout_url,
-            **transfer_account,
+            **{
+                key: value
+                for key, value in transfer_account.items()
+                if key in {"bank_name", "bank_account_number", "bank_account_name"}
+            },
             status="pending",
         )
         return {
@@ -583,7 +599,8 @@ class PaymentGateway:
                 "transaction_id": getattr(txn, "id", None),
                 "payment_url": checkout_url,
                 "checkout_url": checkout_url,
-                "gateway": "manual_internal",
+                "gateway": "swiftpay_self_hosted" if self_hosted_checkout or force_manual_krw else "manual_internal",
+                "approval_required": True,
                 "bank_account": bank_account,
             },
         }

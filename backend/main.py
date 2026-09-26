@@ -173,6 +173,7 @@ _cors_origins = {
     origin
     for origin in (
         _configured_frontend_url,
+        "https://swiftpay.ph",
         "https://swiftpay.site",
         "https://kr.swiftpay.site",
         "http://localhost:5173",

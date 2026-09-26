@@ -29,6 +29,7 @@ class AdminNotificationService:
         metadata: Optional[Dict[str, Any]] = None,
         priority: str = "normal",
         action_url: Optional[str] = None,
+        send_telegram: bool = True,
     ) -> List[AdminNotification]:
         """
         Create a notification for all active super admins.
@@ -95,7 +96,7 @@ class AdminNotificationService:
                 "deposit": ("approve_bank_deposit", "reject_bank_deposit"),
             }
             prefixes = callback_prefixes.get(resource_type or "")
-            if prefixes and resource_id:
+            if prefixes and resource_id and send_telegram:
                 from services.telegram_service import TelegramService
 
                 keyboard = [[
@@ -108,7 +109,7 @@ class AdminNotificationService:
                 telegram = TelegramService()
                 telegram_text = f"<b>{escape(title)}</b>\n\n{escape(message)}"
                 for admin in super_admins:
-                    if admin.telegram_id:
+                    if admin.telegram_id and not str(admin.telegram_id).startswith("web-"):
                         await telegram.send_message(
                             chat_id=admin.telegram_id,
                             text=telegram_text,

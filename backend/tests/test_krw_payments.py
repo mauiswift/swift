@@ -19,9 +19,11 @@ from services.krw_payment_service import (
     KRWPaymentService,
     KRWPaymentLinkRequest,
     KRWDisbursementRequest,
+    KRWDisbursementResponse,
     KRWBankInfo,
     KOREAN_BANKS,
 )
+from routers.krw_payments import create_krw_disbursement, create_krw_payment_link
 
 
 # Set required environment variables for tests
@@ -147,6 +149,60 @@ class TestKRWPaymentLinkRequest:
         )
         assert request.expiry_days == 30
 
+    @pytest.mark.asyncio
+    async def test_krw_payment_link_uses_self_hosted_manual_approval_checkout(self):
+        request = KRWPaymentLinkRequest(
+            amount=50000,
+            reference_no="order-manual-123",
+            description="Manual KRW transfer",
+            customer_name="Kim Park",
+        )
+        transaction = Mock()
+        db = AsyncMock()
+        db.get.return_value = transaction
+        current_user = Mock(id="merchant-1")
+        gateway_result = {
+            "success": True,
+            "data": {
+                "transaction_id": 123,
+                "payment_id": request.reference_no,
+                "payment_url": "https://swiftpay.ph/checkout/order-manual-123",
+                "checkout_url": "https://swiftpay.ph/checkout/order-manual-123",
+                "gateway": "swiftpay_self_hosted",
+                "bank_account": {
+                    "bank_name": "Toss Bank",
+                    "number": "123-456-7890",
+                    "account_name": "SwiftPay Ventures",
+                    "swift_code": "TVBKKRSEXXX",
+                },
+            },
+        }
+
+        with patch(
+            "routers.krw_payments.PaymentGateway.create_payment",
+            new=AsyncMock(return_value=gateway_result),
+        ) as create_payment, patch.object(
+            KRWPaymentService,
+            "create_payment_link",
+            new=AsyncMock(),
+        ) as create_provider_link:
+            response = await create_krw_payment_link(request, current_user, db)
+
+        assert response.success is True
+        assert response.payment_url == "https://swiftpay.ph/checkout/order-manual-123"
+        assert response.payment_link == response.payment_url
+        assert response.gateway == "swiftpay_self_hosted"
+        assert response.manual_verification is True
+        assert response.approval_required is True
+        assert response.bank_account["bank_name"] == "Toss Bank"
+        assert transaction.expires_at is not None
+        create_payment.assert_awaited_once()
+        assert create_payment.await_args.kwargs["metadata"] == {
+            "manual_krw_checkout": True,
+            "self_hosted_checkout": True,
+        }
+        create_provider_link.assert_not_awaited()
+
 
 class TestKRWDisbursementRequest:
     """Test KRW disbursement request validation."""
@@ -197,6 +253,102 @@ class TestKRWDisbursementRequest:
                 reference_no="payout-456",
                 bank_info=bank_info
             )
+
+    @pytest.mark.asyncio
+    async def test_krw_disbursement_is_queued_for_admin_approval(self):
+        request = KRWDisbursementRequest(
+            amount=50000,
+            reference_no="payout-review-456",
+            bank_info=KRWBankInfo(
+                bank_code="004",
+                bank_name="KB Kookmin",
+                account_number="12345678901",
+                account_name="Kim Park",
+            ),
+            description="Reviewed KRW withdrawal",
+        )
+        disbursement = Disbursements(
+            id=456,
+            user_id="merchant-1",
+            external_id=request.reference_no,
+            amount=request.amount,
+            currency="KRW",
+            bank_code=request.bank_info.bank_code,
+            account_number=request.bank_info.account_number,
+            account_name=request.bank_info.account_name,
+            status="processing",
+        )
+        db = AsyncMock()
+        db.scalar.return_value = disbursement
+        current_user = Mock(id="merchant-1")
+        wallet_service = Mock()
+        wallet_service.withdraw_request = AsyncMock(
+            return_value={"success": True, "reference_id": request.reference_no}
+        )
+
+        with patch("routers.krw_payments.WalletsService", return_value=wallet_service), patch(
+            "routers.krw_payments.AdminNotificationService.notify_super_admins",
+            new=AsyncMock(return_value=[]),
+        ) as notify_admins, patch.object(
+            KRWPaymentService,
+            "create_disbursement",
+            new=AsyncMock(),
+        ) as create_provider_disbursement:
+            response = await create_krw_disbursement(request, current_user, db)
+
+        assert response.success is True
+        assert response.status == "processing"
+        assert response.disbursement_id == 456
+        wallet_service.withdraw_request.assert_awaited_once()
+        notify_admins.assert_awaited_once()
+        create_provider_disbursement.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_krw_provider_payout_is_started_only_by_super_admin_approval(self):
+        from routers.wallet import approve_withdrawal
+
+        disbursement = Disbursements(
+            id=456,
+            user_id="merchant-1",
+            external_id="payout-review-456",
+            amount=50000,
+            currency="KRW",
+            bank_code="004",
+            account_number="12345678901",
+            account_name="Kim Park",
+            status="processing",
+        )
+        db = AsyncMock()
+        db.execute.return_value = Mock(
+            scalar_one_or_none=Mock(return_value=disbursement)
+        )
+        db.commit = AsyncMock()
+        current_user = Mock(
+            id="super-admin-1",
+            permissions=Mock(is_super_admin=True),
+        )
+        provider_response = KRWDisbursementResponse(
+            success=True,
+            provider_reference="swiftpay-krw-payout-456",
+            reference_no=disbursement.external_id,
+            amount=disbursement.amount,
+            status="processing",
+        )
+
+        with patch(
+            "services.krw_payment_service.KRWPaymentService.create_disbursement",
+            new=AsyncMock(return_value=provider_response),
+        ) as create_provider_disbursement, patch(
+            "routers.wallet.TransactionsService"
+        ) as transaction_service:
+            transaction_service.return_value.create_transaction = AsyncMock()
+            response = await approve_withdrawal(456, current_user, db)
+
+        assert response["success"] is True
+        assert response["status"] == "transferring"
+        assert disbursement.approved_by == "super-admin-1"
+        assert disbursement.xendit_id == "swiftpay-krw-payout-456"
+        create_provider_disbursement.assert_awaited_once()
 
 
 class TestKRWPaymentService:

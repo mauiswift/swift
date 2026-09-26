@@ -162,6 +162,7 @@ async def admin_mark_payment_paid(
                 txn,
                 approved_by=str(current_user.id),
                 note=body.note or body.reason,
+                manual_receipt=True,
             )
         else:
             result = await txn_svc.mark_as_paid(

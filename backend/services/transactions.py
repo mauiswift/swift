@@ -89,6 +89,36 @@ def publish_payment_link_created(txn: Transactions, user_name: Optional[str] = N
     })
 
 
+def publish_payment_received(txn: Transactions, gateway_label: str) -> None:
+    """Publish a provider-confirmed customer payment receipt."""
+    payment_event_bus.publish({
+        "event_type": "payment_received",
+        "payment_id": str(txn.id),
+        "external_id": txn.external_id,
+        "gateway_reference": txn.xendit_id,
+        "gateway": gateway_label,
+        "user_id": str(txn.user_id),
+        "customer_name": txn.customer_name,
+        "customer_email": txn.customer_email,
+        "sender_name": txn.sender_name,
+        "sender_bank": txn.sender_bank,
+        "bank_name": txn.bank_name,
+        "bank_account_name": txn.bank_account_name,
+        "bank_account_number": txn.bank_account_number,
+        "bank_account_reference": txn.bank_account_reference,
+        "amount": float(txn.amount or 0),
+        "currency": txn.currency or "PHP",
+        "original_amount": txn.original_amount,
+        "original_currency": txn.original_currency,
+        "transaction_type": txn.transaction_type,
+        "description": txn.description or "Payment",
+        "order_no": txn.order_no,
+        "status": txn.status,
+        "approval_status": txn.approval_status,
+        "paid_at": txn.paid_at.isoformat() if txn.paid_at else None,
+    })
+
+
 # ------------------ Service Layer ------------------
 class TransactionsService(BaseService[Transactions]):
     """Service layer for Transactions operations"""
@@ -499,6 +529,11 @@ class TransactionsService(BaseService[Transactions]):
             "payment gateway",
         }
         is_swiftpay_callback = normalized_gateway_label == "swiftpay"
+        is_new_provider_receipt = (
+            is_customer_payment(txn)
+            and provider_callback
+            and txn.paid_at is None
+        )
         currency = (txn.currency or "").upper()
         amount = float(transaction_amount or 0)
         if (
@@ -518,6 +553,8 @@ class TransactionsService(BaseService[Transactions]):
                 transaction_external_id,
                 gateway_label,
             )
+            if is_new_provider_receipt:
+                publish_payment_received(txn, gateway_label)
             return True
 
         if is_disbursement:
@@ -594,6 +631,9 @@ class TransactionsService(BaseService[Transactions]):
             )
             return False
 
+        if is_new_provider_receipt:
+            publish_payment_received(txn, gateway_label)
+
         try:
             payment_event_bus.publish({
                 "event_type": "status_change",
@@ -616,10 +656,17 @@ class TransactionsService(BaseService[Transactions]):
         txn: Transactions,
         approved_by: str,
         note: Optional[str] = None,
+        manual_receipt: bool = False,
     ) -> bool:
-        """Approve a payment link and credit its wallet exactly once."""
+        """Approve a received payment and credit its wallet exactly once."""
         if not is_customer_payment(txn):
             logger.warning("Attempted to approve non-customer transaction %s", txn.id)
+            return False
+        if not is_payment_received(txn) and not manual_receipt:
+            logger.warning(
+                "Attempted to approve payment %s before provider receipt",
+                txn.external_id,
+            )
             return False
         approval_pending = txn.approval_status in {None, "pending"}
         if txn.status in {"paid", "completed"}:
