@@ -8,7 +8,24 @@ import { PERMISSION_DEFINITIONS } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
+import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
 import { toast } from 'sonner';
 import {
@@ -47,6 +64,7 @@ import {
   Loader2,
   Save,
   Settings2,
+  Pencil,
 } from 'lucide-react';
 
 const authenticatedFetch = client.fetch;
@@ -145,7 +163,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'bitgo' | 'checkout-design' | 'platform-settings' | 'operations' | 'toss-approvals' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'bitgo' | 'checkout-design' | 'platform-settings' | 'operations' | 'toss-approvals' | 'team-invitations' | 'team-members' | 'audit-logs' | 'test-data-cleanup';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -298,6 +316,20 @@ type DepositAccount = {
   bank_address?: string;
   minimum_amount?: number;
 };
+
+const createDepositAccount = (number: number): DepositAccount => ({
+  value: `account-${number}`,
+  label: '',
+  account_number: '',
+  account_name: '',
+  currency: 'PHP',
+  swift_code: '',
+  receiving_currency: '',
+  bank_code: '',
+  branch_code: '',
+  bank_address: '',
+  minimum_amount: undefined,
+});
 
 function PlatformSettingsTab({ onError }: { onError: (message: string) => void }) {
   const [currencies, setCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
@@ -664,6 +696,9 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     first_usdt_topup_rule_enabled: true,
   });
   const [depositAccounts, setDepositAccounts] = useState<DepositAccount[]>([]);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null);
+  const [accountDraft, setAccountDraft] = useState<DepositAccount>(() => createDepositAccount(1));
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -742,6 +777,27 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     setDepositAccounts(accounts => accounts.map((account, itemIndex) => (
       itemIndex === index ? { ...account, ...updates } : account
     )));
+  };
+
+  const openNewAccount = () => {
+    setEditingAccountIndex(null);
+    setAccountDraft(createDepositAccount(depositAccounts.length + 1));
+    setAccountDialogOpen(true);
+  };
+
+  const openEditAccount = (index: number) => {
+    setEditingAccountIndex(index);
+    setAccountDraft({ ...depositAccounts[index] });
+    setAccountDialogOpen(true);
+  };
+
+  const saveAccountDraft = () => {
+    if (editingAccountIndex === null) {
+      setDepositAccounts(accounts => [...accounts, accountDraft]);
+    } else {
+      updateAccount(editingAccountIndex, accountDraft);
+    }
+    setAccountDialogOpen(false);
   };
 
   const fields: Array<{ key: keyof WalletLimitValues; label: string; help: string }> = [
@@ -846,113 +902,166 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           <div className="min-w-0">
             <h3 className="text-base font-bold text-slate-900">Receiving accounts</h3>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              These details appear in customer bank-deposit instructions and Telegram. KRW deposits can be assigned an eligible account based on its minimum collection amount.
+              Manage the bank details presented to customers when they deposit. KRW accounts with minimum amounts are used for eligible high-value deposits.
             </p>
           </div>
           <Button
             type="button"
             variant="outline"
             className="w-full shrink-0 gap-2 border-orange-200 text-[#C2410C] hover:bg-orange-50 sm:w-auto"
-            onClick={() => setDepositAccounts(items => [...items, {
-              value: `account-${items.length + 1}`,
-              label: '',
-              account_number: '',
-              account_name: '',
-              currency: 'PHP',
-              swift_code: '',
-              receiving_currency: '',
-              bank_code: '',
-              branch_code: '',
-              bank_address: '',
-              minimum_amount: undefined,
-            }])}
+            onClick={openNewAccount}
           >
             <Plus className="h-4 w-4" />
             Add account
           </Button>
         </div>
-        <div className="mt-5 space-y-3">
+        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
           {depositAccounts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+            <div className="bg-slate-50 px-4 py-8 text-center">
               <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
               <p className="mt-2 text-sm font-semibold text-slate-700">No receiving accounts yet</p>
-              <p className="mt-1 text-xs text-slate-500">Add an account so users know where to send their deposits.</p>
+              <p className="mt-1 text-xs text-slate-500">Add an account to show deposit instructions to customers.</p>
             </div>
-          ) : depositAccounts.map((account, index) => (
-            <article key={`${account.value}-${index}`} className="overflow-hidden rounded-xl border border-slate-200">
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-4 py-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#C2410C]">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-slate-900">{account.label || 'New receiving account'}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{account.currency} · {account.account_number || 'Account number not set'}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
-                  className="motion-interactive inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                  aria-label={`Remove ${account.label || 'receiving account'}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Remove
-                </button>
-              </div>
-              <div className="grid items-start gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Account label</span>
-                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => updateAccount(index, { label: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Currency</span>
-                  <select value={account.currency} onChange={event => updateAccount(index, { currency: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
-                    {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
-                  </select>
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Bank or provider</span>
-                  <input value={account.value} placeholder="e.g. netbank" onChange={event => updateAccount(index, { value: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Account number</span>
-                  <input value={account.account_number} placeholder="Enter account number" onChange={event => updateAccount(index, { account_number: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">SWIFT/BIC (optional)</span>
-                  <input value={account.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => updateAccount(index, { swift_code: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Receiving currency (optional)</span>
-                  <select value={account.receiving_currency || ''} onChange={event => updateAccount(index, { receiving_currency: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
-                    <option value="">Same as collection</option>
-                    {receivingCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
-                  </select>
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Minimum collection amount (optional)</span>
-                  <input type="number" min="0" step="0.01" value={account.minimum_amount ?? ''} onChange={event => updateAccount(index, { minimum_amount: event.target.value ? Number(event.target.value) : undefined })} placeholder={`Amount in ${account.currency}`} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Bank code (optional)</span>
-                  <input value={account.bank_code || ''} onChange={event => updateAccount(index, { bank_code: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
-                  <span className="block">Branch code (optional)</span>
-                  <input value={account.branch_code || ''} onChange={event => updateAccount(index, { branch_code: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 sm:col-span-2 xl:col-span-4">
-                  <span className="block">Bank address (optional)</span>
-                  <input value={account.bank_address || ''} onChange={event => updateAccount(index, { bank_address: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
-                </label>
-                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 sm:col-span-2 xl:col-span-4">
-                  <span className="block">Account holder name</span>
-                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => updateAccount(index, { account_name: event.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
-                </label>
-              </div>
-            </article>
-          ))}
+          ) : (
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow className="hover:bg-slate-50">
+                  <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Account</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Bank details</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Currencies</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Minimum</TableHead>
+                  <TableHead className="min-w-48 text-xs font-bold uppercase tracking-wide text-slate-500">Shown to customers in</TableHead>
+                  <TableHead className="w-24 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {depositAccounts.map((account, index) => (
+                  <TableRow key={`${account.value}-${index}`} className="align-top">
+                    <TableCell className="min-w-40">
+                      <p className="font-semibold text-slate-900">{account.label || 'Untitled account'}</p>
+                      <p className="mt-1 text-xs text-slate-500">{account.value || 'No provider set'}</p>
+                    </TableCell>
+                    <TableCell className="min-w-48">
+                      <p className="font-medium text-slate-800">{account.account_number || 'No account number'}</p>
+                      <p className="mt-1 text-xs text-slate-500">{account.account_name || 'Account holder not set'}</p>
+                      {(account.bank_code || account.branch_code || account.swift_code) && (
+                        <p className="mt-1 text-xs text-slate-400">
+                          {[account.bank_code && `Bank ${account.bank_code}`, account.branch_code && `Branch ${account.branch_code}`, account.swift_code && `SWIFT ${account.swift_code}`].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant="secondary">{account.currency}</Badge>
+                      {account.receiving_currency && account.receiving_currency !== account.currency && (
+                        <p className="mt-1 text-xs text-slate-500">Receives as {account.receiving_currency}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-slate-700">
+                      {account.minimum_amount ? `${account.minimum_amount.toLocaleString()} ${account.currency}` : 'None'}
+                    </TableCell>
+                    <TableCell className="min-w-48 text-xs leading-5 text-slate-600">
+                      <p>Wallet &gt; Deposit</p>
+                      <p className="text-slate-400">Telegram fallback, where applicable</p>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEditAccount(index)}
+                          className="motion-interactive inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                          aria-label={`Edit ${account.label || 'receiving account'}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
+                          className="motion-interactive inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                          aria-label={`Remove ${account.label || 'receiving account'}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          Customers see these details in Wallet &gt; Deposit when choosing a bank destination. Telegram uses them as a fallback when no super-admin receiving account is configured. The minimum amount controls which KRW destination is selected for high-value deposits.
+        </p>
       </section>
+      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-slate-200 bg-white sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900">{editingAccountIndex === null ? 'Add receiving account' : 'Edit receiving account'}</DialogTitle>
+            <DialogDescription>
+              These details appear in Wallet &gt; Deposit and may be used as the Telegram deposit fallback.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Account label
+              <input value={accountDraft.label} placeholder="e.g. Netbank PHP" onChange={event => setAccountDraft(draft => ({ ...draft, label: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Currency
+              <select value={accountDraft.currency} onChange={event => setAccountDraft(draft => ({ ...draft, currency: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
+                {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Bank or provider
+              <input value={accountDraft.value} placeholder="e.g. netbank" onChange={event => setAccountDraft(draft => ({ ...draft, value: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Account number
+              <input value={accountDraft.account_number} placeholder="Enter account number" onChange={event => setAccountDraft(draft => ({ ...draft, account_number: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Account holder name
+              <input value={accountDraft.account_name} placeholder="Registered account holder" onChange={event => setAccountDraft(draft => ({ ...draft, account_name: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Receiving currency (optional)
+              <select value={accountDraft.receiving_currency || ''} onChange={event => setAccountDraft(draft => ({ ...draft, receiving_currency: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
+                <option value="">Same as collection</option>
+                {receivingCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Minimum collection amount (optional)
+              <input type="number" min="0" step="0.01" value={accountDraft.minimum_amount ?? ''} onChange={event => setAccountDraft(draft => ({ ...draft, minimum_amount: event.target.value ? Number(event.target.value) : undefined }))} placeholder={`Amount in ${accountDraft.currency}`} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Bank code (optional)
+              <input value={accountDraft.bank_code || ''} onChange={event => setAccountDraft(draft => ({ ...draft, bank_code: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              Branch code (optional)
+              <input value={accountDraft.branch_code || ''} onChange={event => setAccountDraft(draft => ({ ...draft, branch_code: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+              SWIFT/BIC (optional)
+              <input value={accountDraft.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => setAccountDraft(draft => ({ ...draft, swift_code: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold text-slate-600 sm:col-span-2">
+              Bank address (optional)
+              <input value={accountDraft.bank_address || ''} onChange={event => setAccountDraft(draft => ({ ...draft, bank_address: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setAccountDialogOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={saveAccountDraft} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
+              {editingAccountIndex === null ? 'Add account' : 'Save account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <section id="deposit-rules" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><DollarSign className="h-5 w-5" /></span>
@@ -3478,6 +3587,13 @@ export default function AdminManagement() {
       group: 'Governance',
       description: 'Review administrative activity and export audit history.'
     }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'test-data-cleanup',
+      label: 'Test data cleanup',
+      icon: <Trash2 className="h-4 w-4" />,
+      group: 'Governance',
+      description: 'Review and permanently clear payment transactions and disbursements for test-mode merchants.'
+    }] : []),
   ];
   const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : 'admins';
   const selectedTabMeta = tabs.find(tab => tab.id === selectedTab);
@@ -3999,6 +4115,9 @@ export default function AdminManagement() {
 
             {selectedTab === 'audit-logs' && canAccessGovernance && (
               <AuditLogsTab onError={setError} />
+            )}
+            {selectedTab === 'test-data-cleanup' && isSuperAdmin && (
+              <TestDataCleanupTab />
             )}
 
             {/* ── Crypto Requests Tab ── */}
