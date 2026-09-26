@@ -52,7 +52,9 @@ docker build \
 
 For production Turnstile protection, set `CLOUDFLARE_TURNSTILE_SECRET_KEY` in the
 backend secret store and set `CLOUDFLARE_TURNSTILE_ALLOWED_HOSTNAMES` to the
-frontend hostnames registered on the widget. The public site key is
+frontend hostnames registered on the widget. Include `swiftpay.ph` for the
+current production frontend; keep legacy hostnames only while those domains
+remain active. The public site key is
 `0x4AAAAAAEy2mGn-OGXXID21`; it is passed as the `VITE_TURNSTILE_SITE_KEY` build
 argument. Never commit the secret key or include local hostnames in a production
 allowlist.

@@ -60,6 +60,15 @@ def test_public_and_magpie_settings_are_explicit(monkeypatch):
     assert settings.magpie_base_url == "https://api.pay.magpie.im"
 
 
+def test_turnstile_default_allowlist_includes_current_frontend_host():
+    settings = Settings(_env_file=None)
+
+    allowed_hostnames = set(settings.cloudflare_turnstile_allowed_hostnames.split(","))
+
+    assert "swiftpay.ph" in allowed_hostnames
+    assert {"swiftpay.site", "kr.swiftpay.site"} <= allowed_hostnames
+
+
 def test_production_settings_auto_generate_missing_jwt_secret(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
