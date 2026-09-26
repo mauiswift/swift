@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatTransactionDate,
+  getTransactionStatusLabel,
   getTransactionStatus,
   getTransactionTypeLabel,
+  isAwaitingApproval,
   isPendingTransaction,
   isSuccessfulTransaction,
 } from './transactions';
@@ -15,14 +17,26 @@ describe('transaction display normalization', () => {
     },
   );
 
-  it('keeps provider-confirmed payments pending admin approval', () => {
-    expect(getTransactionStatus({ status: 'succeeded', approval_status: 'pending' })).toBe('pending');
+  it('shows receipt separately while a payment awaits admin approval', () => {
+    const transaction = { status: 'pending', approval_status: 'pending', paid_at: '2026-09-26T14:39:28Z' };
+    expect(getTransactionStatus(transaction)).toBe('paid');
+    expect(isAwaitingApproval(transaction)).toBe(true);
+    expect(getTransactionStatusLabel('paid', 'en')).toBe('Paid');
+    expect(getTransactionStatusLabel('paid', 'ko')).toBe('결제 완료');
   });
 
-  it('normalizes common pending and failure aliases', () => {
+  it('keeps payment outcome separate from an admin rejection', () => {
+    const transaction = { status: 'pending', approval_status: 'rejected', paid_at: '2026-09-26T14:39:28Z' };
+    expect(getTransactionStatus(transaction)).toBe('paid');
+    expect(isAwaitingApproval(transaction)).toBe(false);
+  });
+
+  it('normalizes common pending and terminal aliases distinctly', () => {
     expect(getTransactionStatus({ status: 'awaiting-payment' })).toBe('pending');
     expect(getTransactionStatus({ status: 'canceled' })).toBe('cancelled');
-    expect(getTransactionStatus({ status: 'rejected' })).toBe('failed');
+    expect(getTransactionStatus({ status: 'rejected' })).toBe('rejected');
+    expect(getTransactionStatus({ status: 'expired' })).toBe('expired');
+    expect(getTransactionStatus({ status: 'declined' })).toBe('failed');
     expect(getTransactionStatus({ status: 'unrecognized-status' })).toBe('inactive');
   });
 

@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { StatusBadge, getStatusType } from '@/components/StatusBadge';
+import { PaymentStatusBadge } from '@/components/PaymentStatusBadge';
 
 export default function PaymentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -113,7 +113,6 @@ export default function PaymentDetails() {
   const successful = isSuccessfulTransaction(displayStatus);
   const pending = isPendingTransaction(displayStatus);
   const displayCurrency = normalizePublicCurrency(txn.currency);
-  const statusType = getStatusType(displayStatus);
   const receivedAmount = Math.max(0, Number(txn.amount || 0) - serviceFee);
 
   return (
@@ -156,7 +155,7 @@ export default function PaymentDetails() {
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Transaction amount</p>
             <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{fmtCurrency(txn.amount, displayCurrency)}</span>
           </div>
-          <StatusBadge status={statusType} size="sm" showDot={false} />
+          <PaymentStatusBadge transaction={txn} size="sm" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">

@@ -37,11 +37,11 @@ import SiteContainer from '@/components/SiteContainer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { PaymentStatusBadge } from '@/components/PaymentStatusBadge';
 import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatTransactionDate, getTransactionStatus, getTransactionTypeLabel } from '@/lib/transactions';
-import { StatusBadge, type StatusType } from '@/components/StatusBadge';
 
 interface Transaction {
   id: number;
@@ -52,6 +52,7 @@ interface Transaction {
   currency: string;
   status: string;
   approval_status?: string;
+  payment_status?: string;
   rejection_reason?: string;
   approved_by?: string;
   description: string;
@@ -64,17 +65,6 @@ interface Transaction {
   updated_at: string;
   paid_at?: string;
 }
-
-const statusLabels: Record<string, string> = {
-  paid: 'Success',
-  completed: 'Success',
-  executed: 'Success',
-  pending: 'Processing',
-  processing: 'Processing',
-  expired: 'Failed',
-  cancelled: 'Failed',
-  failed: 'Failed',
-};
 
 function getDisplayStatus(transaction: Transaction) {
   return getTransactionStatus(transaction);
@@ -209,22 +199,6 @@ export default function Transactions() {
 
   const totalPages = Math.ceil(total / limit);
   const activeFilterCount = [searchTerm, statusFilter !== 'all' ? statusFilter : '', typeFilter !== 'all' ? typeFilter : ''].filter(Boolean).length;
-  const getStatusLabel = (displayStatus: string) => {
-    if (['paid', 'completed', 'executed'].includes(displayStatus)) {
-      return isKorean ? ui.success : statusLabels[displayStatus];
-    }
-    if (displayStatus === 'pending' || displayStatus === 'processing') {
-      return isKorean ? ui.processing : statusLabels[displayStatus];
-    }
-    if (displayStatus === 'expired') return ui.expiredStatus;
-    if (displayStatus === 'failed' || displayStatus === 'cancelled') return isKorean ? ui.failed : statusLabels[displayStatus] || ui.failedStatus;
-    return undefined;
-  };
-  const getStatusType = (displayStatus: string): StatusType => (
-    ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled', 'inactive'].includes(displayStatus)
-      ? displayStatus as StatusType
-      : 'inactive'
-  );
   const formatDate = (value?: string | null) => formatTransactionDate(value, dateLocale);
 
   const copyToClipboard = (text: string) => {
@@ -305,6 +279,7 @@ export default function Transactions() {
                   <SelectItem value="expired" className="text-red-700">{isKorean ? '만료' : 'Expired'}</SelectItem>
                   <SelectItem value="cancelled" className="text-slate-700">{isKorean ? '취소됨' : 'Cancelled'}</SelectItem>
                   <SelectItem value="failed" className="text-red-700">{isKorean ? '실패' : 'Failed'}</SelectItem>
+                  <SelectItem value="rejected" className="text-red-700">{isKorean ? '거부됨' : 'Rejected'}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(0); }}>
@@ -378,8 +353,6 @@ export default function Transactions() {
               <>
               <div className="space-y-3 p-3 md:hidden">
                 {filteredTxns.map((txn) => {
-                  const displayStatus = getDisplayStatus(txn);
-                  const statusType = getStatusType(displayStatus);
                   const isUpdated = updatedTxnIds.has(txn.id);
                   return (
                     <article
@@ -400,7 +373,11 @@ export default function Transactions() {
                             </div>
                           </div>
                         </div>
-                        <StatusBadge status={statusType} label={getStatusLabel(displayStatus)} size="sm" showDot={false} />
+                        <PaymentStatusBadge
+                          transaction={txn}
+                          size="sm"
+                          className={isUpdated ? 'animate-pulse ring-2 ring-current scale-110' : undefined}
+                        />
                       </div>
                       <div className="mt-4 flex items-end justify-between gap-3">
                         <div>
@@ -438,8 +415,6 @@ export default function Transactions() {
                   </thead>
                   <tbody>
                     {filteredTxns.map((txn) => {
-                      const displayStatus = getDisplayStatus(txn);
-                      const statusType = getStatusType(displayStatus);
                       const isUpdated = updatedTxnIds.has(txn.id);
                       return (
                         <tr
@@ -487,13 +462,7 @@ export default function Transactions() {
                             </span>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4 text-center">
-                            <StatusBadge
-                              status={statusType}
-                              label={getStatusLabel(displayStatus)}
-                              size="sm"
-                              showDot={false}
-                              className={isUpdated ? 'animate-pulse ring-2 ring-current scale-110' : undefined}
-                            />
+                            <PaymentStatusBadge transaction={txn} size="sm" />
                           </td>
                           <td className="px-3 md:px-4 py-3 md:py-4 hidden lg:table-cell">
                             <div className="space-y-2">

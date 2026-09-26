@@ -1,4 +1,4 @@
-export type TransactionStatus = 'paid' | 'completed' | 'executed' | 'pending' | 'processing' | 'failed' | 'expired' | 'cancelled' | 'inactive';
+export type TransactionStatus = 'paid' | 'pending' | 'processing' | 'failed' | 'rejected' | 'expired' | 'cancelled' | 'inactive';
 
 const SUCCESS_STATUSES = new Set([
   'paid',
@@ -48,31 +48,62 @@ export interface TransactionRecord {
   created_at?: string | null;
   updated_at?: string | null;
   paid_at?: string | null;
+  payment_status?: string | null;
   payment_url?: string | null;
 }
 
-export function getTransactionStatus(transaction: Pick<TransactionRecord, 'status' | 'approval_status'>): TransactionStatus {
-  const status = String(transaction.status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
-  const approvalStatus = String(transaction.approval_status || '').trim().toLowerCase();
-  if (approvalStatus === 'pending' && SUCCESS_STATUSES.has(status)) {
-    return 'pending';
-  }
-  if (SUCCESS_STATUSES.has(status)) return 'paid';
-  if (PENDING_STATUSES.has(status)) return 'pending';
-  if (PROCESSING_STATUSES.has(status)) return 'processing';
-  if (['failed', 'rejected'].includes(status)) return 'failed';
-  if (['expired'].includes(status)) return 'expired';
-  if (['canceled', 'cancelled'].includes(status)) return 'cancelled';
+function normalizeStatus(status?: string | null): string {
+  return String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+export function getTransactionStatus(
+  transaction: Pick<TransactionRecord, 'status' | 'approval_status' | 'paid_at' | 'payment_status'>,
+): TransactionStatus {
+  const status = normalizeStatus(transaction.status);
+  const paymentStatus = normalizeStatus(transaction.payment_status);
+  if (
+    Boolean(transaction.paid_at)
+    || SUCCESS_STATUSES.has(paymentStatus)
+    || SUCCESS_STATUSES.has(status)
+  ) return 'paid';
+  if (status === 'rejected' || paymentStatus === 'rejected') return 'rejected';
+  if (PENDING_STATUSES.has(paymentStatus) || PENDING_STATUSES.has(status)) return 'pending';
+  if (PROCESSING_STATUSES.has(paymentStatus) || PROCESSING_STATUSES.has(status)) return 'processing';
+  if (['failed', 'error', 'declined'].includes(paymentStatus) || ['failed', 'error', 'declined'].includes(status)) return 'failed';
+  if (paymentStatus === 'expired' || status === 'expired') return 'expired';
+  if (['canceled', 'cancelled'].includes(paymentStatus) || ['canceled', 'cancelled'].includes(status)) return 'cancelled';
   return 'inactive';
 }
 
 export function isSuccessfulTransaction(status: string): boolean {
-  return SUCCESS_STATUSES.has(String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_'));
+  return status === 'paid' || SUCCESS_STATUSES.has(normalizeStatus(status));
 }
 
 export function isPendingTransaction(status: string): boolean {
-  const normalized = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const normalized = normalizeStatus(status);
   return PENDING_STATUSES.has(normalized) || PROCESSING_STATUSES.has(normalized);
+}
+
+export function getTransactionStatusLabel(
+  status: TransactionStatus,
+  language: 'en' | 'ko' = 'en',
+): string {
+  const labels: Record<TransactionStatus, { en: string; ko: string }> = {
+    paid: { en: 'Paid', ko: '결제 완료' },
+    pending: { en: 'Pending', ko: '대기 중' },
+    processing: { en: 'Processing', ko: '처리 중' },
+    failed: { en: 'Failed', ko: '실패' },
+    rejected: { en: 'Rejected', ko: '거부됨' },
+    expired: { en: 'Expired', ko: '만료됨' },
+    cancelled: { en: 'Cancelled', ko: '취소됨' },
+    inactive: { en: 'Unknown', ko: '알 수 없음' },
+  };
+  return labels[status][language];
+}
+
+export function isAwaitingApproval(transaction: Pick<TransactionRecord, 'approval_status' | 'status' | 'paid_at' | 'payment_status'>): boolean {
+  return transaction.approval_status?.trim().toLowerCase() === 'pending'
+    && getTransactionStatus(transaction) === 'paid';
 }
 
 export function formatTransactionDate(value?: string | null, locale = 'en-PH'): string {

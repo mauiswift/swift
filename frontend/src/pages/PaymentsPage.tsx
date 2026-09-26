@@ -6,11 +6,13 @@ import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { PaymentStatusBadge } from '@/components/PaymentStatusBadge';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getTransactionStatus, type TransactionStatus } from '@/lib/transactions';
 
 type DateRange = 'all' | 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
-type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
+type Status = 'all' | TransactionStatus;
 
 interface Payment {
   id: string;
@@ -22,7 +24,10 @@ interface Payment {
   createdAt: string;
   createdTimestamp: number | null;
   executedAt: string | null;
-  status: Status;
+  status: TransactionStatus;
+  approvalStatus?: string | null;
+  paymentStatus?: string | null;
+  paidAt?: string | null;
 }
 
 const getDateRangeBounds = (range: DateRange): { start: Date; end: Date } | null => {
@@ -56,15 +61,6 @@ const getDateRangeBounds = (range: DateRange): { start: Date; end: Date } | null
   return { start, end: endOfToday };
 };
 
-const normalizePaymentStatus = (value: unknown): Status => {
-  const rawStatus = String(value || 'pending').toLowerCase();
-  if (rawStatus === 'paid' || rawStatus === 'completed' || rawStatus === 'executed') return 'executed';
-  if (rawStatus === 'failed' || rawStatus === 'cancelled' || rawStatus === 'canceled') return 'canceled';
-  if (rawStatus === 'rejected') return 'rejected';
-  if (rawStatus === 'expired') return 'expired';
-  return 'pending';
-};
-
 const dateRangeLabels: Record<DateRange, { label: string; dates: string }> = {
   all: { label: 'All dates', dates: '' },
   last7: { label: 'Last 7 days', dates: '13 Jul - 19 Jul' },
@@ -80,10 +76,13 @@ const dateRangeLabels: Record<DateRange, { label: string; dates: string }> = {
 const statusLabels: Record<Status, string> = {
   all: 'All',
   pending: 'Pending',
-  executed: 'Executed',
-  canceled: 'Canceled',
+  paid: 'Paid',
+  processing: 'Processing',
+  failed: 'Failed',
   rejected: 'Rejected',
   expired: 'Expired',
+  cancelled: 'Cancelled',
+  inactive: 'Unknown',
 };
 
 const koreanDateRangeLabels: Record<DateRange, string> = {
@@ -101,19 +100,13 @@ const koreanDateRangeLabels: Record<DateRange, string> = {
 const koreanStatusLabels: Record<Status, string> = {
   all: '전체',
   pending: '대기 중',
-  executed: '완료',
-  canceled: '취소됨',
+  paid: '결제 완료',
+  processing: '처리 중',
+  failed: '실패',
   rejected: '거부됨',
   expired: '만료됨',
-};
-
-const statusStyles: Record<Status, { bg: string; text: string; dot: string }> = {
-  all: { bg: '', text: '', dot: '' },
-  pending: { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
-  executed: { bg: '#F0FDFA', text: '#0D9488', dot: '#10B981' },
-  canceled: { bg: '#F9FAFB', text: '#64748B', dot: '#94A3B8' },
-  rejected: { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' },
-  expired: { bg: '#F9FAFB', text: '#64748B', dot: '#94A3B8' },
+  cancelled: '취소됨',
+  inactive: '알 수 없음',
 };
 
 export default function PaymentsPage() {
@@ -165,11 +158,14 @@ export default function PaymentsPage() {
           provider: item.title || 'SwiftPay',
           reference: item.order_no || item.external_id || 'N/A',
           createdAt: item.created_at ? new Date(item.created_at).toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
-          executedAt: (item.status === 'paid' || item.status === 'executed' || item.status === 'completed') && (item.paid_at || item.updated_at)
+          executedAt: getTransactionStatus(item) === 'paid' && (item.paid_at || item.updated_at)
             ? new Date(item.paid_at || item.updated_at).toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { dateStyle: 'medium', timeStyle: 'short' })
             : null,
           createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : null,
-          status: normalizePaymentStatus(item.status),
+          status: getTransactionStatus(item),
+          approvalStatus: item.approval_status || null,
+          paymentStatus: item.payment_status || null,
+          paidAt: item.paid_at || null,
           }));
         setPayments(mapped);
       }
@@ -380,9 +376,7 @@ export default function PaymentsPage() {
                     {ui.noTransactions}
                   </td>
                 </tr>
-              ) : filteredPayments.map((payment) => {
-                const style = statusStyles[payment.status] || statusStyles.expired;
-                return (
+              ) : filteredPayments.map((payment) => (
                   <tr
                     key={payment.id}
                     onClick={() => navigate(`/payments/${payment.id}`)}
@@ -411,17 +405,19 @@ export default function PaymentsPage() {
                       {payment.executedAt && <p className="text-[11px] text-slate-500">{ui.executed} {payment.executedAt}</p>}
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold capitalize"
-                        style={{ backgroundColor: style.bg, color: style.text }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.dot }} />
-                        {statusLabels[payment.status]}
-                      </span>
+                      <PaymentStatusBadge
+                        transaction={{
+                          status: payment.status,
+                          approval_status: payment.approvalStatus,
+                          payment_status: payment.paymentStatus,
+                          paid_at: payment.paidAt,
+                        }}
+                        size="sm"
+                        showDot
+                      />
                     </td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>

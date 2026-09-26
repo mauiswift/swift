@@ -75,6 +75,7 @@ class TransactionsResponse(BaseModel):
     amount: float
     currency: Optional[str] = None
     status: str
+    approval_status: Optional[str] = None
     rejection_reason: Optional[str] = None
     title: Optional[str] = None
     order_no: Optional[str] = None
