@@ -6,7 +6,7 @@ export interface KrwBank {
   logo: string;
 }
 
-export const DEFAULT_KRW_BANK_NAME = '토스페이';
+export const DEFAULT_KRW_BANK_NAME = 'Toss Bank';
 
 export const KRW_BANK_DEFINITIONS = [
   ['002', 'KDB Bank', '/logos/kdb-bank.png'],
@@ -51,7 +51,7 @@ export const KRW_BANK_BY_CODE = new Map(
 export const normalizeKrwBankName = (value?: string | null): string => {
   const raw = String(value ?? '').trim();
   if (!raw) return DEFAULT_KRW_BANK_NAME;
-  if (raw.toLowerCase() === 'toss bank' || raw === '토스뱅크' || raw === '토스페이') return DEFAULT_KRW_BANK_NAME;
+  if (['toss bank', 'tossbank', '토스뱅크', '토스페이'].includes(raw.toLowerCase())) return DEFAULT_KRW_BANK_NAME;
   const aliasedCode = KRW_BANK_CODE_ALIASES[raw.toUpperCase()];
 
   const directMatch = KRW_BANKS.find(bank =>

@@ -67,6 +67,8 @@ export const resolveBrandLogoPath = (value: string): string => {
   const key = normalizeBrandKey(value);
   if (!key) return '';
   return OFFICIAL_BRAND_LOGO_REGISTRY[key]
-    || Object.entries(OFFICIAL_BRAND_LOGO_REGISTRY).find(([alias]) => key.startsWith(alias) || alias.startsWith(key))?.[1]
+    || Object.entries(OFFICIAL_BRAND_LOGO_REGISTRY).find(([alias]) =>
+      alias.length >= 4 && key.length >= 4 && (key.startsWith(alias) || alias.startsWith(key))
+    )?.[1]
     || '';
 };

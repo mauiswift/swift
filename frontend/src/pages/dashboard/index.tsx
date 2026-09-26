@@ -1,5 +1,6 @@
 import ResponsiveRoute from '@/components/ResponsiveRoute';
 import Layout from '@/components/Layout';
+import { Button } from '@/components/ui/button';
 import { useDashboardData } from './shared';
 import DashboardDesktop from './Desktop';
 import DashboardMobile from './Mobile';
@@ -83,6 +84,19 @@ export default function Dashboard() {
 
   if (data.initialLoading) {
     return <DashboardLoadingState connected={data.connected} />;
+  }
+
+  if (data.dataError && !data.hasLoadedData) {
+    return (
+      <Layout connected={data.connected}>
+        <div className="mx-auto flex min-h-[50vh] max-w-lg flex-col items-center justify-center gap-4 text-center">
+          <p role="alert" className="text-sm text-amber-900">{data.ui.dataLoadError}</p>
+          <Button type="button" onClick={data.retryFetchData} disabled={data.loading}>
+            {data.ui.retry}
+          </Button>
+        </div>
+      </Layout>
+    );
   }
 
   return (

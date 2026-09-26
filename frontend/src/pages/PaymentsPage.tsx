@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronDown, MoreVertical, Search, Check, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
@@ -9,7 +9,7 @@ import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
+type DateRange = 'all' | 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
 type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
 
 interface Payment {
@@ -26,7 +26,7 @@ interface Payment {
 }
 
 const getDateRangeBounds = (range: DateRange): { start: Date; end: Date } | null => {
-  if (range === 'custom') return null;
+  if (range === 'all' || range === 'custom') return null;
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfToday = new Date(startOfToday);
@@ -66,6 +66,7 @@ const normalizePaymentStatus = (value: unknown): Status => {
 };
 
 const dateRangeLabels: Record<DateRange, { label: string; dates: string }> = {
+  all: { label: 'All dates', dates: '' },
   last7: { label: 'Last 7 days', dates: '13 Jul - 19 Jul' },
   today: { label: 'Today', dates: '19 Jul' },
   yesterday: { label: 'Yesterday', dates: '18 Jul' },
@@ -86,6 +87,7 @@ const statusLabels: Record<Status, string> = {
 };
 
 const koreanDateRangeLabels: Record<DateRange, string> = {
+  all: '전체 기간',
   last7: '최근 7일',
   today: '오늘',
   yesterday: '어제',
@@ -135,9 +137,11 @@ export default function PaymentsPage() {
   };
   const activeCurrency = String(collectionCurrency || 'PHP').trim().toUpperCase();
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState<DateRange>('last7');
+  const [searchParams] = useSearchParams();
+  const querySearchTerm = searchParams.get('search') || '';
+  const [dateRange, setDateRange] = useState<DateRange>(querySearchTerm ? 'all' : 'last7');
   const [status, setStatus] = useState<Status>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(querySearchTerm);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
@@ -180,6 +184,11 @@ export default function PaymentsPage() {
     fetchPayments();
   }, [fetchPayments]);
 
+  useEffect(() => {
+    setSearchTerm(querySearchTerm);
+    if (querySearchTerm) setDateRange('all');
+  }, [querySearchTerm]);
+
   const filteredPayments = useMemo(() => {
     const bounds = getDateRangeBounds(dateRange);
     return payments.filter(p => {
@@ -188,7 +197,8 @@ export default function PaymentsPage() {
       if (status !== 'all' && p.status !== status) return false;
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        return p.reference.toLowerCase().includes(term) ||
+        return p.id.toLowerCase().includes(term) ||
+               p.reference.toLowerCase().includes(term) ||
                p.provider.toLowerCase().includes(term) ||
                p.method.toLowerCase().includes(term);
       }

@@ -70,6 +70,11 @@ export function DailyVolumeChart({
   dailyVolumes: DashboardStats['daily_volumes'];
   compact?: boolean;
 }) {
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
+  const weekdayLabels: Record<string, string> = isKorean
+    ? { Mon: '월', Tue: '화', Wed: '수', Thu: '목', Fri: '금', Sat: '토', Sun: '일' }
+    : {};
   const fallback = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
     day,
     payments: 0,
@@ -101,14 +106,14 @@ export function DailyVolumeChart({
     <div className="w-full">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-4 text-[10px] font-medium text-slate-500">
-          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-cyan-500" />Payments</span>
-          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-sky-800" />Disbursements</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-cyan-500" />{isKorean ? '결제' : 'Payments'}</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-sky-800" />{isKorean ? '출금' : 'Disbursements'}</span>
         </div>
-        <span className="text-[10px] text-slate-400">Peak {formatValue(maxValue)}</span>
+        <span className="text-[10px] text-slate-400">{isKorean ? '최고' : 'Peak'} {formatValue(maxValue)}</span>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} className={`h-full w-full ${compact ? 'min-h-[110px]' : 'min-h-[150px]'}`} role="img" aria-labelledby="daily-volume-chart-title daily-volume-chart-description">
-        <title id="daily-volume-chart-title">Daily payment and disbursement volume</title>
-        <desc id="daily-volume-chart-description">A seven-day comparison of payment and disbursement amounts.</desc>
+        <title id="daily-volume-chart-title">{isKorean ? '일별 결제 및 출금 거래량' : 'Daily payment and disbursement volume'}</title>
+        <desc id="daily-volume-chart-description">{isKorean ? '7일간 결제 및 출금 금액 비교' : 'A seven-day comparison of payment and disbursement amounts.'}</desc>
         <g stroke="#e2e8f0" strokeWidth="1">
           {[0, 0.5, 1].map((ratio) => {
             const y = bottom - ratio * (bottom - top);
@@ -124,7 +129,7 @@ export function DailyVolumeChart({
         <g fill="#06b6d4">{paymentPoints.map((point, index) => <circle key={`payment-${index}`} cx={point.x} cy={point.y} r="3" />)}</g>
         <g fill="#075985">{disbursementPoints.map((point, index) => <circle key={`disbursement-${index}`} cx={point.x} cy={point.y} r="2.5" />)}</g>
         <g fill="#64748b" fontSize="9" textAnchor="middle">
-          {points.map((point, index) => <text key={`${point.day}-${index}`} x={left + index * xStep} y={height - 8}>{point.day}</text>)}
+          {points.map((point, index) => <text key={`${point.day}-${index}`} x={left + index * xStep} y={height - 8}>{weekdayLabels[point.day] || point.day}</text>)}
         </g>
       </svg>
     </div>
@@ -283,9 +288,10 @@ export function useDashboardData() {
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [balances, setBalances] = useState<Record<string, WalletBalanceSnapshot>>({});
+  const [dataError, setDataError] = useState(false);
 
   const fetchData = useCallback(async (days: RangeKey) => {
-    if (!user) return;
+    if (!user) return false;
     try {
       const [statsRes, phpRes, usdtRes, krwRes, cnyRes] = await Promise.all([
         client.apiCall.invoke({
@@ -299,37 +305,41 @@ export function useDashboardData() {
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=CNY', method: 'GET', data: {} }),
       ]);
 
-      if (statsRes.ok && statsRes.data && statsRes.data.payments) {
-        const dailyVolumes = Array.isArray(statsRes.data.daily_volumes)
-          ? statsRes.data.daily_volumes.map((day: DashboardStats['daily_volumes'][number]) => ({
-              ...day,
-              payments: Number.isFinite(Number(day.payments)) ? Number(day.payments) : 0,
-              disbursements: Number.isFinite(Number(day.disbursements)) ? Number(day.disbursements) : 0,
-            }))
-          : [];
-        setStats({ ...defaultStats, ...statsRes.data, daily_volumes: dailyVolumes });
+      const balanceResponses = [phpRes, usdtRes, krwRes, cnyRes];
+      if (!statsRes.ok || !statsRes.data?.payments || balanceResponses.some((res) => !res.ok || !res.data)) {
+        setDataError(true);
+        return false;
       }
 
+      const dailyVolumes = Array.isArray(statsRes.data.daily_volumes)
+        ? statsRes.data.daily_volumes.map((day: DashboardStats['daily_volumes'][number]) => ({
+            ...day,
+            payments: Number.isFinite(Number(day.payments)) ? Number(day.payments) : 0,
+            disbursements: Number.isFinite(Number(day.disbursements)) ? Number(day.disbursements) : 0,
+          }))
+        : [];
+      setStats({ ...defaultStats, ...statsRes.data, daily_volumes: dailyVolumes });
+
       const balanceMap: Record<string, WalletBalanceSnapshot> = {};
-      const addBal = (curr: string, res: any) => {
-        if (res.ok && res.data) {
-          balanceMap[curr] = {
-            currency: curr,
-            balance: Number(res.data.balance || 0),
-            available_balance: Number(res.data.available_balance ?? res.data.balance ?? 0),
-            pending_balance: Number(res.data.pending_balance || 0),
-          };
-        } else {
-          balanceMap[curr] = { currency: curr, balance: 0, available_balance: 0, pending_balance: 0 };
-        }
+      const addBal = (curr: string, res: { data: Record<string, number> }) => {
+        balanceMap[curr] = {
+          currency: curr,
+          balance: Number(res.data.balance || 0),
+          available_balance: Number(res.data.available_balance ?? res.data.balance ?? 0),
+          pending_balance: Number(res.data.pending_balance || 0),
+        };
       };
       addBal('PHP', phpRes);
       addBal('USDT', usdtRes);
       addBal('KRW', krwRes);
       addBal('CNY', cnyRes);
       setBalances(balanceMap);
+      setDataError(false);
+      return true;
     } catch (err) {
       console.error('Unable to refresh dashboard data', err);
+      setDataError(true);
+      return false;
     }
   }, [user, collectionCurrency]);
 
@@ -344,12 +354,19 @@ export function useDashboardData() {
     if (!user) return;
     const load = async () => {
       setLoading(true);
-      await fetchData(range);
-      setHasLoadedData(true);
+      const loaded = await fetchData(range);
+      if (loaded) setHasLoadedData(true);
       setLoading(false);
     };
     load();
   }, [user, range, fetchData]);
+
+  const retryFetchData = useCallback(async () => {
+    setLoading(true);
+    const loaded = await fetchData(range);
+    if (loaded) setHasLoadedData(true);
+    setLoading(false);
+  }, [fetchData, range]);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchTerm.trim() && hasPermission(permissions, 'can_manage_payments')) {
@@ -376,6 +393,25 @@ export function useDashboardData() {
         status: '상태',
         buckets: '버킷',
         searchPlaceholder: '결제 ID, 참조 번호로 검색…',
+        dashboardTitle: '가맹점 요약',
+        walletOverview: '통합 지갑',
+        allWalletBalances: '모든 통화 잔액',
+        availableBalance: '사용 가능 잔액',
+        total: '합계',
+        wallet: '지갑',
+        viewWallet: '지갑 보기',
+        connected: '연결됨',
+        disconnected: '연결 끊김',
+        paymentMethodDistribution: '결제 수단별 분포',
+        noPaymentMethods: '표시할 결제 수단이 없습니다',
+        transactionVolume: '거래량',
+        dailyActivity: '선택한 기간의 일별 활동',
+        dataLoadError: '대시보드 데이터를 불러오지 못했습니다. 다시 시도해 주세요.',
+        retry: '다시 시도',
+        paymentMethod: '결제 수단',
+        count: '건',
+        transactionShare: '거래 비중',
+        weekdays: '월,화,수,목,금,토,일',
       }
     : {
         overview: 'Overview',
@@ -395,6 +431,25 @@ export function useDashboardData() {
         status: 'Status',
         buckets: 'buckets',
         searchPlaceholder: 'Search by payment ID, ref. no...',
+        dashboardTitle: 'Merchant overview',
+        walletOverview: 'Wallet overview',
+        allWalletBalances: 'Balances across currencies',
+        availableBalance: 'Available balance',
+        total: 'Total',
+        wallet: 'Wallet',
+        viewWallet: 'View wallet',
+        connected: 'Connected',
+        disconnected: 'Disconnected',
+        paymentMethodDistribution: 'Payment method distribution',
+        noPaymentMethods: 'No payment methods to display',
+        transactionVolume: 'Transaction volume',
+        dailyActivity: 'Daily activity across the selected period',
+        dataLoadError: 'Unable to load dashboard data. Please try again.',
+        retry: 'Retry',
+        paymentMethod: 'Payment method',
+        count: 'transactions',
+        transactionShare: 'Transaction mix',
+        weekdays: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
       };
 
   const rangeLabels = rangeLabelsByLanguage[language === 'ko' ? 'ko' : 'en'];
@@ -402,6 +457,9 @@ export function useDashboardData() {
   const statusLabels = language === 'ko'
     ? { Executed: '실행됨', Pending: '대기 중', Rejected: '거부됨', Expired: '만료됨' }
     : { Executed: 'Executed', Pending: 'Pending', Rejected: 'Rejected', Expired: 'Expired' };
+  const currencyNames = language === 'ko'
+    ? { KRW: '원화', PHP: '페소', CNY: '위안화', USDT: '테더' }
+    : { KRW: 'KRW wallet', PHP: 'PHP wallet', CNY: 'CNY wallet', USDT: 'USDT wallet' };
 
   const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
     || (user as { name?: string } | null)?.name
@@ -427,6 +485,7 @@ export function useDashboardData() {
     balances,
     loading,
     initialLoading: loading && !hasLoadedData,
+    dataError,
     range,
     showRangeDropdown,
     searchTerm,
@@ -436,12 +495,15 @@ export function useDashboardData() {
     setRange,
     setShowRangeDropdown,
     fetchData,
+    retryFetchData,
     ui,
     rangeLabels,
     formatAmount,
     statusLabels,
+    currencyNames,
     orgName,
     hasAnyTransactions,
+    hasLoadedData,
     paymentVolume,
     disbursementVolume,
     totalVolume,

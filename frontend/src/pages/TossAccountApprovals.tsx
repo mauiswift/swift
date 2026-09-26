@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Building2, CheckCircle2, Clock, Copy, Mail, Pencil, RefreshCw, Search, Send, ShieldCheck, UserRound, XCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
+import { normalizeKrwBankName } from '@/config/krw-banks';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -61,7 +62,7 @@ export function TossAccountApprovalsPanel() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending_review' | 'active' | 'suspended'>('all');
   const [pool, setPool] = useState<TossPoolAccount[]>([]);
-  const [poolForm, setPoolForm] = useState({ bank_name: '토스페이', account_number: '', account_holder_name: '', is_active: true });
+  const [poolForm, setPoolForm] = useState({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
   const [editingPoolId, setEditingPoolId] = useState<number | null>(null);
   const [updatingPoolId, setUpdatingPoolId] = useState<number | null>(null);
 
@@ -97,7 +98,7 @@ export function TossAccountApprovalsPanel() {
       toast.error(response.data?.detail || 'Unable to save TOSS pool account.');
       return;
     }
-    setPoolForm({ bank_name: '토스페이', account_number: '', account_holder_name: '', is_active: true });
+    setPoolForm({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
     toast.success(editingPoolId ? 'TOSS pool account updated.' : 'TOSS pool account added.');
     setEditingPoolId(null);
     await load();
@@ -105,7 +106,7 @@ export function TossAccountApprovalsPanel() {
 
   const editPoolAccount = (account: TossPoolAccount) => {
     setPoolForm({
-      bank_name: account.bank_name,
+      bank_name: normalizeKrwBankName(account.bank_name),
       account_number: account.account_number,
       account_holder_name: account.account_holder_name,
       is_active: account.is_active,
@@ -165,7 +166,7 @@ export function TossAccountApprovalsPanel() {
     const account = item.application.virtual_account;
     if (!account?.account_number) return;
     const copied = await copyTextToClipboard(
-      `${account.bank_name || '토스페이'}\n${account.account_number}\n${account.account_holder_name || ''}`,
+      `${account.bank_name || 'Toss Bank'}\n${account.account_number}\n${account.account_holder_name || ''}`,
     );
     if (copied) toast.success('Account details copied.');
     else toast.error('Unable to copy account details.');
@@ -174,7 +175,7 @@ export function TossAccountApprovalsPanel() {
   const openAccountControl = (item: TossApplication) => {
     const account = item.application.virtual_account || {};
     setAccountForm({
-      bank_name: account.bank_name || '토스페이',
+      bank_name: account.bank_name || 'Toss Bank',
       account_number: account.account_number || '',
       account_holder_name: account.account_holder_name || item.application.legal_name || item.name || '',
       status: account.status || 'active',
@@ -293,7 +294,7 @@ export function TossAccountApprovalsPanel() {
                         <Building2 size={16} />
                       </span>
                       <div className="min-w-0 text-sm">
-                        <p className="truncate font-semibold text-slate-800">{account.bank_name} <span className="font-normal text-slate-300">·</span> <span className="font-mono font-medium">{account.account_number}</span></p>
+                        <p className="truncate font-semibold text-slate-800">{normalizeKrwBankName(account.bank_name)} <span className="font-normal text-slate-300">·</span> <span className="font-mono font-medium">{account.account_number}</span></p>
                         <p className="mt-0.5 truncate text-xs text-slate-500">{account.account_holder_name}</p>
                       </div>
                     </div>
@@ -307,7 +308,7 @@ export function TossAccountApprovalsPanel() {
                           checked={account.is_active}
                           disabled={updatingPoolId !== null}
                           onCheckedChange={(isActive) => void togglePoolAccount(account, isActive)}
-                          aria-label={`${account.is_active ? 'Disable' : 'Enable'} ${account.bank_name} ${account.account_number} for checkout`}
+                          aria-label={`${account.is_active ? 'Disable' : 'Enable'} ${normalizeKrwBankName(account.bank_name)} ${account.account_number} for checkout`}
                           className="data-[state=checked]:bg-emerald-600"
                         />
                       </label>

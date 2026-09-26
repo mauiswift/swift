@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { KRW_BANKS, normalizeKrwBankName } from '@/config/krw-banks';
+import { resolveBrandLogoPath } from '@/config/payment-logo-registry';
 
 const originalFetch = globalThis.fetch;
 const windowMock = {
@@ -55,7 +56,20 @@ describe('isPaymentChannelEnabled', () => {
   });
 
   it('uses the configured TOSS fallback for empty KRW bank names', () => {
-    expect(normalizeKrwBankName('')).toBe('토스페이');
-    expect(normalizeKrwBankName(null)).toBe('토스페이');
+    expect(normalizeKrwBankName('')).toBe('Toss Bank');
+    expect(normalizeKrwBankName(null)).toBe('Toss Bank');
+  });
+
+  it('keeps Toss Bank separate from Toss Pay branding', () => {
+    expect(normalizeKrwBankName('Toss Bank')).toBe('Toss Bank');
+    expect(normalizeKrwBankName('토스뱅크')).toBe('Toss Bank');
+    expect(normalizeKrwBankName('토스페이')).toBe('Toss Bank');
+    expect(resolveBrandLogoPath('Toss Bank')).toBe('/logos/toss-bank.png');
+    expect(resolveBrandLogoPath('토스페이')).toBe('/logos/tosspay.png');
+  });
+
+  it('does not mistake K Bank for KB Kookmin Bank', () => {
+    expect(resolveBrandLogoPath('K Bank')).toBe('');
+    expect(resolveBrandLogoPath('KB Kookmin Bank')).toBe('/logos/kb-kookmin.svg');
   });
 });
