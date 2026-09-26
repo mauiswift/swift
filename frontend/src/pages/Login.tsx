@@ -612,6 +612,11 @@ export default function Login() {
             flex: 0 0 52px;
             border-radius: 999px;
           }
+          .ak-telegram-login {
+            width: 100%;
+            flex: 1 0 100%;
+            border-radius: 10px;
+          }
           .ak-method-label {
             display: none;
           }
@@ -726,7 +731,6 @@ export default function Login() {
                           await loginWithTelegram(telegramUser, turnstileToken);
                         }}
                       />
-                      <span className="ak-method-label">{isKorean ? 'Telegram' : 'Telegram'}</span>
                     </div>
                   )}
                 </div>

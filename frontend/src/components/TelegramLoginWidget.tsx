@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TelegramWidgetUser } from '@/lib/auth';
-import { Send } from 'lucide-react';
 
 interface TelegramLoginWidgetProps {
   botName: string;
@@ -13,7 +12,7 @@ interface TelegramLoginWidgetProps {
 
 declare global {
   interface Window {
-    onTelegramAuth: (user: any) => void;
+    onTelegramAuth?: (user: TelegramWidgetUser) => void;
   }
 }
 
@@ -26,18 +25,12 @@ export default function TelegramLoginWidget({
   showUserPhoto = true,
 }: TelegramLoginWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Memoize the auth callback to prevent unnecessary re-renders
-  const memoizedOnAuth = useCallback(
-    (user: any) => {
-      onAuth(user as TelegramWidgetUser);
-    },
-    [onAuth]
-  );
+  const onAuthRef = useRef(onAuth);
+  onAuthRef.current = onAuth;
 
   useEffect(() => {
-    // Define global callback for Telegram script
-    window.onTelegramAuth = memoizedOnAuth;
+    const handleTelegramAuth = (user: TelegramWidgetUser) => onAuthRef.current(user);
+    window.onTelegramAuth = handleTelegramAuth;
 
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
@@ -57,26 +50,18 @@ export default function TelegramLoginWidget({
       if (container) {
         container.innerHTML = '';
       }
-      delete (window as any).onTelegramAuth;
+      if (window.onTelegramAuth === handleTelegramAuth) {
+        delete window.onTelegramAuth;
+      }
     };
-  }, [botName, memoizedOnAuth, buttonSize, cornerRadius, requestAccess])
+  }, [botName, buttonSize, cornerRadius, requestAccess])
 
   return (
     <div
-      className="relative inline-flex h-11 w-11 items-center justify-center"
+      ref={containerRef}
+      aria-label="Continue with Telegram"
+      className="inline-flex min-h-10 max-w-full items-center justify-center"
       title="Continue with Telegram"
-    >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none flex h-11 w-11 items-center justify-center rounded-full border border-[#111111] bg-transparent text-[#111111] shadow-sm transition-transform hover:scale-105"
-      >
-        <Send size={20} fill="none" stroke="currentColor" strokeWidth={2.2} />
-      </span>
-      <div
-        ref={containerRef}
-        aria-label="Continue with Telegram"
-        className="absolute inset-0 z-10 overflow-hidden opacity-0"
-      />
-    </div>
+    />
   );
 }
