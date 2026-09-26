@@ -449,6 +449,56 @@ class TestKRWDisbursementRequest:
         db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_php_qr_p2m_approval_forwards_saved_merchant_metadata(self):
+        from routers.wallet import approve_withdrawal
+        from services.swiftpay_service import SwiftPayService
+
+        merchant_information = {
+            "merchantId": "MERCHANT123",
+            "merchantCreditAccountNumber": "1234567890123",
+            "proxyNotifyFlag": "Y",
+            "merchantCategoryCode": "5812",
+        }
+        disbursement = Disbursements(
+            id=793,
+            user_id="merchant-1",
+            external_id="qrph-review-793",
+            amount=250,
+            currency="PHP",
+            bank_code="BNORPHMXXX",
+            account_number="1234567890123",
+            account_name="Test Merchant",
+            swiftpay_transfer_type="QR_P2M",
+            swiftpay_merchant_information=merchant_information,
+            status="processing",
+        )
+        db = AsyncMock()
+        db.execute.return_value = Mock(
+            scalar_one_or_none=Mock(return_value=disbursement)
+        )
+        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        provider_response = {
+            "success": True,
+            "reference_no": disbursement.external_id,
+            "data": {"id": "swiftpay-provider-id-793"},
+        }
+
+        with patch.object(
+            SwiftPayService,
+            "send_disbursement",
+            new=AsyncMock(return_value=provider_response),
+        ) as send_disbursement, patch(
+            "routers.wallet.TransactionsService"
+        ) as transaction_service:
+            transaction_service.return_value.create_transaction = AsyncMock()
+            response = await approve_withdrawal(793, current_user, db)
+
+        assert response["success"] is True
+        assert send_disbursement.await_args.kwargs["transfer_type"] == "QR_P2M"
+        assert send_disbursement.await_args.kwargs["merchant_information"] == merchant_information
+        assert send_disbursement.await_args.kwargs["full_name"] == "Test Merchant"
+
+    @pytest.mark.asyncio
     async def test_php_withdrawal_reconciliation_marks_provider_execution_complete(self):
         from routers.wallet import reconcile_php_withdrawal
         from services.swiftpay_service import SwiftPayService

@@ -589,10 +589,24 @@ class WalletsService(BaseService[Wallets]):
         currency: str = "PHP",
         external_reference: Optional[str] = None,
         bank_code: Optional[str] = None,
+        swiftpay_transfer_type: Optional[str] = None,
+        swiftpay_merchant_information: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Submit a withdrawal request against available liquidity."""
         if not math.isfinite(amount) or amount <= 0:
             raise ValueError("Amount must be a positive finite number")
+
+        if swiftpay_transfer_type:
+            swiftpay_transfer_type = swiftpay_transfer_type.strip().upper()
+            if swiftpay_transfer_type not in {"P2P", "QR_P2P", "QR_P2M", "QR_P2MICRO"}:
+                raise ValueError("Unsupported SwiftPay disbursement type")
+        if swiftpay_transfer_type == "QR_P2M":
+            if not swiftpay_merchant_information:
+                raise ValueError("QR_P2M disbursements require merchant information")
+            if not swiftpay_merchant_information.get("merchantCategoryCode") or not swiftpay_merchant_information.get("proxyNotifyFlag"):
+                raise ValueError("QR_P2M disbursements require merchant category and proxy notification fields")
+        elif swiftpay_merchant_information:
+            raise ValueError("Merchant information is only supported for QR_P2M disbursements")
 
         currency_upper = self._normalize_currency(currency)
         canonical_bank_code = (bank_code or bank_name or "Manual").strip()
@@ -687,6 +701,8 @@ class WalletsService(BaseService[Wallets]):
             bank_code=canonical_bank_code,
             account_number=account_number or "Manual",
             account_name=account_name or user_id,
+            swiftpay_transfer_type=swiftpay_transfer_type,
+            swiftpay_merchant_information=swiftpay_merchant_information,
             recipient_phone=recipient_phone,
             description=note or transfer_label,
             status="processing",

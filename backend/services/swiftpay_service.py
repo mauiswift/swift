@@ -680,6 +680,9 @@ class SwiftPayService:
         note: str = "",
         channel: str = "INSTAPAY",
         currency: str = "PHP",
+        transfer_type: Optional[str] = None,
+        merchant_information: Optional[Dict[str, Any]] = None,
+        full_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Send a disbursement via SwiftPay Disbursement API (Step 1 & 2)."""
         if not self.is_configured():
@@ -689,6 +692,18 @@ class SwiftPayService:
         normalized_channel = str(channel or "").strip().upper()
         if normalized_channel not in {"INSTAPAY", "PESONET"}:
             return {"success": False, "error": "Disbursement channel must be INSTAPAY or PESONET"}
+        normalized_transfer_type = str(transfer_type or "").strip().upper() or None
+        if normalized_transfer_type and normalized_transfer_type not in {
+            "P2P", "QR_P2P", "QR_P2M", "QR_P2MICRO"
+        }:
+            return {"success": False, "error": "Unsupported SwiftPay disbursement type"}
+        if normalized_transfer_type == "QR_P2M":
+            if normalized_channel != "INSTAPAY":
+                return {"success": False, "error": "QR_P2M disbursements require the INSTAPAY channel"}
+            if not merchant_information or not merchant_information.get("merchantCategoryCode") or not merchant_information.get("proxyNotifyFlag"):
+                return {"success": False, "error": "QR_P2M disbursements require merchant category and proxy notification fields"}
+        elif merchant_information:
+            return {"success": False, "error": "Merchant information is only supported for QR_P2M disbursements"}
         base_reference = (reference_no or "").strip()
         if not base_reference:
             base_reference = f"swiftpay-disb-{uuid.uuid4().hex[:12]}"
@@ -703,8 +718,11 @@ class SwiftPayService:
                 "success": False,
                 "error": "A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)",
             }
+        # Prefer the recipient's exact name when the source is a QR merchant label.
+        if full_name:
+            full_name = full_name.strip()
         # Backward compatibility: callers may pass account_name instead of split first/last names.
-        if (not first_name and not last_name) and account_name:
+        elif (not first_name and not last_name) and account_name:
             name_parts = [part for part in str(account_name).split() if part]
             if name_parts:
                 first_name = name_parts[0]
@@ -713,7 +731,7 @@ class SwiftPayService:
                     middle_name = " ".join(name_parts[1:-1]) if not middle_name else middle_name
         first_name = first_name or "Customer"
         last_name = last_name or "Customer"
-        full_name = " ".join(
+        full_name = full_name or " ".join(
             part for part in (first_name, middle_name, last_name) if part
         ).strip() or "Customer"
 
@@ -742,6 +760,10 @@ class SwiftPayService:
                 }
             }
         }
+        if normalized_transfer_type:
+            payload["type"] = normalized_transfer_type
+        if merchant_information:
+            payload["recipientInformation"]["merchantInformation"] = merchant_information
 
         # Basic Auth: base64(accessKey:secretKey)
         auth_str = f"{self.access_key}:{self.secret_key}"

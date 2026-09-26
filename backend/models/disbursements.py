@@ -1,5 +1,5 @@
 from core.database import Base
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String
+from sqlalchemy import Column, DateTime, Float, Index, Integer, JSON, String
 
 
 class Disbursements(Base):
@@ -23,6 +23,8 @@ class Disbursements(Base):
     bank_code = Column(String, nullable=True)
     account_number = Column(String, nullable=True)
     account_name = Column(String, nullable=True)
+    swiftpay_transfer_type = Column(String, nullable=True)
+    swiftpay_merchant_information = Column(JSON, nullable=True)
     recipient_phone = Column(String(32), nullable=True)
     description = Column(String, nullable=True)
     status = Column(String, nullable=True)  # pending, processing, completed, failed, reversed

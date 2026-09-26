@@ -7,7 +7,7 @@ import re
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
@@ -214,8 +214,8 @@ async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -
 def _parse_tlv(s: str) -> dict:
     """Parse an EMVCo/QRPH TLV-encoded string into a tag→value dict.
 
-    Tag reference: 53=Currency (608=PHP), 58=Country, 59=Merchant Name,
-    60=City, 62=Additional Data (sub-tag 05=Reference Label, 01=Bill Number).
+    QR P2M uses tag 28 merchant fields, 52 category, 53 currency, 54 amount,
+    55-57 tip/fee details, 59-60 merchant details, and 62 additional data.
     The equivalent parser exists in ScanQRPH.tsx (frontend).
     """
     result: dict = {}
@@ -270,70 +270,178 @@ async def _process_scanqr(
     amount: float,
     qr_data: str,
 ) -> None:
-    """Process a QRPH payment after the amount and QR data have been collected."""
+    """Reserve wallet funds for a QRPH P2M disbursement after approval."""
+    owner_bypass = (chat_id == _get_bot_owner_id()) or chat_id in [
+        value.strip().lstrip("@")
+        for value in str(getattr(settings, "telegram_admin_ids", "") or "").split(",")
+        if value.strip()
+    ]
+    if not owner_bypass and not _is_pin_session_active(chat_id):
+        admin_record = await _get_admin_user_record(db, chat_id)
+        if admin_record and admin_record.pin_hash:
+            await tg.send_message(
+                chat_id,
+                "🔐 <b>PIN Required</b>\n\nPlease authenticate first:\n\n<code>/login [your PIN]</code>",
+            )
+        elif admin_record:
+            await tg.send_message(
+                chat_id,
+                "🔒 <b>Security Setup Required</b>\n\nPlease set a PIN first:\n\n<code>/setpin [4-6 digits]</code>",
+            )
+        else:
+            await tg.send_message(
+                chat_id,
+                "🔐 <b>PIN Required</b>\n\nPlease authenticate first via /login [PIN].",
+            )
+        return
+
     tlv = _parse_tlv(qr_data)
     merchant_name = tlv.get("59", "")
     merchant_city = tlv.get("60", "")
     currency_code = tlv.get("53", "")
-    currency = "PHP" if currency_code == "608" else currency_code or "PHP"
-    ref_num = ""
-    add_data = tlv.get("62", "")
-    if add_data:
-        sub = _parse_tlv(add_data)
-        ref_num = sub.get("05", sub.get("01", ""))
+    if currency_code != "608":
+        await tg.send_message(chat_id, "❌ Only Philippine-peso QRPH codes are supported.")
+        return
 
-    external_id = f"qrph-{uuid.uuid4().hex[:12]}"
-    reply_lines = [
-        "✅ <b>Payment Request Recorded</b>",
-        "━━━━━━━━━━━━━━━━━━━━",
-        f"💰 Amount: <b>₱{amount:,.2f} PHP</b>",
-    ]
-    if merchant_name:
-        reply_lines.append(f"🏪 Merchant: <b>{merchant_name}</b>")
-    if merchant_city:
-        reply_lines.append(f"📍 City: {merchant_city}")
-    if ref_num:
-        reply_lines.append(f"🆔 Reference: <code>{ref_num}</code>")
-    reply_lines += [
-        "",
-        "⏳ Status: <b>Waiting for Payment</b>",
-        "━━━━━━━━━━━━━━━━━━━━",
-        "💳 Please complete the transfer using your preferred Bank or E-Wallet app.",
-        "📷 <b>Note:</b> You can send a screenshot of the receipt here for manual verification if the automatic update is slow.",
-    ]
-    await tg.send_message(chat_id, "\n".join(reply_lines))
+    merchant_account = _parse_tlv(tlv.get("28", ""))
+    institution_code = merchant_account.get("01", "").strip()
+    account_number = merchant_account.get("04", "").strip()
+    merchant_id = merchant_account.get("03", "").strip()
+    proxy_notify_flag = merchant_account.get("05", "").strip()
+    merchant_category_code = tlv.get("52", "").strip()
+    if not all((institution_code, account_number, merchant_name, merchant_id, proxy_notify_flag, merchant_category_code)):
+        await tg.send_message(
+            chat_id,
+            "❌ This QRPH code is missing the merchant or institution details required for a SwiftPay QR_P2M transfer.",
+        )
+        return
 
     try:
-        # Register the QR payment with SwiftPay while retaining the scanned QR
-        # payload locally for reconciliation and manual verification.
-        qr_result = await payment_gateway.swift.generate_qrph(
-            amount=amount,
-            reference_no=external_id,
-            currency=currency,
+        qr_amount = float(tlv["54"]) if tlv.get("54") else None
+    except (TypeError, ValueError):
+        await tg.send_message(chat_id, "❌ This QRPH code contains an invalid amount.")
+        return
+    if qr_amount is not None and round(qr_amount, 2) != round(amount, 2):
+        await tg.send_message(
+            chat_id,
+            f"❌ The QR code amount is ₱{qr_amount:,.2f}; enter that exact amount to continue.",
         )
-        if not qr_result.get("success"):
-            logger.warning("SwiftPay QR generation failed for /scanqr: %s", qr_result.get("error"))
+        return
+    if not math.isfinite(amount) or amount <= 0 or amount > 50_000:
+        await tg.send_message(chat_id, "❌ Enter a valid PHP amount up to ₱50,000 for an InstaPay QR payment.")
+        return
 
-        txn = Transactions(
-            user_id=f"tg-{chat_id}", transaction_type="qrph_payment",
-            external_id=external_id, xendit_id="",
-            amount=amount, currency=currency, status="pending",
-            description=f"QRPH payment{f' to {merchant_name}' if merchant_name else ''}",
-            customer_name=merchant_name,
-            # Reuse qr_code_url to store the raw QRPH/EMVCo string (existing schema
-            # field; capped at 500 chars to fit the column).
-            qr_code_url=qr_data[:500], telegram_chat_id=chat_id,
-            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+    additional_data = _parse_tlv(tlv.get("62", ""))
+    tip_codes = {"01": "GRTY", "02": "SRCH", "03": "INTC"}
+    merchant_information: Dict[str, Any] = {
+        "merchantId": merchant_id,
+        "merchantCreditAccountNumber": account_number,
+        "proxyNotifyFlag": proxy_notify_flag,
+        "merchantCategoryCode": merchant_category_code,
+    }
+    if tlv.get("55"):
+        if tlv["55"] not in tip_codes:
+            await tg.send_message(chat_id, "❌ This QRPH code has an unsupported tip or fee indicator.")
+            return
+        merchant_information["tipOrFeeIndicator"] = tip_codes[tlv["55"]]
+    try:
+        if tlv.get("56"):
+            tip_or_fee_amount = float(tlv["56"])
+        elif tlv.get("57"):
+            tip_or_fee_amount = round(amount * float(tlv["57"]) / 100, 2)
+        else:
+            tip_or_fee_amount = None
+    except ValueError:
+        await tg.send_message(chat_id, "❌ This QRPH code contains an invalid tip or fee amount.")
+        return
+    if tip_or_fee_amount is not None:
+        if not math.isfinite(tip_or_fee_amount) or tip_or_fee_amount <= 0:
+            await tg.send_message(chat_id, "❌ This QRPH code contains an invalid tip or fee amount.")
+            return
+        merchant_information["tipOrFeeAmount"] = tip_or_fee_amount
+    for qr_tag, api_field in (
+        ("03", "storeLabel"),
+        ("04", "loyaltyNumber"),
+        ("05", "referenceLabel"),
+        ("07", "terminalLabel"),
+    ):
+        if additional_data.get(qr_tag):
+            merchant_information[api_field] = additional_data[qr_tag]
+    acquirer_data = _parse_tlv(tlv.get("88", ""))
+    if acquirer_data.get("01"):
+        merchant_information["additionalAcquirerInformation"] = acquirer_data["01"]
+
+    reference_label = additional_data.get("05", "")
+    note = f"QRPH P2M payment to {merchant_name}"
+    if reference_label:
+        note += f" ({reference_label})"
+
+    from services.wallets import WalletsService
+
+    try:
+        result = await WalletsService(db).withdraw_request(
+            user_id=chat_id,
+            amount=amount,
+            bank_name=institution_code,
+            bank_code=institution_code,
+            account_number=account_number,
+            account_name=merchant_name,
+            note=note,
+            currency="PHP",
+            swiftpay_transfer_type="QR_P2M",
+            swiftpay_merchant_information=merchant_information,
         )
-        db.add(txn)
-        await db.commit()
-        await db.refresh(txn)
-    except Exception as e:
-        logger.error(f"DB save failed for /scanqr: {e}", exc_info=True)
-        try:
-            await db.rollback()
-        except Exception:
-            pass
+    except ValueError as exc:
+        await _send_bot_error(
+            tg,
+            chat_id,
+            str(exc),
+            next_step="Check your PHP wallet balance and QR code, then try again.",
+            title="QRPH payment unavailable",
+        )
+        return
+
+    reference_id = str(result.get("reference_id", ""))
+    from services.admin_notification_service import AdminNotificationService
+
+    try:
+        await AdminNotificationService.notify_super_admins(
+            db=db,
+            notification_type="withdrawal_request",
+            title="New QRPH P2M payment request",
+            message=f"QRPH P2M payment of PHP {amount:,.2f} to {merchant_name} is awaiting super-admin approval.",
+            user_id=str(chat_id),
+            user_name=username or str(chat_id),
+            resource_type="disbursement",
+            resource_id=reference_id,
+            priority="high",
+            action_url="/withdrawals",
+        )
+    except Exception:
+        logger.exception("QRPH disbursement %s was reserved but admin notification failed", reference_id)
+        await tg.send_message(
+            chat_id,
+            "✅ Your QRPH request was saved and the wallet amount is reserved, but the administrator could not be notified. Do not submit it again; contact support.",
+        )
+        return
+
+    lines = [
+        "✅ <b>QRPH Payment Request Received</b>",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"💰 Amount: <b>₱{amount:,.2f} PHP</b>",
+        f"🏪 Merchant: <b>{_escape_html(merchant_name)}</b>",
+    ]
+    if merchant_city:
+        lines.append(f"📍 City: {_escape_html(merchant_city)}")
+    if reference_label:
+        lines.append(f"🆔 Reference: <code>{_escape_html(reference_label)}</code>")
+    lines += [
+        f"🔖 Request: <code>{_escape_html(reference_id)}</code>",
+        "",
+        "⏳ Status: <b>Awaiting super-admin approval</b>",
+        "Your PHP wallet funds are reserved. The QRPH transfer will be submitted to SwiftPay after approval.",
+    ]
+    await tg.send_message(chat_id, "\n".join(lines))
 
 
 async def _create_gateway_qr_payment(
@@ -587,7 +695,7 @@ _BOT_COMMANDS = [
     {"command": "logout", "description": "End the current PIN session"},
     {"command": "link", "description": "Create a SwiftPay payment link"},
     {"command": "linkkrw", "description": "Create a KRW payment link"},
-    {"command": "scanqr", "description": "Create a SwiftPay QRPH payment"},
+    {"command": "scanqr", "description": "Pay a QRPH merchant from your PHP wallet"},
     {"command": "alipay", "description": "Create an Alipay payment"},
     {"command": "wechat", "description": "Create a WeChat payment"},
     {"command": "status", "description": "Check payment or transfer status"},
@@ -777,6 +885,21 @@ def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]]
     """Initialise pending state for cmd and return the first prompt."""
     currency = (currency or _wizard_currency(chat_id, cmd)).upper()
     steps = _CMD_STEPS.get(cmd, [])
+
+    total_steps = len(steps)
+    current_step_num = start_step + 1
+
+    # Ensure PIN session is active for sensitive commands
+    if steps and cmd in ("/send", "/sendusd", "/sendusdt", "/withdraw", "/disburse", "/scanqr"):
+        owner_bypass = (chat_id == _get_bot_owner_id()) or chat_id in [
+            e.strip().lstrip("@") for e in str(getattr(settings, "telegram_admin_ids", "") or "").split(",") if e.strip()
+        ]
+        if not owner_bypass and not _is_pin_session_active(chat_id):
+            # We can't easily check DB here as this function is not async and doesn't have DB access.
+            # We'll return a message that will be caught by the caller if possible,
+            # or just rely on the command-level checks.
+            return "🔐 <b>PIN Required</b>\n\nPlease authenticate first via /login [PIN]"
+
     pending_state = _pending.get(chat_id)
     if pending_state and pending_state["cmd"] == cmd and pending_state["step"] < len(steps):
         start_step = pending_state["step"]
@@ -787,9 +910,6 @@ def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]]
             "data": initial_data.copy() if initial_data else {},
         }
 
-    total_steps = len(steps)
-    current_step_num = start_step + 1
-
     if not steps:
         return (
             f"<b>{cmd}</b>\n"
@@ -797,17 +917,6 @@ def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]]
             f"This command is available directly from the bot.\n\n"
             f"💡 Use the command text itself to trigger it, or type /help for the full catalog."
         )
-
-    # Ensure PIN session is active for sensitive commands
-    if cmd in ("/send", "/sendusd", "/sendusdt", "/withdraw", "/disburse"):
-        owner_bypass = (chat_id == _get_bot_owner_id()) or chat_id in [
-            e.strip().lstrip("@") for e in str(getattr(settings, "telegram_admin_ids", "") or "").split(",") if e.strip()
-        ]
-        if not owner_bypass and not _is_pin_session_active(chat_id):
-            # We can't easily check DB here as this function is not async and doesn't have DB access.
-            # We'll return a message that will be caught by the caller if possible, 
-            # or just rely on the command-level checks.
-            return "🔐 <b>PIN Required</b>\n\nPlease authenticate first via /login [PIN]"
 
     prompt = _render_wizard_prompt(chat_id, cmd, steps[start_step]["prompt"])
 
@@ -1855,7 +1964,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 cmd = cq_data.split(":")[1]
                 
                 # PIN check for sensitive wizard commands
-                if cmd in ("/send", "/sendusd", "/sendusdt", "/withdraw", "/disburse"):
+                if cmd in ("/send", "/sendusd", "/sendusdt", "/withdraw", "/disburse", "/scanqr"):
                     owner_bypass = (cq_chat_id == _get_bot_owner_id()) or cq_chat_id in [
                         e.strip().lstrip("@") for e in str(getattr(settings, "telegram_admin_ids", "") or "").split(",") if e.strip()
                     ]
@@ -1976,7 +2085,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             return {"status": "ok"}
 
         # ==================== PIN session gate ====================
-        # MOVED: PIN gate is now only applied to /send and /withdraw commands.
+        # Sensitive payout actions, including /scanqr, verify PIN at request time.
 
         # ==================== Photo message → receipt upload or wizard photo step ====================
         if photos and not text:
@@ -3890,7 +3999,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /reports — Analytics and summaries\n\n"
                 "💳 <b>Actions</b>\n"
                 "  /link [amt] [desc] — SwiftPay payment link\n"
-                "  /scanqr — QRPH payment\n"
+                "  /scanqr — Pay a QRPH merchant from your PHP wallet\n"
                 "  /disburse — SwiftPay payout\n"
                 "  /deposit — Bank or wallet deposit\n"
                 "  /topup [amt] — Add funds via USDT\n"
@@ -3908,7 +4017,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /reports — 分析与报表\n\n"
                 "💳 <b>快捷操作</b>\n"
                 "  /link [金额] [说明] — SwiftPay 付款链接\n"
-                "  /scanqr — QRPH 扫码支付\n"
+                "  /scanqr — QRPH 扫码付款\n"
                 "  /disburse — SwiftPay 出款\n"
                 "  /deposit — 银行或钱包入账\n"
                 "  /topup [金额] — USDT 充值\n"
@@ -3926,7 +4035,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /reports — 분석 및 보고서\n\n"
                 "💳 <b>빠른 작업</b>\n"
                 "  /link [금액] [설명] — SwiftPay 결제 링크\n"
-                "  /scanqr — QRPH 결제\n"
+                "  /scanqr — QRPH 가맹점 결제\n"
                 "  /disburse — SwiftPay 지급\n"
                 "  /deposit — 은행 또는 지갑 입금\n"
                 "  /topup [금액] — USDT 충전\n"

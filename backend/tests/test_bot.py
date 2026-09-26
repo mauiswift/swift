@@ -1163,6 +1163,32 @@ class TestScanQrWizard:
     def _photo_body(self, file_id: str = "fake_file_id") -> dict:
         return _photo_webhook_body(chat_id=self.CHAT_ID, file_id=file_id)
 
+    @staticmethod
+    def _valid_qrph_p2m_payload() -> str:
+        def tlv(tag: str, value: str) -> str:
+            return f"{tag}{len(value):02d}{value}"
+
+        merchant_account = "".join(
+            (
+                tlv("01", "BNORPHMXXX"),
+                tlv("03", "MERCHANT123"),
+                tlv("04", "1234567890123"),
+                tlv("05", "Y"),
+            )
+        )
+        additional_data = tlv("05", "SALE-123")
+        return "".join(
+            (
+                tlv("28", merchant_account),
+                tlv("52", "5812"),
+                tlv("53", "608"),
+                tlv("58", "PH"),
+                tlv("59", "Test Merchant"),
+                tlv("60", "Manila"),
+                tlv("62", additional_data),
+            )
+        )
+
     def test_scanqr_command_starts_wizard(self, client):
         """/scanqr should prompt the user for an amount (wizard step 1)."""
         # Clear any existing wizard state for this chat
@@ -1176,6 +1202,18 @@ class TestScanQrWizard:
         assert str(self.CHAT_ID) in _pending
         assert _pending[str(self.CHAT_ID)]["cmd"] == "/scanqr"
         assert _pending[str(self.CHAT_ID)]["step"] == 0
+
+    def test_scanqr_requires_pin_before_creating_wizard_state(self):
+        from routers.telegram import _PIN_SESSIONS, _pending, _wizard_start
+
+        chat_id = "987654321"
+        _pending.pop(chat_id, None)
+        _PIN_SESSIONS.pop(chat_id, None)
+
+        response = _wizard_start(chat_id, "/scanqr")
+
+        assert "PIN Required" in response
+        assert chat_id not in _pending
 
     def test_scanqr_wizard_invalid_amount(self, client):
         """Sending a non-numeric amount should keep the wizard at step 0."""
@@ -1239,13 +1277,13 @@ class TestScanQrWizard:
         assert _pending.get(str(self.CHAT_ID), {}).get("step") == 1
 
     def test_scanqr_wizard_valid_photo_completes_payment(self, client):
-        """Uploading a photo with a valid QR code should complete the wizard and record payment."""
+        """Uploading a supported QRPH P2M code should complete the wizard."""
         from routers.telegram import _pending
         _pending[str(self.CHAT_ID)] = {
             "cmd": "/scanqr", "step": 1, "data": {"amount": "250.0"},
         }
 
-        sample_qr = "5303608591255555559999996011MANILA CITY"
+        sample_qr = self._valid_qrph_p2m_payload()
 
         with patch(
             "routers.telegram._decode_qr_from_telegram_photo",
@@ -1257,6 +1295,69 @@ class TestScanQrWizard:
         assert r.json()["status"] == "ok"
         # Wizard state should be cleared after successful completion
         assert str(self.CHAT_ID) not in _pending
+
+    @pytest.mark.asyncio
+    async def test_scanqr_reserves_wallet_and_persists_qr_p2m_fields(self):
+        from routers.telegram import _process_scanqr
+
+        tg = AsyncMock()
+        db = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock(
+            return_value={"success": True, "reference_id": "wd-qrph-123"}
+        )
+        merchant_fields = {
+            "merchantId": "MERCHANT123",
+            "merchantCreditAccountNumber": "1234567890123",
+            "proxyNotifyFlag": "Y",
+            "merchantCategoryCode": "5812",
+            "referenceLabel": "SALE-123",
+        }
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service), patch(
+            "services.admin_notification_service.AdminNotificationService.notify_super_admins",
+            new=AsyncMock(return_value=[]),
+        ):
+            await _process_scanqr(
+                tg,
+                db,
+                str(self.CHAT_ID),
+                "testuser",
+                250,
+                self._valid_qrph_p2m_payload(),
+            )
+
+        wallet_service.withdraw_request.assert_awaited_once_with(
+            user_id=str(self.CHAT_ID),
+            amount=250,
+            bank_name="BNORPHMXXX",
+            bank_code="BNORPHMXXX",
+            account_number="1234567890123",
+            account_name="Test Merchant",
+            note="QRPH P2M payment to Test Merchant (SALE-123)",
+            currency="PHP",
+            swiftpay_transfer_type="QR_P2M",
+            swiftpay_merchant_information=merchant_fields,
+        )
+        assert "Awaiting super-admin approval" in tg.send_message.await_args.args[1]
+
+    @pytest.mark.asyncio
+    async def test_scanqr_rejects_amount_mismatch_before_wallet_debit(self):
+        from routers.telegram import _process_scanqr
+
+        tg = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock()
+        qr_payload = self._valid_qrph_p2m_payload()
+        qr_payload += f"5406250.00"
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service):
+            await _process_scanqr(
+                tg, AsyncMock(), str(self.CHAT_ID), "testuser", 249, qr_payload
+            )
+
+        wallet_service.withdraw_request.assert_not_awaited()
+        assert "QR code amount is ₱250.00" in tg.send_message.await_args.args[1]
 
     def test_scanqr_wizard_cancel_clears_state(self, client):
         """/cancel during the wizard should clear wizard state."""

@@ -448,6 +448,46 @@ async def test_send_disbursement_uses_documented_institution_code(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_qr_p2m_disbursement_includes_documented_qr_fields(monkeypatch):
+    svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            captured_payload.update(json)
+            return DummyResponse(status_code=200, text="")
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+    merchant_information = {
+        "merchantId": "MERCHANT123",
+        "merchantCreditAccountNumber": "1234567890123",
+        "proxyNotifyFlag": "Y",
+        "merchantCategoryCode": "5812",
+        "referenceLabel": "SALE-123",
+    }
+
+    result = await svc.send_disbursement(
+        reference_no="QRPH-123",
+        amount=250,
+        bank_code="BNORPHMXXX",
+        account_number="1234567890123",
+        full_name="Test Merchant",
+        transfer_type="QR_P2M",
+        merchant_information=merchant_information,
+    )
+
+    assert result["success"] is True
+    assert captured_payload["type"] == "QR_P2M"
+    assert captured_payload["channel"] == "INSTAPAY"
+    assert captured_payload["institutionCode"] == "BNORPHMXXX"
+    assert captured_payload["recipientInformation"]["fullName"] == "Test Merchant"
+    assert captured_payload["recipientInformation"]["merchantInformation"] == merchant_information
+
+
+@pytest.mark.asyncio
 async def test_send_disbursement_rejects_invalid_contract_values():
     svc = SwiftPayService()
 
@@ -464,6 +504,15 @@ async def test_send_disbursement_rejects_invalid_contract_values():
         account_number="1234567890",
         channel="BANK",
     ))["error"] == "Disbursement channel must be INSTAPAY or PESONET"
+    assert (await svc.send_disbursement(
+        reference_no="DISB-INVALID",
+        amount=100,
+        bank_code="BDO",
+        account_number="1234567890",
+        transfer_type="QR_P2M",
+    ))["error"] == (
+        "QR_P2M disbursements require merchant category and proxy notification fields"
+    )
     assert (await svc.send_disbursement(
         reference_no="x" * 51,
         amount=100,

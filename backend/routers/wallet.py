@@ -1251,18 +1251,17 @@ async def approve_withdrawal(
 	if currency == "PHP":
 		from services.swiftpay_service import SwiftPayService
 
-		name_parts = [part for part in (disb.account_name or "").split() if part]
 		provider_result = await SwiftPayService().send_disbursement(
 			reference_no=disb.external_id or f"withdrawal-{disb.id}",
 			amount=float(disb.amount or 0),
 			bank_code=disb.bank_code or "",
 			account_number=disb.account_number or "",
-			first_name=name_parts[0] if name_parts else "Customer",
-			middle_name=" ".join(name_parts[1:-1]) if len(name_parts) > 2 else None,
-			last_name=name_parts[-1] if len(name_parts) > 1 else "Customer",
+			full_name=disb.account_name or "Customer",
 			phone=disb.recipient_phone,
 			note=disb.description or "Super admin PHP disbursement",
 			currency="PHP",
+			transfer_type=disb.swiftpay_transfer_type,
+			merchant_information=disb.swiftpay_merchant_information,
 		)
 		already_submitted = (
 			provider_result.get("code") == "DUPLICATE_MERCHANT_REFERENCE_NO"
@@ -1416,18 +1415,17 @@ async def reconcile_php_withdrawal(
 	else:
 		provider_result = await service.get_disbursement_by_reference(disb.external_id or "")
 		if provider_result.get("not_found"):
-			name_parts = [part for part in (disb.account_name or "").split() if part]
 			provider_result = await service.send_disbursement(
 				reference_no=disb.external_id or f"withdrawal-{disb.id}",
 				amount=float(disb.amount or 0),
 				bank_code=disb.bank_code or "",
 				account_number=disb.account_number or "",
-				first_name=name_parts[0] if name_parts else "Customer",
-				middle_name=" ".join(name_parts[1:-1]) if len(name_parts) > 2 else None,
-				last_name=name_parts[-1] if len(name_parts) > 1 else "Customer",
+				full_name=disb.account_name or "Customer",
 				phone=disb.recipient_phone,
 				note=disb.description or "Super admin PHP disbursement",
 				currency="PHP",
+				transfer_type=disb.swiftpay_transfer_type,
+				merchant_information=disb.swiftpay_merchant_information,
 			)
 	if not provider_result.get("success"):
 		raise HTTPException(

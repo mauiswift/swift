@@ -357,6 +357,7 @@ class TestWalletsService:
     @pytest.mark.asyncio
     async def test_withdraw_request_starts_in_processing_status(self):
         """Submitted withdrawals should be represented as processing from the moment they are created."""
+        from models.disbursements import Disbursements
         from services.wallets import WalletsService
         from unittest.mock import AsyncMock, MagicMock
 
@@ -393,10 +394,23 @@ class TestWalletsService:
             account_number="1234567890",
             account_name="Juan Dela Cruz",
             note="Manual withdrawal test",
+            swiftpay_transfer_type="QR_P2M",
+            swiftpay_merchant_information={
+                "merchantId": "MERCHANT123",
+                "merchantCreditAccountNumber": "1234567890123",
+                "proxyNotifyFlag": "Y",
+                "merchantCategoryCode": "5812",
+            },
         )
 
-        created_disb = db.add.call_args[0][0]
+        created_disb = next(
+            entry.args[0]
+            for entry in db.add.call_args_list
+            if isinstance(entry.args[0], Disbursements)
+        )
         assert created_disb.status == "processing"
+        assert created_disb.swiftpay_transfer_type == "QR_P2M"
+        assert created_disb.swiftpay_merchant_information["merchantId"] == "MERCHANT123"
 
     @pytest.mark.asyncio
     async def test_new_usdt_wallet_is_not_frozen_without_onboarding_limit(self):
