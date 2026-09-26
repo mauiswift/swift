@@ -16,9 +16,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
@@ -59,12 +60,31 @@ class PaymentApprovalRequest(BaseModel):
 def _require_payment_approval_access(user: UserResponse) -> None:
     """Ensure user is a super admin or has explicit payment approval permission."""
     if not (
-        user.permissions
-        and (user.permissions.is_super_admin or user.permissions.can_approve_topups)
+        str(user.id) == str(settings.telegram_bot_owner_id or "").strip()
+        or (
+            user.permissions
+            and (user.permissions.is_super_admin or user.permissions.can_approve_topups)
+        )
     ):
         raise HTTPException(
             status_code=403,
             detail="Payment approval permission required"
+        )
+
+
+def _is_krw_payment(txn: Transactions) -> bool:
+    return any(
+        str(currency or "").strip().upper() == "KRW"
+        for currency in (txn.original_currency, txn.currency)
+    )
+
+
+def _require_krw_payment_owner(user: UserResponse) -> None:
+    owner_id = str(settings.telegram_bot_owner_id or "").strip()
+    if not owner_id or str(user.id) != owner_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the bot owner can approve KRW payments",
         )
 
 
@@ -84,27 +104,37 @@ async def list_pending_payment_approvals(
     _require_payment_approval_access(current_user)
 
     try:
-        result = await db.execute(
-            select(Transactions)
-            .where(
-                Transactions.transaction_type.not_in([
-                    "disbursement", "swiftpay_disbursement", "withdrawal",
-                    "wallet_withdrawal", "topup", "wallet_topup", "crypto_topup",
-                    "bank_deposit", "refund", "fee", "commission", "settlement",
-                ]),
-                Transactions.amount > 0,
-                Transactions.external_id.is_not(None),
-                or_(
-                    Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
-                    and_(
-                        Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
-                        or_(
-                            Transactions.approval_status.is_(None),
-                            Transactions.approval_status == "pending",
-                        ),
+        query = select(Transactions).where(
+            Transactions.transaction_type.not_in([
+                "disbursement", "swiftpay_disbursement", "withdrawal",
+                "wallet_withdrawal", "topup", "wallet_topup", "crypto_topup",
+                "bank_deposit", "refund", "fee", "commission", "settlement",
+            ]),
+            Transactions.amount > 0,
+            Transactions.external_id.is_not(None),
+            or_(
+                Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
+                and_(
+                    Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
+                    or_(
+                        Transactions.approval_status.is_(None),
+                        Transactions.approval_status == "pending",
                     ),
                 ),
+            ),
+        )
+        is_bot_owner = (
+            bool(str(settings.telegram_bot_owner_id or "").strip())
+            and str(current_user.id) == str(settings.telegram_bot_owner_id).strip()
+        )
+        if not is_bot_owner:
+            query = query.where(
+                or_(Transactions.currency.is_(None), func.upper(Transactions.currency) != "KRW"),
+                or_(Transactions.original_currency.is_(None), func.upper(Transactions.original_currency) != "KRW"),
             )
+
+        result = await db.execute(
+            query
             .order_by(Transactions.created_at.desc(), Transactions.id.desc())
             .limit(limit)
         )
@@ -202,6 +232,8 @@ async def approve_payment_link(
     txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
+    if _is_krw_payment(txn):
+        _require_krw_payment_owner(current_user)
 
     approval_pending = txn.approval_status in {None, "pending"}
     retryable_settlement = (
@@ -341,6 +373,8 @@ async def reject_payment_link(
     txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
+    if _is_krw_payment(txn):
+        _require_krw_payment_owner(current_user)
 
     if txn.status not in APPROVABLE_PAYMENT_STATUSES and not (
         txn.status in EXTERNALLY_PAID_STATUSES

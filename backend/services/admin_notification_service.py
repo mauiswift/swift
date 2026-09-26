@@ -30,9 +30,10 @@ class AdminNotificationService:
         priority: str = "normal",
         action_url: Optional[str] = None,
         send_telegram: bool = True,
+        recipient_ids: Optional[List[str]] = None,
     ) -> List[AdminNotification]:
         """
-        Create a notification for all active super admins.
+        Create notifications for active super admins, or for explicitly targeted admins.
         
         Args:
             db: Database session
@@ -46,30 +47,42 @@ class AdminNotificationService:
             metadata: Additional metadata as JSON
             priority: Notification priority (low, normal, high, urgent)
             action_url: URL to view the resource in the dashboard
+            recipient_ids: Optional explicit Telegram IDs to notify instead of all super admins
         
         Returns:
             List of created notification records
         """
         try:
-            # Fetch all active super admins
-            result = await db.execute(
-                select(AdminUser).where(
-                    and_(
-                        AdminUser.is_super_admin == True,
-                        AdminUser.is_active == True,
+            if recipient_ids is None:
+                # Fetch all active super admins.
+                result = await db.execute(
+                    select(AdminUser).where(
+                        and_(
+                            AdminUser.is_super_admin == True,
+                            AdminUser.is_active == True,
+                        )
                     )
                 )
-            )
-            super_admins = result.scalars().all()
+                recipient_telegram_ids = [
+                    str(admin.telegram_id)
+                    for admin in result.scalars().all()
+                    if admin.telegram_id
+                ]
+            else:
+                recipient_telegram_ids = list(dict.fromkeys(
+                    str(recipient_id).strip()
+                    for recipient_id in recipient_ids
+                    if str(recipient_id).strip()
+                ))
             
-            if not super_admins:
-                logger.warning("No active super admins found to notify")
+            if not recipient_telegram_ids:
+                logger.warning("No configured administrators found to notify")
                 return []
-            
+
             notifications = []
-            for admin in super_admins:
+            for recipient_id in recipient_telegram_ids:
                 notification = AdminNotification(
-                    admin_id=admin.telegram_id,
+                    admin_id=recipient_id,
                     notification_type=notification_type,
                     title=title,
                     message=message,
@@ -108,10 +121,10 @@ class AdminNotificationService:
                     keyboard.append([{"text": "📋 View Details", "url": detail_url}])
                 telegram = TelegramService()
                 telegram_text = f"<b>{escape(title)}</b>\n\n{escape(message)}"
-                for admin in super_admins:
-                    if admin.telegram_id and not str(admin.telegram_id).startswith("web-"):
+                for recipient_id in recipient_telegram_ids:
+                    if not recipient_id.startswith("web-"):
                         await telegram.send_message(
-                            chat_id=admin.telegram_id,
+                            chat_id=recipient_id,
                             text=telegram_text,
                             parse_mode="HTML",
                             reply_markup={"inline_keyboard": keyboard},

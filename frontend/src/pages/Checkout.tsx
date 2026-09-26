@@ -637,6 +637,7 @@ export default function Checkout() {
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const isUsdt = currencyCode === 'USDT';
+  const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
   const currencyCapabilities = getCurrencyCapabilities(currencyCode);
   const supportsMagpieCard = currencyCapabilities.magpieCard;
   const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
 from core.database import get_db
 from models.transactions import Transactions
 from models.admin_users import AdminUser
@@ -32,6 +33,13 @@ from services.transactions import TransactionsService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/telegram", tags=["telegram-bot"])
+
+
+def _is_krw_payment(txn: Transactions) -> bool:
+    return any(
+        str(currency or "").strip().upper() == "KRW"
+        for currency in (txn.original_currency, txn.currency)
+    )
 
 
 class TelegramCallbackUpdate(BaseModel):
@@ -60,14 +68,20 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
 
     action, resource_id = parts
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
-    if not admin or not admin.is_super_admin:
+    is_bot_owner = (
+        bool(str(settings.telegram_bot_owner_id or "").strip())
+        and str(user_id) == str(settings.telegram_bot_owner_id).strip()
+    )
+    if (not admin or not admin.is_super_admin) and not is_bot_owner:
         await telegram_service.answer_callback_query(callback_id, "❌ You are not authorized to approve requests")
         return {"ok": False}
 
+    admin_id = str(admin.id) if admin else str(user_id)
+    admin_name = (admin.name if admin else None) or "Bot owner"
     admin_user = UserResponse(
-        id=str(admin.id),
+        id=admin_id,
         email=f"telegram:{user_id}",
-        name=admin.name,
+        name=admin_name,
         role="admin",
         permissions=UserPermissions(
             is_super_admin=True,
@@ -83,8 +97,16 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             txn = await db.get(Transactions, numeric_id)
             if not txn:
                 raise ValueError("Payment not found")
+            if _is_krw_payment(txn):
+                owner_id = str(settings.telegram_bot_owner_id or "").strip()
+                if not owner_id or str(user_id) != owner_id:
+                    await telegram_service.answer_callback_query(
+                        callback_id,
+                        "❌ Only the bot owner can approve KRW payments",
+                    )
+                    return {"ok": False}
             approved = await TransactionsService(db).approve_payment_link(
-                txn, approved_by=str(admin.id), note=note,
+                txn, approved_by=admin_id, note=note,
             )
             if not approved:
                 raise ValueError("Payment could not be approved")
@@ -94,9 +116,17 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             txn = await db.get(Transactions, numeric_id)
             if not txn:
                 raise ValueError("Payment not found")
+            if _is_krw_payment(txn):
+                owner_id = str(settings.telegram_bot_owner_id or "").strip()
+                if not owner_id or str(user_id) != owner_id:
+                    await telegram_service.answer_callback_query(
+                        callback_id,
+                        "❌ Only the bot owner can reject KRW payments",
+                    )
+                    return {"ok": False}
             txn.status = "failed"
             txn.approval_status = "rejected"
-            txn.approved_by = str(admin.id)
+            txn.approved_by = admin_id
             txn.rejection_reason = note
             await db.commit()
             status_text = "❌ Payment Rejected"
@@ -144,7 +174,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
         await telegram_service.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text=f"<b>{status_text}</b>\n\n<b>Request ID:</b> <code>{resource_id}</code>\n<b>Processed by:</b> {admin.name or 'Admin'}",
+            text=f"<b>{status_text}</b>\n\n<b>Request ID:</b> <code>{resource_id}</code>\n<b>Processed by:</b> {admin_name}",
             parse_mode="HTML",
         )
     await telegram_service.answer_callback_query(callback_id, response_text)
@@ -154,7 +184,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             text=(
                 f"<b>{status_text}</b>\n\n"
                 f"Request <code>#{resource_id}</code> was processed successfully.\n"
-                f"Processed by: {admin.name or 'Admin'}"
+                f"Processed by: {admin_name}"
             ),
             parse_mode="HTML",
         )

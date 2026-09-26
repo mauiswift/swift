@@ -6,8 +6,19 @@ from typing import Dict, Any
 from services.event_bus import payment_event_bus
 from services.admin_notification_service import AdminNotificationService
 from core.database import db_manager
+from core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _payment_recipient_ids(currency: str, original_currency: str | None = None) -> list[str] | None:
+    if all(
+        str(value or "").strip().upper() != "KRW"
+        for value in (currency, original_currency)
+    ):
+        return None
+    owner_id = str(settings.telegram_bot_owner_id or "").strip()
+    return [owner_id] if owner_id else []
 
 
 def _format_payment_received_message(data: Dict[str, Any]) -> str:
@@ -48,6 +59,10 @@ async def _handle_payment_created(data: Dict[str, Any]):
     payment_id = data.get("payment_id")
     if not payment_id:
         return
+    recipient_ids = _payment_recipient_ids(str(data.get("currency") or ""))
+    if recipient_ids == []:
+        logger.error("KRW payment notification skipped: TELEGRAM_BOT_OWNER_ID is not configured")
+        return
 
     async with db_manager.async_session_maker() as db:
         await AdminNotificationService.notify_super_admins(
@@ -70,6 +85,7 @@ async def _handle_payment_created(data: Dict[str, Any]):
             priority="normal",
             action_url=f"/payments/{payment_id}",
             send_telegram=False,
+            recipient_ids=recipient_ids,
         )
 
 
@@ -77,6 +93,10 @@ async def _handle_payment_link_created(data: Dict[str, Any]):
     """Create a dashboard notification without sending a premature bot alert."""
     payment_id = data.get("payment_id")
     if not payment_id:
+        return
+    recipient_ids = _payment_recipient_ids(str(data.get("currency") or ""))
+    if recipient_ids == []:
+        logger.error("KRW payment-link notification skipped: TELEGRAM_BOT_OWNER_ID is not configured")
         return
 
     async with db_manager.async_session_maker() as db:
@@ -101,14 +121,22 @@ async def _handle_payment_link_created(data: Dict[str, Any]):
             priority="normal",
             action_url="/payment-approvals",
             send_telegram=False,
+            recipient_ids=recipient_ids,
         )
 
 
 async def _handle_payment_received(data: Dict[str, Any]):
-    """Notify super admins only after the provider confirms receipt of a payment."""
+    """Notify the bot owner for KRW receipts and super admins for other currencies."""
     payment_id = data.get("payment_id")
     if not payment_id:
         logger.warning("Payment receipt notification ignored because payment_id is missing")
+        return
+
+    currency = str(data.get("currency") or "").strip().upper()
+    original_currency = str(data.get("original_currency") or "").strip().upper()
+    recipient_ids = _payment_recipient_ids(currency, original_currency)
+    if "KRW" in {currency, original_currency} and not recipient_ids:
+        logger.error("KRW payment receipt notification skipped: TELEGRAM_BOT_OWNER_ID is not configured")
         return
 
     async with db_manager.async_session_maker() as db:
@@ -124,6 +152,7 @@ async def _handle_payment_received(data: Dict[str, Any]):
             metadata={key: value for key, value in data.items() if key != "event_type"},
             priority="high",
             action_url="/payment-approvals",
+            recipient_ids=recipient_ids,
         )
 
 
