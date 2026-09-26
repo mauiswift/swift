@@ -88,6 +88,48 @@ async def test_create_order_calls_swiftpay(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_get_disbursement_institutions_fetches_instapay_catalogue(monkeypatch):
+    svc = SwiftPayService()
+    requested = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def get(self, url, headers=None):
+            requested["url"] = url
+            return DummyResponse(
+                status_code=200,
+                json_data=[
+                    {"code": "GXCHPHM2XXX", "name": "G-Xchange, Inc. (GCash)"},
+                    {"code": "PAPHPHM1XXX", "name": "MAYA PHILIPPINES, INC."},
+                ],
+            )
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    result = await svc.get_disbursement_institutions()
+
+    assert requested["url"].endswith("/api/disbursements/institutions?channel=INSTAPAY")
+    assert result == {
+        "success": True,
+        "data": [
+            {"code": "GXCHPHM2XXX", "name": "G-Xchange, Inc. (GCash)"},
+            {"code": "PAPHPHM1XXX", "name": "MAYA PHILIPPINES, INC."},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_disbursement_institution_catalogue_rejects_invalid_channel():
+    result = await SwiftPayService().get_disbursement_institutions("FAST")
+    assert result == {
+        "success": False,
+        "error": "Disbursement channel must be INSTAPAY or PESONET",
+    }
+
+
+@pytest.mark.asyncio
 async def test_create_order_retries_on_duplicate_reference(monkeypatch):
     os.environ.setdefault("SWIFTPAY_ACCESS_KEY", "ABC123")
     os.environ.setdefault("SWIFTPAY_SECRET_KEY", "SECRET")
@@ -143,7 +185,7 @@ async def test_create_order_payload_structure(monkeypatch):
         amount=100.0,
         reference_no="test-ref",
         details={"customerName": "John"},
-        institution_code="BNORPHMXXX",
+        institution_code="BNORPHMMXXX",
     )
 
     assert captured_payload["x_currency"] == "PHP"
@@ -408,7 +450,7 @@ async def test_send_disbursement_payload(monkeypatch):
 
     assert res["success"] is True
     assert captured_payload["merchantReferenceNo"] == "DISB-123"
-    assert captured_payload["institutionCode"] == "GCASH"
+    assert captured_payload["institutionCode"] == "GXCHPHM2XXX"
     assert "externalBankCode" not in captured_payload
     assert captured_payload["recipientInformation"]["fullName"] == "Juan Cruz"
     assert captured_payload["recipientInformation"]["mobileNumber"] == "+63-95-567-08019"
@@ -438,14 +480,53 @@ async def test_send_disbursement_uses_documented_institution_code(monkeypatch):
     result = await svc.send_disbursement(
         reference_no="DISB-BDO",
         amount=500.0,
-        bank_code="BNORPHMXXX",
+        bank_code="BNORPHMMXXX",
         account_number="1234567890",
         first_name="Juan",
         last_name="Cruz",
     )
 
     assert result["success"] is True
-    assert captured_payload["institutionCode"] == "BNORPHMXXX"
+    assert captured_payload["institutionCode"] == "BNORPHMMXXX"
+    assert "externalBankCode" not in captured_payload
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bank_code", "expected_institution_code"),
+    [
+        ("MAYA", "PAPHPHM1XXX"),
+        ("PAYMAYA", "PAPHPHM1XXX"),
+    ],
+)
+async def test_send_disbursement_normalizes_maya_alias_to_catalogue_code(
+    monkeypatch,
+    bank_code,
+    expected_institution_code,
+):
+    svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            captured_payload.update(json)
+            return DummyResponse(status_code=200, text="")
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    result = await svc.send_disbursement(
+        reference_no="DISB-MAYA",
+        amount=500.0,
+        bank_code=bank_code,
+        account_number="639556708019",
+        phone="639556708019",
+    )
+
+    assert result["success"] is True
+    assert captured_payload["institutionCode"] == expected_institution_code
     assert "externalBankCode" not in captured_payload
 
 
@@ -474,7 +555,7 @@ async def test_send_qr_p2m_disbursement_includes_documented_qr_fields(monkeypatc
     result = await svc.send_disbursement(
         reference_no="QRPH-123",
         amount=250,
-        bank_code="BNORPHMXXX",
+        bank_code="BNORPHMMXXX",
         account_number="1234567890123",
         full_name="Test Merchant",
         transfer_type="QR_P2M",
@@ -484,7 +565,7 @@ async def test_send_qr_p2m_disbursement_includes_documented_qr_fields(monkeypatc
     assert result["success"] is True
     assert captured_payload["type"] == "QR_P2M"
     assert captured_payload["channel"] == "INSTAPAY"
-    assert captured_payload["institutionCode"] == "BNORPHMXXX"
+    assert captured_payload["institutionCode"] == "BNORPHMMXXX"
     assert captured_payload["recipientInformation"]["fullName"] == "Test Merchant"
     assert captured_payload["recipientInformation"]["merchantInformation"] == merchant_information
 
@@ -538,8 +619,8 @@ def test_normalize_collection_institution_code_converts_bic_catalog_values():
 
 
 def test_normalize_disbursement_institution_code_converts_aliases():
-    assert SwiftPayService.normalize_disbursement_institution_code("BDO") == "BNORPHMXXX"
-    assert SwiftPayService.normalize_disbursement_institution_code("BPI") == "BOPIPHMXXX"
+    assert SwiftPayService.normalize_disbursement_institution_code("BDO") == "BNORPHMMXXX"
+    assert SwiftPayService.normalize_disbursement_institution_code("BPI") == "BOPIPHMMXXX"
 
 
 def test_validate_external_bank_code_rejects_unknown_short_code():

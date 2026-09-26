@@ -525,6 +525,60 @@ class TestTelegramWebhook:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_banks_command_lists_live_insta_pay_destinations(self, client):
+        sent_messages = []
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            sent_messages.append(text)
+            return {"success": True, "message_id": len(sent_messages)}
+
+        with (
+            patch(
+                "services.swiftpay_service.SwiftPayService.get_disbursement_institutions",
+                new=AsyncMock(return_value={
+                    "success": True,
+                    "data": [
+                        {"code": "BNORPHMMXXX", "name": "BDO"},
+                        {"code": "<script>", "name": "Unsafe & bank"},
+                    ],
+                }),
+            ),
+            patch.object(telegram_router, "_is_authorized_admin", new=AsyncMock(return_value=True)),
+            patch.object(telegram_router.TelegramService, "send_message", new=fake_send_message),
+        ):
+            response = client.post("/api/v1/telegram/webhook", json=_webhook_body("/banks"))
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        assert len(sent_messages) == 1
+        assert "<code>BNORPHMMXXX</code> — BDO" in sent_messages[0]
+        assert "&lt;script&gt;" in sent_messages[0]
+        assert "Unsafe &amp; bank" in sent_messages[0]
+        assert "Use a listed code with /withdraw or /disburse." in sent_messages[0]
+
+    def test_banks_command_reports_catalogue_load_failure(self, client):
+        sent_messages = []
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            sent_messages.append(text)
+            return {"success": True, "message_id": len(sent_messages)}
+
+        with (
+            patch(
+                "services.swiftpay_service.SwiftPayService.get_disbursement_institutions",
+                new=AsyncMock(return_value={"success": False, "error": "unavailable"}),
+            ),
+            patch.object(telegram_router, "_is_authorized_admin", new=AsyncMock(return_value=True)),
+            patch.object(telegram_router.TelegramService, "send_message", new=fake_send_message),
+        ):
+            response = client.post("/api/v1/telegram/webhook", json=_webhook_body("/banks"))
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        assert len(sent_messages) == 1
+        assert "Bank list unavailable" in sent_messages[0]
+        assert "try /banks again shortly" in sent_messages[0]
+
     def test_start_always_prompts_for_currency(self):
         captured = {}
 
@@ -1432,7 +1486,7 @@ class TestTelegramWithdrawalPhone:
             user_id="123456789",
             amount=1.0,
             bank_name="MAYA",
-            bank_code="MAYA",
+            bank_code="PAPHPHM1XXX",
             account_number="639556708019",
             account_name="Den",
             recipient_phone="+63-95-567-08019",
@@ -1506,6 +1560,22 @@ class TestWizardAnswerValidation:
         assert telegram_router._validate_wizard_answer(
             "/withdraw", {"key": "bank", "type": "str"}, "GCASH"
         ) is None
+
+    def test_accepts_any_swiftpay_catalogue_code_for_telegram_payouts(self):
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "bank", "type": "str"}, "BNORPHMMXXX"
+        ) is None
+        assert telegram_router._validate_wizard_answer(
+            "/disburse", {"key": "bank", "type": "str"}, "PAPHPHM1XXX"
+        ) is None
+        assert telegram_router._validate_wizard_answer(
+            "/withdraw", {"key": "bank", "type": "str"}, "not-a-bank"
+        )
+        assert telegram_router._validate_wizard_answer(
+            "/deposit", {"key": "channel", "type": "str"}, "BNORPHMMXXX"
+        )
+
+    def test_accepts_valid_common_answers(self):
         assert telegram_router._validate_wizard_answer(
             "/sendusdt", {"key": "address", "type": "str"},
             "TQm2R8kY8zZ7wX6vU5tS4rQ3pN2mL1kJH",

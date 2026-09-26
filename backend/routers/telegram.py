@@ -688,6 +688,7 @@ _BOT_COMMANDS = [
     {"command": "wallet", "description": "View wallet balances and activity"},
     {"command": "payments", "description": "Open the payments overview"},
     {"command": "disbursements", "description": "Open the payouts and disbursement overview"},
+    {"command": "banks", "description": "List supported InstaPay banks and wallets"},
     {"command": "reports", "description": "Open the reports and analytics view"},
     {"command": "help", "description": "Show available dashboard commands"},
     {"command": "login", "description": "Authenticate with your PIN"},
@@ -759,7 +760,7 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
         {"key": "amount", "type": "float", "prompt": "💰 Enter the USDT amount to sell:\n<i>e.g. 50</i>"},
     ],
     "/disburse": [
-        {"key": "bank",    "type": "str",   "prompt": "🏦 Enter the <b>channel / bank</b>:\n<i>GCASH · MAYA · BDO · BPI · UNIONBANK · METROBANK · LANDBANK</i>"},
+        {"key": "bank",    "type": "str",   "prompt": "🏦 Enter the <b>bank or wallet code</b>:\n<i>Use /banks to see all supported InstaPay destinations. You can also enter a common alias such as GCASH, MAYA, BDO, or BPI.</i>"},
         {"key": "account", "type": "str",   "prompt": "🔢 Enter the <b>account / mobile number</b>:\n<i>e.g. 09XXXXXXXXX or 1234567890</i>"},
         {"key": "name",    "type": "str",   "prompt": "👤 Enter the <b>account holder name</b>:\n<i>e.g. Juan Dela Cruz</i>"},
         {"key": "amount",  "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 1000</i>"},
@@ -798,7 +799,7 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
     ],
     "/stats": [],
     "/withdraw": [
-        {"key": "bank",    "type": "str",   "prompt": "🏦 Select the <b>clearing channel</b> (Destination Bank):\n<i>GCASH · MAYA · BDO · BPI · UNIONBANK · METROBANK · LANDBANK</i>"},
+        {"key": "bank",    "type": "str",   "prompt": "🏦 Enter the <b>bank or wallet code</b>:\n<i>Use /banks to see all supported InstaPay destinations. You can also enter a common alias such as GCASH, MAYA, BDO, or BPI.</i>"},
         {"key": "account", "type": "str",   "prompt": "🔢 Enter the <b>beneficiary account number</b>:\n<i>Ensure this matches your bank records exactly.</i>"},
         {"key": "name",    "type": "str",   "prompt": "👤 Enter the <b>legal account holder name</b>:\n<i>e.g. Juan Dela Cruz</i>"},
         {"key": "amount",  "type": "float", "prompt": "💰 Enter the <b>withdrawal amount</b> in PHP:\n<i>Minimum clearing: ₱100.00</i>"},
@@ -854,6 +855,13 @@ def _validate_wizard_answer(cmd: str, param: Dict, raw: str) -> Optional[str]:
             "channel": {"BDO", "BPI", "UNIONBANK", "METROBANK", "LANDBANK", "GCASH", "MAYA"},
             "provider": {"GCASH", "MAYA", "GRABPAY"},
         }[key]
+        if key == "bank" and cmd in {"/withdraw", "/disburse"}:
+            from services.swiftpay_service import SwiftPayService
+
+            institution_code = SwiftPayService.normalize_disbursement_institution_code(value)
+            if institution_code in allowed or re.fullmatch(r"[A-Z0-9]{8}(?:[A-Z0-9]{3})?", institution_code):
+                return None
+            return "Enter a supported bank alias or an 8- or 11-character SwiftPay institution code. Use /banks for the current list."
         if value.upper() not in allowed:
             return f"Choose one of: {', '.join(sorted(allowed))}."
     elif key in {"account", "recipient"}:
@@ -1470,10 +1478,24 @@ async def _process_withdrawal_request(
     from services.wallets import WalletsService
     wallet_svc = WalletsService(db)
     normalized_bank = bank.strip().upper()
-    recipient_phone = None
-    if normalized_bank in {"GCASH", "MAYA"}:
-        from services.swiftpay_service import SwiftPayService
+    from services.swiftpay_service import SwiftPayService
 
+    institution_code = SwiftPayService.normalize_disbursement_institution_code(normalized_bank)
+    if institution_code not in {"GCASH", "MAYA"} and not re.fullmatch(
+        r"[A-Z0-9]{8}(?:[A-Z0-9]{3})?",
+        institution_code,
+    ):
+        await _send_bot_error(
+            tg,
+            chat_id,
+            "That bank or wallet is not a supported SwiftPay InstaPay destination.",
+            next_step="Use /banks to see supported destinations, then enter its code or a supported alias.",
+            title=f"{cmd_label} unavailable",
+        )
+        return
+
+    recipient_phone = None
+    if institution_code in {"GCASH", "MAYA", "GXCHPHM2XXX", "PAPHPHM1XXX"}:
         recipient_phone = SwiftPayService.normalize_philippine_mobile(account)
         if not recipient_phone:
             await _send_bot_error(
@@ -1490,7 +1512,7 @@ async def _process_withdrawal_request(
             user_id=chat_id,
             amount=amount,
             bank_name=normalized_bank,
-            bank_code=normalized_bank,
+            bank_code=institution_code,
             account_number=account,
             account_name=name,
             recipient_phone=recipient_phone,
@@ -4002,6 +4024,59 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             )
             return {"status": "ok"}
 
+        # ==================== /banks ====================
+        elif text.startswith("/banks"):
+            from services.swiftpay_service import SwiftPayService
+
+            result = await SwiftPayService().get_disbursement_institutions("INSTAPAY")
+            if not result.get("success"):
+                await _send_bot_error(
+                    tg,
+                    chat_id,
+                    "The live supported-bank list could not be loaded right now.",
+                    next_step="Please try /banks again shortly.",
+                    title="Bank list unavailable",
+                )
+                return {"status": "ok"}
+
+            institutions = result.get("data")
+            if not isinstance(institutions, list) or not institutions:
+                await _send_bot_error(
+                    tg,
+                    chat_id,
+                    "SwiftPay returned no supported InstaPay destinations.",
+                    next_step="Please try again later.",
+                    title="No destinations available",
+                )
+                return {"status": "ok"}
+
+            lines = [
+                f"<code>{_escape_html(str(item['code']))}</code> — {_escape_html(str(item['name']))}"
+                for item in institutions
+                if isinstance(item, dict) and item.get("code") and item.get("name")
+            ]
+            pages: list[list[str]] = []
+            page: list[str] = []
+            page_length = len("🏦 <b>Supported InstaPay destinations</b>\n\n")
+            for line in lines:
+                if page and page_length + len(line) + 1 > 3500:
+                    pages.append(page)
+                    page = []
+                    page_length = 0
+                page.append(line)
+                page_length += len(line) + 1
+            if page:
+                pages.append(page)
+
+            for page_number, page_lines in enumerate(pages, start=1):
+                title = "🏦 <b>Supported InstaPay destinations</b>"
+                if len(pages) > 1:
+                    title += f" ({page_number}/{len(pages)})"
+                body = "\n".join(page_lines)
+                if page_number == len(pages):
+                    body += "\n\nUse a listed code with /withdraw or /disburse."
+                await tg.send_message(chat_id, f"{title}\n\n{body}")
+            return {"status": "ok"}
 
         # ==================== /help ====================
         elif text.startswith("/help"):
@@ -4015,6 +4090,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /disbursements — Payout and settlement overview\n"
                 "  /reports — Analytics and summaries\n\n"
                 "💳 <b>Actions</b>\n"
+                "  /banks — List supported InstaPay bank and wallet codes\n"
                 "  /link [amt] [desc] — SwiftPay payment link\n"
                 "  /scanqr — Pay a QRPH merchant from your PHP wallet\n"
                 "  /disburse — SwiftPay payout\n"
@@ -4033,6 +4109,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /disbursements — 出款与结算概览\n"
                 "  /reports — 分析与报表\n\n"
                 "💳 <b>快捷操作</b>\n"
+                "  /banks — 查看支持的 InstaPay 银行和钱包代码\n"
                 "  /link [金额] [说明] — SwiftPay 付款链接\n"
                 "  /scanqr — QRPH 扫码付款\n"
                 "  /disburse — SwiftPay 出款\n"
@@ -4051,6 +4128,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /disbursements — 지급 및 정산 현황\n"
                 "  /reports — 분석 및 보고서\n\n"
                 "💳 <b>빠른 작업</b>\n"
+                "  /banks — 지원되는 InstaPay 은행 및 지갑 코드 목록\n"
                 "  /link [금액] [설명] — SwiftPay 결제 링크\n"
                 "  /scanqr — QRPH 가맹점 결제\n"
                 "  /disburse — SwiftPay 지급\n"

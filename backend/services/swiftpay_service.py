@@ -98,8 +98,13 @@ class SwiftPayService:
         """Return the SwiftPay institution catalogue code for a bank alias."""
         code = str(value or "").strip().upper()
         institution_aliases = {
-            "BDO": "BNORPHMXXX",
-            "BPI": "BOPIPHMXXX",
+            "BDO": "BNORPHMMXXX",
+            "BPI": "BOPIPHMMXXX",
+            "GCASH": "GXCHPHM2XXX",
+            "G-XCHANGE, INC. (GCASH)": "GXCHPHM2XXX",
+            "MAYA": "PAPHPHM1XXX",
+            "PAYMAYA": "PAPHPHM1XXX",
+            "MAYA PHILIPPINES, INC.": "PAPHPHM1XXX",
             "UNIONBANK": "UBPHPHMMXXX",
             "UBP": "UBPHPHMMXXX",
             "METROBANK": "MBTCPHMMXXX",
@@ -517,6 +522,38 @@ class SwiftPayService:
         except Exception as exc:
             logger.exception("SwiftPay get_institutions exception")
             return {"success": False, "error": str(exc)}
+
+    async def get_disbursement_institutions(self, channel: str = "INSTAPAY") -> Dict[str, Any]:
+        """Fetch the public catalogue of institutions supported for disbursements."""
+        normalized_channel = str(channel or "").strip().upper()
+        if normalized_channel not in {"INSTAPAY", "PESONET"}:
+            return {"success": False, "error": "Disbursement channel must be INSTAPAY or PESONET"}
+
+        url = f"{self.base_url}/api/disbursements/institutions?channel={normalized_channel}"
+        logger.info("SwiftPay get_disbursement_institutions %s", url)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers={"Accept": "application/json"})
+            if response.status_code >= 400:
+                logger.warning(
+                    "SwiftPay get_disbursement_institutions failed status=%s",
+                    response.status_code,
+                )
+                return {
+                    "success": False,
+                    "error": f"SwiftPay institution catalogue unavailable ({response.status_code})",
+                }
+            data = response.json() if response.text else []
+            return {
+                "success": True,
+                "data": self._normalize_disbursement_institutions(data),
+            }
+        except httpx.TransportError:
+            logger.warning("SwiftPay disbursement institution catalogue is unreachable", exc_info=True)
+            return {"success": False, "error": "SwiftPay institution catalogue is unreachable"}
+        except Exception:
+            logger.exception("SwiftPay get_disbursement_institutions failed")
+            return {"success": False, "error": "Unable to load SwiftPay institution catalogue"}
 
     async def get_collection_institutions(self) -> Dict[str, Any]:
         """Fetch SwiftPay collection institutions, which support PHP only."""
