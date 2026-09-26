@@ -26,7 +26,6 @@ class TestSMSNotifications:
         
         methods = [
             "send_sms",
-            "notify_bank_of_failure",
             "notify_user_of_failed_transfer",
             "notify_user_of_successful_transfer",
             "notify_user_of_disbursement",

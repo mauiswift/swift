@@ -311,6 +311,42 @@ async def test_provider_callback_within_php_range_stays_pending_for_admin_approv
 
 
 @pytest.mark.asyncio
+async def test_provider_callback_records_receipt_when_transaction_was_already_completed():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-previously-completed",
+            transaction_type="payment",
+            amount=1500.0,
+            currency="PHP",
+            external_id="pay-previously-completed",
+            status="completed",
+            approval_status="pending",
+            paid_at=None,
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="SwiftPay")
+
+        assert ok is True
+        assert txn.status == "pending"
+        assert txn.approval_status == "pending"
+        assert txn.paid_at is not None
+        assert is_payment_received(txn) is True
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
 async def test_non_swiftpay_provider_callback_stays_pending_for_admin_approval():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:

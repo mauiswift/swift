@@ -1871,23 +1871,13 @@ class TestWalletBalanceConsistency:
 
 
 class TestEvents:
-    def test_simulate_requires_auth(self, client):
-        r = client.post(
-            "/api/v1/events/simulate",
-            json={"transaction_type": "invoice", "status": "paid", "amount": 100},
-        )
-        assert r.status_code == 401
-
-    def test_simulate_authenticated(self, client, auth_headers):
+    def test_simulate_endpoint_is_removed(self, client, auth_headers):
         r = client.post(
             "/api/v1/events/simulate",
             json={"transaction_type": "invoice", "status": "paid", "amount": 500},
             headers=auth_headers,
         )
-        assert r.status_code == 200
-        data = r.json()
-        assert data["success"] is True
-        assert data["amount"] == 500.0
+        assert r.status_code in {404, 405}
 
     def test_recent_events_returns_events(self, client, auth_headers):
         r = client.get(

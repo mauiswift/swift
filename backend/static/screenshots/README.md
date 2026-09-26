@@ -12,6 +12,7 @@ Expected filenames:
 - `payments.png`   — Payments Hub screenshot
 - `transactions.png` — Transactions page screenshot
 
-When an image is present it is used; if missing the built-in code mockup is shown as fallback.
+The Features page only displays supplied screenshots. If an image is missing, it shows an
+unavailable notice instead of fabricated sample balances or transactions.
 
 Recommended size: 400×600 px or similar portrait/mobile format.

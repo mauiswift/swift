@@ -63,23 +63,36 @@ export default function SuperAdminPaymentApprovalDesktop() {
     fetchPendingPayments();
   }, []);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void fetchPendingPayments(false);
+    }, 15_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const fetchPendingPayments = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
       const response = await client.get('/api/v1/admin/payment-approvals/pending');
       if (response.ok && response.data?.success) {
         const nextPayments = response.data.data;
-        setPayments(Array.isArray(nextPayments) ? nextPayments : []);
+        const refreshedPayments = Array.isArray(nextPayments) ? nextPayments : [];
+        setPayments(refreshedPayments);
+        setReviewPayment((current) =>
+          current
+            ? refreshedPayments.find((payment) => payment.id === current.id) || current
+            : current
+        );
         setError('');
       } else {
         const errorMsg = response.data?.detail || 'Failed to fetch pending payments';
         setError(errorMsg);
-        setPayments([]);
+        if (showLoading) setPayments([]);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch pending payments';
       setError(errorMsg);
-      setPayments([]);
+      if (showLoading) setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -396,6 +409,8 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       <div><p className="text-xs text-slate-400">Customer</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</p></div>
                       <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(Number(reviewPayment.amount) || 0, reviewPayment.currency || 'PHP')}</p></div>
                       <div><p className="text-xs text-slate-400">Submitted</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
+                      <div><p className="text-xs text-slate-400">Payment status</p><p className={`mt-1 font-semibold ${reviewPayment.payment_received ? 'text-emerald-700' : 'text-amber-700'}`}>{reviewPayment.payment_received ? 'Payment received' : 'Not received'}</p></div>
+                      <div><p className="text-xs text-slate-400">Received at</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</p></div>
                       <div className="col-span-2"><p className="text-xs text-slate-400">Reference</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
                     </div>
                     {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">Settlement: {fmtCurrency(Number(reviewPayment.processing_amount) || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {Number(reviewPayment.exchange_rate || 0).toFixed(6)} {reviewPayment.processing_currency}</p>}

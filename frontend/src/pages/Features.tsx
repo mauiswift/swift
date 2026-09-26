@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppFooter from '@/components/AppFooter';
 import {
-  Bot,
   BarChart3,
   Wallet,
   CreditCard,
@@ -36,153 +35,58 @@ import {
 } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL } from '@/lib/brand';
 
-/* ─── Screenshot gallery ─────────────────────────────────────── */
-function PaymentsHubMockup() {
-  const methods = [
-    { label: 'Invoice', color: 'text-blue-400', dot: 'bg-blue-500' },
-    { label: 'QR Code', color: 'text-purple-400', dot: 'bg-purple-500' },
-    { label: 'Alipay QR', color: 'text-red-400', dot: 'bg-red-500' },
-    { label: 'Payment Link', color: 'text-cyan-400', dot: 'bg-cyan-500' },
-    { label: 'Virtual Account', color: 'text-amber-400', dot: 'bg-amber-500' },
-    { label: 'Maya', color: 'text-emerald-400', dot: 'bg-emerald-500' },
-    { label: 'E-Wallet', color: 'text-rose-400', dot: 'bg-rose-500' },
-  ];
-  return (
-    <div className="rounded-2xl overflow-hidden border border-slate-600/30 shadow-2xl bg-[#0F172A] w-full text-[10px]">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F172A] border-b border-slate-700/50">
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center">
-            <CreditCard className="h-3 w-3 text-white" />
-          </div>
-          <span className="text-white font-semibold text-xs">Payments Hub</span>
-        </div>
-        <span className="text-blue-400 text-[9px] bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">7 Methods</span>
-      </div>
-      <div className="p-3 space-y-2">
-        <p className="text-slate-400 text-[9px] font-medium uppercase tracking-wider mb-2">Select Payment Method</p>
-        <div className="grid grid-cols-2 gap-1.5">
-          {methods.map((m) => (
-            <div key={m.label} className="flex items-center gap-2 bg-slate-800/60 border border-slate-700/30 rounded-lg p-2">
-              <span className={`h-2 w-2 rounded-full ${m.dot} shrink-0`}></span>
-              <span className={`${m.color} font-medium`}>{m.label}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 bg-slate-800/40 rounded-lg p-2 border border-slate-700/30">
-          <p className="text-slate-400 mb-1.5">Amount (PHP)</p>
-          <div className="bg-[#0F172A] rounded px-2 py-1 text-emerald-400 font-mono font-semibold">₱ 1,500.00</div>
-        </div>
-        <div className="bg-blue-600 rounded-lg py-1.5 text-center text-white font-semibold text-[10px]">Create Payment</div>
-      </div>
-    </div>
-  );
-}
-
-function TransactionsMockup() {
-  const txns = [
-    { type: 'Invoice', id: '#INV-042', amt: '+₱1,500', status: 'paid', statusColor: 'text-emerald-400 bg-emerald-500/10' },
-    { type: 'QR Code', id: '#QR-019', amt: '+₱250', status: 'paid', statusColor: 'text-emerald-400 bg-emerald-500/10' },
-    { type: 'Disburse', id: '#DIS-007', amt: '-₱500', status: 'sent', statusColor: 'text-blue-400 bg-blue-500/10' },
-    { type: 'VA BPI', id: '#VA-031', amt: '+₱3,000', status: 'pending', statusColor: 'text-amber-400 bg-amber-500/10' },
-    { type: 'Maya', id: '#MY-055', amt: '+₱800', status: 'paid', statusColor: 'text-emerald-400 bg-emerald-500/10' },
-  ];
-  return (
-    <div className="rounded-2xl overflow-hidden border border-slate-600/30 shadow-2xl bg-[#0F172A] w-full text-[10px]">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F172A] border-b border-slate-700/50">
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-purple-600 rounded flex items-center justify-center">
-            <Receipt className="h-3 w-3 text-white" />
-          </div>
-          <span className="text-white font-semibold text-xs">Transactions</span>
-        </div>
-        <span className="text-slate-400 text-[9px]">124 total</span>
-      </div>
-      <div className="p-3">
-        <div className="bg-slate-800/40 rounded-lg px-2 py-1 mb-2 flex items-center gap-1.5 border border-slate-700/30">
-          <span className="text-slate-500">🔍</span>
-          <span className="text-slate-500">Search transactions...</span>
-        </div>
-        <div className="space-y-1">
-          {txns.map((t) => (
-            <div key={t.id} className="flex items-center justify-between py-1 border-b border-slate-700/20 last:border-0">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-300">{t.type}</span>
-                <span className="text-slate-600">{t.id}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`font-mono ${t.amt.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>{t.amt}</span>
-                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${t.statusColor}`}>{t.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /**
  * screenshots[] — each entry may optionally provide an `image` path
  * (relative to /public, e.g. "/screenshots/telegram.png").
- * When an image is present it is rendered as a <img>; otherwise the
- * code-generated mockup component is used as a fallback.
  */
 const screenshots = [
   {
     id: 'telegram',
     label: 'Telegram Bot',
     badge: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
-    caption: '22 bot commands · instant payment notifications',
+    caption: 'Telegram bot interface',
     image: '/screenshots/telegram.png',
   },
   {
     id: 'dashboard',
     label: 'Admin Dashboard',
     badge: 'bg-purple-500/10 text-purple-300 border-purple-500/20',
-    caption: '9 pages · real-time updates · mobile-friendly',
+    caption: 'Admin dashboard',
     image: '/screenshots/dashboard.png',
   },
   {
     id: 'payments',
     label: 'Payments Hub',
     badge: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20',
-    caption: '7 payment methods · invoice, QR, VA, e-wallet & more',
+    caption: 'Payment creation options',
     image: '/screenshots/payments.png',
   },
   {
     id: 'transactions',
     label: 'Transactions',
     badge: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
-    caption: 'Full searchable & filterable transaction history',
+    caption: 'Transaction history',
     image: '/screenshots/transactions.png',
   },
 ];
 
-/** Renders the image when available, falls back to the code mockup. */
-function ScreenshotFrame({ id, image, caption }: { id: string; image?: string; caption: string }) {
+function ScreenshotFrame({ image, caption }: { image?: string; caption: string }) {
   const [imgOk, setImgOk] = useState(!!image);
 
-  const renderMockup = () => {
-    if (id === 'telegram') return <TelegramMockup />;
-    if (id === 'dashboard') return <DashboardMockup />;
-    if (id === 'payments') return <PaymentsHubMockup />;
-    return <TransactionsMockup />;
-  };
-
   return (
-    <>
-      {imgOk && image ? (
-        <img
+    imgOk && image ? (
+      <img
           src={image}
           alt={caption}
           onError={() => setImgOk(false)}
           className="w-full rounded-2xl border border-slate-600/30 shadow-2xl object-cover"
           draggable={false}
-        />
-      ) : (
-        renderMockup()
-      )}
-    </>
+      />
+    ) : (
+      <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-600/30 bg-slate-900/60 px-6 text-center text-sm text-slate-400">
+        Screenshot unavailable
+      </div>
+    )
   );
 }
 
@@ -238,7 +142,7 @@ function ScreenshotViewer() {
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center">
             <span className="text-white text-xs font-medium bg-black/50 px-3 py-1 rounded-full">Click to enlarge</span>
           </div>
-          <ScreenshotFrame id={current.id} image={current.image} caption={current.caption} />
+          <ScreenshotFrame image={current.image} caption={current.caption} />
         </div>
 
         <p className="text-slate-500 text-xs text-center mt-3">{current.caption}</p>
@@ -274,10 +178,9 @@ function ScreenshotViewer() {
             onClick={(e) => e.stopPropagation()}
           >
             <ScreenshotFrame
-              id={screenshots[lightbox].id}
-              image={screenshots[lightbox].image}
-              caption={screenshots[lightbox].caption}
-            />
+                image={screenshots[lightbox].image}
+                caption={screenshots[lightbox].caption}
+              />
             <p className="text-slate-400 text-xs text-center mt-3">{screenshots[lightbox].caption}</p>
           </div>
         </div>
@@ -286,89 +189,6 @@ function ScreenshotViewer() {
   );
 }
 /* ─────────────────────────────────────────────────────────────── */
-
-function TelegramMockup() {
-  const messages = [
-    { from: 'user', text: '/balance' },
-    { from: 'bot', text: '💰 Wallet Balance\n\nAvailable: ₱ 12,500.00\nPending: ₱ 1,200.00\n\nUse /withdraw to cash out.' },
-    { from: 'user', text: '/invoice 1500 Web design deposit' },
-    { from: 'bot', text: '✅ Invoice Created!\n\nAmount: ₱ 1,500.00\nDesc: Web design deposit\n\n🔗 Pay Now: pay.swiftpay.site/...' },
-    { from: 'user', text: '/alipay 500 Product sale' },
-    { from: 'bot', text: '✅ Alipay QR Ready!\n\n💰 ₱500.00\n📱 Scan QR with Alipay' },
-  ];
-  return (
-    <div className="rounded-2xl overflow-hidden border border-slate-600/30 shadow-2xl bg-[#17212b] w-full">
-      <div className="flex items-center gap-3 px-4 py-3 bg-[#232e3c] border-b border-slate-600/20">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lg">
-          <Bot className="h-4 w-4 text-white" />
-        </div>
-        <div>
-          <p className="text-white text-sm font-semibold">{APP_NAME}</p>
-          <p className="text-emerald-400 text-[10px] flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block"></span>online</p>
-        </div>
-      </div>
-      <div className="px-3 py-3 space-y-2">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`rounded-xl px-3 py-2 max-w-[85%] text-[11px] leading-relaxed whitespace-pre-line ${
-              m.from === 'user' ? 'bg-[#2b5278] text-white rounded-br-sm' : 'bg-[#182533] text-slate-200 rounded-bl-sm border border-slate-600/20'
-            }`}>{m.text}</div>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#232e3c] border-t border-slate-600/20">
-        <div className="flex-1 bg-[#17212b] rounded-full px-3 py-1.5 text-slate-500 text-[11px]">Type a command...</div>
-        <div className="h-7 w-7 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-          <Send className="h-3 w-3 text-white" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DashboardMockup() {
-  return (
-    <div className="rounded-2xl overflow-hidden border border-slate-600/30 shadow-2xl bg-[#0F172A] w-full text-[10px]">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F172A] border-b border-slate-700/50">
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center">
-            <Bot className="h-3 w-3 text-white" />
-          </div>
-          <span className="text-white font-semibold text-xs">{APP_NAME}</span>
-        </div>
-        <span className="text-emerald-400 text-[9px] flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>Live</span>
-      </div>
-      <div className="p-3 space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { label: 'Wallet', value: '₱12,500', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border border-emerald-500/20' },
-            { label: 'Revenue', value: '₱48,200', color: 'text-blue-400', bg: 'bg-blue-500/10 border border-blue-500/20' },
-            { label: 'Transactions', value: '124', color: 'text-purple-400', bg: 'bg-purple-500/10 border border-purple-500/20' },
-            { label: 'Pending', value: '8', color: 'text-amber-400', bg: 'bg-amber-500/10 border border-amber-500/20' },
-          ].map((s) => (
-            <div key={s.label} className={`${s.bg} rounded-lg p-2`}>
-              <p className="text-slate-400 mb-0.5">{s.label}</p>
-              <p className={`${s.color} font-semibold text-xs`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
-        <div className="bg-slate-800/60 rounded-lg p-2 border border-slate-700/30">
-          <p className="text-slate-400 mb-1.5 font-medium">Recent Transactions</p>
-          {[
-            { name: 'Invoice #42', amt: '+₱1,500', color: 'text-emerald-400' },
-            { name: 'Disburse BPI', amt: '-₱500', color: 'text-red-400' },
-            { name: 'QR Payment', amt: '+₱250', color: 'text-emerald-400' },
-          ].map((t) => (
-            <div key={t.name} className="flex justify-between py-0.5 border-b border-slate-700/20 last:border-0">
-              <span className="text-slate-300">{t.name}</span>
-              <span className={`font-medium ${t.color}`}>{t.amt}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function FeatureCard({ icon, title, description, color }: { icon: React.ReactNode; title: string; description: string; color: string }) {
   return (

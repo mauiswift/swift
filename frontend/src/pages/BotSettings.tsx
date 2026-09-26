@@ -25,7 +25,6 @@ import {
   Webhook,
   Info,
   Zap,
-  Radio,
   FlaskConical,
   AlertTriangle,
   RefreshCw,
@@ -278,11 +277,6 @@ export default function BotSettings() {
   const [chatId, setChatId] = useState('');
   const [testMessage, setTestMessage] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
-  const [simType, setSimType] = useState('invoice');
-  const [simStatus, setSimStatus] = useState('paid');
-  const [simAmount, setSimAmount] = useState('1000');
-  const [simDescription, setSimDescription] = useState('');
-  const [simLoading, setSimLoading] = useState(false);
   const [testChecks, setTestChecks] = useState<TestCheck[]>([]);
   const [testLoading, setTestLoading] = useState(false);
   const [testRan, setTestRan] = useState(false);
@@ -411,18 +405,6 @@ export default function BotSettings() {
       else toast.error(res.data?.message || 'Failed');
     } catch (e) { toast.error(is401(e) ? 'Please log in first.' : getErr(e)); }
     finally { setSendLoading(false); }
-  };
-
-  const handleSimulateWebhook = async () => {
-    const amount = parseFloat(simAmount);
-    if (isNaN(amount) || amount <= 0) { toast.error('Enter a valid amount'); return; }
-    setSimLoading(true);
-    try {
-      const res = await client.apiCall.invoke({ url: '/api/v1/events/simulate', method: 'POST', data: { transaction_type: simType, status: simStatus, amount, description: simDescription } });
-      if (res.data?.success) toast.success('Test event sent!', { description: `${simType} -> ${simStatus.toUpperCase()} (amount: ${amount.toLocaleString()})`, duration: 5000 });
-      else toast.error('Failed to simulate webhook');
-    } catch (e) { toast.error(is401(e) ? 'Please log in first.' : getErr(e)); }
-    finally { setSimLoading(false); }
   };
 
   const handleTestBot = async () => {
@@ -948,55 +930,6 @@ export default function BotSettings() {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border ring-1 ring-amber-500/20">
-              <CardHeader>
-                <CardTitle className="text-foreground flex items-center space-x-2">
-                  <Zap className="h-5 w-5 text-amber-400" /><span>Simulate Webhook</span>
-                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 border text-[10px] ml-2">TEST</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start space-x-2">
-                  <Radio className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-                  <p className="text-xs text-amber-300">Send a test payment event to verify real-time notifications. No actual payment required.</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Transaction Type</Label>
-                    <Select value={simType} onValueChange={setSimType}>
-                      <SelectTrigger className="mt-1 bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-muted border-border">
-                        <SelectItem value="invoice" className="text-blue-400">Invoice</SelectItem>
-                        <SelectItem value="qr_code" className="text-purple-400">QR Code</SelectItem>
-                        <SelectItem value="payment_link" className="text-cyan-400">Payment Link</SelectItem>
-                        <SelectItem value="alipay_qr" className="text-red-400">Alipay QR</SelectItem>
-                        <SelectItem value="wechat_qr" className="text-green-400">WeChat QR</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Target Status</Label>
-                    <Select value={simStatus} onValueChange={setSimStatus}>
-                      <SelectTrigger className="mt-1 bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-muted border-border">
-                        <SelectItem value="paid" className="text-emerald-400">Paid</SelectItem>
-                        <SelectItem value="expired" className="text-red-400">Expired</SelectItem>
-                        <SelectItem value="pending" className="text-amber-400">Pending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Amount (PHP)</Label>
-                    <Input type="number" placeholder="1000" value={simAmount} onChange={(e) => setSimAmount(e.target.value)} className="mt-1 bg-muted border-border text-foreground placeholder:text-muted-foreground" />
-                  </div>
-                </div>
-                <div><Label className="text-muted-foreground">Description (optional)</Label><Input placeholder="Test payment for order #123" value={simDescription} onChange={(e) => setSimDescription(e.target.value)} className="mt-1 bg-muted border-border text-foreground placeholder:text-muted-foreground" /></div>
-                <Button onClick={handleSimulateWebhook} disabled={simLoading} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium">
-                  {simLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Zap className="h-4 w-4 mr-2" />Send Test Event</>}
-                </Button>
               </CardContent>
             </Card>
 

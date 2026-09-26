@@ -1,64 +1,14 @@
 import json
-import logging
 import time
-import random
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
 from dependencies.auth import get_current_user
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
-
-
-# ---------- Simulate Webhook ----------
-class SimulateWebhookRequest(BaseModel):
-    transaction_type: str = "invoice"
-    amount: float = 1000.0
-    status: str = "paid"
-    description: str = ""
-
-
-@router.post("/simulate")
-async def simulate_webhook(
-    data: SimulateWebhookRequest,
-    current_user: UserResponse = Depends(get_current_user),
-):
-    """Simulate a Xendit webhook payment status change event for testing real-time notifications"""
-    fake_id = random.randint(10000, 99999)
-    external_id = f"sim-{data.transaction_type}-{fake_id}"
-    description = data.description or f"Simulated {data.transaction_type.replace('_', ' ')} payment"
-
-    old_status = "pending" if data.status in ("paid", "expired") else "unknown"
-
-    payment_event_bus.publish({
-        "event_type": "status_change",
-        "transaction_id": fake_id,
-        "external_id": external_id,
-        "old_status": old_status,
-        "new_status": data.status,
-        "amount": data.amount,
-        "description": description,
-        "transaction_type": data.transaction_type,
-        "user_id": str(current_user.id),
-    })
-
-    logger.info(
-        f"Simulated webhook: {data.transaction_type} -> {data.status}, "
-        f"amount={data.amount}, external_id={external_id}"
-    )
-
-    return {
-        "success": True,
-        "message": f"Simulated {data.status} event for {data.transaction_type}",
-        "external_id": external_id,
-        "amount": data.amount,
-    }
 
 
 @router.get("/stream")

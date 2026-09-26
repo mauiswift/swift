@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Copy, FileText } from 'lucide-react';
+import { ChevronLeft, Copy } from 'lucide-react';
 import { client } from '@/lib/api';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { fmtCurrency } from '@/lib/format';
-import { formatTransactionDate } from '@/lib/transactions';
 import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 import { toast } from 'sonner';
 
@@ -76,23 +75,11 @@ export default function DisbursementDetails() {
     );
   }
 
-  const mockDb = {
-    id: data.id,
-    shortId: data.short_id || 'N/A',
-    amount: data.amount,
-    commission: data.commission ?? 0,
-    totalAmount: data.total_amount ?? data.amount,
-    currency: data.currency || 'PHP',
-    status: data.status,
-    destination: data.destination || 'Not specified',
-    reference: data.merchant_reference || '-',
-    channelRef: data.channel_reference || '-',
-    recipientName: data.recipient_name || 'Not specified',
-    recipientAccount: data.recipient_account || '-',
-    history: data.history || [
-      { event: 'Disbursement created', date: formatTransactionDate(data.created_at) }
-    ]
-  };
+  const currency = data.currency || 'PHP';
+  const history = data.history || [];
+  const shortId = data.short_id;
+  const merchantReference = data.merchant_reference;
+  const recipientAccount = data.recipient_account;
 
   const copyToClipboard = async (value: string) => {
     try {
@@ -125,20 +112,16 @@ export default function DisbursementDetails() {
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Disbursement details</h1>
           </div>
 
-          <button className="flex items-center gap-2 text-[12px] font-semibold text-slate-900 hover:text-[#FF6B00] transition-colors">
-            <FileText size={16} />
-            Download confirmation
-          </button>
         </div>
 
         <div className="app-panel mb-8 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
           <div>
              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Disbursement amount</p>
-             <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{fmtCurrency(mockDb.totalAmount, mockDb.currency)}</span>
+             <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{data.total_amount !== undefined ? fmtCurrency(data.total_amount, currency) : '—'}</span>
           </div>
           <div className="flex items-center gap-3">
-             <StatusBadge status={getStatusType(mockDb.status)} size="sm" showDot={false} />
-             <PaymentBrandLogo brand={mockDb.destination} size="sm" />
+             <StatusBadge status={getStatusType(data.status)} size="sm" showDot={false} />
+             {data.destination && <PaymentBrandLogo brand={data.destination} size="sm" />}
           </div>
         </div>
 
@@ -148,8 +131,9 @@ export default function DisbursementDetails() {
             {/* History */}
             <section className="app-panel p-5 sm:p-6">
               <h2 className="text-[16px] font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-2">History</h2>
-              <div className="space-y-6">
-                {mockDb.history.map((h, i) => (
+              {history.length > 0 ? (
+                <div className="space-y-6">
+                {history.map((h, i) => (
                   <div key={i} className="flex gap-4">
                     <div className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${i === 0 ? 'bg-teal-400' : 'bg-slate-200'}`} />
                     <div>
@@ -158,41 +142,25 @@ export default function DisbursementDetails() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No history details available.</p>
+              )}
             </section>
 
             {/* Disbursement breakdown */}
             <section className="app-panel p-5 sm:p-6">
               <h2 className="mb-6 border-b border-slate-100 pb-2 text-[16px] font-semibold text-slate-900">Disbursement breakdown</h2>
               <div className="space-y-2 text-[13px]">
-                <BreakdownRow label="Disbursement amount" value={fmtCurrency(mockDb.amount, mockDb.currency)} />
-                <BreakdownRow label="Processing fee" value={fmtCurrency(mockDb.commission, mockDb.currency)} />
+                <BreakdownRow label="Disbursement amount" value={fmtCurrency(data.amount, currency)} />
+                <BreakdownRow label="Processing fee" value={data.commission !== undefined ? fmtCurrency(data.commission, currency) : '—'} />
                 <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-900 px-4 py-3.5 text-white">
                   <span className="font-semibold">Total debit</span>
-                  <span className="font-mono text-base font-semibold">{fmtCurrency(mockDb.totalAmount, mockDb.currency)}</span>
+                  <span className="font-mono text-base font-semibold">{data.total_amount !== undefined ? fmtCurrency(data.total_amount, currency) : '—'}</span>
                 </div>
               </div>
             </section>
 
-            {/* Callback */}
-            <section className="app-panel p-5 sm:p-6">
-              <h2 className="text-[16px] font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-2">Callback</h2>
-              <div>
-                 <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                 <div className="flex items-center gap-2">
-                    <span className="text-rose-500">
-                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="12" y1="8" x2="12" y2="12" />
-                          <line x1="12" y1="16" x2="12.01" y2="16" />
-                       </svg>
-                    </span>
-                    <span className="text-[13px] font-semibold text-slate-700">Error</span>
-                 </div>
-                 <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mt-6 mb-1">Executed on</p>
-                 <p className="text-[13px] text-slate-400">-</p>
-              </div>
-            </section>
           </div>
 
           {/* Right Column */}
@@ -200,13 +168,13 @@ export default function DisbursementDetails() {
             <h2 className="text-[16px] font-semibold text-slate-900 border-b border-slate-100 pb-2">Details</h2>
 
             <div className="space-y-6">
-               <DetailRow label="Disbursement ID" value={mockDb.id} showCopy onCopy={() => void copyToClipboard(mockDb.id)} />
-               <DetailRow label="Short ID" value={mockDb.shortId} showCopy onCopy={() => void copyToClipboard(mockDb.shortId)} />
-               <DetailRow label="Destination" value={mockDb.destination} />
-               <DetailRow label="Merchant reference number" value={mockDb.reference} showCopy onCopy={() => void copyToClipboard(mockDb.reference)} />
-               <DetailRow label="Channel reference number" value={mockDb.channelRef} />
-               <DetailRow label="Recipient name" value={mockDb.recipientName} />
-               <DetailRow label="Recipient account number" value={mockDb.recipientAccount} showCopy onCopy={() => void copyToClipboard(mockDb.recipientAccount)} />
+               <DetailRow label="Disbursement ID" value={data.id} showCopy onCopy={() => void copyToClipboard(data.id)} />
+               <DetailRow label="Short ID" value={shortId || '—'} showCopy={Boolean(shortId)} onCopy={shortId ? () => void copyToClipboard(shortId) : undefined} />
+               <DetailRow label="Destination" value={data.destination || '—'} />
+               <DetailRow label="Merchant reference number" value={merchantReference || '—'} showCopy={Boolean(merchantReference)} onCopy={merchantReference ? () => void copyToClipboard(merchantReference) : undefined} />
+               <DetailRow label="Channel reference number" value={data.channel_reference || '—'} />
+               <DetailRow label="Recipient name" value={data.recipient_name || '—'} />
+               <DetailRow label="Recipient account number" value={recipientAccount || '—'} showCopy={Boolean(recipientAccount)} onCopy={recipientAccount ? () => void copyToClipboard(recipientAccount) : undefined} />
             </div>
           </div>
         </div>

@@ -1,24 +1,9 @@
 import logging
-import os
-import asyncio
-from typing import Dict, Any, Optional
 import httpx
 
 from core.config import settings
 
 logger = logging.getLogger(__name__)
-
-# Mock bank contact directory for SMS notifications
-# In a real system, these would be fetched from a secure bank-partner database
-BANK_CONTACTS = {
-    "gcash": "+639171234567",
-    "maya": "+639187654321",
-    "bdo": "+639190000001",
-    "bpi": "+639190000002",
-    "metrobank": "+639190000003",
-    "security_bank": "+639190000004",
-    "unionbank": "+639190000005",
-}
 
 class SMSService:
     """Service to handle SMS notifications to banks and users."""
@@ -128,35 +113,6 @@ class SMSService:
         except Exception as e:
             logger.error(f"❌ [SMS_TWILIO] Exception sending SMS to {to_number}: {str(e)}")
             return False
-
-    @classmethod
-    async def notify_bank_of_failure(
-        cls,
-        bank_code: str,
-        amount: float,
-        reference_id: str,
-        error_detail: str
-    ) -> bool:
-        """
-        Notify the bank via text message about a failed incoming transfer attempt.
-        This triggers the bank's own internal failure handling to notify the user.
-        """
-        bank_code = (bank_code or "system").lower()
-        contact_number = BANK_CONTACTS.get(bank_code, "+639000000000")  # Fallback to general clearing number
-
-        bank_name = bank_code.upper()
-
-        message = (
-            f"SYSTEM_ALERT: Failed transfer for {bank_name}.\n"
-            f"Ref: {reference_id}\n"
-            f"Amt: PHP {amount:,.2f}\n"
-            f"Status: FAILED\n"
-            f"Reason: {error_detail}\n"
-            f"Note: The funds will be returned to the sender. Please check settlement settings.\n"
-            f"Action: Please notify the receiving customer of the failed deposit."
-        )
-
-        return await cls.send_sms(contact_number, message)
 
     @classmethod
     async def notify_user_of_failed_transfer(

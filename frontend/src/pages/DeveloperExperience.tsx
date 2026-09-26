@@ -108,23 +108,6 @@ const SCOPE_PRESETS = [
   { label: 'Full Access', scopes: AVAILABLE_SCOPES.map((s) => s.key) as string[] },
 ];
 
-const EVENT_TYPES = [
-  { value: 'invoice',       label: 'Invoice',         icon: '🧾' },
-  { value: 'payment_link',  label: 'Payment Link',    icon: '🔗' },
-  { value: 'qr_code',       label: 'QR Code',         icon: '📱' },
-  { value: 'qrph_payment',  label: 'QRPh Payment',    icon: '🇵🇭' },
-  { value: 'alipay_qr',     label: 'Alipay QR',       icon: '🟦' },
-  { value: 'wechat_qr',     label: 'WeChat QR',       icon: '💚' },
-];
-
-const EVENT_STATUSES = [
-  { value: 'paid',       label: 'Paid',       color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30' },
-  { value: 'pending',    label: 'Pending',    color: 'text-amber-600 bg-amber-500/10 border-amber-500/30' },
-  { value: 'failed',     label: 'Failed',     color: 'text-red-600 bg-red-500/10 border-red-500/30' },
-  { value: 'cancelled',  label: 'Cancelled',  color: 'text-slate-500 bg-slate-500/10 border-slate-500/30' },
-  { value: 'expired',    label: 'Expired',    color: 'text-orange-600 bg-orange-500/10 border-orange-500/30' },
-];
-
 const SECRET_RE = /(secret|token|api[_-]?key|private|password)/i;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -220,12 +203,10 @@ function statusColor(status: string) {
 export default function DeveloperExperience() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [simulating, setSimulating] = useState(false);
   const [configs, setConfigs] = useState<ApiConfig[]>([]);
   const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null);
   const [revealedKeys, setRevealedKeys] = useState<Set<number>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<ApiConfig | null>(null);
-  const [simResult, setSimResult] = useState<'success' | 'error' | null>(null);
 
   // API key create form
   const [keyName, setKeyName] = useState('');
@@ -247,17 +228,11 @@ export default function DeveloperExperience() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [pingResults, setPingResults] = useState<Map<number, PingResult>>(new Map());
 
-  // Event simulator
-  const [eventType, setEventType] = useState('invoice');
-  const [eventStatus, setEventStatus] = useState('paid');
-  const [eventAmount, setEventAmount] = useState('500');
-  const [eventDescription, setEventDescription] = useState('Developer test event');
-
   // Live event stream
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [streamConnected, setStreamConnected] = useState(false);
   const [streamPaused, setStreamPaused] = useState(false);
-  const [activeTab, setActiveTab] = useState<'simulator' | 'stream' | 'snippets'>('simulator');
+  const [activeTab, setActiveTab] = useState<'stream' | 'snippets'>('stream');
   const sseRef = useRef<EventSource | null>(null);
   const eventsEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -487,25 +462,6 @@ export default function DeveloperExperience() {
       setDeleteTarget(null);
       await fetchConfigs();
     } catch { toast.error('Failed to delete'); }
-  };
-
-  // ── simulate ──
-  const simulateEvent = async () => {
-    const amount = Number(eventAmount || '0');
-    if (!amount || amount <= 0) { toast.error('Amount must be greater than zero'); return; }
-    try {
-      setSimulating(true);
-      setSimResult(null);
-      await apiFetch('/api/v1/events/simulate', {
-        method: 'POST',
-        body: JSON.stringify({ transaction_type: eventType, status: eventStatus, amount, description: eventDescription || undefined }),
-      });
-      setSimResult('success');
-      toast.success('Event dispatched');
-    } catch {
-      setSimResult('error');
-      toast.error('Dispatch failed');
-    } finally { setSimulating(false); }
   };
 
   const toggleReveal = (id: number) => {
@@ -1010,7 +966,6 @@ def webhook():
             {/* Sub-nav */}
             <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl w-fit">
               {([
-                { key: 'simulator', label: 'Event Simulator', icon: <Send className="h-3.5 w-3.5" /> },
                 { key: 'stream',    label: 'Live Stream',     icon: <Activity className="h-3.5 w-3.5" /> },
                 { key: 'snippets',  label: 'Code Snippets',   icon: <Terminal className="h-3.5 w-3.5" /> },
               ] as const).map((t) => (
@@ -1027,111 +982,6 @@ def webhook():
                 </button>
               ))}
             </div>
-
-            {/* Event Simulator */}
-            {activeTab === 'simulator' && (
-              <Card className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Send className="h-4 w-4 text-blue-500" />Event Simulator
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    Fire a test event to verify your callback URL receives and processes it correctly.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {/* Event type selector */}
-                  <div className="space-y-2">
-                    <Label className="text-xs">Event Type</Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {EVENT_TYPES.map((t) => (
-                        <button
-                          key={t.value}
-                          onClick={() => setEventType(t.value)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                            eventType === t.value
-                              ? 'border-blue-500/50 bg-blue-500/10 text-blue-600'
-                              : 'border-border/60 text-muted-foreground hover:border-border hover:text-foreground'
-                          }`}
-                        >
-                          <span>{t.icon}</span>{t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Status selector */}
-                  <div className="space-y-2">
-                    <Label className="text-xs">Status</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {EVENT_STATUSES.map((s) => (
-                        <button
-                          key={s.value}
-                          onClick={() => setEventStatus(s.value)}
-                          className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                            eventStatus === s.value ? s.color : 'border-border/60 text-muted-foreground hover:border-border'
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Amount + description */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Amount (PHP)</Label>
-                      <Input type="number" min="1" value={eventAmount} onChange={(e) => setEventAmount(e.target.value)} className="h-9 text-sm" placeholder="500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Description</Label>
-                      <Input value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="h-9 text-sm" placeholder="Developer test event" />
-                    </div>
-                  </div>
-
-                  {/* Payload preview */}
-                  <div>
-                    <Label className="text-xs mb-2 block">Payload Preview</Label>
-                    <div className="relative rounded-xl bg-slate-900 border border-slate-700/60 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/60 bg-slate-800/60">
-                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">JSON</span>
-                        <CopyBtn size="xs" text={JSON.stringify({ event: `${eventType}.${eventStatus}`, data: { transaction_type: eventType, status: eventStatus, amount: Number(eventAmount) || 0, description: eventDescription } }, null, 2)} />
-                      </div>
-                      <pre className="p-4 text-xs text-slate-300 font-mono leading-relaxed overflow-x-auto">
-{`{
-  "event": "${eventType}.${eventStatus}",
-  "data": {
-    "transaction_type": "${eventType}",
-    "status": "${eventStatus}",
-    "amount": ${eventAmount || 0},
-    "description": "${eventDescription}"
-  }
-}`}
-                      </pre>
-                    </div>
-                  </div>
-
-                  {/* Send button + result */}
-                  <div className="flex items-center gap-3 pt-1 border-t border-border/60">
-                    <Button onClick={simulateEvent} disabled={simulating} className="gap-2 h-9">
-                      {simulating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      Send Test Event
-                    </Button>
-                    {simResult === 'success' && (
-                      <div className="flex items-center gap-1.5 text-emerald-600 text-sm animate-in fade-in">
-                        <CheckCircle2 className="h-4 w-4" />Event dispatched — check your callback URL
-                      </div>
-                    )}
-                    {simResult === 'error' && (
-                      <div className="flex items-center gap-1.5 text-red-500 text-sm animate-in fade-in">
-                        <AlertCircle className="h-4 w-4" />Dispatch failed — check your server logs
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Live Event Stream */}
             {activeTab === 'stream' && (

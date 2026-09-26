@@ -62,23 +62,36 @@ export default function SuperAdminPaymentApprovalMobile() {
     fetchPendingPayments();
   }, []);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void fetchPendingPayments(false);
+    }, 15_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const fetchPendingPayments = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
       const response = await client.get('/api/v1/admin/payment-approvals/pending');
       if (response.ok && response.data?.success) {
         const nextPayments = response.data.data;
-        setPayments(Array.isArray(nextPayments) ? nextPayments : []);
+        const refreshedPayments = Array.isArray(nextPayments) ? nextPayments : [];
+        setPayments(refreshedPayments);
+        setReviewPayment((current) =>
+          current
+            ? refreshedPayments.find((payment) => payment.id === current.id) || current
+            : current
+        );
         setError('');
       } else {
         const errorMsg = response.data?.detail || 'Failed to fetch pending payments';
         setError(errorMsg);
-        setPayments([]);
+        if (showLoading) setPayments([]);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch pending payments';
       setError(errorMsg);
-      setPayments([]);
+      if (showLoading) setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -334,6 +347,8 @@ export default function SuperAdminPaymentApprovalMobile() {
               <dl className="mt-4 space-y-3 text-sm">
                 <div><dt className="text-xs text-slate-400">Store</dt><dd className="font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || reviewPayment.customer_name || 'Unknown'}</dd></div>
                 <div><dt className="text-xs text-slate-400">Date &amp; time</dt><dd className="font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</dd></div>
+                <div><dt className="text-xs text-slate-400">Payment status</dt><dd className={`font-semibold ${reviewPayment.payment_received ? 'text-emerald-700' : 'text-amber-700'}`}>{reviewPayment.payment_received ? 'Payment received' : 'Not received'}</dd></div>
+                <div><dt className="text-xs text-slate-400">Received at</dt><dd className="font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</dd></div>
                 <div><dt className="text-xs text-slate-400">Customer</dt><dd className="font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</dd></div>
                 <div><dt className="text-xs text-slate-400">Reference</dt><dd className="font-mono text-xs text-slate-800">{reviewPayment.external_id || `#${reviewPayment.id}`}</dd></div>
                 <div><dt className="text-xs text-slate-400">Customer-facing amount</dt><dd className="text-base font-semibold text-slate-900">{fmtCurrency(reviewPayment.amount, reviewPayment.currency)}</dd></div>

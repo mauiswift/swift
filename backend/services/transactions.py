@@ -505,12 +505,6 @@ class TransactionsService(BaseService[Transactions]):
         approval_note: Optional[str] = None,
     ) -> bool:
         """Mark a transaction as paid and credit the wallet (for incoming) or complete (for outgoing)."""
-        if txn.status == "paid" or txn.status == "completed":
-            return True
-        if txn.status == "expired":
-            logger.warning("Attempted to mark expired transaction %s as paid", txn.id)
-            return False
-
         transaction_id = txn.id
         transaction_external_id = txn.external_id
         transaction_amount = txn.amount
@@ -529,15 +523,29 @@ class TransactionsService(BaseService[Transactions]):
             "payment gateway",
         }
         is_swiftpay_callback = normalized_gateway_label == "swiftpay"
+        is_terminal_status = str(txn.status or "").lower() in {"paid", "completed"}
+        customer_payment = is_customer_payment(txn)
+        if is_terminal_status:
+            if not (customer_payment and provider_callback and txn.paid_at is None):
+                return True
+            if txn.approval_status == "approved":
+                txn.paid_at = datetime.now(timezone.utc)
+                txn.updated_at = txn.paid_at
+                await self.db.commit()
+                return True
+        elif txn.status == "expired":
+            logger.warning("Attempted to mark expired transaction %s as paid", txn.id)
+            return False
+
         is_new_provider_receipt = (
-            is_customer_payment(txn)
+            customer_payment
             and provider_callback
             and txn.paid_at is None
         )
         currency = (txn.currency or "").upper()
         amount = float(transaction_amount or 0)
         if (
-            is_customer_payment(txn)
+            customer_payment
             and txn.approval_status != "approved"
             and approved_by is None
             and provider_callback
