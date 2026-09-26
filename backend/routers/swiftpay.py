@@ -522,6 +522,7 @@ def _extract_swiftpay_payload(request: Request, query_params: dict[str, str]) ->
 
 
 @router.api_route("/webhook", methods=["GET", "POST"])
+@router.api_route("/webhooks/swiftpay", methods=["GET", "POST"], include_in_schema=False)
 async def swiftpay_webhook(
     request: Request,
     x_access_key: Optional[str] = Query(None),

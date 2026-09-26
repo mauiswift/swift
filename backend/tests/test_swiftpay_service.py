@@ -899,3 +899,26 @@ def test_swiftpay_webhook_accepts_form_encoded_payload():
     body = response.json()
     assert body["success"] is True
     assert body["message"] == "no matching transaction"
+
+
+def test_swiftpay_webhook_accepts_configured_legacy_get_url():
+    svc = SwiftPayService()
+    payload = {
+        "x_access_key": svc.access_key,
+        "x_reference_no": "PUBLIC-PAY-test",
+        "x_payment_status": "EXECUTED",
+        "x_payment_id": "pay-test",
+    }
+    signature = svc._sign_payload(payload)
+    payload["signature"] = signature
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/swiftpay/webhooks/swiftpay",
+            params={**payload, "institution_reference_no": "801605057"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "no matching transaction"
