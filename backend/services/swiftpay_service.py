@@ -732,9 +732,7 @@ class SwiftPayService:
                 "mobileNumber": normalized_phone or "",
                 "email": email or "",
                 "address": {
-                    "fullAddress": ", ".join(
-                        part for part in (line1, line2, city, province, postal_code, country_code) if part
-                    ),
+                    "fullAddress": None,
                     "line1": line1,
                     "line2": line2,
                     "city": city,

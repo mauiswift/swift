@@ -410,7 +410,11 @@ async def test_send_disbursement_payload(monkeypatch):
     assert captured_payload["institutionCode"] == "GCASH"
     assert "externalBankCode" not in captured_payload
     assert captured_payload["recipientInformation"]["fullName"] == "Juan Cruz"
-    assert captured_payload["recipientInformation"]["address"]["city"] == "Manila"
+    address = captured_payload["recipientInformation"]["address"]
+    assert address["fullAddress"] is None
+    assert address["line1"] == "N/A"
+    assert address["city"] == "Manila"
+    assert address["postalCode"] == "1000"
     assert captured_payload["creditInformation"]["amount"] == 500.0
 
 
