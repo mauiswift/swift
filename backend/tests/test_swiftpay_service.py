@@ -399,6 +399,7 @@ async def test_send_disbursement_payload(monkeypatch):
         amount=500.0,
         bank_code="GCASH",
         account_number="09123456789",
+        phone="639556708019",
         first_name="Juan",
         last_name="Cruz",
         city="Manila",
@@ -410,6 +411,7 @@ async def test_send_disbursement_payload(monkeypatch):
     assert captured_payload["institutionCode"] == "GCASH"
     assert "externalBankCode" not in captured_payload
     assert captured_payload["recipientInformation"]["fullName"] == "Juan Cruz"
+    assert captured_payload["recipientInformation"]["mobileNumber"] == "+63-95-567-08019"
     address = captured_payload["recipientInformation"]["address"]
     assert address["fullAddress"] is None
     assert address["line1"] == "N/A"

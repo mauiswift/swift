@@ -1469,14 +1469,31 @@ async def _process_withdrawal_request(
 
     from services.wallets import WalletsService
     wallet_svc = WalletsService(db)
+    normalized_bank = bank.strip().upper()
+    recipient_phone = None
+    if normalized_bank in {"GCASH", "MAYA"}:
+        from services.swiftpay_service import SwiftPayService
+
+        recipient_phone = SwiftPayService.normalize_philippine_mobile(account)
+        if not recipient_phone:
+            await _send_bot_error(
+                tg,
+                chat_id,
+                "Enter a valid Philippine mobile number for the GCash or Maya account.",
+                next_step="Use a number such as 639556708019 or 09556708019.",
+                title=f"{cmd_label} unavailable",
+            )
+            return
+
     try:
         result = await wallet_svc.withdraw_request(
             user_id=chat_id,
             amount=amount,
-            bank_name=bank.upper(),
-            bank_code=bank.upper(),
+            bank_name=normalized_bank,
+            bank_code=normalized_bank,
             account_number=account,
             account_name=name,
+            recipient_phone=recipient_phone,
             note=f"{cmd_label} request via Telegram",
         )
     except ValueError as exc:

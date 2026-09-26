@@ -1394,6 +1394,75 @@ class TestParseTlv:
         assert result == {}
 
 
+class TestTelegramWithdrawalPhone:
+    @pytest.mark.asyncio
+    async def test_maya_account_number_is_sent_as_formatted_recipient_phone(self):
+        from routers.telegram import _process_withdrawal_request
+
+        tg = AsyncMock()
+        db = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock(
+            return_value={
+                "success": True,
+                "reference_id": "withdrawal-9",
+                "balance": 100,
+                "transaction_id": 9,
+            }
+        )
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service), patch(
+            "services.admin_notification_service.AdminNotificationService.notify_super_admins",
+            new=AsyncMock(return_value=[]),
+        ), patch("routers.telegram._get_bot_owner_id", return_value=None), patch(
+            "routers.telegram.payment_event_bus.publish"
+        ):
+            await _process_withdrawal_request(
+                tg,
+                db,
+                "123456789",
+                "testuser",
+                "MAYA",
+                "639556708019",
+                "Den",
+                1.0,
+            )
+
+        wallet_service.withdraw_request.assert_awaited_once_with(
+            user_id="123456789",
+            amount=1.0,
+            bank_name="MAYA",
+            bank_code="MAYA",
+            account_number="639556708019",
+            account_name="Den",
+            recipient_phone="+63-95-567-08019",
+            note="Withdrawal request via Telegram",
+        )
+
+    @pytest.mark.asyncio
+    async def test_invalid_maya_number_does_not_reserve_wallet_funds(self):
+        from routers.telegram import _process_withdrawal_request
+
+        tg = AsyncMock()
+        wallet_service = MagicMock()
+        wallet_service.withdraw_request = AsyncMock()
+
+        with patch("services.wallets.WalletsService", return_value=wallet_service):
+            await _process_withdrawal_request(
+                tg,
+                AsyncMock(),
+                "123456789",
+                "testuser",
+                "MAYA",
+                "1234",
+                "Den",
+                1.0,
+            )
+
+        wallet_service.withdraw_request.assert_not_awaited()
+        assert "valid Philippine mobile number" in tg.send_message.await_args.args[1]
+
+
 # ---------------------------------------------------------------------------
 # Helper: Telegram command normalization
 # ---------------------------------------------------------------------------
