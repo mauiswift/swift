@@ -2182,7 +2182,7 @@ export default function Checkout() {
           </div>
         </DialogContent>
       </Dialog>
-      {checkoutDesign.show_powered_by && <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8" />}
+      {checkoutDesign.show_powered_by && <CheckoutPoweredBy currency={currencyCode} paymentChannels={paymentChannels} className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8" />}
     </div>
   );
 }

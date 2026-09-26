@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { client } from '@/lib/api';
+import { fetchPaymentChannels, type PaymentChannels } from '@/lib/paymentChannels';
 import {
   ResponsiveContainer,
   ResponsiveHeading1,
@@ -72,6 +73,7 @@ export default function ImprovedCheckout() {
 
   // State
   const [payment, setPayment] = useState<PaymentLink | null>(null);
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'amount' | 'method' | 'confirm'>('amount');
@@ -79,6 +81,12 @@ export default function ImprovedCheckout() {
   const [copied, setCopied] = useState(false);
   const [showBankDetails, setShowBankDetails] = useState(false);
   const [enteredAmount, setEnteredAmount] = useState('');
+
+  useEffect(() => {
+    fetchPaymentChannels().then(setPaymentChannels, error => {
+      console.error('Failed to load payment channels for checkout branding:', error);
+    });
+  }, []);
 
   // Fetch payment link details
   useEffect(() => {
@@ -480,7 +488,11 @@ export default function ImprovedCheckout() {
               </div>
 
               {/* POWERED BY */}
-              <CheckoutPoweredBy currency={payment?.currency?.trim().toUpperCase() || 'PHP'} className="mt-6" />
+              <CheckoutPoweredBy
+                currency={payment?.currency?.trim().toUpperCase() || 'PHP'}
+                paymentChannels={paymentChannels}
+                className="mt-6"
+              />
             </ResponsiveCard>
           </div>
         </div>

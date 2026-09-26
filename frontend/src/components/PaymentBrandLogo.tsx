@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Building2, WalletCards } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { normalizeBrandKey, resolveBrandLogoPath } from '@/config/payment-logo-registry';
+import { getBrandLogoCandidates, normalizeBrandKey } from '@/config/payment-logo-registry';
 
 interface PaymentBrandLogoProps {
   brand: string;
@@ -12,9 +12,8 @@ interface PaymentBrandLogoProps {
 
 export default function PaymentBrandLogo({ brand, size = 'md', className, logoUrl }: PaymentBrandLogoProps) {
   const brandName = String(brand || 'Payment').trim() || 'Payment';
-  const [failedOfficialLogo, setFailedOfficialLogo] = useState(false);
-  const [failedProviderLogo, setFailedProviderLogo] = useState(false);
-  const officialLogoPath = resolveBrandLogoPath(brandName);
+  const [failedLogoPaths, setFailedLogoPaths] = useState<string[]>([]);
+  const logoCandidates = getBrandLogoCandidates(brandName, logoUrl);
   const brandKey = normalizeBrandKey(brandName);
   const isWallet = ['gcash', 'maya', 'grabpay', 'alipay', 'kakaopay', 'tosspay', 'naverpay', 'payco', 'wechatpay'].some(key => brandKey.includes(key));
   const fallbackLabel = brandName
@@ -30,12 +29,9 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
     'from-amber-50 to-orange-100 text-orange-700',
     'from-violet-50 to-fuchsia-100 text-violet-700',
   ][brandKey.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 4];
-  const logoPath = failedProviderLogo
-    ? undefined
-    : (failedOfficialLogo ? logoUrl : (officialLogoPath || logoUrl));
+  const logoPath = logoCandidates.find(path => !failedLogoPaths.includes(path));
   useEffect(() => {
-    setFailedOfficialLogo(false);
-    setFailedProviderLogo(false);
+    setFailedLogoPaths([]);
   }, [brand, logoUrl]);
   const sizeClass = {
     sm: 'h-7 w-12',
@@ -59,11 +55,7 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
         alt={`${brandName} logo`}
         className="h-full w-full object-contain"
         onError={() => {
-          if (logoPath === officialLogoPath && logoUrl) {
-            setFailedOfficialLogo(true);
-          } else {
-            setFailedProviderLogo(true);
-          }
+          setFailedLogoPaths(paths => paths.includes(logoPath) ? paths : [...paths, logoPath]);
         }}
       />
     </span>

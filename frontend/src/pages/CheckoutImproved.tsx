@@ -643,7 +643,7 @@ export default function CheckoutImproved() {
           </aside>
         </div>
       </main>
-      <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-4xl px-4 sm:px-6" />
+      <CheckoutPoweredBy currency={currencyCode} paymentChannels={paymentChannels} className="mx-auto max-w-4xl px-4 sm:px-6" />
     </div>
   );
 }

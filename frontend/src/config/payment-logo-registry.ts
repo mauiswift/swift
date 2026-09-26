@@ -72,3 +72,8 @@ export const resolveBrandLogoPath = (value: string): string => {
     )?.[1]
     || '';
 };
+
+export const getBrandLogoCandidates = (value: string, providerLogoUrl?: string): string[] => {
+  const candidates = [providerLogoUrl?.trim(), resolveBrandLogoPath(value)];
+  return [...new Set(candidates.filter((path): path is string => Boolean(path)))];
+};

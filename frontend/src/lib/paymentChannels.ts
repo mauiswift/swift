@@ -4,6 +4,17 @@ export type PaymentChannelFlow = 'checkout' | 'withdrawal' | 'disbursement';
 export type PaymentChannels = Record<string, Record<PaymentChannelFlow, string[]> & { checkout_institutions?: string[] }>;
 
 const SUPPORTED_PAYMENT_CHANNEL_CURRENCIES = new Set(['PHP', 'CNY', 'KRW', 'USDT']);
+const CHECKOUT_CHANNEL_BRANDS: Record<string, string> = {
+  gcash: 'GCash',
+  maya: 'Maya',
+  grabpay: 'GrabPay',
+  bank_transfer: 'Bank transfer',
+  virtual_account: 'SwiftPay Virtual Account',
+  alipay: 'Alipay',
+  wechat: 'WeChat Pay',
+  unionpay: 'UnionPay',
+  card: 'Card',
+};
 
 export const PAYMENT_CHANNELS = [
   { id: 'gcash', label: 'GCash' },
@@ -73,4 +84,23 @@ export function isPaymentChannelEnabled(
 
   const flowChannels = channels[normalizedCurrency]?.[flow];
   return Array.isArray(flowChannels) ? flowChannels.includes(channel) : false;
+}
+
+export function getCheckoutPaymentBrands(
+  channels: PaymentChannels | null,
+  currency: string,
+): string[] {
+  const normalizedCurrency = normalizePaymentChannelCurrency(currency);
+  if (!channels || !normalizedCurrency) return [];
+
+  const checkoutChannels = channels[normalizedCurrency]?.checkout;
+  if (!Array.isArray(checkoutChannels)) return [];
+
+  return [...new Set(checkoutChannels
+    .map(channel => {
+      const normalizedChannel = channel.trim().toLowerCase();
+      if (normalizedChannel === 'qr_code') return normalizedCurrency === 'PHP' ? 'QRPH' : undefined;
+      return CHECKOUT_CHANNEL_BRANDS[normalizedChannel];
+    })
+    .filter((brand): brand is string => Boolean(brand)))];
 }

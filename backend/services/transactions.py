@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Protocol
 
 from sqlalchemy import select, func, or_, case, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,6 +41,11 @@ RECEIVED_PAYMENT_STATUSES = {
     "executed",
     "settled",
 }
+
+
+class PaymentStatusRecord(Protocol):
+    status: Optional[str]
+    paid_at: Optional[datetime]
 
 
 def is_approvable_transaction_status(txn: Transactions) -> bool:
@@ -86,7 +91,7 @@ def is_payment_received(txn: Transactions) -> bool:
     return bool(txn.paid_at) or status in RECEIVED_PAYMENT_STATUSES or approval_status == "approved"
 
 
-def get_payment_status(txn: Transactions) -> str:
+def get_payment_status(txn: PaymentStatusRecord) -> str:
     """Return the payment outcome separately from its admin approval state."""
     status = str(txn.status or "").strip().lower()
     if status in RECEIVED_PAYMENT_STATUSES:

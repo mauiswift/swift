@@ -10,9 +10,27 @@ import { PaymentStatusBadge } from '@/components/PaymentStatusBadge';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTransactionStatus, type TransactionStatus } from '@/lib/transactions';
+import { getPaymentDateRangeBounds, type PaymentDateRange } from '@/lib/paymentDateRanges';
 
-type DateRange = 'all' | 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
+type DateRange = PaymentDateRange;
 type Status = 'all' | TransactionStatus;
+const PAYMENT_PAGE_SIZE = 2000;
+
+interface PaymentApiRecord {
+  id: number | string;
+  transaction_type?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  status: string;
+  approval_status?: string | null;
+  payment_status?: string | null;
+  paid_at?: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+  title?: string | null;
+  order_no?: string | null;
+  external_id?: string | null;
+}
 
 interface Payment {
   id: string;
@@ -30,47 +48,16 @@ interface Payment {
   paidAt?: string | null;
 }
 
-const getDateRangeBounds = (range: DateRange): { start: Date; end: Date } | null => {
-  if (range === 'all' || range === 'custom') return null;
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(startOfToday);
-  endOfToday.setDate(endOfToday.getDate() + 1);
-  if (range === 'today') return { start: startOfToday, end: endOfToday };
-  if (range === 'yesterday') {
-    const start = new Date(startOfToday);
-    start.setDate(start.getDate() - 1);
-    return { start, end: startOfToday };
-  }
-  if (range === 'last7' || range === 'lastWeek' || range === 'lastMonth') {
-    const start = new Date(startOfToday);
-    if (range === 'last7') start.setDate(start.getDate() - 6);
-    if (range === 'lastWeek') {
-      const day = start.getDay();
-      start.setDate(start.getDate() - (day === 0 ? 6 : day - 1) - 7);
-    }
-    if (range === 'lastMonth') {
-      start.setMonth(start.getMonth() - 1, 1);
-    }
-    return { start, end: endOfToday };
-  }
-  if (range === 'thisMonth') return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: endOfToday };
-  const day = startOfToday.getDay();
-  const start = new Date(startOfToday);
-  start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
-  return { start, end: endOfToday };
-};
-
-const dateRangeLabels: Record<DateRange, { label: string; dates: string }> = {
-  all: { label: 'All dates', dates: '' },
-  last7: { label: 'Last 7 days', dates: '13 Jul - 19 Jul' },
-  today: { label: 'Today', dates: '19 Jul' },
-  yesterday: { label: 'Yesterday', dates: '18 Jul' },
-  thisWeek: { label: 'This week', dates: '19 Jul' },
-  lastWeek: { label: 'Last week', dates: '12 Jul - 18 Jul' },
-  thisMonth: { label: 'This month', dates: '01 Jul - 19 Jul' },
-  lastMonth: { label: 'Last month', dates: '01 Jun - 30 Jun' },
-  custom: { label: 'Custom range', dates: '' },
+const dateRangeLabels: Record<DateRange, string> = {
+  all: 'All dates',
+  last7: 'Last 7 days',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  thisWeek: 'This week',
+  lastWeek: 'Last week',
+  thisMonth: 'This month',
+  lastMonth: 'Last month',
+  custom: 'Custom range',
 };
 
 const statusLabels: Record<Status, string> = {
@@ -116,23 +103,31 @@ export default function PaymentsPage() {
   const ui = isKorean ? {
     title: '결제', search: '검색...', refresh: '결제 새로고침', actions: '결제 작업',
     refreshData: '데이터 새로고침', viewTransactions: '거래 내역 보기', createdOn: '생성일:',
-    status: '상태:', more: '더 보기', transactions: '거래', totalAmount: '총 금액',
+    status: '상태:', clearFilters: '필터 초기화', startDate: '시작일', endDate: '종료일',
+    transactions: '거래', totalAmount: '총 금액',
     averageAmount: '평균 금액', history: '거래 내역', payment: '결제',
     reference: '참조 번호', date: '날짜', paymentStatus: '결제 상태',
-    noTransactions: '거래 내역이 없습니다', created: '생성:', executed: '실행:',
+    noTransactions: '거래 내역이 없습니다', loadError: '결제를 불러오지 못했습니다.',
+    retry: '다시 시도', created: '생성:', executed: '실행:',
   } : {
     title: 'Payments', search: 'Search...', refresh: 'Refresh payments', actions: 'Open payment actions',
     refreshData: 'Refresh data', viewTransactions: 'View transactions', createdOn: 'Created on:',
-    status: 'Status:', more: 'More', transactions: 'Transactions', totalAmount: 'Total amount',
+    status: 'Status:', clearFilters: 'Clear filters', startDate: 'Start date', endDate: 'End date',
+    transactions: 'Transactions', totalAmount: 'Total amount',
     averageAmount: 'Average amount', history: 'Transactions history', payment: 'PAYMENT',
     reference: 'REFERENCE NO', date: 'DATE', paymentStatus: 'PAYMENT STATUS',
-    noTransactions: 'No transactions found', created: 'Created:', executed: 'Executed:',
+    noTransactions: 'No transactions found', loadError: 'Unable to load payments.',
+    retry: 'Try again', created: 'Created:', executed: 'Executed:',
   };
   const activeCurrency = String(collectionCurrency || 'PHP').trim().toUpperCase();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const querySearchTerm = searchParams.get('search') || '';
   const [dateRange, setDateRange] = useState<DateRange>(querySearchTerm ? 'all' : 'last7');
+  const today = new Date();
+  const todayInput = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const [customStart, setCustomStart] = useState(todayInput);
+  const [customEnd, setCustomEnd] = useState(todayInput);
   const [status, setStatus] = useState<Status>('all');
   const [searchTerm, setSearchTerm] = useState(querySearchTerm);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
@@ -140,37 +135,70 @@ export default function PaymentsPage() {
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const res = await client.get('/api/v1/entities/transactions');
-      if (res.ok && res.data) {
-        // Handle both direct array and list response with items
-        const rawItems = Array.isArray(res.data) ? res.data : (res.data?.items || []);
-        const mapped: Payment[] = rawItems
-          .filter((item: any) => String(item.currency || 'PHP').trim().toUpperCase() === activeCurrency)
-          .map((item: any) => ({
+      const fetchAllPages = async (query: Record<string, string | null>) => {
+        const items: PaymentApiRecord[] = [];
+        let total = Number.POSITIVE_INFINITY;
+        while (items.length < total) {
+          const res = await client.entities.transactions.query({
+            query,
+            sort: '-created_at',
+            limit: PAYMENT_PAGE_SIZE,
+            skip: items.length,
+          });
+          if (!res.ok || !res.data || !Array.isArray(res.data.items)) {
+            throw new Error(res.data?.detail || 'Unable to load payment history.');
+          }
+          const batch = res.data.items as PaymentApiRecord[];
+          total = Number(res.data.total);
+          if (!Number.isFinite(total) || total < 0) {
+            throw new Error('The payment history response has an invalid transaction count.');
+          }
+          items.push(...batch);
+          if (batch.length === 0 && items.length < total) {
+            throw new Error('Payment history changed while loading. Refresh to try again.');
+          }
+        }
+        return items;
+      };
+      const rawItems = await fetchAllPages({ currency: activeCurrency });
+      if (activeCurrency === 'PHP') {
+        rawItems.push(...await fetchAllPages({ currency: null }));
+      }
+      const locale = language === 'ko' ? 'ko-KR' : 'en-PH';
+      const mapped: Payment[] = rawItems.map((item) => {
+        const createdDate = item.created_at ? new Date(item.created_at) : null;
+        const paidDate = item.paid_at || item.updated_at;
+        const executedDate = getTransactionStatus(item) === 'paid' && paidDate ? new Date(paidDate) : null;
+        return {
           id: String(item.id),
-          amount: item.amount,
-          currency: String(item.currency || 'PHP').toUpperCase(),
+          amount: Number(item.amount) || 0,
+          currency: String(item.currency || 'PHP').trim().toUpperCase(),
           method: item.transaction_type || 'Transfer',
           provider: item.title || 'SwiftPay',
           reference: item.order_no || item.external_id || 'N/A',
-          createdAt: item.created_at ? new Date(item.created_at).toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
-          executedAt: getTransactionStatus(item) === 'paid' && (item.paid_at || item.updated_at)
-            ? new Date(item.paid_at || item.updated_at).toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+          createdAt: createdDate && !Number.isNaN(createdDate.getTime())
+            ? createdDate.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
+            : 'N/A',
+          executedAt: executedDate && !Number.isNaN(executedDate.getTime())
+            ? executedDate.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
             : null,
-          createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : null,
+          createdTimestamp: createdDate && !Number.isNaN(createdDate.getTime()) ? createdDate.getTime() : null,
           status: getTransactionStatus(item),
           approvalStatus: item.approval_status || null,
           paymentStatus: item.payment_status || null,
           paidAt: item.paid_at || null,
-          }));
-        setPayments(mapped);
-      }
+        };
+      });
+      setPayments(mapped);
     } catch (err) {
       console.error('Failed to fetch payments:', err);
+      setLoadError(err instanceof Error ? err.message : 'Unable to load payment history.');
     } finally {
       setLoading(false);
     }
@@ -186,9 +214,10 @@ export default function PaymentsPage() {
   }, [querySearchTerm]);
 
   const filteredPayments = useMemo(() => {
-    const bounds = getDateRangeBounds(dateRange);
+    const bounds = getPaymentDateRangeBounds(dateRange, customStart, customEnd);
     return payments.filter(p => {
       if (p.currency !== activeCurrency) return false;
+      if (dateRange === 'custom' && !bounds) return false;
       if (bounds && (p.createdTimestamp === null || p.createdTimestamp < bounds.start.getTime() || p.createdTimestamp >= bounds.end.getTime())) return false;
       if (status !== 'all' && p.status !== status) return false;
       if (searchTerm) {
@@ -200,7 +229,7 @@ export default function PaymentsPage() {
       }
       return true;
     });
-  }, [payments, activeCurrency, dateRange, status, searchTerm]);
+  }, [payments, activeCurrency, dateRange, customStart, customEnd, status, searchTerm]);
 
   const transactionsCount = filteredPayments.length;
   const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -209,6 +238,22 @@ export default function PaymentsPage() {
   if (loading) return (
     <Layout>
       <LoadingSkeleton variant="page" />
+    </Layout>
+  );
+
+  if (loadError) return (
+    <Layout>
+      <div role="alert" className="mx-auto max-w-xl py-20 text-center">
+        <p className="text-lg font-semibold text-slate-900">{ui.loadError}</p>
+        <p className="mt-2 text-sm text-slate-500">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => void fetchPayments()}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <RefreshCw size={15} /> {ui.retry}
+        </button>
+      </div>
     </Layout>
   );
 
@@ -277,7 +322,7 @@ export default function PaymentsPage() {
               className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">{ui.createdOn}</span>
-              <span className="text-slate-900 font-semibold">{isKorean ? koreanDateRangeLabels[dateRange] : dateRangeLabels[dateRange].label}</span>
+              <span className="text-slate-900 font-semibold">{isKorean ? koreanDateRangeLabels[dateRange] : dateRangeLabels[dateRange]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
             {showDateDropdown && (
@@ -290,7 +335,7 @@ export default function PaymentsPage() {
                       onClick={() => { setDateRange(key); setShowDateDropdown(false); }}
                       className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-semibold ${dateRange === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
-                      {isKorean ? koreanDateRangeLabels[key] : dateRangeLabels[key].label}
+                      {isKorean ? koreanDateRangeLabels[key] : dateRangeLabels[key]}
                       {dateRange === key && <Check size={14} />}
                     </button>
                   ))}
@@ -327,13 +372,46 @@ export default function PaymentsPage() {
             )}
           </div>
 
-          <button className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-600 shadow-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-            </svg>
-            {ui.more}
+          <button
+            type="button"
+            onClick={() => {
+              setDateRange('all');
+              setCustomStart(todayInput);
+              setCustomEnd(todayInput);
+              setStatus('all');
+              setSearchTerm('');
+              navigate('/payments', { replace: true });
+            }}
+            className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+          >
+            {ui.clearFilters}
           </button>
         </div>
+
+        {dateRange === 'custom' && (
+          <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+              {ui.startDate}
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd}
+                onChange={(event) => setCustomStart(event.target.value)}
+                className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-normal text-slate-900"
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+              {ui.endDate}
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart}
+                onChange={(event) => setCustomEnd(event.target.value)}
+                className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-normal text-slate-900"
+              />
+            </label>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">

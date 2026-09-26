@@ -1,6 +1,7 @@
 import os
 import asyncio
 import uuid
+from datetime import datetime, timezone
 
 os.environ["JWT_SECRET_KEY"] = "devsecret"
 os.environ["TELEGRAM_BOT_TOKEN"] = "123"
@@ -46,7 +47,38 @@ def test_public_transaction_lookup_returns_transaction():
         payload = response.json()
         assert payload["external_id"] == txn.external_id
         assert payload["status"] == "pending"
+        assert payload["payment_status"] == "pending"
         assert payload["amount"] == 12.5
+
+
+def test_public_transaction_exposes_received_payment_status_before_approval():
+    with TestClient(app) as client:
+        async def seed_transaction():
+            async for session in get_db():
+                svc = TransactionsService(session)
+                txn = await svc.create_transaction(
+                    user_id="demo-user",
+                    transaction_type="payment_link",
+                    amount=12.5,
+                    external_id=f"received-{uuid.uuid4().hex[:8]}",
+                    gateway_id="gw-received",
+                    description="provider-confirmed payment awaiting review",
+                    status="pending",
+                    currency="PHP",
+                )
+                txn.paid_at = datetime.now(timezone.utc)
+                txn.approval_status = "pending"
+                await session.commit()
+                return txn
+
+        txn = asyncio.run(seed_transaction())
+        response = client.get(f"/api/v1/entities/transactions/public/{txn.external_id}")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["status"] == "pending"
+        assert payload["payment_status"] == "paid"
+        assert payload["approval_status"] == "pending"
 
 
 def test_checkout_institution_allows_php_above_50000():

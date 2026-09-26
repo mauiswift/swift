@@ -4,11 +4,11 @@ from typing import List, Optional
 from datetime import datetime
 
 from fastapi import Depends, HTTPException
-from pydantic import ConfigDict, BaseModel, field_serializer
+from pydantic import ConfigDict, BaseModel, computed_field, field_serializer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from services.transactions import TransactionsService
+from services.transactions import TransactionsService, get_payment_status
 from dependencies.auth import get_current_user
 from schemas.auth import UserResponse
 from routers.base import BaseEntityRouter
@@ -91,6 +91,12 @@ class TransactionsResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None
+
+    @computed_field
+    @property
+    def payment_status(self) -> str:
+        return get_payment_status(self)
+
     @field_serializer("expires_at", "created_at", "updated_at", "paid_at")
     def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
         return serialize_utc_datetime(value)

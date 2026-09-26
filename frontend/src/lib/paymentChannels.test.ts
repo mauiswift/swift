@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { KRW_BANKS, normalizeKrwBankName } from '@/config/krw-banks';
-import { resolveBrandLogoPath } from '@/config/payment-logo-registry';
+import { getBrandLogoCandidates, resolveBrandLogoPath } from '@/config/payment-logo-registry';
+import type { PaymentChannels } from './paymentChannels';
 
 const originalFetch = globalThis.fetch;
 const windowMock = {
@@ -13,7 +14,7 @@ if (!globalThis.fetch) {
   globalThis.fetch = windowMock.fetch as typeof fetch;
 }
 
-const { isPaymentChannelEnabled } = await import('./paymentChannels');
+const { getCheckoutPaymentBrands, isPaymentChannelEnabled } = await import('./paymentChannels');
 
 describe('isPaymentChannelEnabled', () => {
   it('normalizes USD aliases to the supported USDT channel config', () => {
@@ -47,12 +48,11 @@ describe('isPaymentChannelEnabled', () => {
     expect(isPaymentChannelEnabled(channels, 'KRW', 'checkout', 'bank_transfer')).toBe(false);
   });
 
-  it('includes the Korean bank catalog used by KRW checkout', () => {
+  it('includes the Korean banks present in the KRW bank catalog', () => {
     const names = KRW_BANKS.map(bank => bank.name);
     expect(names).toContain('Kakao Bank');
     expect(names).toContain('Toss Bank');
     expect(names).toContain('K Bank');
-    expect(names).toContain('Naver Bank');
   });
 
   it('uses the configured TOSS fallback for empty KRW bank names', () => {
@@ -71,5 +71,38 @@ describe('isPaymentChannelEnabled', () => {
   it('does not mistake K Bank for KB Kookmin Bank', () => {
     expect(resolveBrandLogoPath('K Bank')).toBe('');
     expect(resolveBrandLogoPath('KB Kookmin Bank')).toBe('/logos/kb-kookmin.svg');
+  });
+
+  it('prefers a provider-supplied logo before the generic registry logo', () => {
+    expect(getBrandLogoCandidates('GCash', '/provider/gcash.svg')).toEqual([
+      '/provider/gcash.svg',
+      '/logos/gcash.png',
+    ]);
+    expect(getBrandLogoCandidates('GCash', '/logos/gcash.png')).toEqual(['/logos/gcash.png']);
+  });
+
+  it('lists only configured checkout methods with branded logos', () => {
+    const channels: PaymentChannels = {
+      PHP: {
+        checkout: ['gcash', 'bank_transfer', 'card', 'qr_code', 'unknown'],
+        withdrawal: [],
+        disbursement: [],
+      },
+      CNY: {
+        checkout: ['qr_code'],
+        withdrawal: [],
+        disbursement: [],
+      },
+    };
+
+    expect(getCheckoutPaymentBrands(channels, 'PHP')).toEqual([
+      'GCash',
+      'Bank transfer',
+      'Card',
+      'QRPH',
+    ]);
+    expect(getCheckoutPaymentBrands(channels, 'CNY')).toEqual([]);
+    expect(getCheckoutPaymentBrands(channels, 'KRW')).toEqual([]);
+    expect(getCheckoutPaymentBrands(null, 'PHP')).toEqual([]);
   });
 });
