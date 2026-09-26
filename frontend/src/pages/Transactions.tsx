@@ -85,6 +85,7 @@ export default function Transactions() {
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
   const isKorean = language === 'ko';
+  const dateLocale = isKorean ? 'ko-KR' : 'en-PH';
   const ui = isKorean ? {
     title: '거래 내역', description: '결제 활동, 상태 및 고객 정보를 실시간으로 확인하세요.',
     live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
@@ -92,6 +93,9 @@ export default function Transactions() {
     allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
     transaction: '거래', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', created: '생성', paid: '결제 완료', actions: '작업',
     success: '성공', processing: '처리 중', failed: '실패', noResultsHint: '필터를 변경하거나 새 결제를 만들어 보세요.',
+    invoiceType: '인보이스', qrType: 'QR 결제', paymentLinkType: '결제 링크', type: '유형',
+    customerFallback: '고객 정보 없음', descriptionFallback: '결제 거래',
+    showing: '표시 중', of: '/', activeFilters: '개 필터 적용', transactionCount: '건의 거래', clearFilters: '필터 초기화',
   } : {
     title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
     live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
@@ -99,6 +103,9 @@ export default function Transactions() {
     allTypes: 'All Types', noTransactions: 'No transactions found',
     transaction: 'Transaction', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', created: 'Created', paid: 'Paid', actions: 'Actions',
     success: 'Success', processing: 'Processing', failed: 'Failed', noResultsHint: 'Try changing filters or create a new payment to get started.',
+    invoiceType: 'Invoice', qrType: 'QR payment', paymentLinkType: 'Payment link', type: 'Type',
+    customerFallback: 'Customer not provided', descriptionFallback: 'Payment transaction',
+    showing: 'Showing', of: 'of', activeFilters: ' filters active', transactionCount: ' transactions', clearFilters: 'Clear filters',
   };
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -202,15 +209,23 @@ export default function Transactions() {
 
   const totalPages = Math.ceil(total / limit);
   const activeFilterCount = [searchTerm, statusFilter !== 'all' ? statusFilter : '', typeFilter !== 'all' ? typeFilter : ''].filter(Boolean).length;
-  const getStatusLabel = (displayStatus: string) => isKorean
-    ? (['paid', 'completed', 'executed'].includes(displayStatus)
-      ? ui.success
-      : ['pending', 'processing'].includes(displayStatus) ? ui.processing : ui.failed)
-    : statusLabels[displayStatus] || undefined;
-  const getStatusType = (displayStatus: string): StatusType =>
-    ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled'].includes(displayStatus)
+  const getStatusLabel = (displayStatus: string) => {
+    if (['paid', 'completed', 'executed'].includes(displayStatus)) {
+      return isKorean ? ui.success : statusLabels[displayStatus];
+    }
+    if (displayStatus === 'pending' || displayStatus === 'processing') {
+      return isKorean ? ui.processing : statusLabels[displayStatus];
+    }
+    if (displayStatus === 'expired') return ui.expiredStatus;
+    if (displayStatus === 'failed' || displayStatus === 'cancelled') return isKorean ? ui.failed : statusLabels[displayStatus] || ui.failedStatus;
+    return undefined;
+  };
+  const getStatusType = (displayStatus: string): StatusType => (
+    ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled', 'inactive'].includes(displayStatus)
       ? displayStatus as StatusType
-      : 'inactive';
+      : 'inactive'
+  );
+  const formatDate = (value?: string | null) => formatTransactionDate(value, dateLocale);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -283,34 +298,36 @@ export default function Transactions() {
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="all" className="text-foreground">{ui.allStatus}</SelectItem>
-                  <SelectItem value="paid" className="text-emerald-400">Paid</SelectItem>
-                  <SelectItem value="completed" className="text-emerald-400">Completed</SelectItem>
-                  <SelectItem value="pending" className="text-amber-400">Pending</SelectItem>
-                  <SelectItem value="expired" className="text-red-400">Expired</SelectItem>
-                  <SelectItem value="failed" className="text-red-400">Failed</SelectItem>
+                  <SelectItem value="paid" className="text-emerald-700">{isKorean ? '완료' : 'Paid'}</SelectItem>
+                  <SelectItem value="completed" className="text-emerald-700">{isKorean ? '완료됨' : 'Completed'}</SelectItem>
+                  <SelectItem value="pending" className="text-amber-700">{isKorean ? '대기 중' : 'Pending'}</SelectItem>
+                  <SelectItem value="processing" className="text-amber-700">{isKorean ? '처리 중' : 'Processing'}</SelectItem>
+                  <SelectItem value="expired" className="text-red-700">{isKorean ? '만료' : 'Expired'}</SelectItem>
+                  <SelectItem value="cancelled" className="text-slate-700">{isKorean ? '취소됨' : 'Cancelled'}</SelectItem>
+                  <SelectItem value="failed" className="text-red-700">{isKorean ? '실패' : 'Failed'}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(0); }}>
                 <SelectTrigger className="w-full sm:w-[160px] bg-slate-50 border-slate-200 text-foreground">
-                  <SelectValue placeholder="Type" />
+                  <SelectValue placeholder={ui.type} />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="all" className="text-foreground">{ui.allTypes}</SelectItem>
-                  <SelectItem value="invoice" className="text-blue-400">Invoice</SelectItem>
-                  <SelectItem value="qr_code" className="text-purple-400">QR Code</SelectItem>
-                  <SelectItem value="payment_link" className="text-cyan-400">Payment Link</SelectItem>
+                  <SelectItem value="invoice" className="text-blue-700">{ui.invoiceType}</SelectItem>
+                  <SelectItem value="qr_code" className="text-purple-700">{ui.qrType}</SelectItem>
+                  <SelectItem value="payment_link" className="text-cyan-700">{ui.paymentLinkType}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
-              <span>{activeFilterCount ? `${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active` : `${total} transactions`}</span>
+              <span>{activeFilterCount ? `${activeFilterCount}${ui.activeFilters}` : `${total}${ui.transactionCount}`}</span>
               {activeFilterCount > 0 && (
                 <button
                   type="button"
                   onClick={() => { setSearchTerm(''); setStatusFilter('all'); setTypeFilter('all'); setPage(0); }}
                   className="font-semibold text-blue-600 hover:text-blue-700"
                 >
-                  Clear filters
+                  {ui.clearFilters}
                 </button>
               )}
             </div>
@@ -320,7 +337,7 @@ export default function Transactions() {
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:p-4">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => ['paid', 'completed', 'executed'].includes(getDisplayStatus(txn))).length}</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => getDisplayStatus(txn) === 'paid').length}</p>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 sm:text-xs">{ui.success}</p>
           </div>
           <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 sm:p-4">
@@ -376,7 +393,7 @@ export default function Transactions() {
                         <div className="flex min-w-0 items-center gap-3">
                           <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-9 min-w-12 max-w-16" />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">{getTransactionTypeLabel(txn.transaction_type)}</p>
+                            <p className="truncate text-sm font-semibold text-slate-900">{getTransactionTypeLabel(txn.transaction_type, isKorean ? 'ko' : 'en')}</p>
                             <div className="mt-1 flex items-center gap-1">
                               <code className="max-w-[180px] truncate text-[11px] text-slate-500">{txn.external_id || `#${txn.id}`}</code>
                               {txn.external_id && <button type="button" aria-label="Copy transaction ID" onClick={(event) => { event.stopPropagation(); copyToClipboard(txn.external_id); }} className="text-slate-400"><Copy className="h-3 w-3" /></button>}
@@ -387,8 +404,10 @@ export default function Transactions() {
                       </div>
                       <div className="mt-4 flex items-end justify-between gap-3">
                         <div>
-                          <p className="text-xs text-slate-500">{txn.description || txn.customer_name || 'Payment transaction'}</p>
-                          <p className="mt-1 text-[11px] text-slate-400">{formatTransactionDate(txn.created_at)}</p>
+                          <p className="text-xs text-slate-600">{txn.description || ui.descriptionFallback}</p>
+                          <p className="mt-1 text-[11px] text-slate-500">{txn.customer_name || ui.customerFallback}</p>
+                          <p className="mt-1 text-[11px] text-slate-400">{formatDate(txn.created_at)}</p>
+                          {txn.paid_at && <p className="mt-1 text-[11px] font-medium text-emerald-700">{ui.paid}: {formatDate(txn.paid_at)}</p>}
                         </div>
                         <p className="whitespace-nowrap text-base font-semibold text-slate-900">{fmtCurrency(Number(txn.amount || 0), normalizePublicCurrency(txn.currency))}</p>
                       </div>
@@ -436,7 +455,7 @@ export default function Transactions() {
                             <div className="flex min-w-[170px] items-center gap-2.5">
                               <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-7 min-w-12 max-w-16" />
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-medium text-foreground">{getTransactionTypeLabel(txn.transaction_type)}</p>
+                                <p className="truncate text-sm font-medium text-foreground">{getTransactionTypeLabel(txn.transaction_type, isKorean ? 'ko' : 'en')}</p>
                                 <div className="mt-0.5 flex items-center gap-1">
                                   <code className="max-w-[150px] truncate text-[11px] text-muted-foreground font-mono">{txn.external_id || `#${txn.id}`}</code>
                                   {txn.external_id && (
@@ -482,7 +501,7 @@ export default function Transactions() {
                                 <div>
                                   <div className="text-xs text-muted-foreground">
                                     <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-400">{ui.created}</span>
-                                    {formatTransactionDate(txn.created_at)}
+                                    {formatDate(txn.created_at)}
                                   </div>
                                 </div>
                               ) : (
@@ -492,7 +511,7 @@ export default function Transactions() {
                                 <div className="text-emerald-600">
                                   <div className="text-xs font-medium">
                                     <span className="mr-1 text-[10px] uppercase tracking-wide text-emerald-500/70">{ui.paid}</span>
-                                    {formatTransactionDate(txn.paid_at)}
+                                    {formatDate(txn.paid_at)}
                                   </div>
                                 </div>
                               ) : (
@@ -536,7 +555,7 @@ export default function Transactions() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-6 py-4 border-t border-border">
                 <p className="text-sm text-muted-foreground">
-                  Showing {page * limit + 1}-{Math.min((page + 1) * limit, total)} of {total}
+                  {ui.showing} {page * limit + 1}-{Math.min((page + 1) * limit, total)} {ui.of} {total}
                 </p>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -549,7 +568,7 @@ export default function Transactions() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {page + 1} of {totalPages}
+                    {isKorean ? `${page + 1} / ${totalPages} 페이지` : `Page ${page + 1} of ${totalPages}`}
                   </span>
                   <Button
                     variant="ghost"

@@ -921,54 +921,90 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
         </div>
       </section>
       <section id="deposit-accounts" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="text-base font-bold text-slate-900">Deposit account settings</h3>
-            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Manage deposit destinations. Toss Bank accounts form a random-selection pool; each deposit session shows just one selected account to the customer.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full shrink-0 gap-2 border-orange-200 text-[#C2410C] hover:bg-orange-50 sm:w-auto"
-            onClick={openNewAccount}
-          >
-            <Plus className="h-4 w-4" />
-            Add other account
-          </Button>
-        </div>
-        <div className="mt-5 rounded-xl border border-orange-200 bg-orange-50/70 p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900">Toss Bank KRW deposit account pool</h4>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
-                Add the accounts eligible for KRW wallet deposits. The system randomly assigns one account per deposit session and displays only that account. When possible, it avoids the user’s previous deposit account.
+        <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+              <Landmark className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Wallet deposit destinations</p>
+              <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-900">Bank deposit settings</h3>
+              <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
+                Manage the accounts customers see when they deposit funds into their wallet.
               </p>
+            </div>
+          </div>
+          <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+            {tossDepositAccounts.length + otherDepositAccounts.length} accounts configured
+          </span>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+            <div className="flex items-center gap-2 text-blue-800">
+              <WalletIcon className="h-4 w-4" />
+              <p className="text-xs font-bold uppercase tracking-wide">Wallet deposits</p>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">This page controls deposit accounts</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">Toss deposits show one randomly selected account for each deposit session. Other accounts follow their currency and minimum-amount rules.</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center gap-2 text-slate-600">
+              <RefreshCw className="h-4 w-4" />
+              <p className="text-xs font-bold uppercase tracking-wide">Payment checkout</p>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Managed separately</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">KRW payment-link checkout uses the active TOSS pool under Admin Management → TOSS Bank approvals, not the deposit accounts below.</p>
+          </div>
+        </div>
+        <div className="mt-5 overflow-hidden rounded-2xl border border-orange-200 bg-white">
+          <div className="flex flex-col gap-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 via-white to-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#C2410C]">
+                <Landmark className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-bold text-slate-900">Toss Bank · KRW deposit pool</h4>
+                  <Badge variant="secondary" className="border border-orange-200 bg-white text-[10px] text-[#C2410C]">Wallet deposits only</Badge>
+                </div>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
+                  One account is randomly selected per deposit session. The full pool is never shown to the customer, and the previous account is avoided when possible.
+                </p>
+              </div>
             </div>
             <Button
               type="button"
               variant="outline"
-              className="w-full shrink-0 gap-2 border-orange-200 text-[#C2410C] hover:bg-white sm:w-auto"
+              className="w-full shrink-0 gap-2 border-orange-200 bg-white text-[#C2410C] hover:bg-orange-50 sm:w-auto"
               onClick={openNewTossDepositAccount}
             >
               <Plus className="h-4 w-4" />
               Add Toss account
             </Button>
           </div>
-          <div className="mt-4 space-y-2">
+          <div className="space-y-2 p-3 sm:p-4">
             {tossDepositAccounts.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-orange-200 bg-white/70 px-4 py-5 text-center text-xs text-slate-500">
-                No Toss Bank deposit accounts configured.
-              </p>
+              <div className="rounded-xl border border-dashed border-orange-200 bg-orange-50/40 px-4 py-8 text-center">
+                <Landmark className="mx-auto h-7 w-7 text-orange-300" />
+                <p className="mt-2 text-sm font-semibold text-slate-700">No Toss deposit accounts yet</p>
+                <p className="mt-1 text-xs text-slate-500">Add a KRW account to enable Toss wallet deposits.</p>
+              </div>
             ) : (
               tossDepositAccounts.map(({ account, index }) => (
-                  <div key={`${account.value}-${index}`} className="flex flex-col gap-3 rounded-lg border border-orange-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div key={`${account.value}-${index}`} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-orange-200 hover:bg-orange-50/30 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                      <Landmark className="h-4 w-4" />
+                    </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{account.account_number || 'Account number not set'}</p>
-                      <p className="mt-1 text-xs text-slate-500">{account.account_name || 'Account holder not set'}</p>
+                      <p className="truncate text-sm font-semibold text-slate-900">{account.account_number || 'Account number not set'}</p>
+                      <p className="mt-1 truncate text-xs text-slate-500">{account.account_name || 'Account holder not set'} <span className="px-1 text-slate-300">·</span> KRW</p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
+                  </div>
+                  <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 pt-2 sm:justify-end sm:border-0 sm:pt-0">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">In deposit rotation</span>
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => openEditAccount(index)}
@@ -989,16 +1025,32 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
                       </button>
                     </div>
                   </div>
+                </div>
                 ))
             )}
           </div>
         </div>
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">Other receiving accounts</h4>
+              <p className="mt-1 text-xs text-slate-500">Shown in Wallet → Deposit, subject to currency and minimum amount.</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full shrink-0 gap-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-100 sm:w-auto"
+              onClick={openNewAccount}
+            >
+              <Plus className="h-4 w-4" />
+              Add other account
+            </Button>
+          </div>
           {otherDepositAccounts.length === 0 ? (
-            <div className="bg-slate-50 px-4 py-8 text-center">
-              <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
-              <p className="mt-2 text-sm font-semibold text-slate-700">No other receiving accounts</p>
-              <p className="mt-1 text-xs text-slate-500">Toss Bank deposit accounts are managed in the pool above.</p>
+            <div className="bg-white px-4 py-8 text-center">
+              <WalletIcon className="mx-auto h-7 w-7 text-slate-300" />
+              <p className="mt-2 text-sm font-semibold text-slate-700">No other accounts configured</p>
+              <p className="mt-1 text-xs text-slate-500">Use this section for non-Toss wallet deposit destinations.</p>
             </div>
           ) : (
             <Table>
@@ -1070,7 +1122,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           )}
         </div>
         <p className="mt-3 text-xs leading-5 text-slate-500">
-          Other receiving accounts are managed separately from the Toss Bank pool. Minimum amounts can be used to select a destination for eligible high-value deposits.
+          Minimum amounts can be used to select a non-Toss destination for eligible high-value wallet deposits.
         </p>
       </section>
       <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>

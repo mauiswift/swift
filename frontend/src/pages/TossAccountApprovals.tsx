@@ -63,6 +63,7 @@ export function TossAccountApprovalsPanel() {
   const [pool, setPool] = useState<TossPoolAccount[]>([]);
   const [poolForm, setPoolForm] = useState({ bank_name: '토스페이', account_number: '', account_holder_name: '', is_active: true });
   const [editingPoolId, setEditingPoolId] = useState<number | null>(null);
+  const [updatingPoolId, setUpdatingPoolId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -111,6 +112,33 @@ export function TossAccountApprovalsPanel() {
     });
     setEditingPoolId(account.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const togglePoolAccount = async (account: TossPoolAccount, isActive: boolean) => {
+    setUpdatingPoolId(account.id);
+    try {
+      const response = await client.request(
+        `/api/v1/admin/toss-account-pool/${account.id}`,
+        'PATCH',
+        {
+          bank_name: account.bank_name,
+          account_number: account.account_number,
+          account_holder_name: account.account_holder_name,
+          is_active: isActive,
+        },
+      );
+      if (!response.ok) {
+        throw new Error(response.data?.detail || 'Unable to update TOSS checkout availability.');
+      }
+      setPool(accounts => accounts.map(item => (
+        item.id === account.id ? { ...item, is_active: isActive } : item
+      )));
+      toast.success(isActive ? 'TOSS account enabled for checkout.' : 'TOSS account disabled for checkout.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to update TOSS checkout availability.');
+    } finally {
+      setUpdatingPoolId(null);
+    }
   };
 
   useEffect(() => { void load(); }, [load]);
@@ -242,23 +270,49 @@ export function TossAccountApprovalsPanel() {
               <Input value={poolForm.bank_name} onChange={(event) => setPoolForm({ ...poolForm, bank_name: event.target.value })} placeholder="Bank name" />
               <Input value={poolForm.account_number} onChange={(event) => setPoolForm({ ...poolForm, account_number: event.target.value })} placeholder="Account number" />
               <Input value={poolForm.account_holder_name} onChange={(event) => setPoolForm({ ...poolForm, account_holder_name: event.target.value })} placeholder="Account holder name" />
-              <label className="flex items-center gap-2 rounded-md border border-input bg-white px-3 text-sm text-slate-700">
-                <Switch checked={poolForm.is_active} onCheckedChange={(isActive) => setPoolForm({ ...poolForm, is_active: isActive })} />
-                Available for checkout
+              <label className={`flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors ${poolForm.is_active ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50'}`}>
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-slate-800">Checkout availability</span>
+                  <span className={`mt-0.5 block text-[10px] ${poolForm.is_active ? 'text-emerald-700' : 'text-slate-500'}`}>{poolForm.is_active ? 'Included in rotation' : 'Excluded from rotation'}</span>
+                </span>
+                <Switch
+                  checked={poolForm.is_active}
+                  onCheckedChange={(isActive) => setPoolForm({ ...poolForm, is_active: isActive })}
+                  aria-label="Include this account in checkout rotation"
+                  className="data-[state=checked]:bg-emerald-600"
+                />
               </label>
               <Button onClick={() => void savePoolAccount()}><Building2 size={14} className="mr-2" />{editingPoolId ? 'Save account' : 'Add account'}</Button>
             </div>
             {pool.length > 0 && (
               <div className="mt-4 overflow-hidden rounded-xl border border-blue-100 bg-white">
                 {pool.map((account) => (
-                  <div key={account.id} className="flex flex-col gap-2 border-b border-slate-100 p-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0 text-sm">
-                      <span className={`mr-2 inline-block h-2 w-2 rounded-full ${account.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                      <span className="font-semibold text-slate-800">{account.bank_name}</span>
-                      <span className="ml-3 font-mono text-slate-600">{account.account_number}</span>
-                      <span className="ml-3 text-slate-500">{account.account_holder_name}</span>
+                  <div key={account.id} className="flex flex-col gap-3 border-b border-slate-100 p-3 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${account.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                        <Building2 size={16} />
+                      </span>
+                      <div className="min-w-0 text-sm">
+                        <p className="truncate font-semibold text-slate-800">{account.bank_name} <span className="font-normal text-slate-300">·</span> <span className="font-mono font-medium">{account.account_number}</span></p>
+                        <p className="mt-0.5 truncate text-xs text-slate-500">{account.account_holder_name}</p>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => editPoolAccount(account)}><Pencil size={13} className="mr-1" />Edit</Button>
+                    <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 sm:justify-end sm:border-0 sm:pt-0">
+                      <label className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${account.is_active ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50'}`}>
+                        <span className="min-w-24">
+                          <span className={`block text-xs font-semibold ${account.is_active ? 'text-emerald-800' : 'text-slate-600'}`}>{account.is_active ? 'Active' : 'Inactive'}</span>
+                          <span className="block text-[10px] text-slate-500">{account.is_active ? 'Used for checkout' : 'Not in rotation'}</span>
+                        </span>
+                        <Switch
+                          checked={account.is_active}
+                          disabled={updatingPoolId !== null}
+                          onCheckedChange={(isActive) => void togglePoolAccount(account, isActive)}
+                          aria-label={`${account.is_active ? 'Disable' : 'Enable'} ${account.bank_name} ${account.account_number} for checkout`}
+                          className="data-[state=checked]:bg-emerald-600"
+                        />
+                      </label>
+                      <Button variant="outline" size="sm" disabled={updatingPoolId !== null} onClick={() => editPoolAccount(account)}><Pencil size={13} className="mr-1" />Edit</Button>
+                    </div>
                   </div>
                 ))}
               </div>
