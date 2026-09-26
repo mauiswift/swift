@@ -12,7 +12,10 @@ from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
 from models.audit_logs import AuditLog
 from models.disbursements import Disbursements
+from models.manual_deposit_receipts import ManualDepositReceipt
+from models.refunds import Refunds
 from models.transactions import Transactions
+from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 
 router = APIRouter(prefix="/api/v1/admin/test-data", tags=["admin-test-data"])
@@ -70,6 +73,9 @@ async def preview_test_data(
         "eligible_test_merchants": int(merchants_result.scalar_one()),
         "payment_transactions": await _count_records(db, Transactions),
         "disbursements": await _count_records(db, Disbursements),
+        "wallet_transactions": await _count_records(db, Wallet_transactions),
+        "refunds": await _count_records(db, Refunds),
+        "deposit_receipts": await _count_records(db, ManualDepositReceipt),
     }
 
 
@@ -81,6 +87,21 @@ async def clear_test_data(
 ):
     _require_super_admin(current_user)
 
+    receipt_result = await db.execute(
+        delete(ManualDepositReceipt)
+        .where(ManualDepositReceipt.user_id.in_(_test_mode_merchant_ids()))
+        .execution_options(synchronize_session=False)
+    )
+    refund_result = await db.execute(
+        delete(Refunds)
+        .where(Refunds.user_id.in_(_test_mode_merchant_ids()))
+        .execution_options(synchronize_session=False)
+    )
+    wallet_transaction_result = await db.execute(
+        delete(Wallet_transactions)
+        .where(Wallet_transactions.user_id.in_(_test_mode_merchant_ids()))
+        .execution_options(synchronize_session=False)
+    )
     transaction_result = await db.execute(
         delete(Transactions)
         .where(Transactions.user_id.in_(_test_mode_merchant_ids()))
@@ -94,12 +115,21 @@ async def clear_test_data(
 
     payment_transactions = transaction_result.rowcount
     disbursements = disbursement_result.rowcount
-    if payment_transactions is None or disbursements is None:
+    wallet_transactions = wallet_transaction_result.rowcount
+    refunds = refund_result.rowcount
+    deposit_receipts = receipt_result.rowcount
+    if any(
+        count is None
+        for count in (payment_transactions, disbursements, wallet_transactions, refunds, deposit_receipts)
+    ):
         raise RuntimeError("The database did not report deleted test-record counts.")
 
     counts = {
         "payment_transactions": payment_transactions,
         "disbursements": disbursements,
+        "wallet_transactions": wallet_transactions,
+        "refunds": refunds,
+        "deposit_receipts": deposit_receipts,
     }
     db.add(
         AuditLog(
@@ -108,8 +138,9 @@ async def clear_test_data(
             action="clear_test_transaction_records",
             target_type="test_mode_payment_records",
             details=(
-                f"Cleared {payment_transactions} payment transactions and "
-                f"{disbursements} disbursements for test-mode merchants."
+                f"Cleared payment transactions={payment_transactions}, disbursements={disbursements}, "
+                f"wallet transactions={wallet_transactions}, refunds={refunds}, "
+                f"deposit receipts={deposit_receipts} for test-mode merchants."
             ),
             payload=counts,
         )

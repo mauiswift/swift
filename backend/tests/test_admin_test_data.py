@@ -6,7 +6,11 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from models.admin_users import AdminUser
 from models.audit_logs import AuditLog
 from models.disbursements import Disbursements
+from models.manual_deposit_receipts import ManualDepositReceipt
+from models.refunds import Refunds
 from models.transactions import Transactions
+from models.wallet_transactions import Wallet_transactions
+from models.wallets import Wallets
 from routers.admin_test_data import (
     ClearTestDataRequest,
     clear_test_data,
@@ -30,6 +34,10 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
         AdminUser.__table__,
         Transactions.__table__,
         Disbursements.__table__,
+        Wallet_transactions.__table__,
+        Refunds.__table__,
+        ManualDepositReceipt.__table__,
+        Wallets.__table__,
         AuditLog.__table__,
     ]
     async with engine.begin() as connection:
@@ -110,6 +118,51 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
                     status="pending",
                 )
             )
+            session.add_all(
+                [
+                    Wallet_transactions(
+                        user_id=user_id,
+                        wallet_id=1,
+                        transaction_type="credit",
+                        amount=50,
+                        status="completed",
+                    )
+                    for user_id in ("test-merchant", "live-merchant")
+                ]
+            )
+            session.add_all(
+                [
+                    Refunds(
+                        user_id=user_id,
+                        amount=20,
+                        status="completed",
+                    )
+                    for user_id in ("test-merchant", "live-merchant")
+                ]
+            )
+            session.add_all(
+                [
+                    ManualDepositReceipt(
+                        user_id=user_id,
+                        file_path=f"/tmp/{user_id}-receipt.png",
+                        amount=30,
+                        status="pending",
+                    )
+                    for user_id in ("test-merchant", "live-merchant")
+                ]
+            )
+            session.add_all(
+                [
+                    Wallets(
+                        user_id=user_id,
+                        currency="PHP",
+                        balance=500,
+                        available_balance=500,
+                        pending_balance=0,
+                    )
+                    for user_id in ("test-merchant", "live-merchant")
+                ]
+            )
             await session.commit()
 
             preview = await preview_test_data(_user(is_super_admin=True), session)
@@ -117,6 +170,9 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
                 "eligible_test_merchants": 1,
                 "payment_transactions": 2,
                 "disbursements": 2,
+                "wallet_transactions": 1,
+                "refunds": 1,
+                "deposit_receipts": 1,
             }
 
             result = await clear_test_data(
@@ -128,17 +184,30 @@ async def test_preview_and_clear_only_affect_non_super_admin_test_mode_merchants
                 "success": True,
                 "payment_transactions": 2,
                 "disbursements": 2,
+                "wallet_transactions": 1,
+                "refunds": 1,
+                "deposit_receipts": 1,
             }
 
-            remaining_transactions = await session.scalar(
-                select(func.count()).select_from(Transactions)
+            remaining = {
+                "payment_transactions": await session.scalar(select(func.count()).select_from(Transactions)),
+                "disbursements": await session.scalar(select(func.count()).select_from(Disbursements)),
+                "wallet_transactions": await session.scalar(select(func.count()).select_from(Wallet_transactions)),
+                "refunds": await session.scalar(select(func.count()).select_from(Refunds)),
+                "deposit_receipts": await session.scalar(select(func.count()).select_from(ManualDepositReceipt)),
+            }
+            assert remaining == {
+                "payment_transactions": 2,
+                "disbursements": 2,
+                "wallet_transactions": 1,
+                "refunds": 1,
+                "deposit_receipts": 1,
+            }
+            test_wallet_balance = await session.scalar(
+                select(Wallets.balance).where(Wallets.user_id == "test-merchant")
             )
-            remaining_disbursements = await session.scalar(
-                select(func.count()).select_from(Disbursements)
-            )
+            assert test_wallet_balance == 500
             audit_count = await session.scalar(select(func.count()).select_from(AuditLog))
-            assert remaining_transactions == 2
-            assert remaining_disbursements == 2
             assert audit_count == 1
 
     finally:
@@ -156,6 +225,9 @@ async def test_preview_and_clear_require_super_admin():
                     AdminUser.__table__,
                     Transactions.__table__,
                     Disbursements.__table__,
+                    Wallet_transactions.__table__,
+                    Refunds.__table__,
+                    ManualDepositReceipt.__table__,
                 ],
             )
         )

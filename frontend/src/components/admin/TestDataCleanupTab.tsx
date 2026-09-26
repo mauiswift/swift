@@ -17,12 +17,18 @@ interface TestDataPreview {
   eligible_test_merchants: number;
   payment_transactions: number;
   disbursements: number;
+  wallet_transactions: number;
+  refunds: number;
+  deposit_receipts: number;
 }
 
 const emptyPreview: TestDataPreview = {
   eligible_test_merchants: 0,
   payment_transactions: 0,
   disbursements: 0,
+  wallet_transactions: 0,
+  refunds: 0,
+  deposit_receipts: 0,
 };
 
 const confirmationPhrase = 'CLEAR TEST RECORDS';
@@ -35,13 +41,22 @@ function parsePreview(data: unknown): TestDataPreview {
   const eligibleTestMerchants = counts.eligible_test_merchants;
   const paymentTransactions = counts.payment_transactions;
   const disbursements = counts.disbursements;
+  const walletTransactions = counts.wallet_transactions;
+  const refunds = counts.refunds;
+  const depositReceipts = counts.deposit_receipts;
   if (
     !Number.isInteger(eligibleTestMerchants) ||
     !Number.isInteger(paymentTransactions) ||
     !Number.isInteger(disbursements) ||
+    !Number.isInteger(walletTransactions) ||
+    !Number.isInteger(refunds) ||
+    !Number.isInteger(depositReceipts) ||
     Number(eligibleTestMerchants) < 0 ||
     Number(paymentTransactions) < 0 ||
-    Number(disbursements) < 0
+    Number(disbursements) < 0 ||
+    Number(walletTransactions) < 0 ||
+    Number(refunds) < 0 ||
+    Number(depositReceipts) < 0
   ) {
     throw new Error('The test-record preview response was invalid.');
   }
@@ -49,28 +64,43 @@ function parsePreview(data: unknown): TestDataPreview {
     eligible_test_merchants: Number(eligibleTestMerchants),
     payment_transactions: Number(paymentTransactions),
     disbursements: Number(disbursements),
+    wallet_transactions: Number(walletTransactions),
+    refunds: Number(refunds),
+    deposit_receipts: Number(depositReceipts),
   };
 }
 
-function parseClearResult(data: unknown): Pick<TestDataPreview, 'payment_transactions' | 'disbursements'> {
+function parseClearResult(data: unknown): Omit<TestDataPreview, 'eligible_test_merchants'> {
   if (typeof data !== 'object' || data === null) {
     throw new Error('The test-record deletion response was invalid.');
   }
   const result = data as Record<string, unknown>;
   const paymentTransactions = result.payment_transactions;
   const disbursements = result.disbursements;
+  const walletTransactions = result.wallet_transactions;
+  const refunds = result.refunds;
+  const depositReceipts = result.deposit_receipts;
   if (
     result.success !== true ||
     !Number.isInteger(paymentTransactions) ||
     !Number.isInteger(disbursements) ||
+    !Number.isInteger(walletTransactions) ||
+    !Number.isInteger(refunds) ||
+    !Number.isInteger(depositReceipts) ||
     Number(paymentTransactions) < 0 ||
-    Number(disbursements) < 0
+    Number(disbursements) < 0 ||
+    Number(walletTransactions) < 0 ||
+    Number(refunds) < 0 ||
+    Number(depositReceipts) < 0
   ) {
     throw new Error('The test-record deletion response was invalid.');
   }
   return {
     payment_transactions: Number(paymentTransactions),
     disbursements: Number(disbursements),
+    wallet_transactions: Number(walletTransactions),
+    refunds: Number(refunds),
+    deposit_receipts: Number(depositReceipts),
   };
 }
 
@@ -114,9 +144,8 @@ export default function TestDataCleanupTab() {
       setConfirmOpen(false);
       setConfirmation('');
       await refreshPreview();
-      toast.success(
-        `Removed ${deleted.payment_transactions} payment transactions and ${deleted.disbursements} disbursements.`,
-      );
+      const total = Object.values(deleted).reduce((sum, count) => sum + count, 0);
+      toast.success(`Removed ${total} transaction records across all record types.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to clear test records.');
     } finally {
@@ -125,7 +154,9 @@ export default function TestDataCleanupTab() {
   };
 
   const counts = preview || emptyPreview;
-  const hasRecords = counts.payment_transactions > 0 || counts.disbursements > 0;
+  const hasRecords = Object.entries(counts)
+    .filter(([key]) => key !== 'eligible_test_merchants')
+    .some(([, count]) => count > 0);
 
   return (
     <>
@@ -139,14 +170,18 @@ export default function TestDataCleanupTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-6 text-slate-600">
-              Permanently removes payment transactions and disbursements belonging to merchant
-              accounts that are currently in Test Mode. Live-mode accounts and super-admin
-              records are excluded. Wallet balances and wallet ledger history are not changed.
+              Permanently removes payment transactions, disbursements, wallet transaction history,
+              refunds, and manual deposit receipts belonging to merchant accounts currently in
+              Test Mode. Live-mode accounts and super-admin records are excluded. Wallet balances
+              are preserved.
             </p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <CountCard label="Test-mode merchants" count={counts.eligible_test_merchants} />
               <CountCard label="Payment transactions" count={counts.payment_transactions} />
               <CountCard label="Disbursements" count={counts.disbursements} />
+              <CountCard label="Wallet transaction history" count={counts.wallet_transactions} />
+              <CountCard label="Refund records" count={counts.refunds} />
+              <CountCard label="Manual deposit receipts" count={counts.deposit_receipts} />
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loading || clearing}>
@@ -180,9 +215,9 @@ export default function TestDataCleanupTab() {
           <DialogHeader>
             <DialogTitle>Confirm permanent deletion</DialogTitle>
             <DialogDescription>
-              This will delete {counts.payment_transactions} payment transactions and{' '}
-              {counts.disbursements} disbursements for current test-mode merchants. This cannot
-              be undone. Type <strong>{confirmationPhrase}</strong> to continue.
+              This will delete all five listed record categories for current test-mode merchants.
+              Wallet balances remain unchanged. This cannot be undone. Type{' '}
+              <strong>{confirmationPhrase}</strong> to continue.
             </DialogDescription>
           </DialogHeader>
           <input
