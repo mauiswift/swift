@@ -688,14 +688,14 @@ class MagpieService:
                 amount_cents = total
 
         normalized_currency = (currency or "").strip().lower()
-        if normalized_currency not in {"php", "cny", "krw"}:
+        if normalized_currency not in {"php", "cny"}:
             logger.warning(
-                "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php",
+                "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php and cny",
                 currency,
             )
             return {
                 "success": False,
-                "error": "Magpie checkout sessions only support PHP provider settlement. The selected amount could not be converted.",
+                "error": "Magpie checkout sessions only support PHP and CNY source currencies.",
             }
 
         # Magpie Checkout Sessions currently accepts PHP for this account,
@@ -703,7 +703,7 @@ class MagpieService:
         # the provider amount while the internal transaction remains CNY.
         provider_currency = "php"
         provider_amount_cents = int(amount_cents or 0)
-        if normalized_currency in {"cny", "krw"}:
+        if normalized_currency == "cny":
             source_currency = normalized_currency.upper()
             provider_amount_php = await CurrencyConverter.convert_live(
                 float(amount_cents or 0) / 100.0,
@@ -797,8 +797,6 @@ class MagpieService:
                 "error": "Magpie did not return a hosted checkout URL for the selected payment channel",
             }
         result["data"] = {**data, "checkout_url": checkout_url}
-        result["provider_amount"] = round(provider_amount_cents / 100, 2)
-        result["provider_currency"] = provider_currency.upper()
         return result
 
     # Fallback methods for backward compatibility

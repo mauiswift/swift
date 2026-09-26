@@ -104,24 +104,8 @@ async def test_create_session_defaults_to_magpie_wallet_methods(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_create_session_supports_krw_with_magpie_settlement_conversion(monkeypatch):
+async def test_create_session_rejects_krw(monkeypatch):
     service = MagpieService()
-    called = {"count": 0}
-    captured = {}
-
-    async def fake_convert_live(amount, from_currency, to_currency):
-        assert (from_currency, to_currency) == ("KRW", "PHP")
-        return amount * 0.043
-
-    async def fake_post(path, payload):
-        called["count"] += 1
-        captured["path"] = path
-        captured["payload"] = payload
-        return {"success": True, "data": {"checkout_url": "https://pay.magpie.im/session/krw"}}
-
-    monkeypatch.setattr(magpie_services.CurrencyConverter, "convert_live", fake_convert_live)
-    monkeypatch.setattr(service, "_post", fake_post)
-
     result = await service.create_session(
         amount_cents=100_000,
         currency="KRW",
@@ -131,11 +115,5 @@ async def test_create_session_supports_krw_with_magpie_settlement_conversion(mon
         payment_method_types=["alipay"],
     )
 
-    assert result["success"] is True
-    assert captured["path"] == "/"
-    assert captured["payload"]["payment_method_types"] == ["alipay"]
-    assert captured["payload"]["currency"] == "php"
-    assert captured["payload"]["line_items"][0]["amount"] == 4300
-    assert result["provider_amount"] == 43.0
-    assert result["provider_currency"] == "PHP"
-    assert called["count"] == 1
+    assert result["success"] is False
+    assert "PHP and CNY" in result["error"]

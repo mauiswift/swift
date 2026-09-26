@@ -376,7 +376,7 @@ async def create_magpie_method_checkout(
     payload: MagpieCheckoutMethodRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a Magpie session for an eligible CNY or KRW wallet payment."""
+    """Create a Magpie session for an eligible CNY wallet payment."""
     result = await db.execute(
         select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
     )
@@ -384,10 +384,8 @@ async def create_magpie_method_checkout(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     currency = (txn.currency or "").strip().upper()
-    if currency not in {"CNY", "KRW"}:
-        raise HTTPException(status_code=400, detail="Wallet-specific Magpie checkout is only available for CNY and KRW payments")
-    if currency == "KRW" and payload.payment_method != "alipay":
-        raise HTTPException(status_code=400, detail="Only Alipay is available for KRW wallet checkout")
+    if currency != "CNY":
+        raise HTTPException(status_code=400, detail="Wallet-specific Magpie checkout is only available for CNY payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
 
@@ -421,8 +419,6 @@ async def create_magpie_method_checkout(
         "checkout_url": checkout_url,
         "payment_url": checkout_url,
         "payment_method": payload.payment_method,
-        "charge_amount": session.get("provider_amount"),
-        "charge_currency": session.get("provider_currency", "PHP"),
     }
 
 

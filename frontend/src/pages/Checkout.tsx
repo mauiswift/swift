@@ -274,7 +274,6 @@ export default function Checkout() {
   const [cardFormError, setCardFormError] = useState<string | null>(null);
   const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
   const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
-  const [krwAlipayLoading, setKrwAlipayLoading] = useState(false);
   const [walletFormError, setWalletFormError] = useState<string | null>(null);
   const [digitalSignature, setDigitalSignature] = useState('');
   const [signatureError, setSignatureError] = useState('');
@@ -644,7 +643,6 @@ export default function Checkout() {
   const checkoutText = (english: string, korean: string) => (
     isKoreanCheckout ? korean : english
   );
-  const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
   const isManualDeposit = currencyCapabilities.manualDeposit;
   const hasQR = (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const hasQrPayload = !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
@@ -946,39 +944,6 @@ export default function Checkout() {
       toast.error(message);
     } finally {
       setWalletCheckoutLoading(false);
-    }
-  };
-
-  const openKrwAlipayCheckout = async () => {
-    if (!txn || krwAlipayLoading) return;
-    setKrwAlipayLoading(true);
-    try {
-      const response = await client.post(
-        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-method`,
-        { payment_method: 'alipay' },
-      );
-      if (
-        !response.ok
-        || !response.data?.success
-        || !response.data?.checkout_url
-        || !Number.isFinite(Number(response.data?.charge_amount))
-      ) {
-        throw new Error(response.data?.detail || response.data?.error || 'Unable to initialize Alipay checkout.');
-      }
-
-      const chargeAmount = Number(response.data.charge_amount);
-      const chargeCurrency = String(response.data.charge_currency || 'PHP').toUpperCase();
-      const confirmed = window.confirm(
-        checkoutText(
-          `Your KRW ${Number(txn.amount).toLocaleString()} payment will be converted to ${fmtCurrency(chargeAmount, chargeCurrency)} for Alipay. Continue?`,
-          `KRW ${Number(txn.amount).toLocaleString()} 결제 금액이 Alipay 결제를 위해 ${fmtCurrency(chargeAmount, chargeCurrency)}로 환산됩니다. 계속하시겠습니까?`,
-        ),
-      );
-      if (confirmed) window.location.assign(response.data.checkout_url);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Unable to initialize Alipay checkout.');
-    } finally {
-      setKrwAlipayLoading(false);
     }
   };
 
@@ -1327,7 +1292,7 @@ export default function Checkout() {
               </div>
             )}
 
-            {isPending && isManualDeposit && !isUsdt && (!isKrw || paymentMethodParam === 'bank_transfer') && (
+            {isPending && isManualDeposit && !isUsdt && (
               <div className="overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
                 <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
                   <div className="flex flex-wrap items-start justify-between gap-5">
@@ -1528,7 +1493,7 @@ export default function Checkout() {
             )}
 
             {/* Payment Methods */}
-            {isPending && (!isManualDeposit || isKrw) && (
+            {isPending && !isManualDeposit && (
               <div className="space-y-6" style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
                 <div style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
                   <h2 className="text-[16px] font-semibold mb-1" style={{ color: checkoutDesign.heading_color }}>{checkoutText('Select Payment Channel', '결제 수단 선택')}</h2>
@@ -1539,7 +1504,7 @@ export default function Checkout() {
                   </p>
                 </div>
 
-                {loadingInstitutions && !isKrw ? (
+                {loadingInstitutions ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
                   </div>
@@ -1666,56 +1631,8 @@ export default function Checkout() {
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
                   </button>
-                ) : isKrw || institutions.length > 0 ? (
+                ) : institutions.length > 0 ? (
                   <div className="space-y-6">
-                    {isKrw && (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextParams = new URLSearchParams(searchParams);
-                            nextParams.set('payment_method', 'bank_transfer');
-                            navigate(`/checkout/${encodeURIComponent(checkoutId || txn.external_id)}?${nextParams.toString()}`);
-                          }}
-                          className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg"
-                        >
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                            <PaymentBrandLogo brand={krwBankName} size="md" className="border-0 bg-transparent p-0 shadow-none" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-base font-semibold text-slate-900">{checkoutText('Manual bank transfer', '수동 은행 송금')}</p>
-                            <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Transfer KRW to the account shown on the next step.', '다음 단계에 표시되는 계좌로 KRW를 송금하세요.')}</p>
-                          </div>
-                          <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void openKrwAlipayCheckout()}
-                          disabled={krwAlipayLoading}
-                          className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg disabled:cursor-wait disabled:opacity-60"
-                        >
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-sky-50">
-                            <PaymentBrandLogo brand="Alipay" size="sm" className="border-0 bg-transparent p-0 shadow-none" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-base font-semibold text-slate-900">
-                              {krwAlipayLoading
-                                ? checkoutText('Preparing Alipay...', 'Alipay 결제를 준비 중...')
-                                : checkoutText('Pay with Alipay', 'Alipay로 결제')}
-                            </p>
-                            <p className="mt-1 text-[12px] leading-5 text-slate-500">
-                              {checkoutText(
-                                'KRW is converted to PHP at the current rate. Confirm the final charge before continuing.',
-                                '현재 환율로 KRW 금액을 PHP로 환산합니다. 계속하기 전에 최종 결제 금액을 확인하세요.',
-                              )}
-                            </p>
-                          </div>
-                          {krwAlipayLoading
-                            ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#00A0E9]" />
-                            : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />}
-                        </button>
-                      </div>
-                    )}
                     {/* QRPH first for PHP checkout */}
                     {qrphInstitutions.length > 0 && (
                       <div className="space-y-4">
