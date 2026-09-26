@@ -598,6 +598,7 @@ export default function Login() {
           }
           .ak-login-methods {
             gap: 8px;
+            flex-wrap: wrap;
           }
           .ak-login-methods .ak-btn-secondary {
             width: 52px;

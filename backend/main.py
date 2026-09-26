@@ -17,7 +17,6 @@ from core.config import settings
 from core.database import close_db, db_manager
 from services.database import initialize_database
 from services.auth import initialize_admin_user
-from services.mock_data import initialize_mock_data
 from services.scheduler import start_scheduler, stop_scheduler
 from sync_frontend_assets import build_frontend_if_needed
 from middlewares.error_handler import ErrorHandlingMiddleware
@@ -59,7 +58,6 @@ async def lifespan(app: FastAPI):
         # Initialize Core Services
         await initialize_database()
         await initialize_admin_user()
-        await initialize_mock_data()
 
         # Ensure built-in system roles exist (locked permission templates)
         try:

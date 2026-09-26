@@ -1778,11 +1778,9 @@ class TestEvents:
 
 
 # ---------------------------------------------------------------------------
-# Demo / seed data
+# Transaction ownership
 # ---------------------------------------------------------------------------
-class TestDemoData:
-    """Verify that the mock_data seed files are loaded on a fresh database."""
-
+class TestTransactionOwnership:
     def test_user_sees_only_their_own_transactions_even_if_stored_with_tg_prefix(self, client, auth_headers):
         """Transactions must be scoped by the authenticated user regardless of prefixed storage format."""
         from models.transactions import Transactions
@@ -1823,74 +1821,6 @@ class TestDemoData:
         visible_user_ids = {item["user_id"] for item in data["items"]}
         assert "tg-123456789" in visible_user_ids
         assert "tg-999999999" not in visible_user_ids
-
-    def test_demo_transactions_loaded(self, client, auth_headers):
-        """At least the 8 demo transactions should be present."""
-        r = client.get("/api/v1/entities/transactions", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 8
-
-    def test_demo_transactions_have_paid_status(self, client, auth_headers):
-        """At least one transaction with status 'paid' must exist."""
-        import json as _json
-        r = client.get(
-            "/api/v1/entities/transactions",
-            params={"query": _json.dumps({"status": "paid"})},
-            headers=auth_headers,
-        )
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 1
-        for item in data["items"]:
-            assert item["status"] == "paid"
-
-    def test_demo_wallet_has_balance(self, client, auth_headers):
-        """The admin demo wallet should have a positive balance."""
-        r = client.get("/api/v1/entities/wallets", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 1
-        assert data["items"][0]["balance"] > 0
-
-    def test_demo_customers_loaded(self, client, auth_headers):
-        """At least the 5 demo customers should be present."""
-        r = client.get("/api/v1/entities/customers", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 5
-
-    def test_demo_disbursements_loaded(self, client, auth_headers):
-        """At least the 3 demo disbursements should be present."""
-        r = client.get("/api/v1/entities/disbursements", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 3
-
-    def test_demo_subscriptions_loaded(self, client, auth_headers):
-        """At least the 3 demo subscriptions should be present."""
-        r = client.get("/api/v1/entities/subscriptions", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 3
-
-    def test_demo_wallet_transactions_loaded(self, client, auth_headers):
-        """At least the 8 demo wallet transactions should be present."""
-        r = client.get("/api/v1/entities/wallet_transactions", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 8
-
-    def test_demo_transaction_stats_reflect_seed(self, client, auth_headers):
-        """Transaction list should return the seeded paid/pending/expired records."""
-        r = client.get("/api/v1/entities/transactions", headers=auth_headers)
-        assert r.status_code == 200
-        data = r.json()
-        assert data["total"] >= 8
-        assert any(item["status"] == "paid" for item in data["items"])
-        assert any(item["status"] == "pending" for item in data["items"])
-        assert any(item["status"] == "expired" for item in data["items"])
-
 
 # ---------------------------------------------------------------------------
 # Performance optimizations
