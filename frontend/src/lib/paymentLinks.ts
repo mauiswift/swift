@@ -17,6 +17,7 @@ export type PaymentLink = {
   orderNo: string;
   payor: string;
   externalId?: string;
+  provider?: 'swiftpay';
   paymentStatus?: string;
   paymentUpdatedAt?: string;
   paymentUrl?: string;
@@ -177,6 +178,8 @@ export function createPaymentLink(payload: {
   currency: string;
   title: string;
   validUntil: string;
+  code?: string;
+  provider?: PaymentLink['provider'];
   description?: string;
   orderNo?: string;
   payor?: string;
@@ -186,7 +189,7 @@ export function createPaymentLink(payload: {
   bankAccountDetails?: PaymentLinkBankAccount;
 }) {
   const existingLinks = getAllPaymentLinks();
-  const code = generateUniqueCode(existingLinks.map((link) => link.code));
+  const code = payload.code || generateUniqueCode(existingLinks.map((link) => link.code));
 
   const now = new Date();
   const created = now.toLocaleString('en-US', {
@@ -209,6 +212,7 @@ export function createPaymentLink(payload: {
     description: payload.description?.trim() || '-',
     orderNo: payload.orderNo?.trim() || '-',
     payor: payload.payor?.trim() || '-',
+    provider: payload.provider,
     externalId: payload.externalId,
     paymentStatus: 'pending',
     paymentUrl: payload.paymentUrl,

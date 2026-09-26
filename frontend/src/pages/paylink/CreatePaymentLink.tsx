@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Landmark, QrCode, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/Layout';
@@ -11,8 +11,14 @@ import '../PaymentActivity.css';
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { collectionCurrency } = useCollectionCurrency();
+  const { collectionCurrency, enabledCurrencies } = useCollectionCurrency();
   const isKorean = language === 'ko';
+  const availableCurrencies = Array.from(new Set([...enabledCurrencies, 'PHP', 'USD', 'EUR', 'KRW']));
+  const [currency, setCurrency] = useState(collectionCurrency.toUpperCase());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  useEffect(() => {
+    setCurrency(collectionCurrency.toUpperCase());
+  }, [collectionCurrency]);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [validUntil, setValidUntil] = useState(() => {
@@ -23,14 +29,13 @@ export default function CreatePaymentLink() {
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [description, setDescription] = useState('');
-  const currency = collectionCurrency.toUpperCase();
   const [error, setError] = useState('');
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
     const minimumAmount = currency === 'KRW' ? 1000 : 1;
     const maximumAmount = currency === 'KRW' ? 100_000_000 : 50_000;
-    const currencyLabel = currency === 'KRW' ? '₩' : '₱';
+    const currencyLabel = ({ PHP: '₱', KRW: '₩', USD: '$', EUR: '€' } as Record<string, string>)[currency] || currency;
 
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       setError(isKorean ? '유효한 금액을 입력하세요.' : 'Please enter a valid amount.');
@@ -53,10 +58,22 @@ export default function CreatePaymentLink() {
 
     setError('');
 
+    setIsSubmitting(true);
     try {
       const reference_no = orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
       const normalizedCurrency = currency;
-      const response = normalizedCurrency === 'KRW'
+      const usesSwiftPayLinks = ['PHP', 'USD', 'EUR'].includes(normalizedCurrency);
+      const response = usesSwiftPayLinks
+        ? await client.post('/api/v1/swiftpay/payment-links', {
+            amount: numericAmount,
+            currency: normalizedCurrency,
+            title: title.trim(),
+            referenceNo: reference_no,
+            validUntil: validUntil ? `${validUntil}T23:59:59Z` : undefined,
+            customerName: payor.trim() || undefined,
+            description: description.trim() || undefined,
+          })
+        : normalizedCurrency === 'KRW'
         ? await client.post('/api/v1/krw/payment-links', {
             amount: numericAmount,
             reference_no,
@@ -88,7 +105,7 @@ export default function CreatePaymentLink() {
       }
 
       const backendPayload = data?.data ?? data ?? {};
-      const redirectUrl = backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || '';
+      const redirectUrl = backendPayload.paymentUrl || backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || '';
       if (!redirectUrl) {
         setError(isKorean ? '유효한 결제 링크를 받지 못했습니다.' : 'Payment link did not return a valid checkout URL.');
         return;
@@ -115,6 +132,8 @@ export default function CreatePaymentLink() {
         currency: normalizedCurrency,
         title: title.trim(),
         validUntil,
+        code: usesSwiftPayLinks ? String(backendPayload.code || '') : undefined,
+        provider: usesSwiftPayLinks ? 'swiftpay' : undefined,
         payor,
         orderNo,
         externalId: reference_no,
@@ -132,6 +151,8 @@ export default function CreatePaymentLink() {
       navigate(`/pay-by-link/details/${link.code}`);
     } catch (err) {
       setError(isKorean ? '결제 링크를 만들 수 없습니다. 다시 시도하세요.' : 'Unable to create payment link. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -184,6 +205,18 @@ export default function CreatePaymentLink() {
 
           <div className="space-y-6">
             <div>
+              <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '통화' : 'Currency'}</label>
+              <select
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
+              >
+                {availableCurrencies.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '금액' : 'Amount'}</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">{currency}</span>
@@ -191,6 +224,7 @@ export default function CreatePaymentLink() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
+                  placeholder="0.00"
                   className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
               </div>
@@ -201,6 +235,7 @@ export default function CreatePaymentLink() {
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                maxLength={100}
                 className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
               />
             </div>
@@ -213,6 +248,7 @@ export default function CreatePaymentLink() {
                     type="date"
                     value={validUntil}
                     onChange={(e) => setValidUntil(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
                     className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                   />
                 </div>
@@ -222,6 +258,7 @@ export default function CreatePaymentLink() {
                 <input
                   value={payor}
                   onChange={(e) => setPayor(e.target.value)}
+                  maxLength={150}
                   className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
               </div>
@@ -233,6 +270,7 @@ export default function CreatePaymentLink() {
                 <input
                   value={orderNo}
                   onChange={(e) => setOrderNo(e.target.value)}
+                  maxLength={50}
                   className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
               </div>
@@ -241,6 +279,7 @@ export default function CreatePaymentLink() {
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  maxLength={500}
                   className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
               </div>
@@ -254,10 +293,13 @@ export default function CreatePaymentLink() {
               <button
                 type="button"
                 onClick={handleGenerate}
+                disabled={isSubmitting}
                 data-guide-target="payment-link-generate"
-                className="bg-slate-900 text-white px-8 py-3 rounded-lg font-semibold text-[13px] hover:bg-slate-700 transition-colors"
+                className="bg-slate-900 text-white px-8 py-3 rounded-lg font-semibold text-[13px] hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isKorean ? '링크 생성' : 'Generate link'}
+                {isSubmitting
+                  ? (isKorean ? '생성 중...' : 'Creating...')
+                  : (isKorean ? '링크 생성' : 'Generate link')}
               </button>
             </div>
           </div>

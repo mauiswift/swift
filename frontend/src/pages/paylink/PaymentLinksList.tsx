@@ -4,7 +4,7 @@ import { Copy, Link2, Search, Plus, X, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { getAllPaymentLinks, getIdentifiedPaymentLinkUrl, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
+import { getAllPaymentLinks, getIdentifiedPaymentLinkUrl, PaymentLink, togglePaymentLinkStatus, updatePaymentLink } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
@@ -14,20 +14,72 @@ import '../PaymentActivity.css';
 export default function PaymentLinksList() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { collectionCurrency } = useCollectionCurrency();
-  const currentCurrency = collectionCurrency.toUpperCase();
+  const { collectionCurrency, enabledCurrencies } = useCollectionCurrency();
+  const [selectedCurrency, setSelectedCurrency] = useState(collectionCurrency.toUpperCase());
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
+  const [updatingCode, setUpdatingCode] = useState<string | null>(null);
   const getPermanentLinkUrl = (link: PaymentLink) => getIdentifiedPaymentLinkUrl(link, window.location.origin);
 
   useEffect(() => {
     setLinks(getAllPaymentLinks());
   }, []);
 
+  useEffect(() => {
+    setSelectedCurrency(collectionCurrency.toUpperCase());
+  }, [collectionCurrency]);
+
+  const currencies = useMemo(
+    () => Array.from(new Set([...enabledCurrencies, 'PHP', 'USD', 'EUR', ...links.map((link) => link.currency.toUpperCase())])).sort(),
+    [enabledCurrencies, links],
+  );
+
+  const handleStatusAction = async (link: PaymentLink) => {
+    if (updatingCode) return;
+    if (link.provider === 'swiftpay') {
+      if (link.status !== 'Active') return;
+      const confirmed = window.confirm(
+        isKorean
+          ? '이 결제 링크는 비활성화 후 다시 활성화할 수 없습니다. 계속하시겠습니까?'
+          : 'This SwiftPay payment link cannot be reactivated after invalidation. Continue?',
+      );
+      if (!confirmed) return;
+
+      setUpdatingCode(link.code);
+      try {
+        const response = await client.request(
+          `/api/v1/swiftpay/payment-links/${encodeURIComponent(link.code)}`,
+          'DELETE',
+        );
+        if (!response.ok || !response.data?.success) {
+          const message = response.data?.detail || response.data?.error || `Request failed (${response.status})`;
+          toast.error(String(message));
+          return;
+        }
+        const updated = updatePaymentLink(link.code, { status: 'Inactive' });
+        if (updated) {
+          setLinks((current) => current.map((item) => item.code === updated.code ? updated : item));
+          toast.success(isKorean ? '결제 링크가 비활성화되었습니다.' : 'Payment link invalidated');
+        }
+      } catch {
+        toast.error(isKorean ? '결제 링크를 비활성화할 수 없습니다.' : 'Unable to invalidate payment link');
+      } finally {
+        setUpdatingCode(null);
+      }
+      return;
+    }
+
+    const updated = togglePaymentLinkStatus(link.code);
+    if (updated) {
+      setLinks((current) => current.map((item) => item.code === updated.code ? updated : item));
+      toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
+    }
+  };
+
   const filteredLinks = useMemo(() => {
     const currencyLinks = links.filter(
-      (link) => link.currency.toUpperCase() === currentCurrency,
+      (link) => selectedCurrency === 'ALL' || link.currency.toUpperCase() === selectedCurrency,
     );
     if (!searchTerm.trim()) {
       return currencyLinks;
@@ -40,7 +92,7 @@ export default function PaymentLinksList() {
         .toLowerCase()
         .includes(lowerTerm)
     );
-  }, [currentCurrency, links, searchTerm]);
+  }, [selectedCurrency, links, searchTerm]);
 
   return (
     <Layout>
@@ -52,7 +104,7 @@ export default function PaymentLinksList() {
             <button
               type="button"
               onClick={async () => {
-                const currency = currentCurrency || 'PHP';
+                const currency = (selectedCurrency === 'ALL' ? collectionCurrency : selectedCurrency) || 'PHP';
                 const response = await client.get(
                   `/api/v1/payments/open-amount-link?currency=${encodeURIComponent(currency)}`,
                 );
@@ -75,7 +127,8 @@ export default function PaymentLinksList() {
                   toast.error('Unable to copy default payment link');
                 }
               }}
-              className="h-9 inline-flex items-center gap-2 border border-slate-300 bg-white text-slate-700 rounded-lg px-4 text-[12px] font-semibold hover:bg-slate-50"
+              disabled={selectedCurrency === 'ALL'}
+              className="h-9 inline-flex items-center gap-2 border border-slate-300 bg-white text-slate-700 rounded-lg px-4 text-[12px] font-semibold hover:bg-slate-50 disabled:opacity-50"
             >
               <CircleDollarSign size={15} /> {isKorean ? '영구 링크' : 'Permanent Link'}
             </button>
@@ -89,7 +142,16 @@ export default function PaymentLinksList() {
           </div>
         </div>
 
-          <div className="mb-6 flex justify-end">
+          <div className="mb-6 flex flex-col sm:flex-row sm:justify-end gap-3">
+           <select
+              value={selectedCurrency}
+              onChange={(event) => setSelectedCurrency(event.target.value)}
+              aria-label={isKorean ? '통화별 필터' : 'Filter by currency'}
+              className="w-full sm:w-auto min-w-36 px-3 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none focus:border-slate-400"
+            >
+              <option value="ALL">{isKorean ? '모든 통화' : 'All currencies'}</option>
+              {currencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+            </select>
            <div className="relative w-full max-w-sm">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -155,18 +217,13 @@ export default function PaymentLinksList() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        const updated = togglePaymentLinkStatus(l.code);
-                        if (updated) {
-                          setLinks((current) =>
-                            current.map((item) => (item.code === updated.code ? updated : item))
-                          );
-                          toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
-                        }
-                      }}
-                      className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 hover:text-rose-500"
+                      onClick={() => void handleStatusAction(l)}
+                      disabled={updatingCode === l.code || (l.provider === 'swiftpay' && l.status !== 'Active')}
+                      className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <X size={14} /> {l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
+                      <X size={14} /> {l.provider === 'swiftpay'
+                        ? (isKorean ? '비활성화' : 'Invalidate')
+                        : l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
                     </button>
                   </div>
                 </div>
@@ -262,18 +319,13 @@ export default function PaymentLinksList() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              const updated = togglePaymentLinkStatus(l.code);
-                              if (updated) {
-                                setLinks((current) =>
-                                  current.map((item) => (item.code === updated.code ? updated : item))
-                                );
-                                toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
-                              }
-                            }}
-                            className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors"
+                            onClick={() => void handleStatusAction(l)}
+                            disabled={updatingCode === l.code || (l.provider === 'swiftpay' && l.status !== 'Active')}
+                            className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <X size={14} /> {l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
+                            <X size={14} /> {l.provider === 'swiftpay'
+                              ? (isKorean ? '비활성화' : 'Invalidate')
+                              : l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
                           </button>
                         </div>
                       </td>

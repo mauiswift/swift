@@ -23,6 +23,7 @@ export default function PaymentLinkDetails() {
   const { language } = useLanguage();
   const isKorean = language === 'ko';
   const [link, setLink] = useState<PaymentLink | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     if (!code) {
@@ -32,6 +33,36 @@ export default function PaymentLinkDetails() {
 
     const storedLink = getPaymentLink(code) ?? null;
     setLink(storedLink);
+    if (storedLink?.provider === 'swiftpay') {
+      let active = true;
+      const refreshSwiftPayLink = async () => {
+        try {
+          const response = await client.get(`/api/v1/swiftpay/payment-links/${encodeURIComponent(storedLink.code)}`);
+          if (!response.ok || !response.data?.success) {
+            const message = response.data?.detail || response.data?.error || `Request failed (${response.status})`;
+            toast.error(String(message));
+            return;
+          }
+          if (!active) return;
+          const remoteLink = response.data.data || {};
+          const remoteStatus = String(remoteLink.linkStatus || '').toUpperCase();
+          const updated = updatePaymentLink(storedLink.code, {
+            status: remoteStatus === 'INACTIVE'
+              ? 'Inactive'
+              : remoteStatus === 'ACTIVE'
+                ? 'Active'
+                : storedLink.status,
+            paymentUrl: remoteLink.paymentUrl || storedLink.paymentUrl,
+            paymentStatus: remoteLink.paymentStatus || storedLink.paymentStatus,
+          });
+          if (updated) setLink(updated);
+        } catch {
+          if (active) toast.error(isKorean ? '결제 링크 정보를 불러올 수 없습니다.' : 'Unable to refresh payment link details');
+        }
+      };
+      void refreshSwiftPayLink();
+      return () => { active = false; };
+    }
     if (!storedLink?.externalId) return;
 
     let active = true;
@@ -56,7 +87,7 @@ export default function PaymentLinkDetails() {
       active = false;
       window.clearInterval(interval);
     };
-  }, [code]);
+  }, [code, isKorean]);
 
   if (!link) {
     return (
@@ -129,6 +160,7 @@ export default function PaymentLinkDetails() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-8 gap-x-12 mb-10">
             <DetailItem label={isKorean ? '통화' : 'Amount currency'} value={currencyCode} />
             <DetailItem label={isKorean ? '코드' : 'Code'} value={link.code} />
+            {link.provider === 'swiftpay' && <DetailItem label={isKorean ? '결제 제공자' : 'Provider'} value="SwiftPay" />}
             <DetailItem label={isKorean ? '생성일' : 'Created on'} value={link.created} />
             <DetailItem label={isKorean ? '유효 기간' : 'Valid until'} value={link.validUntil} />
             <DetailItem label={isKorean ? '설명' : 'Description'} value={link.description} />
@@ -227,18 +259,52 @@ export default function PaymentLinkDetails() {
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!link) return;
+                if (link.provider === 'swiftpay') {
+                  if (link.status !== 'Active') return;
+                  const confirmed = window.confirm(
+                    isKorean
+                      ? '이 결제 링크는 비활성화 후 다시 활성화할 수 없습니다. 계속하시겠습니까?'
+                      : 'This SwiftPay payment link cannot be reactivated after invalidation. Continue?',
+                  );
+                  if (!confirmed) return;
+                  setIsUpdatingStatus(true);
+                  try {
+                    const response = await client.request(
+                      `/api/v1/swiftpay/payment-links/${encodeURIComponent(link.code)}`,
+                      'DELETE',
+                    );
+                    if (!response.ok || !response.data?.success) {
+                      const message = response.data?.detail || response.data?.error || `Request failed (${response.status})`;
+                      toast.error(String(message));
+                      return;
+                    }
+                    const updated = updatePaymentLink(link.code, { status: 'Inactive' });
+                    if (updated) {
+                      setLink(updated);
+                      toast.success(isKorean ? '결제 링크가 비활성화되었습니다.' : 'Payment link invalidated');
+                    }
+                  } catch {
+                    toast.error(isKorean ? '결제 링크를 비활성화할 수 없습니다.' : 'Unable to invalidate payment link');
+                  } finally {
+                    setIsUpdatingStatus(false);
+                  }
+                  return;
+                }
                 const updated = togglePaymentLinkStatus(link.code);
                 if (updated) {
                   setLink(updated);
                   toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
                 }
               }}
-              className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
+              disabled={isUpdatingStatus || (link.provider === 'swiftpay' && link.status !== 'Active')}
+              className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-900 hover:bg-slate-50 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <X size={16} className="text-slate-400" />
-              {link?.status === 'Active' ? 'Deactivate link' : 'Activate link'}
+              {link.provider === 'swiftpay'
+                ? (isKorean ? '비활성화' : 'Invalidate link')
+                : link.status === 'Active' ? 'Deactivate link' : 'Activate link'}
             </button>
           </div>
         </div>
