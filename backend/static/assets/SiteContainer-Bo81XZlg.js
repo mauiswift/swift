@@ -1,1 +1,0 @@
-import{j as m}from"./query-vendor-Ee9vmuSY.js";function s({children:x,className:t=""}){return m.jsx("div",{className:`mx-auto w-full max-w-[1280px] px-4 sm:px-6 md:px-12 lg:px-16 ${t}`,children:x})}export{s as S};
