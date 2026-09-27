@@ -29,6 +29,8 @@ class FakeDb:
 class FakeWalletService:
     def __init__(self):
         self.debited = []
+        self.reserved = []
+        self.consumed = []
 
     async def get_or_create_wallet(self, *_args, **_kwargs):
         return SimpleNamespace(id=999, available_balance=1000.0, balance=1000.0)
@@ -44,6 +46,23 @@ class FakeWalletService:
             "check_liquidity": check_liquidity,
         })
         return SimpleNamespace(available_balance=1000.0 - amount, balance=1000.0 - amount)
+
+    async def reserve_wallet(self, user_id, amount, currency, reference_id):
+        self.reserved.append({
+            "user_id": user_id,
+            "amount": amount,
+            "currency": currency,
+            "reference_id": reference_id,
+        })
+        return SimpleNamespace(reference_id=reference_id, status="pending")
+
+    async def consume_wallet_reservation(self, reference_id, transaction_type, note=""):
+        self.consumed.append({
+            "reference_id": reference_id,
+            "transaction_type": transaction_type,
+            "note": note,
+        })
+        return SimpleNamespace(available_balance=500.0, balance=500.0)
 
 
 class ConfiguredCoins:
@@ -189,14 +208,16 @@ async def test_approve_admin_usdt_trade_debits_php_after_provider_success(monkey
     result = await wallet_router.approve_admin_usdt_trade(42, current_user=user, db=db)
 
     assert result["success"] is True
-    assert wallet_service.debited == [{
+    assert wallet_service.reserved == [{
         "user_id": "user-1",
         "amount": 500.0,
         "currency": "PHP",
-        "transaction_type": "usdt_purchase",
         "reference_id": "usdt-trade-42",
+    }]
+    assert wallet_service.consumed == [{
+        "reference_id": "usdt-trade-42",
+        "transaction_type": "usdt_purchase",
         "note": "Approved USDT purchase settled from PHP wallet",
-        "check_liquidity": True,
     }]
     assert trade.status == "withdrawal_submitted"
     assert db.commits == 2

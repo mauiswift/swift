@@ -26,7 +26,6 @@ from dependencies.auth import get_current_user
 from models.bank_deposit_requests import BankDepositRequest
 from models.topup_requests import TopupRequest
 from models.transactions import Transactions
-from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
@@ -271,29 +270,23 @@ async def admin_approve_bank_deposit(
     amount_php = req.amount_php
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.get_or_create_wallet(user_id, "PHP")
-
-    balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + amount_php, 2)
-    wallet.updated_at = datetime.now(timezone.utc)
-
-    txn = Wallet_transactions(
-        user_id=wallet.user_id,
-        wallet_id=wallet.id,
-        transaction_type="top_up",
+    wallet = await wallet_service.credit_wallet(
+        user_id=user_id,
         amount=amount_php,
-        balance_before=balance_before,
-        balance_after=wallet.balance,
+        currency="PHP",
+        transaction_type="top_up",
+        reference_id=str(deposit_id),
         note=(
             f"Bank deposit: ₱{amount_php:,.2f} via {req.channel} ({req.account_number})"
             f" (request #{deposit_id}) [Admin Approved]"
             + (f" — {body.note}" if body.note else "")
         ),
-        status="completed",
-        reference_id=str(deposit_id),
-        created_at=datetime.now(timezone.utc),
     )
-    db.add(txn)
+    txn = await db.scalar(
+        select(Wallet_transactions)
+        .where(Wallet_transactions.reference_id == str(deposit_id))
+        .order_by(Wallet_transactions.id.desc())
+    )
 
     req.status = "approved"
     req.note = body.note or f"Approved: ₱{amount_php:,.2f} PHP credited [Admin]"
@@ -400,31 +393,23 @@ async def admin_approve_topup(
         credit_note = f"{credit_currency} topup: {credit_amount:,.2f} {credit_currency}"
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.get_or_create_wallet(user_id, credit_currency)
-
-    balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + credit_amount, 2)
-    wallet.available_balance = round(wallet.available_balance + credit_amount, 2)
-    wallet.updated_at = datetime.now(timezone.utc)
-
-    txn = Wallet_transactions(
-        user_id=wallet.user_id,
-        wallet_id=wallet.id,
-        transaction_type="top_up",
+    wallet = await wallet_service.credit_wallet(
+        user_id=user_id,
         amount=credit_amount,
-        balance_before=balance_before,
-        balance_after=wallet.balance,
+        currency=credit_currency,
+        transaction_type="top_up",
+        reference_id=str(topup_id),
         note=(
             credit_note
-            +
-            f" (request #{topup_id}) [Admin Approved]"
+            + f" (request #{topup_id}) [Admin Approved]"
             + (f" — {body.note}" if body.note else "")
         ),
-        status="completed",
-        reference_id=str(topup_id),
-        created_at=datetime.now(timezone.utc),
     )
-    db.add(txn)
+    txn = await db.scalar(
+        select(Wallet_transactions)
+        .where(Wallet_transactions.reference_id == str(topup_id))
+        .order_by(Wallet_transactions.id.desc())
+    )
 
     req.status = "approved"
     req.note = body.note or f"Approved: {credit_note} [Admin]"

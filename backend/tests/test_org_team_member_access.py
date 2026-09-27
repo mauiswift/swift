@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from models.admin_users import AdminUser
 from models.team_invitations import TeamInvitation
+from models.organizations import Organization, OrganizationMembership
 from routers.team_invitations import (
     CompleteInvitationRequest,
     accept_invitation,
@@ -20,6 +21,8 @@ from schemas.auth import UserPermissions, UserResponse
 async def team_db():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:
+        await connection.run_sync(Organization.__table__.create)
+        await connection.run_sync(OrganizationMembership.__table__.create)
         await connection.run_sync(AdminUser.__table__.create)
         await connection.run_sync(TeamInvitation.__table__.create)
 
@@ -142,3 +145,11 @@ async def test_invited_organization_owner_accepts_as_scoped_owner(team_db):
     assert account.is_super_admin is False
     assert account.organization_id == "business-a"
     assert account.can_manage_team is True
+    membership = await team_db.scalar(
+        select(OrganizationMembership).where(
+            OrganizationMembership.organization_id == "business-a",
+            OrganizationMembership.user_id == account.telegram_id,
+        )
+    )
+    assert membership is not None
+    assert membership.role == "owner"

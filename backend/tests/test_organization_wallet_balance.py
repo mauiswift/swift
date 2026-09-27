@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from models.admin_users import AdminUser
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
+from models.wallet_reservations import WalletReservation
 from routers.wallet import get_organization_balance
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
@@ -18,6 +19,7 @@ async def wallet_db():
         await connection.run_sync(AdminUser.__table__.create)
         await connection.run_sync(Wallets.__table__.create)
         await connection.run_sync(Wallet_transactions.__table__.create)
+        await connection.run_sync(WalletReservation.__table__.create)
 
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as session:
@@ -118,6 +120,7 @@ async def test_organization_member_can_spend_direct_owners_wallet(wallet_db):
             ),
             Wallets(
                 user_id="merchant-owner",
+                organization_id="swiftpay-ph",
                 currency="PHP",
                 balance=1250.50,
                 available_balance=1100.25,
@@ -135,7 +138,7 @@ async def test_organization_member_can_spend_direct_owners_wallet(wallet_db):
         reference_id="org-member-withdrawal",
     )
 
-    assert wallet.user_id == "merchant-owner"
+    assert wallet.organization_id == "swiftpay-ph"
     assert wallet.balance == 1150.50
     assert wallet.available_balance == 1000.25
 
@@ -163,5 +166,59 @@ async def test_organization_member_cannot_resolve_another_organizations_wallet(w
 
     member_wallet = await WalletsService(wallet_db).get_or_create_wallet("member-b", "PHP")
 
-    assert member_wallet.user_id == "org:business-b"
+    assert member_wallet.organization_id == "business-b"
     assert member_wallet.balance == 0
+
+
+@pytest.mark.asyncio
+async def test_php_reservation_consumes_once_on_shared_organization_wallet(wallet_db):
+    wallet_db.add(
+        AdminUser(
+            telegram_id="member-a",
+            role="manager",
+            organization_id="business-a",
+            is_super_admin=False,
+        )
+    )
+    wallet_db.add(
+        Wallets(
+            user_id="org:business-a",
+            organization_id="business-a",
+            currency="PHP",
+            balance=500,
+            available_balance=500,
+            reserved_balance=0,
+        )
+    )
+    await wallet_db.flush()
+
+    service = WalletsService(wallet_db)
+    reservation = await service.reserve_wallet(
+        user_id="member-a",
+        amount=200,
+        currency="PHP",
+        reference_id="usdt-trade-test",
+    )
+    wallet = await service.get_or_create_wallet("member-a", "PHP")
+    assert reservation.status == "pending"
+    assert wallet.balance == 500
+    assert wallet.available_balance == 300
+    assert wallet.reserved_balance == 200
+
+    await service.consume_wallet_reservation(
+        reference_id="usdt-trade-test",
+        transaction_type="usdt_purchase",
+    )
+    await wallet_db.commit()
+    await wallet_db.refresh(wallet)
+    assert wallet.balance == 300
+    assert wallet.available_balance == 300
+    assert wallet.reserved_balance == 0
+
+    ledger = await wallet_db.scalar(
+        select(Wallet_transactions).where(
+            Wallet_transactions.reference_id == "usdt-trade-test"
+        )
+    )
+    assert ledger is not None
+    assert ledger.amount == -200

@@ -533,7 +533,7 @@ async def _fetch_dashboard_wallet(
     """Fetch the same effective wallet and ledger rows exposed by the dashboard."""
     service = WalletsService(db)
     normalized_currency = service._normalize_currency(currency)
-    effective_user_id = await service._resolve_effective_wallet_user_id(
+    effective_user_id, organization_id = await service._resolve_effective_wallet_owner(
         user_id,
         normalized_currency,
     )
@@ -541,7 +541,11 @@ async def _fetch_dashboard_wallet(
     result = await db.execute(
         select(Wallet_transactions)
         .where(
-            Wallet_transactions.user_id == effective_user_id,
+            (
+                Wallets.organization_id == organization_id
+                if organization_id
+                else Wallet_transactions.user_id == effective_user_id
+            ),
             Wallet_transactions.wallet_id == wallet.id,
         )
         .order_by(Wallet_transactions.id.desc())
@@ -3340,13 +3344,14 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 usd_balance = await svc.compute_usd_balance(tg_user_id)
                 if abs(usd_wallet.balance - usd_balance) > 0.001:
                     usd_wallet.balance = usd_balance
+                    usd_wallet.available_balance = usd_balance
                     usd_wallet.updated_at = datetime.now(timezone.utc)
                     await db.commit()
                 # Fetch last 5 USD wallet transactions for this effective wallet owner
                 usd_txn_res = await db.execute(
                     select(Wallet_transactions)
                     .where(
-                        Wallet_transactions.user_id == usd_wallet.user_id,
+                        Wallet_transactions.wallet_id == usd_wallet.id,
                         Wallet_transactions.transaction_type.in_(["crypto_topup", "usdt_send"]),
                     )
                     .order_by(Wallet_transactions.created_at.desc())

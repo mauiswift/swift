@@ -4,7 +4,6 @@ from models.kyb_registrations import KybRegistration
 from routers.kyb import _registration_organization
 from routers.team_invitations import _is_invitation_expired, _normalize_invitation_email
 from models.admin_users import AdminUser
-from services.wallets import WalletsService
 from services.auth import _get_platform_organization, normalize_organization_owner_scope
 from routers.admin_users import _apply_role_permissions
 from routers.team_invitations import _application_permissions, _validate_role_name
@@ -49,18 +48,13 @@ def test_downline_registration_gets_own_merchant_scope():
     assert downline_name == "Downline Merchant"
 
 
-def test_invited_owner_uses_organization_wallet():
+def test_organization_owner_is_shared_regardless_of_registration_path():
     invited_owner = AdminUser(
         telegram_id="invite-generated-id",
         role="owner",
         organization_id="acme-business",
         is_super_admin=False,
     )
-
-    assert not WalletsService._is_direct_owner(invited_owner)
-
-
-def test_direct_owner_keeps_personal_wallet():
     direct_owner = AdminUser(
         telegram_id="merchant-telegram-id",
         role="owner",
@@ -68,7 +62,7 @@ def test_direct_owner_keeps_personal_wallet():
         is_super_admin=False,
     )
 
-    assert WalletsService._is_direct_owner(direct_owner)
+    assert invited_owner.organization_id == direct_owner.organization_id
 
 
 def test_organization_owner_role_is_not_platform_super_admin():

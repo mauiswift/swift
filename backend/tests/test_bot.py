@@ -3173,7 +3173,7 @@ class TestUsdtPhpConversion:
         assert wallet is not None
         assert wallet.balance == pytest.approx(1000.0, abs=0.01)
         assert any(t.transaction_type == "admin_credit" and t.amount == pytest.approx(1500.0, abs=0.01) for t in txns)
-        assert any(t.transaction_type == "admin_debit" and t.amount == pytest.approx(500.0, abs=0.01) for t in txns)
+        assert any(t.transaction_type == "admin_debit" and t.amount == pytest.approx(-500.0, abs=0.01) for t in txns)
 
     def test_admin_php_wallet_adjust_note_hides_internal_admin_id(self, client, auth_headers):
         """Manual wallet adjustments must not expose internal admin IDs to clients."""

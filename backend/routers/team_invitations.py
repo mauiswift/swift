@@ -22,6 +22,7 @@ from dependencies.auth import get_admin_user, get_current_user
 from services.email_service import EmailService
 from models.admin_users import AdminUser
 from models.team_invitations import TeamInvitation, AdminRole
+from models.organizations import Organization, OrganizationMembership
 from models.referral_links import ReferralLink
 from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
@@ -529,6 +530,25 @@ def _to_org_slug(value: str) -> str:
     return base[:48]
 
 
+async def _ensure_organization(
+    db: AsyncSession,
+    organization_id: Optional[str],
+    organization_name: Optional[str],
+) -> None:
+    if not organization_id:
+        return
+    organization = await db.scalar(
+        select(Organization).where(Organization.id == organization_id)
+    )
+    if organization is None:
+        db.add(
+            Organization(
+                id=organization_id,
+                name=(organization_name or organization_id).strip()[:256],
+            )
+        )
+
+
 async def _resolve_super_admin_org_scope(
     db: AsyncSession,
     request: SendInvitationRequest,
@@ -865,6 +885,8 @@ async def send_team_invitation(
     is_super = bool(admin and admin.is_super_admin)
     if is_super:
         org_id, org_name = await _resolve_super_admin_org_scope(db, request, role_name)
+
+    await _ensure_organization(db, org_id, org_name)
 
     # Create invitation
     invitation = TeamInvitation(
@@ -1347,6 +1369,17 @@ async def accept_invitation(
         can_unfreeze_wallet=bool(permissions.get("can_unfreeze_wallet")),
     )
     db.add(admin_user)
+    await _ensure_organization(db, invitation.organization_id, invitation.organization_name)
+    if invitation.organization_id:
+        db.add(
+            OrganizationMembership(
+                organization_id=invitation.organization_id,
+                user_id=telegram_id,
+                role=invitation.role,
+                status="active",
+                is_primary=True,
+            )
+        )
     invitation.status = "accepted"
     invitation.accepted_at = now
     try:

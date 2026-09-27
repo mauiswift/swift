@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
+from models.wallet_reservations import WalletReservation
 from models.admin_users import AdminUser
 from models.disbursements import Disbursements
 from models.crypto_topup import CryptoTopupRequest
@@ -117,18 +118,6 @@ class WalletsService(BaseService[Wallets]):
 
         return normalized
 
-    @staticmethod
-    def _is_direct_owner(admin_user: Optional[AdminUser]) -> bool:
-        """Keep directly registered owners on their legacy personal wallet.
-
-        Invitation-created accounts use a generated ``invite-`` Telegram ID,
-        including invitations assigned the owner role, and must use the shared
-        organization wallet instead.
-        """
-        if not admin_user or getattr(admin_user, "role", None) != "owner":
-            return False
-        return not str(getattr(admin_user, "telegram_id", "")).startswith("invite-")
-
     async def _resolve_effective_wallet_owner(self, user_id: str, currency: str = "PHP") -> Tuple[str, Optional[str]]:
         """Resolve the effective wallet owner (Org ID vs User ID).
 
@@ -150,34 +139,8 @@ class WalletsService(BaseService[Wallets]):
         )
         admin_user = admin_res.scalar_one_or_none()
 
-        # Keep a directly registered owner's wallet keyed to their personal account
-        # so it remains visible in admin wallet controls. Other members of that
-        # organization resolve to the direct owner's same wallet.
-        is_direct_owner = bool(
-            admin_user
-            and admin_user.organization_id
-            and self._is_direct_owner(admin_user)
-        )
-        if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False) and not is_direct_owner:
+        if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False):
             org_id = admin_user.organization_id
-            owner_res = await self.db.execute(
-                select(AdminUser)
-                .where(
-                    AdminUser.organization_id == org_id,
-                    AdminUser.role == "owner",
-                )
-                .order_by(AdminUser.id)
-            )
-            organization_owner = next(
-                (
-                    candidate
-                    for candidate in owner_res.scalars().all()
-                    if self._is_direct_owner(candidate)
-                ),
-                None,
-            )
-            if organization_owner:
-                return str(organization_owner.telegram_id), None
             return f"org:{org_id}", org_id
 
         return user_id, None
@@ -207,10 +170,16 @@ class WalletsService(BaseService[Wallets]):
             "USD" if currency_upper == "USDT" else currency_upper,
         )
 
-        query = select(Wallets).where(
-            Wallets.user_id == effective_owner_id,
-            Wallets.currency == currency_upper,
-        )
+        if org_id:
+            query = select(Wallets).where(
+                Wallets.organization_id == org_id,
+                Wallets.currency == currency_upper,
+            ).order_by(Wallets.id.asc())
+        else:
+            query = select(Wallets).where(
+                Wallets.user_id == effective_owner_id,
+                Wallets.currency == currency_upper,
+            )
         if lock:
             query = query.with_for_update()
 
@@ -254,7 +223,7 @@ class WalletsService(BaseService[Wallets]):
         org_wallet_user_id = f"org:{normalized_org_id}"
 
         query = select(Wallets).where(
-            Wallets.user_id == org_wallet_user_id,
+            Wallets.organization_id == normalized_org_id,
             Wallets.currency == currency_upper,
         )
         if lock:
@@ -280,6 +249,118 @@ class WalletsService(BaseService[Wallets]):
         await self.db.flush()
         if lock:
             return await self.get_or_create_organization_wallet(normalized_org_id, currency_upper, lock=True)
+        return wallet
+
+    async def reserve_wallet(
+        self,
+        user_id: str,
+        amount: float,
+        currency: str,
+        reference_id: str,
+    ) -> WalletReservation:
+        """Hold spendable funds before an external provider operation starts."""
+        if not math.isfinite(amount) or amount <= 0:
+            raise ValueError("Reservation amount must be positive")
+        if not reference_id or not reference_id.strip():
+            raise ValueError("Reservation reference is required")
+
+        wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
+        await self._ensure_wallet_active(wallet, "reserve wallet funds")
+        existing = await self.db.scalar(
+            select(WalletReservation)
+            .where(WalletReservation.reference_id == reference_id)
+            .with_for_update()
+        )
+        if existing:
+            if existing.wallet_id != wallet.id or abs(float(existing.amount) - amount) > 0.000001:
+                raise ValueError("Reservation reference is already used for another amount")
+            if existing.status == "pending":
+                return existing
+            raise ValueError(f"Reservation is already {existing.status}")
+
+        amount = round(amount, 2)
+        if float(wallet.available_balance or 0.0) < amount:
+            raise ValueError(
+                f"Insufficient balance. Available: {currency} {wallet.available_balance:,.2f}"
+            )
+
+        wallet.available_balance = round(float(wallet.available_balance or 0.0) - amount, 2)
+        wallet.reserved_balance = round(float(wallet.reserved_balance or 0.0) + amount, 2)
+        wallet.updated_at = self._utc_now()
+        reservation = WalletReservation(
+            wallet_id=wallet.id,
+            user_id=wallet.user_id,
+            organization_id=wallet.organization_id,
+            currency=wallet.currency,
+            amount=amount,
+            reference_id=reference_id,
+            status="pending",
+        )
+        self.db.add(reservation)
+        await self.db.flush()
+        return reservation
+
+    async def release_wallet_reservation(self, reference_id: str) -> Optional[WalletReservation]:
+        """Release a pending hold without creating a ledger debit."""
+        reservation = await self.db.scalar(
+            select(WalletReservation)
+            .where(WalletReservation.reference_id == reference_id)
+            .with_for_update()
+        )
+        if not reservation or reservation.status != "pending":
+            return reservation
+        wallet = await self.db.get(Wallets, reservation.wallet_id, with_for_update=True)
+        if wallet is None:
+            raise ValueError("Wallet reservation references a missing wallet")
+        amount = float(reservation.amount)
+        wallet.available_balance = round(float(wallet.available_balance or 0.0) + amount, 2)
+        wallet.reserved_balance = max(0.0, round(float(wallet.reserved_balance or 0.0) - amount, 2))
+        wallet.updated_at = self._utc_now()
+        reservation.status = "released"
+        reservation.updated_at = self._utc_now()
+        await self.db.flush()
+        return reservation
+
+    async def consume_wallet_reservation(
+        self,
+        reference_id: str,
+        transaction_type: str,
+        note: str = "",
+    ) -> Wallets:
+        """Convert a pending hold into the canonical wallet debit ledger entry."""
+        reservation = await self.db.scalar(
+            select(WalletReservation)
+            .where(WalletReservation.reference_id == reference_id)
+            .with_for_update()
+        )
+        if not reservation:
+            raise ValueError("Wallet reservation not found")
+        wallet = await self.db.get(Wallets, reservation.wallet_id, with_for_update=True)
+        if wallet is None:
+            raise ValueError("Wallet reservation references a missing wallet")
+        if reservation.status == "consumed":
+            return wallet
+        if reservation.status != "pending":
+            raise ValueError(f"Reservation is already {reservation.status}")
+
+        amount = round(float(reservation.amount), 2)
+        if float(wallet.balance or 0.0) < amount:
+            raise ValueError("Wallet balance is below the reserved amount")
+        balance_before = float(wallet.balance or 0.0)
+        wallet.balance = round(balance_before - amount, 2)
+        wallet.reserved_balance = max(0.0, round(float(wallet.reserved_balance or 0.0) - amount, 2))
+        self._touch_wallet(wallet, debit=amount)
+        self._append_ledger_entry(
+            wallet,
+            transaction_type=transaction_type,
+            amount=-amount,
+            balance_before=balance_before,
+            reference_id=reference_id,
+            note=note,
+        )
+        reservation.status = "consumed"
+        reservation.updated_at = self._utc_now()
+        await self.db.flush()
         return wallet
 
     async def ensure_admin_wallets(self, user_id: str, currencies: Optional[List[str]] = None) -> List[Wallets]:
@@ -431,10 +512,12 @@ class WalletsService(BaseService[Wallets]):
     async def get_balance(self, user_id: str, currency: str = "PHP") -> Dict[str, Any]:
         """Get wallet balance. For USD, it ensures the balance field is synced with history."""
         currency_upper = self._normalize_currency(currency)
-        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
+        effective_user_id, organization_id = await self._resolve_effective_wallet_owner(
+            user_id, currency_upper
+        )
 
         if currency_upper == "USD":
-            computed = await self.compute_usd_balance(effective_user_id)
+            computed = await self.compute_usd_balance(user_id)
             wallet = await self.get_or_create_wallet(effective_user_id, "USD")
 
             if abs(computed - wallet.balance) > 0.001:
@@ -481,14 +564,19 @@ class WalletsService(BaseService[Wallets]):
 
     async def compute_usd_balance(self, user_id: Any) -> float:
         """Compute completed USD balance from the wallet transaction ledger."""
-        effective_user_id = await self._resolve_effective_wallet_user_id(
+        effective_user_id, organization_id = await self._resolve_effective_wallet_owner(
             self._normalize_user_id(user_id), "USD"
+        )
+        wallet_scope = (
+            Wallets.organization_id == organization_id
+            if organization_id
+            else Wallet_transactions.user_id == effective_user_id
         )
         result = await self.db.execute(
             select(func.coalesce(func.sum(Wallet_transactions.amount), 0.0))
             .join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
             .where(
-                Wallet_transactions.user_id == effective_user_id,
+                wallet_scope,
                 Wallets.currency == "USD",
                 Wallet_transactions.status == "completed",
                 Wallet_transactions.transaction_type.in_(_USD_CREDIT_TYPES + _USD_DEBIT_TYPES),
@@ -855,16 +943,6 @@ class WalletsService(BaseService[Wallets]):
                 check_liquidity=True,
             )
 
-            try:
-                res = await self.db.execute(
-                    select(Wallet_transactions).where(Wallet_transactions.reference_id == ref_id)
-                )
-                txn = res.scalar_one_or_none()
-                if txn is not None:
-                    txn.amount = abs(float(amount))
-            except Exception:
-                pass
-
         await self.db.commit()
 
         try:
@@ -1031,11 +1109,18 @@ class WalletsService(BaseService[Wallets]):
             except Exception as e:
                 logger.error(f"Error fetching {currency} wallet analytics: {str(e)}")
 
-        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, "PHP")
+        effective_user_id, organization_id = await self._resolve_effective_wallet_owner(user_id, "PHP")
         # Get recent transactions
         recent_txns = await self.db.execute(
             select(Wallet_transactions)
-            .where(Wallet_transactions.user_id == effective_user_id)
+            .join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
+            .where(
+                (
+                    Wallets.organization_id == organization_id
+                    if organization_id
+                    else Wallet_transactions.user_id == effective_user_id
+                )
+            )
             .order_by(Wallet_transactions.created_at.desc())
             .limit(10)
         )

@@ -1,5 +1,5 @@
 from core.database import Base
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Boolean
+from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Boolean, UniqueConstraint
 
 
 class Wallets(Base):
@@ -11,6 +11,7 @@ class Wallets(Base):
         Index("idx_wallets_status", "is_frozen"),
         # Index for organization-level wallet lookup and aggregation
         Index("idx_wallets_organization_currency", "organization_id", "currency"),
+        UniqueConstraint("organization_id", "currency", name="uq_wallets_organization_currency"),
         # extend_existing allows the table definition to be updated if it already exists
         {"extend_existing": True},
     )
@@ -20,6 +21,7 @@ class Wallets(Base):
     organization_id = Column(String, nullable=True)
     balance = Column(Float, nullable=False, default=0.0)
     available_balance = Column(Float, nullable=False, default=0.0, server_default='0.0') # Funds ready to withdraw
+    reserved_balance = Column(Float, nullable=False, default=0.0, server_default='0.0') # Funds held for an in-flight operation
     pending_balance = Column(Float, nullable=False, default=0.0, server_default='0.0')   # Funds in clearing period
     currency = Column(String, nullable=True)
     

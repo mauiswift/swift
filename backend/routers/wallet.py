@@ -123,32 +123,46 @@ async def _list_all_admin_wallets(db: AsyncSession) -> list[dict[str, Any]]:
 	"""Return one row per supported wallet for every active user."""
 	service = WalletsService(db)
 	users_result = await db.execute(select(AdminUser).where(AdminUser.is_active.is_(True)))
-	for admin in users_result.scalars().all():
+	active_admins = users_result.scalars().all()
+	active_user_ids = [admin.telegram_id for admin in active_admins]
+	active_organization_ids = list({
+		admin.organization_id for admin in active_admins if admin.organization_id
+	})
+	for admin in active_admins:
 		for currency in PUBLIC_ADMIN_WALLET_CURRENCIES:
 			await service.get_or_create_wallet(admin.telegram_id, currency)
 
 	result = await db.execute(
-		select(Wallets, AdminUser.telegram_username, AdminUser.name, AdminUser.email)
-		.join(AdminUser, AdminUser.telegram_id == Wallets.user_id)
+		select(Wallets)
 		.where(
-			AdminUser.is_active.is_(True),
+			or_(
+				Wallets.user_id.in_(active_user_ids),
+				Wallets.organization_id.in_(active_organization_ids),
+			),
 			Wallets.currency.in_(INTERNAL_ADMIN_WALLET_CURRENCIES),
 		)
-		.order_by(AdminUser.telegram_username, Wallets.currency)
+		.order_by(Wallets.organization_id, Wallets.user_id, Wallets.currency)
 	)
+	admin_by_user = {admin.telegram_id: admin for admin in active_admins}
+	admin_by_organization = {
+		admin.organization_id: admin
+		for admin in active_admins
+		if admin.organization_id
+	}
 	return [
 		{
 			"user_id": wallet.user_id,
-			"telegram_username": username,
-			"name": name,
-			"email": email,
+			"telegram_username": admin.telegram_username if admin else None,
+			"name": admin.name if admin else None,
+			"email": admin.email if admin else None,
 			"currency": public_currency(wallet.currency),
 			"balance": float(wallet.balance or 0.0),
 			"wallet_id": wallet.id,
 			"is_frozen": bool(wallet.is_frozen),
 			"freeze_reason": wallet.freeze_reason,
 		}
-		for wallet, username, name, email in result.all()
+		for wallet in result.scalars().all()
+		for admin in [admin_by_user.get(wallet.user_id) or admin_by_organization.get(wallet.organization_id)]
 	]
 
 
@@ -300,14 +314,18 @@ async def list_wallet_transactions(
 	"""Return the authenticated user's recent wallet transactions."""
 	service = WalletsService(db)
 	currency_upper = service._normalize_currency(currency)
-	effective_user_id = await service._resolve_effective_wallet_user_id(
+	effective_user_id, organization_id = await service._resolve_effective_wallet_owner(
 		str(current_user.id), currency_upper
 	)
 	result = await db.execute(
 		select(Wallet_transactions)
 		.join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
 		.where(
-			Wallet_transactions.user_id == effective_user_id,
+						(
+							Wallets.organization_id == organization_id
+							if organization_id
+							else Wallet_transactions.user_id == effective_user_id
+						),
 			Wallets.currency == currency_upper,
 		)
 		.order_by(Wallet_transactions.id.desc())
@@ -620,6 +638,8 @@ async def convert_wallet_balance(
 		raise HTTPException(status_code=400, detail="Only PHP, CNY, KRW, and USDT conversion is supported")
 	if from_currency == to_currency:
 		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
+	if "USDT" in {from_currency, to_currency} and not (request.idempotency_key or "").strip():
+		raise HTTPException(status_code=400, detail="An idempotency key is required for USDT trades")
 	if request.from_amount <= 0:
 		raise HTTPException(status_code=400, detail="Conversion amount must be positive")
 	if not math.isfinite(request.from_amount):
@@ -648,6 +668,7 @@ async def convert_wallet_balance(
 	provider_amount = None
 	request_rate = None
 	trade = None
+	reservation_reference = None
 	if "USDT" in {from_currency, to_currency}:
 		trade_key = (request.idempotency_key or uuid.uuid4().hex).strip()
 		if len(trade_key) > 128:
@@ -737,6 +758,17 @@ async def convert_wallet_balance(
 				"provider": provider_name,
 			}
 
+		if trade and normalized_from == "USD" and normalized_to == "PHP":
+			reservation_reference = f"usdt-trade-{trade.id}"
+			await service.reserve_wallet(
+				user_id=owner_id,
+				amount=request.from_amount,
+				currency="USD",
+				reference_id=reservation_reference,
+			)
+			trade.status = "provider_pending"
+			await db.commit()
+
 		if provider_name == "coins.ph":
 			if trade:
 				trade.status = "provider_pending"
@@ -755,6 +787,8 @@ async def convert_wallet_balance(
 			provider_amount = float(provider_result.get("amount") or 0)
 			if not provider_result.get("success") or provider_amount <= 0:
 				if trade:
+					if reservation_reference:
+						await service.release_wallet_reservation(reservation_reference)
 					trade.status = "failed"
 					trade.failure_reason = provider_result.get("error", "Provider order was not filled")
 					await db.commit()
@@ -763,8 +797,44 @@ async def convert_wallet_balance(
 			if trade:
 				trade.provider_order_id = provider_order_id
 				trade.status = "provider_filled"
+				if reservation_reference:
+					await db.commit()
 			fee_rate = float(quote.get("fee_rate") or 0.0)
 			request_rate = provider_amount / request.from_amount / max(1.0 - fee_rate, 0.000001)
+
+		if trade and normalized_from == "USD" and normalized_to == "PHP" and provider_name == "coins.ph":
+			await service.consume_wallet_reservation(
+				reference_id=reservation_reference,
+				transaction_type="usdt_sale",
+				note="USDT sold through Coins.ph",
+			)
+			await service.credit_wallet(
+				user_id=owner_id,
+				amount=provider_amount,
+				currency="PHP",
+				transaction_type="usdt_sale",
+				reference_id=f"{reservation_reference}-php",
+				note="PHP proceeds from Coins.ph USDT sale",
+			)
+			trade.settled_amount = provider_amount
+			trade.fee = 0
+			trade.status = "settled"
+			await db.commit()
+			return {
+				"success": True,
+				"from_currency": "USDT",
+				"to_currency": "PHP",
+				"from_amount": request.from_amount,
+				"to_amount": provider_amount,
+				"rate": request_rate,
+				"fee_amount": 0,
+				"fee_rate": 0,
+				"reference_id": f"usdt-trade-{trade.id}",
+				"provider": provider_name,
+				"provider_order_id": provider_order_id,
+				"provider_amount": provider_amount,
+				"execution_rate": request_rate,
+			}
 
 		if trade and normalized_from == "PHP" and normalized_to == "USD" and provider_name == "coins.ph":
 			deposit_address = await db.scalar(
@@ -964,6 +1034,13 @@ async def approve_admin_usdt_trade(
 		if float(from_wallet.available_balance or from_wallet.balance or 0) < float(trade.requested_amount):
 			raise ValueError("Insufficient PHP balance to approve this trade")
 
+		reservation_reference = f"usdt-trade-{trade.id}"
+		await service.reserve_wallet(
+			user_id=trade.user_id,
+			amount=float(trade.requested_amount),
+			currency="PHP",
+			reference_id=reservation_reference,
+		)
 		trade.reviewed_by = str(current_user.id)
 		trade.reviewed_at = datetime.now(timezone.utc)
 		trade.status = "provider_pending"
@@ -1004,12 +1081,9 @@ async def approve_admin_usdt_trade(
 			trade.settled_amount = provider_amount
 			trade.status = "withdrawal_submitted"
 
-		await service.debit_wallet(
-			trade.user_id,
-			float(trade.requested_amount),
-			"PHP",
-			"usdt_purchase",
-			f"usdt-trade-{trade.id}",
+		await service.consume_wallet_reservation(
+			reference_id=reservation_reference,
+			transaction_type="usdt_purchase",
 			note="Approved USDT purchase settled from PHP wallet",
 		)
 		await db.commit()

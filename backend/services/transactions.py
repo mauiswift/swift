@@ -252,22 +252,8 @@ class TransactionsService(BaseService[Transactions]):
         return txn
 
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
-        """Helper to get or create a user wallet with optional row locking."""
-        query = select(Wallets).where(Wallets.user_id == user_id, Wallets.currency == currency)
-        if lock:
-            query = query.with_for_update()
-
-        result = await self.db.execute(query)
-        wallet = result.scalar_one_or_none()
-        if wallet is None:
-            now = datetime.now(timezone.utc)
-            wallet = Wallets(user_id=user_id, currency=currency, balance=0.0, created_at=now, updated_at=now)
-            self.db.add(wallet)
-            await self.db.flush()
-            if lock:
-                # Re-fetch with lock
-                return await self.get_or_create_wallet(user_id, currency, lock=True)
-        return wallet
+        """Compatibility wrapper around the canonical organization-aware wallet service."""
+        return await WalletsService(self.db).get_or_create_wallet(user_id, currency, lock=lock)
 
     async def credit_wallet_from_transaction(
         self,
