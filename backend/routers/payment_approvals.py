@@ -12,7 +12,7 @@ Endpoints:
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -34,6 +34,7 @@ from services.transactions import (
     is_customer_payment,
     is_payment_received,
 )
+from services.swiftpay_service import SwiftPayService
 from services.action_confirmation import ActionConfirmationService, ActionType
 from utils.datetime import serialize_utc_datetime
 
@@ -55,6 +56,86 @@ class PaymentApprovalRequest(BaseModel):
     """Request to approve or reject a payment link"""
     note: Optional[str] = None
     reason: Optional[str] = None
+
+
+def _provider_value(payload: Any, aliases: set[str]) -> Optional[str]:
+    if isinstance(payload, list):
+        for item in payload:
+            value = _provider_value(item, aliases)
+            if value:
+                return value
+        return None
+    if not isinstance(payload, dict):
+        return None
+
+    for key, value in payload.items():
+        normalized_key = "".join(char for char in str(key).lower() if char.isalnum())
+        if normalized_key in aliases and value not in (None, "") and not isinstance(value, (dict, list)):
+            return str(value).strip() or None
+    for value in payload.values():
+        if isinstance(value, (dict, list)):
+            nested_value = _provider_value(value, aliases)
+            if nested_value:
+                return nested_value
+    return None
+
+
+def _swiftpay_payment_details(payload: Any) -> dict[str, Optional[str]]:
+    return {
+        "sender_name": _provider_value(
+            payload, {"sendername", "payername", "remittername", "debtorname"}
+        ),
+        "sender_bank": _provider_value(
+            payload, {"senderbank", "payerbank", "debitbankname", "sourcebankname"}
+        ),
+        "sender_account_number": _provider_value(
+            payload,
+            {
+                "senderaccountnumber",
+                "payeraccountnumber",
+                "sourceaccountnumber",
+                "debitaccountnumber",
+                "fromaccountnumber",
+            },
+        ),
+        "receiver_bank": _provider_value(
+            payload,
+            {
+                "merchantbankname",
+                "merchantcreditbankname",
+                "destinationbankname",
+                "receiverbankname",
+                "creditbankname",
+            },
+        ),
+        "receiver_account_name": _provider_value(
+            payload,
+            {
+                "merchantaccountname",
+                "merchantcreditaccountname",
+                "destinationaccountname",
+                "receiveraccountname",
+            },
+        ),
+        "receiver_account_number": _provider_value(
+            payload,
+            {
+                "merchantaccountnumber",
+                "merchantcreditaccountnumber",
+                "destinationaccountnumber",
+                "receiveraccountnumber",
+                "creditaccountnumber",
+                "toaccountnumber",
+            },
+        ),
+        "institution_reference_no": _provider_value(
+            payload, {"institutionreferenceno"}
+        ),
+        "channel_reference_no": _provider_value(payload, {"channelreferenceno"}),
+        "provider_status": _provider_value(
+            payload, {"xpaymentstatus", "paymentstatus", "status"}
+        ),
+    }
 
 
 def _require_payment_approval_access(user: UserResponse) -> None:
@@ -198,6 +279,16 @@ async def list_pending_payment_approvals(
                     "payment_received_at": serialize_utc_datetime(txn.paid_at) or "",
                     "created_at": serialize_utc_datetime(txn.created_at) or "",
                     "user_id": txn.user_id,
+                    "sender_name": txn.sender_name,
+                    "sender_bank": txn.sender_bank,
+                    "sender_account_number": None,
+                    "receiver_bank": txn.bank_name,
+                    "receiver_account_name": txn.bank_account_name,
+                    "receiver_account_number": txn.bank_account_number,
+                    "has_swiftpay_details": bool(
+                        txn.xendit_id
+                        or txn.transaction_type in {"swiftpay_order", "swiftpay_qr"}
+                    ),
                 }
                 for txn in transactions
             ],
@@ -207,6 +298,68 @@ async def list_pending_payment_approvals(
     except Exception as e:
         logger.error(f"Error fetching pending payments: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to fetch pending payments: {str(e)}")
+
+
+@router.get("/payment-approvals/{txn_id}/details")
+async def get_payment_approval_details(
+    txn_id: int,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch available transfer details for a provider-confirmed payment."""
+    _require_payment_approval_access(current_user)
+    result = await db.execute(select(Transactions).where(Transactions.id == txn_id))
+    txn = result.scalar_one_or_none()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment link not found")
+    if _is_krw_payment(txn):
+        _require_krw_payment_owner(current_user)
+    if not is_payment_received(txn):
+        raise HTTPException(status_code=409, detail="Payment has not been received yet")
+
+    details = {
+        "sender_name": txn.sender_name,
+        "sender_bank": txn.sender_bank,
+        "sender_account_number": None,
+        "receiver_bank": txn.bank_name,
+        "receiver_account_name": txn.bank_account_name,
+        "receiver_account_number": txn.bank_account_number,
+        "institution_reference_no": None,
+        "channel_reference_no": None,
+        "provider_status": get_payment_status(txn),
+    }
+    provider_lookup_error = None
+    is_swiftpay = bool(
+        txn.xendit_id
+        or txn.transaction_type in {"swiftpay_order", "swiftpay_qr"}
+    )
+    if is_swiftpay:
+        service = SwiftPayService()
+        if service.is_configured():
+            remote = await service.get_order_status(
+                reference_no=txn.external_id,
+                payment_id=txn.xendit_id,
+            )
+            if remote.get("success"):
+                remote_details = _swiftpay_payment_details(remote.get("data"))
+                details = {
+                    key: remote_details.get(key) or details.get(key)
+                    for key in details
+                }
+            else:
+                provider_lookup_error = str(
+                    remote.get("error") or "SwiftPay payment details could not be fetched"
+                )
+        else:
+            provider_lookup_error = "SwiftPay is not configured"
+
+    return {
+        "success": True,
+        "transaction_id": txn.id,
+        "provider": "SwiftPay" if is_swiftpay else None,
+        "data": details,
+        "provider_lookup_error": provider_lookup_error,
+    }
 
 
 @router.post("/payment-approvals/{txn_id}/approve")

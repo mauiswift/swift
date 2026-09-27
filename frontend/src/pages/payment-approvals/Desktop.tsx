@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { fmtCurrency } from '@/lib/format';
 import PaymentStatus from './PaymentStatus';
+import PaymentTransferDetails from './PaymentTransferDetails';
 
 interface PendingPayment {
   id: string;
@@ -24,14 +25,16 @@ interface PendingPayment {
   approval_status?: string | null;
   payment_received?: boolean;
   payment_received_at?: string | null;
+  sender_name?: string | null;
+  sender_bank?: string | null;
+  sender_account_number?: string | null;
+  receiver_bank?: string | null;
+  receiver_account_name?: string | null;
+  receiver_account_number?: string | null;
+  has_swiftpay_details?: boolean;
   created_at: string;
   transaction_type: string;
   external_id?: string;
-}
-
-interface SenderDetails {
-  senderName: string;
-  senderBank: string;
 }
 
 export default function SuperAdminPaymentApprovalDesktop() {
@@ -41,7 +44,6 @@ export default function SuperAdminPaymentApprovalDesktop() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
-  const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
   const [error, setError] = useState('');
   const [reviewPayment, setReviewPayment] = useState<PendingPayment | null>(null);
   const [reviewNote, setReviewNote] = useState('');
@@ -102,14 +104,11 @@ export default function SuperAdminPaymentApprovalDesktop() {
   };
 
   const approvePayment = async (paymentId: string) => {
-    const details = senderDetails[paymentId] || { senderName: '', senderBank: '' };
     try {
       setApproving(paymentId);
       const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/approve`, {
         note: reviewNote.trim(),
         reason: reviewNote.trim() || 'Manually approved by super admin',
-        sender_name: details.senderName.trim() || undefined,
-        sender_bank: details.senderBank.trim() || undefined,
       });
 
       if (response.ok && response.data?.success) {
@@ -118,11 +117,6 @@ export default function SuperAdminPaymentApprovalDesktop() {
         setSelectedIds(prev => prev.filter(id => id !== paymentId));
         setReviewPayment(null);
         setReviewNote('');
-        setSenderDetails(prev => {
-          const next = { ...prev };
-          delete next[paymentId];
-          return next;
-        });
         await fetchPendingPayments(false);
       } else {
         toast.error(response.data?.detail || 'Failed to approve payment');
@@ -341,6 +335,13 @@ export default function SuperAdminPaymentApprovalDesktop() {
                           {payment.description}
                         </p>
                         <PaymentStatus payment={payment} compact />
+                        {payment.payment_received && (
+                          <PaymentTransferDetails
+                            paymentId={payment.id}
+                            hasSwiftpayDetails={payment.has_swiftpay_details}
+                            storedDetails={payment}
+                          />
+                        )}
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
@@ -349,34 +350,6 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       </td>
                       <td className="px-8 py-4">
                         <div className="flex items-center justify-end gap-3">
-                          <input
-                            value={senderDetails[payment.id]?.senderName || ''}
-                            onChange={(e) =>
-                              setSenderDetails(prev => ({
-                                ...prev,
-                                [payment.id]: {
-                                  senderName: e.target.value,
-                                  senderBank: prev[payment.id]?.senderBank || '',
-                                },
-                              }))
-                            }
-                            placeholder="Sender name"
-                            className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                          />
-                          <input
-                            value={senderDetails[payment.id]?.senderBank || ''}
-                            onChange={(e) =>
-                              setSenderDetails(prev => ({
-                                ...prev,
-                                [payment.id]: {
-                                  senderName: prev[payment.id]?.senderName || '',
-                                  senderBank: e.target.value,
-                                },
-                              }))
-                            }
-                            placeholder="Sender bank"
-                            className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                          />
                           <button
                             onClick={() => { setReviewNote(''); setReviewPayment(payment); }}
                             disabled={approving === payment.id || !payment.payment_received}
