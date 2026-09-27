@@ -911,8 +911,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             required_usdt: usdtConversion.requestedUsdtAmount,
             eligible_balance: usdtConversion.convertibleSource,
             shortfall_balance: shortfall,
-            eligible_balance: usdtConversion.convertibleSource,
-            shortfall_balance: shortfall,
           },
         },
       });
