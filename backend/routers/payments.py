@@ -32,7 +32,7 @@ from services.magpie_services import CurrencyConverter, MagpieService
 from services.payment_gateway import gateway
 from services.toss_account_pool import assign_toss_account_to_transaction
 from services.paymentwall_service import PaymentwallService
-from services.transactions import publish_payment_link_created
+from services.transactions import TransactionsService, publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
@@ -227,8 +227,138 @@ class CheckoutInstitutionRequest(BaseModel):
     amount: Optional[float] = Field(default=None, gt=0)
 
 
+class SwiftPayCurrencyCheckoutRequest(BaseModel):
+    currency: Literal["USD", "EUR"]
+
+
 class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
+
+
+@router.post("/checkout/{identifier}/swiftpay-currency")
+async def create_swiftpay_currency_checkout(
+    identifier: str,
+    payload: SwiftPayCurrencyCheckoutRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a SwiftPay USD/EUR order for a KRW checkout using live FX rates."""
+    result = await db.execute(
+        select(Transactions)
+        .where(func.lower(Transactions.external_id) == identifier.lower())
+        .limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if str(txn.status or "").lower() not in {"pending", "created"} or txn.paid_at:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    if (txn.currency or "").strip().upper() != "KRW":
+        raise HTTPException(status_code=400, detail="Multicurrency checkout is only available for KRW payments")
+
+    amount_krw = float(txn.original_amount if txn.original_amount is not None else txn.amount or 0)
+    reference_id = f"FX-{txn.id}-{payload.currency}"
+    existing_result = await db.execute(
+        select(Transactions)
+        .where(func.lower(Transactions.external_id) == reference_id.lower())
+        .limit(1)
+    )
+    existing_txn = existing_result.scalars().first()
+    if existing_txn:
+        if str(existing_txn.status or "").lower() not in {"pending", "created"} or existing_txn.paid_at:
+            raise HTTPException(status_code=400, detail="This multicurrency payment has already been completed")
+        if existing_txn.payment_url:
+            return {
+                "success": True,
+                "external_id": existing_txn.external_id,
+                "redirect_url": existing_txn.payment_url,
+                "quoted_amount": amount_krw,
+                "quoted_currency": "KRW",
+                "charged_amount": float(existing_txn.amount),
+                "charged_currency": payload.currency,
+            }
+        raise HTTPException(status_code=502, detail="The existing SwiftPay checkout is missing its payment URL")
+
+    try:
+        converted_amount = await CurrencyConverter.convert_live(
+            amount_krw,
+            "KRW",
+            payload.currency,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if converted_amount < 1:
+        raise HTTPException(
+            status_code=400,
+            detail=f"KRW {amount_krw:,.2f} converts below the SwiftPay minimum of {payload.currency} 1.00",
+        )
+
+    service = SwiftPayService()
+    if not service.is_configured():
+        raise HTTPException(status_code=503, detail="SwiftPay is not configured")
+    order_result = await service.create_order(
+        amount=converted_amount,
+        reference_no=reference_id,
+        details={
+            "description": txn.description or "SwiftPay payment",
+            "customerName": txn.customer_name or "Customer",
+            "email": txn.customer_email or "",
+            "sourceAmount": amount_krw,
+            "sourceCurrency": "KRW",
+        },
+        currency=payload.currency,
+        generate_customer_redirect_url=True,
+        merchant_webhook_url=service.callback_url or None,
+    )
+    if not order_result.get("success"):
+        raise HTTPException(
+            status_code=502,
+            detail=order_result.get("error", "SwiftPay multicurrency checkout could not be created"),
+        )
+
+    order_data = order_result.get("data")
+    if not isinstance(order_data, dict):
+        raise HTTPException(status_code=502, detail="SwiftPay returned an invalid multicurrency order")
+    redirect_url = (
+        order_data.get("customerRedirectUrl")
+        or order_data.get("customer_redirect_url")
+        or ""
+    )
+    parsed_redirect = urlparse(str(redirect_url)) if redirect_url else None
+    if not parsed_redirect or parsed_redirect.scheme != "https" or not parsed_redirect.netloc:
+        raise HTTPException(status_code=502, detail="SwiftPay did not return a valid multicurrency checkout URL")
+
+    provider_reference = str(order_result.get("reference_no") or reference_id)
+    provider_payment_id = (
+        order_data.get("paymentId")
+        or order_data.get("payment_id")
+        or provider_reference
+    )
+    payment_txn = await TransactionsService(db).create_transaction(
+        user_id=str(txn.user_id),
+        transaction_type="invoice",
+        amount=converted_amount,
+        currency=payload.currency,
+        original_amount=amount_krw,
+        original_currency="KRW",
+        external_id=provider_reference,
+        gateway_id=str(provider_payment_id),
+        description=txn.description or "SwiftPay payment",
+        customer_name=txn.customer_name or "",
+        customer_email=txn.customer_email or "",
+        payment_url=str(redirect_url),
+        status="pending",
+    )
+    await db.commit()
+    return {
+        "success": True,
+        "transaction_id": payment_txn.id,
+        "external_id": payment_txn.external_id,
+        "redirect_url": payment_txn.payment_url,
+        "quoted_amount": amount_krw,
+        "quoted_currency": "KRW",
+        "charged_amount": converted_amount,
+        "charged_currency": payload.currency,
+    }
 
 
 @router.get("/checkout/{identifier}/magpie-card/config")
@@ -412,6 +542,7 @@ async def create_magpie_method_checkout(
     if session_id:
         txn.xendit_id = str(session_id)
     txn.payment_url = checkout_url
+    txn.payment_method = payload.payment_method
     txn.updated_at = datetime.now(timezone.utc)
     await db.commit()
     return {
@@ -515,6 +646,9 @@ async def charge_magpie_wallet_source(
     )
     if not charge.get("success"):
         raise HTTPException(status_code=502, detail=charge.get("error", "Wallet payment could not be processed"))
+    txn.payment_method = payload.payment_method
+    txn.updated_at = datetime.now(timezone.utc)
+    await db.commit()
     return {
         "success": True,
         "charge_id": charge.get("charge_id"),
@@ -566,6 +700,9 @@ async def charge_magpie_card_source(
     )
     if not charge.get("success"):
         raise HTTPException(status_code=502, detail=charge.get("error", "Card payment could not be processed"))
+    txn.payment_method = "CARD"
+    txn.updated_at = datetime.now(timezone.utc)
+    await db.commit()
     return {
         "success": True,
         "charge_id": charge.get("charge_id"),
@@ -662,6 +799,10 @@ async def _create_reusable_payment_attempt(
     )
     db.add(payment)
     await db.flush()
+    # Persist the reusable payment attempt immediately so provider failures
+    # during institution selection cannot roll back the created attempt.
+    await db.commit()
+    await db.refresh(payment)
     return payment
 
 
@@ -1325,6 +1466,7 @@ async def get_checkout_payment(
             "id": txn.id,
             "external_id": txn.external_id,
             "transaction_type": txn.transaction_type,
+            "payment_method": txn.payment_method,
             "amount": display_amount,
             "currency": display_currency,
             "processing_amount": float(txn.amount),
@@ -1376,17 +1518,47 @@ async def get_checkout_status(
         if not txn:
             logger.warning(f"Checkout status not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
+
+        status_txn = txn
+        if str(txn.currency or "").strip().upper() == "KRW" and str(txn.status or "").lower() in {"pending", "created"}:
+            linked_references = [f"FX-{txn.id}-USD", f"FX-{txn.id}-EUR"]
+            linked_result = await db.execute(
+                select(Transactions)
+                .where(Transactions.external_id.in_(linked_references))
+                .order_by(Transactions.created_at.desc())
+            )
+            linked_transactions = linked_result.scalars().all()
+            status_txn = (
+                next(
+                    (
+                        linked_txn
+                        for linked_txn in linked_transactions
+                        if str(linked_txn.status or "").lower() in {"paid", "completed", "executed"}
+                    ),
+                    None,
+                )
+                or next(
+                    (
+                        linked_txn
+                        for linked_txn in linked_transactions
+                        if str(linked_txn.status or "").lower() in {"pending", "created"}
+                    ),
+                    None,
+                )
+                or (linked_transactions[0] if linked_transactions else txn)
+            )
         
         display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
         display_currency = txn.original_currency or txn.currency or "PHP"
         return {
-            "status": txn.status,
+            "status": status_txn.status,
+            "payment_method": status_txn.payment_method or txn.payment_method,
             "amount": display_amount,
             "currency": display_currency,
-            "processing_amount": float(txn.amount),
-            "processing_currency": txn.currency or "PHP",
-            "payment_url": txn.payment_url or "",
-            "updated_at": serialize_utc_datetime(txn.updated_at),
+            "processing_amount": float(status_txn.amount),
+            "processing_currency": status_txn.currency or "PHP",
+            "payment_url": status_txn.payment_url or txn.payment_url or "",
+            "updated_at": serialize_utc_datetime(status_txn.updated_at),
         }
     except HTTPException:
         raise
@@ -1634,6 +1806,7 @@ async def select_checkout_institution(
 
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
+        txn.payment_method = institution_code
         provider_reference = qr_result.get("reference_no")
         if provider_reference and provider_reference != txn.external_id:
             # A duplicate reference is retried with a provider-safe suffix.
@@ -1708,6 +1881,7 @@ async def select_checkout_institution(
     if gateway_id:
         txn.xendit_id = gateway_id
     txn.payment_url = redirect_url
+    txn.payment_method = institution_code
     if institution_code == "ALIPAY":
         # Keep the customer on our checkout page and render the SwiftPay
         # redirect URL as a scannable Alipay QR code. The URL remains the
