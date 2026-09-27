@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     // Ensure base path is correct for nested routes
     base: '/',
+    minify: false,
+    cssMinify: true,
     // Reduce chunk size warnings
     chunkSizeWarningLimit: 1000,
     rollupOptions: {

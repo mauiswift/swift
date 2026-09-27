@@ -30,7 +30,6 @@ import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { AdminSidebar } from '@/components/admin/AdminManagementNavigation';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
 import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
-import './AdminManagement.css';
 import { toast } from 'sonner';
 import {
   ShieldCheck,
@@ -3551,9 +3550,9 @@ export default function AdminManagement() {
 
   return (
     <Layout>
-      <div className="admin-dashboard min-h-full w-full">
+      <div className="w-full bg-gradient-to-b from-slate-50 to-white min-h-screen">
         {/* Page Header */}
-        <div className="admin-dashboard__header sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
+        <div className="border-b border-slate-200 bg-white sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -3606,7 +3605,7 @@ export default function AdminManagement() {
           </div>
         </div>
 
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-8 pt-5 sm:px-6 lg:flex-row lg:items-start lg:gap-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-8 pt-4 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:px-8">
           {/* Vertical Navigation Sidebar */}
           <AdminSidebar
             tabs={tabs}
@@ -3619,7 +3618,7 @@ export default function AdminManagement() {
           />
 
           {/* Main Content Area */}
-          <div className="admin-dashboard__content flex-1 min-w-0 w-full space-y-5">
+          <div className="flex-1 min-w-0 w-full space-y-6">
             {selectedTabMeta && (
               <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-6">
                 <div className="flex items-start gap-3">

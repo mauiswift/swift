@@ -30,13 +30,18 @@ import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { getTransactionPaymentMethodBrand } from '@/lib/paymentMethodBranding';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
-import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
+import {
+  normalizeCheckoutQrValue,
+  resolveCheckoutQrPanelMode,
+  sanitizeCheckoutDeepLink,
+} from '@/lib/checkoutQr';
 import {
   KRW_BANKS as SUPPORTED_KRW_BANKS,
   DEFAULT_KRW_BANK_NAME,
@@ -47,6 +52,7 @@ import {
 interface Transaction {
   id: number;
   transaction_type: string;
+  payment_method?: string | null;
   external_id: string;
   amount: number;
   currency: string;
@@ -65,7 +71,6 @@ interface Transaction {
   bank_account_number?: string;
   bank_account_name?: string;
   usdt_deposit_address?: string | null;
-  toss_deep_link?: string;
   created_at: string;
 }
 
@@ -246,7 +251,6 @@ export default function Checkout() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showQRPhModal, setShowQRPhModal] = useState(false);
-  const [qrInstructionApp, setQrInstructionApp] = useState<'toss' | null>(null);
   const openAmount = searchParams.get('open_amount') === '1';
   const [enteredAmount, setEnteredAmount] = useState('');
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
@@ -320,11 +324,19 @@ export default function Checkout() {
         const response = await client.get(`/api/v1/payments/checkout/${extId}/status`);
         const status = String(response.data?.status || '').toLowerCase();
         if (status === 'paid' || status === 'completed' || status === 'executed') {
-          setTxn(prev => prev ? { ...prev, status: 'paid' } : null);
+          setTxn(prev => prev ? {
+            ...prev,
+            status: 'paid',
+            payment_method: response.data?.payment_method || prev.payment_method,
+          } : null);
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           toast.success('Payment confirmed!');
         } else if (status === 'expired' || status === 'cancelled' || status === 'failed') {
-          setTxn(prev => prev ? { ...prev, status } : null);
+          setTxn(prev => prev ? {
+            ...prev,
+            status,
+            payment_method: response.data?.payment_method || prev.payment_method,
+          } : null);
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         }
       } catch (err) {
@@ -550,6 +562,13 @@ export default function Checkout() {
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = ['pending', 'created'].includes(String(txn?.status || '').trim().toLowerCase());
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
+  const statusPaymentMethod = txn.payment_method || searchParams.get('payment_method');
+  const statusPaymentMethodBrand = statusPaymentMethod
+    ? getTransactionPaymentMethodBrand({
+      transaction_type: txn.transaction_type,
+      payment_method: statusPaymentMethod,
+    })
+    : null;
   const phpEquivalent = currencyCode === 'PHP'
     ? Number(txn.amount || 0)
     : txn.processing_currency?.toUpperCase() === 'PHP'
@@ -870,30 +889,6 @@ export default function Checkout() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const openKoreanPaymentApp = (app: 'toss' | 'kakao') => {
-    if (app === 'toss') {
-      const tossDeepLink = txn?.toss_deep_link?.trim() || 'supertoss://toss/pay';
-      let appOpened = false;
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') {
-          appOpened = true;
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        }
-      };
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      window.location.assign(tossDeepLink);
-      window.setTimeout(() => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        if (!appOpened) {
-          setQrInstructionApp('toss');
-          setShowQRPhModal(true);
-        }
-      }, 1200);
-      return;
-    }
-    window.location.assign('kakaopay://');
-  };
-
   const openMagpieCardCheckout = async () => {
     if (!txn || cardCheckoutLoading) return;
     setCardFormError(null);
@@ -1149,6 +1144,8 @@ export default function Checkout() {
     );
   }
 
+  const qrCodeUrl = normalizeCheckoutQrValue(txn.qr_code_url);
+
   return (
     <div
       className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen pb-8 font-sans text-slate-900 sm:pb-12`}
@@ -1401,49 +1398,33 @@ export default function Checkout() {
                         <div className="flex items-center gap-2">
                           <Smartphone className="h-4 w-4 text-[#1475d1]" aria-hidden="true" />
                           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-700">
-                            {checkoutText('Open your payment app', '결제 앱 열기')}
+                            {checkoutText('Pay through SwiftPay', 'SwiftPay로 결제')}
                           </p>
                         </div>
+                        <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                          {checkoutText(
+                            'Choose USD or EUR. Your KRW total is quoted using a live exchange rate, then paid through SwiftPay’s secure checkout.',
+                            'USD 또는 EUR를 선택하세요. 실시간 환율로 원화 금액을 환산한 뒤 SwiftPay의 안전한 결제 페이지에서 결제합니다.',
+                          )}
+                        </p>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            onClick={() => openKoreanPaymentApp('toss')}
-                            className="group flex min-h-28 items-center gap-3 rounded-2xl border border-[#d7e5ff] bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#0064FF] hover:shadow-md"
-                          >
-                            <PaymentBrandLogo
-                              brand="Toss Pay"
-                              logoUrl="/logos/tosspay.png"
-                              size="lg"
-                              className="h-14 w-20 border-0 bg-[#f7f8ff] p-1.5 shadow-none"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-bold text-slate-900">Toss Pay</span>
-                              <span className="mt-0.5 block text-[11px] text-slate-500">토스페이에서 열기</span>
-                            </span>
-                            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#0064FF]" aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openKoreanPaymentApp('kakao')}
-                            className="group flex min-h-28 items-center gap-3 rounded-2xl border border-[#f4e6a0] bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#FEE500] hover:shadow-md"
-                          >
-                            <PaymentBrandLogo
-                              brand="Kakao Pay"
-                              logoUrl="/logos/kakaopay.png"
-                              size="lg"
-                              className="h-14 w-20 border-0 bg-[#fffdf0] p-1.5 shadow-none"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-bold text-slate-900">Kakao Pay</span>
-                              <span className="mt-0.5 block text-[11px] text-slate-500">카카오페이에서 열기</span>
-                            </span>
-                            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#b49b00]" aria-hidden="true" />
-                          </button>
+                          {(['USD', 'EUR'] as const).map(currency => (
+                            <button
+                              key={currency}
+                              type="button"
+                              onClick={() => openSwiftPayCurrencyCheckout(currency)}
+                              disabled={swiftPayCurrencyLoading !== null}
+                              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {swiftPayCurrencyLoading === currency && <Loader2 className="h-4 w-4 animate-spin" />}
+                              {currency} checkout
+                            </button>
+                          ))}
                         </div>
                         <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
                           {checkoutText(
-                            'Open an app, then scan the QR code below to load the transfer details.',
-                            '앱을 연 다음 아래 QR 코드를 스캔하여 송금 정보를 불러오세요.',
+                            'Your KRW order amount remains the quoted amount shown above.',
+                            '원화 주문 금액은 위에 표시된 금액으로 유지됩니다.',
                           )}
                         </p>
                       </div>
@@ -1906,6 +1887,14 @@ export default function Checkout() {
                 <div className="h-20 w-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
                   <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                 </div>
+                {statusPaymentMethodBrand && (
+                  <div className="mx-auto flex w-fit items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <PaymentBrandLogo brand={statusPaymentMethodBrand} size="sm" />
+                    <span className="text-sm font-semibold text-slate-700">
+                      {checkoutText('Paid with', '결제 수단')}: {statusPaymentMethodBrand}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-900 mb-2">{checkoutText('Payment Successful', '결제가 완료되었습니다')}</h2>
                   <p className="text-slate-500">{checkoutText('Your transaction has been completed successfully.', '거래가 성공적으로 완료되었습니다.')}</p>
@@ -2129,30 +2118,25 @@ export default function Checkout() {
         open={showQRPhModal}
         onOpenChange={open => {
           setShowQRPhModal(open);
-          if (!open) setQrInstructionApp(null);
         }}
       >
         <DialogContent className="max-w-md">
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="text-center space-y-2">
-              <h2 className="text-xl font-semibold text-slate-900">
-                {qrInstructionApp === 'toss'
-                  ? 'Pay with Toss'
-                  : 'Scan QR Code to Pay'}
-              </h2>
+              <h2 className="text-xl font-semibold text-slate-900">Scan QR Code to Pay</h2>
               <p className="text-sm text-slate-500">
-                {qrInstructionApp === 'toss'
-                  ? 'Open Toss, choose QR scan, and scan this QRPH code to complete payment.'
-                  : checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}
+                {checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}
               </p>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
-              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                <img src={txn.qr_code_url} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
-              ) : (
-                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-              )}
-            </div>
+            {qrCodeUrl ? (
+              <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
+                {/^https?:\/\//i.test(qrCodeUrl) ? (
+                  <img src={qrCodeUrl} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
+                ) : (
+                  <QRCodeSVG value={qrCodeUrl} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
+                )}
+              </div>
+            ) : null}
             <div className="w-full bg-slate-50 rounded-lg p-4 space-y-2 text-center text-sm">
               <p className="font-semibold text-slate-900">Merchant: {merchantDisplayName}</p>
               <p className="text-slate-600">Amount: {fmtCurrency(Number(txn.amount || 0), txn.currency || 'PHP')}</p>

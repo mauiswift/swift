@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 class TransactionsData(BaseModel):
     """Entity data schema (for create/update)"""
     transaction_type: str
+    payment_method: Optional[str] = None
     external_id: str = None
     xendit_id: str = None
     amount: float
@@ -44,6 +45,7 @@ class TransactionsData(BaseModel):
 class TransactionsUpdateData(BaseModel):
     """Update entity data (partial updates allowed)"""
     transaction_type: Optional[str] = None
+    payment_method: Optional[str] = None
     external_id: Optional[str] = None
     xendit_id: Optional[str] = None
     amount: Optional[float] = None
@@ -70,6 +72,7 @@ class TransactionsResponse(BaseModel):
     id: int
     user_id: str
     transaction_type: str
+    payment_method: Optional[str] = None
     external_id: Optional[str] = None
     xendit_id: Optional[str] = None
     amount: float

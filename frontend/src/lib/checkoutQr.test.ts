@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from './checkoutQr.ts';
+import {
+  normalizeCheckoutQrValue,
+  resolveCheckoutQrPanelMode,
+  sanitizeCheckoutDeepLink,
+} from './checkoutQr.ts';
+
+test('normalizeCheckoutQrValue rejects empty QR content', () => {
+  assert.equal(normalizeCheckoutQrValue(''), null);
+  assert.equal(normalizeCheckoutQrValue('   '), null);
+  assert.equal(normalizeCheckoutQrValue(null), null);
+});
+
+test('normalizeCheckoutQrValue trims valid QR content', () => {
+  assert.equal(normalizeCheckoutQrValue('  https://pay.example.test/order  '), 'https://pay.example.test/order');
+});
 
 test('sanitizeCheckoutDeepLink allows gcash scheme', () => {
   assert.equal(sanitizeCheckoutDeepLink('gcash://com.mynt.gcash/app/006300000700'), 'gcash://com.mynt.gcash/app/006300000700');

@@ -24,8 +24,8 @@ export function AdminSidebar({
   }, []);
 
   return (
-    <nav aria-label="Administration sections" className="w-full shrink-0 lg:sticky lg:top-4 lg:w-72">
-      <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col lg:gap-1 lg:overflow-y-auto">
+    <nav aria-label="Administration sections" className="w-full shrink-0 lg:sticky lg:top-24 lg:w-72">
+      <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-1 lg:overflow-y-auto">
         {groupedTabs.map((group) => (
           <section key={group.id} aria-labelledby={`admin-group-${group.id}`}>
             <h2 id={`admin-group-${group.id}`} className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">
@@ -59,7 +59,7 @@ export function AdminSidebar({
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:hidden">
+      <div className="lg:hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <label htmlFor="admin-section-select" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
           Administration section
         </label>

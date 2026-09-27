@@ -47,7 +47,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/ibk-bank.svg': ['ibk', 'industrialbankofkorea', 'ibkindustrialbankofkorea'],
   '/logos/kdb-bank.png': ['kdb', 'kdbbank'],
   '/logos/kakao-bank.svg': ['kakaobank', 'kakao'],
-  '/logos/toss-bank.png': ['tossbank', 'toss'],
+  '/logos/toss-bank-account.png': ['tossbank', 'tossbankaccount'],
   '/logos/sc-first-bank.svg': ['sc', 'scfirstbank', 'scbank'],
   '/logos/naver.svg': ['naver'],
   '/logos/kakaopay.png': ['kakaopay'],
@@ -74,6 +74,6 @@ export const resolveBrandLogoPath = (value: string): string => {
 };
 
 export const getBrandLogoCandidates = (value: string, providerLogoUrl?: string): string[] => {
-  const candidates = [providerLogoUrl?.trim(), resolveBrandLogoPath(value)];
+  const candidates = [resolveBrandLogoPath(value), providerLogoUrl?.trim()];
   return [...new Set(candidates.filter((path): path is string => Boolean(path)))];
 };

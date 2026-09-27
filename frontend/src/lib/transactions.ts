@@ -31,6 +31,7 @@ const PROCESSING_STATUSES = new Set([
 export interface TransactionRecord {
   id: number;
   transaction_type: string;
+  payment_method?: string | null;
   external_id?: string | null;
   xendit_id?: string | null;
   amount: number;

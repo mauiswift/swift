@@ -1,5 +1,10 @@
 export type CheckoutQrPanelMode = 'none' | 'default' | 'gcash' | 'qrph' | 'alipay';
 
+export const normalizeCheckoutQrValue = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  return value.trim();
+};
+
 export const sanitizeCheckoutDeepLink = (value: unknown): string | null => {
   if (typeof value !== 'string' || !value.trim()) return null;
   const trimmed = value.trim();

@@ -204,6 +204,7 @@ async def select_checkout_institution_compat(
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
+        txn.payment_method = institution_code
         txn.transaction_type = "alipay_qr" if institution_code == "ALIPAY" else "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
@@ -253,6 +254,7 @@ async def select_checkout_institution_compat(
     if not redirect_url:
         raise HTTPException(status_code=502, detail="SwiftPay did not return a direct bank payment URL")
     txn.payment_url = redirect_url
+    txn.payment_method = institution_code
     txn.xendit_id = order_data.get("paymentId") or order_data.get("payment_id") or order_data.get("id")
     txn.updated_at = datetime.now(timezone.utc)
     await db.commit()

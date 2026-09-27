@@ -203,6 +203,7 @@ class TransactionsService(BaseService[Transactions]):
         bank_name: Optional[str] = None,
         bank_account_number: Optional[str] = None,
         bank_account_name: Optional[str] = None,
+        payment_method: Optional[str] = None,
     ) -> Transactions:
         """Create a new transaction record with consistent defaults.
 
@@ -221,6 +222,7 @@ class TransactionsService(BaseService[Transactions]):
         txn = Transactions(
             user_id=user_id,
             transaction_type=transaction_type,
+            payment_method=payment_method,
             amount=amount,
             currency=currency,
             original_amount=original_amount,

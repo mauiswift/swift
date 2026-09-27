@@ -29,7 +29,7 @@ export const KRW_BANK_DEFINITIONS = [
   ['088', 'Shinhan Bank', '/logos/shinhan-bank.svg'],
   ['089', 'K Bank', ''],
   ['090', 'Kakao Bank', '/logos/kakao-bank.svg'],
-  ['092', 'Toss Bank', '/logos/toss-bank.png'],
+  ['092', 'Toss Bank', '/logos/toss-bank-account.png'],
 ] as const;
 
 const KRW_BANK_CODE_ALIASES: Record<string, string> = {
@@ -51,7 +51,9 @@ export const KRW_BANK_BY_CODE = new Map(
 export const normalizeKrwBankName = (value?: string | null): string => {
   const raw = String(value ?? '').trim();
   if (!raw) return DEFAULT_KRW_BANK_NAME;
-  if (['toss bank', 'tossbank', '토스뱅크', '토스페이'].includes(raw.toLowerCase())) return DEFAULT_KRW_BANK_NAME;
+  const normalizedRaw = raw.toLowerCase();
+  if (['toss bank', 'tossbank', '토스뱅크'].includes(normalizedRaw)) return DEFAULT_KRW_BANK_NAME;
+  if (['toss pay', 'tosspay', '토스페이'].includes(normalizedRaw)) return 'Toss Pay';
   const aliasedCode = KRW_BANK_CODE_ALIASES[raw.toUpperCase()];
 
   const directMatch = KRW_BANKS.find(bank =>
@@ -62,6 +64,8 @@ export const normalizeKrwBankName = (value?: string | null): string => {
 
   const normalized = raw.toUpperCase();
   if (normalized.includes('KAKAO')) return 'Kakao Bank';
+  if (normalized.includes('TOSSPAY') || normalized.includes('TOSS PAY') || raw.includes('토스페이')) return 'Toss Pay';
+  if (normalized.includes('TOSSBANK') || normalized.includes('TOSS BANK') || raw.includes('토스뱅크')) return 'Toss Bank';
   if (normalized.includes('TOSS')) return 'Toss Bank';
   if (normalized.includes('K BANK') || normalized.includes('KBANK')) return 'K Bank';
   if (normalized.includes('NAVER')) return 'Naver Bank';

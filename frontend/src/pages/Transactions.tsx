@@ -41,7 +41,8 @@ import { PaymentStatusBadge } from '@/components/PaymentStatusBadge';
 import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatTransactionDate, getTransactionStatus, getTransactionTypeLabel } from '@/lib/transactions';
+import { formatTransactionDate, getTransactionStatus } from '@/lib/transactions';
+import { getTransactionPaymentMethodBrand } from '@/lib/paymentMethodBranding';
 import './PaymentActivity.css';
 
 interface Transaction {
@@ -361,9 +362,9 @@ export default function Transactions() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-9 min-w-12 max-w-16" />
+                          <PaymentBrandLogo brand={getTransactionPaymentMethodBrand(txn)} size="sm" className="h-9 min-w-12 max-w-16" />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">{getTransactionTypeLabel(txn.transaction_type, isKorean ? 'ko' : 'en')}</p>
+                            <p className="truncate text-sm font-semibold text-slate-900">{getTransactionPaymentMethodBrand(txn)}</p>
                             <div className="mt-1 flex items-center gap-1">
                               <code className="max-w-[180px] truncate text-[11px] text-slate-500">{txn.external_id || `#${txn.id}`}</code>
                               {txn.external_id && <button type="button" aria-label="Copy transaction ID" onClick={(event) => { event.stopPropagation(); copyToClipboard(txn.external_id); }} className="text-slate-400"><Copy className="h-3 w-3" /></button>}
@@ -425,9 +426,9 @@ export default function Transactions() {
                         >
                           <td className="px-3 md:px-6 py-3 md:py-4">
                             <div className="flex min-w-[170px] items-center gap-2.5">
-                              <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-7 min-w-12 max-w-16" />
+                              <PaymentBrandLogo brand={getTransactionPaymentMethodBrand(txn)} size="sm" className="h-7 min-w-12 max-w-16" />
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-medium text-foreground">{getTransactionTypeLabel(txn.transaction_type, isKorean ? 'ko' : 'en')}</p>
+                                <p className="truncate text-sm font-medium text-foreground">{getTransactionPaymentMethodBrand(txn)}</p>
                                 <div className="mt-0.5 flex items-center gap-1">
                                   <code className="max-w-[150px] truncate text-[11px] text-muted-foreground font-mono">{txn.external_id || `#${txn.id}`}</code>
                                   {txn.external_id && (

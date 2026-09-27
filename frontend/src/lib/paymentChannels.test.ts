@@ -63,9 +63,14 @@ describe('isPaymentChannelEnabled', () => {
   it('keeps Toss Bank separate from Toss Pay branding', () => {
     expect(normalizeKrwBankName('Toss Bank')).toBe('Toss Bank');
     expect(normalizeKrwBankName('토스뱅크')).toBe('Toss Bank');
-    expect(normalizeKrwBankName('토스페이')).toBe('Toss Bank');
-    expect(resolveBrandLogoPath('Toss Bank')).toBe('/logos/toss-bank.png');
+    expect(normalizeKrwBankName('토스페이')).toBe('Toss Pay');
+    expect(resolveBrandLogoPath('Toss Bank')).toBe('/logos/toss-bank-account.png');
     expect(resolveBrandLogoPath('토스페이')).toBe('/logos/tosspay.png');
+  });
+
+  it('uses the correct original logos for KDB and Toss Bank', () => {
+    expect(resolveBrandLogoPath('KDB Bank')).toBe('/logos/kdb-bank.png');
+    expect(resolveBrandLogoPath('Toss Bank')).not.toBe('/logos/toss-bank.png');
   });
 
   it('does not mistake K Bank for KB Kookmin Bank', () => {
@@ -73,10 +78,10 @@ describe('isPaymentChannelEnabled', () => {
     expect(resolveBrandLogoPath('KB Kookmin Bank')).toBe('/logos/kb-kookmin.svg');
   });
 
-  it('prefers a provider-supplied logo before the generic registry logo', () => {
+  it('prefers the registered official logo before a provider-supplied logo', () => {
     expect(getBrandLogoCandidates('GCash', '/provider/gcash.svg')).toEqual([
-      '/provider/gcash.svg',
       '/logos/gcash.png',
+      '/provider/gcash.svg',
     ]);
     expect(getBrandLogoCandidates('GCash', '/logos/gcash.png')).toEqual(['/logos/gcash.png']);
   });

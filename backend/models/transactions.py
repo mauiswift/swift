@@ -17,6 +17,7 @@ class Transactions(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True, nullable=False)
     user_id = Column(String, nullable=False)
     transaction_type = Column(String, nullable=False)
+    payment_method = Column(String(128), nullable=True)
     external_id = Column(String, nullable=True)
     xendit_id = Column(String, nullable=True)
     short_url_slug = Column(String, nullable=True, index=True)
