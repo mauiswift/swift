@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  LogOut, Menu, X, Landmark, Bell, ChevronLeft, ChevronRight, Power, RefreshCw
+  LogOut, Menu, X, Landmark, Bell, ChevronLeft, ChevronRight, Power
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
@@ -93,8 +93,8 @@ export default function Layout({ children }: LayoutProps) {
         source: String(response.data?.source || 'Market'),
       };
     },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    staleTime: 1000,
+    refetchInterval: 1000,
     refetchIntervalInBackground: false,
   });
 
@@ -394,7 +394,7 @@ export default function Layout({ children }: LayoutProps) {
               role="group"
               aria-label={language === 'ko' ? '실시간 USDT 대 페소 환율' : 'Live USDT to PHP exchange rate'}
               title={liveRateQuery.data
-                ? `${liveRateQuery.data.source} · Updated ${new Date(liveRateQuery.dataUpdatedAt).toLocaleTimeString()}`
+                ? `${liveRateQuery.data.source} · Checked ${new Date(liveRateQuery.dataUpdatedAt).toLocaleTimeString()}`
                 : liveRateQuery.isError ? 'Live exchange rate unavailable' : 'Loading live exchange rate'}
               className="hidden shrink-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-3 py-1.5 shadow-sm lg:flex"
             >
@@ -412,16 +412,6 @@ export default function Layout({ children }: LayoutProps) {
                     : liveRateQuery.isError ? 'Rate unavailable' : 'Loading rate…'}
                 </p>
               </div>
-              <button
-                type="button"
-                aria-label={liveRateQuery.isFetching ? 'Refreshing live exchange rate' : 'Refresh live exchange rate'}
-                title="Refresh live exchange rate"
-                disabled={liveRateQuery.isFetching}
-                onClick={() => void liveRateQuery.refetch()}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-wait disabled:opacity-60"
-              >
-                <RefreshCw size={14} className={liveRateQuery.isFetching ? 'motion-safe:animate-spin' : ''} aria-hidden="true" />
-              </button>
             </div>
 
             {/* Notification Bell - Touch-friendly 44x44px */}
