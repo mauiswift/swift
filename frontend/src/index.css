@@ -2355,6 +2355,11 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
     transition-delay: 0ms !important;
   }
 
+  .reveal-group .reveal-item {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+
   .motion-skeleton {
     animation: none !important;
     opacity: 0.7;

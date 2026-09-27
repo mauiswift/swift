@@ -1473,13 +1473,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
                 VIP
               </div>}
-              <div className="flex items-center justify-between mt-3">
+              <div className="mt-3">
                 <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
-                {usdtConversion.conversionRate && (
-                  <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
-                    {formatWalletCurrency(1 / usdtConversion.conversionRate, usdtConversion.sourceCurrency)}/USDT
-                  </span>
-                )}
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2 min-h-[44px]">
                 {showUsdtActionRow ? (

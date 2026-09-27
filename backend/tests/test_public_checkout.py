@@ -183,6 +183,13 @@ def test_swiftpay_multicurrency_checkout_converts_krw_and_creates_order(monkeypa
         assert captured["currency"] == "USD"
         assert captured["details"]["sourceAmount"] == 100000
         assert captured["details"]["sourceCurrency"] == "KRW"
+        other_currency_response = client.post(
+            f"/api/v1/payments/checkout/{txn.external_id}/swiftpay-currency",
+            json={"currency": "EUR"},
+        )
+        assert other_currency_response.status_code == 409, other_currency_response.text
+        assert len(order_calls) == 1
+
         repeated_response = client.post(
             f"/api/v1/payments/checkout/{txn.external_id}/swiftpay-currency",
             json={"currency": "USD"},
@@ -215,6 +222,12 @@ def test_swiftpay_multicurrency_checkout_converts_krw_and_creates_order(monkeypa
         status_response = client.get(f"/api/v1/payments/checkout/{txn.external_id}/status")
         assert status_response.status_code == 200, status_response.text
         assert status_response.json()["status"] == "paid"
+        other_currency_after_paid_response = client.post(
+            f"/api/v1/payments/checkout/{txn.external_id}/swiftpay-currency",
+            json={"currency": "EUR"},
+        )
+        assert other_currency_after_paid_response.status_code == 409, other_currency_after_paid_response.text
+        assert len(order_calls) == 1
 
 
 def test_fixed_payment_link_creates_reusable_payment_attempt():

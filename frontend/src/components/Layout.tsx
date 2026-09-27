@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  LogOut, Menu, X, Landmark, Bell, ChevronLeft, ChevronRight, Power
+  LogOut, Menu, X, Landmark, Bell, ChevronLeft, ChevronRight, Power, RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
@@ -78,6 +79,24 @@ export default function Layout({ children }: LayoutProps) {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  const liveRateQuery = useQuery({
+    queryKey: ['header-live-usdt-php-rate'],
+    queryFn: async () => {
+      const response = await client.get('/api/v1/app-settings/usdt-php-rate/live');
+      const rate = Number(response.data?.rate);
+      if (!response.ok || !Number.isFinite(rate) || rate <= 0) {
+        throw new Error('Unable to load the live exchange rate');
+      }
+      return {
+        rate,
+        source: String(response.data?.source || 'Market'),
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
+  });
 
   const permissions = user?.permissions;
   const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string, isVipGold);
@@ -371,6 +390,40 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
+            <div
+              role="group"
+              aria-label={language === 'ko' ? '실시간 USDT 대 페소 환율' : 'Live USDT to PHP exchange rate'}
+              title={liveRateQuery.data
+                ? `${liveRateQuery.data.source} · Updated ${new Date(liveRateQuery.dataUpdatedAt).toLocaleTimeString()}`
+                : liveRateQuery.isError ? 'Live exchange rate unavailable' : 'Loading live exchange rate'}
+              className="hidden shrink-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-3 py-1.5 shadow-sm lg:flex"
+            >
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 shrink-0 rounded-full ${liveRateQuery.isError ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              />
+              <div className="min-w-0 leading-tight">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  {language === 'ko' ? '실시간 환율' : 'Live rate'}
+                </p>
+                <p className="whitespace-nowrap text-[11px] font-semibold text-slate-800">
+                  {liveRateQuery.data
+                    ? `1 USDT = ₱${liveRateQuery.data.rate.toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : liveRateQuery.isError ? 'Rate unavailable' : 'Loading rate…'}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label={liveRateQuery.isFetching ? 'Refreshing live exchange rate' : 'Refresh live exchange rate'}
+                title="Refresh live exchange rate"
+                disabled={liveRateQuery.isFetching}
+                onClick={() => void liveRateQuery.refetch()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-wait disabled:opacity-60"
+              >
+                <RefreshCw size={14} className={liveRateQuery.isFetching ? 'motion-safe:animate-spin' : ''} aria-hidden="true" />
+              </button>
+            </div>
+
             {/* Notification Bell - Touch-friendly 44x44px */}
             {isSuperAdmin && (
               <div className="relative" data-notification-menu>
@@ -451,7 +504,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Main Content - Mobile Optimized Padding */}
         <main id="dashboard-main" tabIndex={-1} className="app-main">
-          <div key={`${location.pathname}${location.search}`} className="app-content app-motion flex-1">
+          <div key={location.pathname} className="app-content app-motion flex-1">
             <div className="print:hidden"><BroadcastBanner /></div>
             <div className="print:hidden"><WhatsNewBanner /></div>
             {children}

@@ -165,6 +165,15 @@
   animation: fadeInUp 0.7s var(--motion-ease-standard);
 }
 
+.animate-stagger-1 { animation-delay: 80ms; }
+.animate-stagger-2 { animation-delay: 160ms; }
+.animate-stagger-3 { animation-delay: 240ms; }
+.animate-stagger-4 { animation-delay: 320ms; }
+.animate-stagger-5 { animation-delay: 400ms; }
+.animate-stagger-6 { animation-delay: 480ms; }
+.animate-stagger-7 { animation-delay: 560ms; }
+.animate-stagger-8 { animation-delay: 640ms; }
+
 @keyframes fadeInLeft {
   from {
     opacity: 0;
@@ -485,6 +494,11 @@
 
   .stagger-item {
     animation: none !important;
+  }
+
+  .animate-fade-in-up {
+    opacity: 1 !important;
+    animation-delay: 0ms !important;
   }
 }
 

@@ -246,6 +246,7 @@ async def create_swiftpay_currency_checkout(
         select(Transactions)
         .where(func.lower(Transactions.external_id) == identifier.lower())
         .limit(1)
+        .with_for_update()
     )
     txn = result.scalars().first()
     if not txn:
@@ -259,10 +260,28 @@ async def create_swiftpay_currency_checkout(
     reference_id = f"FX-{txn.id}-{payload.currency}"
     existing_result = await db.execute(
         select(Transactions)
-        .where(func.lower(Transactions.external_id) == reference_id.lower())
-        .limit(1)
+        .where(
+            func.lower(Transactions.external_id).in_([
+                f"FX-{txn.id}-USD".lower(),
+                f"FX-{txn.id}-EUR".lower(),
+            ])
+        )
+        .order_by(Transactions.created_at.desc())
     )
-    existing_txn = existing_result.scalars().first()
+    existing_attempts = existing_result.scalars().all()
+    existing_txn = next(
+        (attempt for attempt in existing_attempts if (attempt.external_id or "").lower() == reference_id.lower()),
+        None,
+    )
+    other_currency_attempt = next(
+        (attempt for attempt in existing_attempts if (attempt.external_id or "").lower() != reference_id.lower()),
+        None,
+    )
+    if other_currency_attempt:
+        raise HTTPException(
+            status_code=409,
+            detail="A checkout in the other currency has already been initiated for this payment",
+        )
     if existing_txn:
         if str(existing_txn.status or "").lower() not in {"pending", "created"} or existing_txn.paid_at:
             raise HTTPException(status_code=400, detail="This multicurrency payment has already been completed")
