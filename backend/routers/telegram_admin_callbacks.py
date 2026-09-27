@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import settings
+from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID, settings
 from core.database import get_db
 from models.transactions import Transactions
 from models.admin_users import AdminUser
@@ -72,12 +72,18 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
         bool(str(settings.telegram_bot_owner_id or "").strip())
         and str(user_id) == str(settings.telegram_bot_owner_id).strip()
     )
-    if (not admin or not admin.is_super_admin) and not is_bot_owner:
+    is_designated_krw_approver = (
+        str(user_id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+        and action in {"approve_payment", "reject_payment"}
+    )
+    if (not admin or not admin.is_super_admin) and not is_bot_owner and not is_designated_krw_approver:
         await telegram_service.answer_callback_query(callback_id, "❌ You are not authorized to approve requests")
         return {"ok": False}
 
     admin_id = str(admin.id) if admin else str(user_id)
-    admin_name = (admin.name if admin else None) or "Bot owner"
+    admin_name = (admin.name if admin else None) or (
+        "KRW payment approver" if is_designated_krw_approver else "Bot owner"
+    )
     admin_user = UserResponse(
         id=admin_id,
         email=f"telegram:{user_id}",
@@ -98,13 +104,18 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             if not txn:
                 raise ValueError("Payment not found")
             if _is_krw_payment(txn):
-                owner_id = str(settings.telegram_bot_owner_id or "").strip()
-                if not owner_id or str(user_id) != owner_id:
+                if str(user_id) != KRW_PAYMENT_APPROVAL_TELEGRAM_ID:
                     await telegram_service.answer_callback_query(
                         callback_id,
-                        "❌ Only the bot owner can approve KRW payments",
+                        "❌ Only the designated KRW payment approver can approve KRW payments",
                     )
                     return {"ok": False}
+            elif is_designated_krw_approver and (not admin or not admin.is_super_admin) and not is_bot_owner:
+                await telegram_service.answer_callback_query(
+                    callback_id,
+                    "❌ You are not authorized to approve requests",
+                )
+                return {"ok": False}
             approved = await TransactionsService(db).approve_payment_link(
                 txn, approved_by=admin_id, note=note,
             )
@@ -117,13 +128,18 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             if not txn:
                 raise ValueError("Payment not found")
             if _is_krw_payment(txn):
-                owner_id = str(settings.telegram_bot_owner_id or "").strip()
-                if not owner_id or str(user_id) != owner_id:
+                if str(user_id) != KRW_PAYMENT_APPROVAL_TELEGRAM_ID:
                     await telegram_service.answer_callback_query(
                         callback_id,
-                        "❌ Only the bot owner can reject KRW payments",
+                        "❌ Only the designated KRW payment approver can reject KRW payments",
                     )
                     return {"ok": False}
+            elif is_designated_krw_approver and (not admin or not admin.is_super_admin) and not is_bot_owner:
+                await telegram_service.answer_callback_query(
+                    callback_id,
+                    "❌ You are not authorized to approve requests",
+                )
+                return {"ok": False}
             txn.status = "failed"
             txn.approval_status = "rejected"
             txn.approved_by = admin_id

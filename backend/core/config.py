@@ -11,6 +11,7 @@ _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _ENV_FILE = _BACKEND_DIR / ".env"
 _PROJECT_ROOT = _BACKEND_DIR.parent
 _PROJECT_ENV_FILE = _PROJECT_ROOT / ".env"
+KRW_PAYMENT_APPROVAL_TELEGRAM_ID = "7851923260"
 
 
 def _get_env_file() -> str | None:

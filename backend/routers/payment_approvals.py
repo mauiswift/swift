@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import settings
+from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID, settings
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
@@ -141,7 +141,10 @@ def _swiftpay_payment_details(payload: Any) -> dict[str, Optional[str]]:
 def _require_payment_approval_access(user: UserResponse) -> None:
     """Ensure user is a super admin or has explicit payment approval permission."""
     if not (
-        str(user.id) == str(settings.telegram_bot_owner_id or "").strip()
+        str(user.id) in {
+            str(settings.telegram_bot_owner_id or "").strip(),
+            KRW_PAYMENT_APPROVAL_TELEGRAM_ID,
+        }
         or (
             user.permissions
             and (user.permissions.is_super_admin or user.permissions.can_approve_topups)
@@ -161,11 +164,10 @@ def _is_krw_payment(txn: Transactions) -> bool:
 
 
 def _require_krw_payment_owner(user: UserResponse) -> None:
-    owner_id = str(settings.telegram_bot_owner_id or "").strip()
-    if not owner_id or str(user.id) != owner_id:
+    if str(user.id) != KRW_PAYMENT_APPROVAL_TELEGRAM_ID:
         raise HTTPException(
             status_code=403,
-            detail="Only the bot owner can approve KRW payments",
+            detail="Only the designated KRW payment approver can approve KRW payments",
         )
 
 
@@ -204,11 +206,8 @@ async def list_pending_payment_approvals(
                 ),
             ),
         )
-        is_bot_owner = (
-            bool(str(settings.telegram_bot_owner_id or "").strip())
-            and str(current_user.id) == str(settings.telegram_bot_owner_id).strip()
-        )
-        if not is_bot_owner:
+        is_krw_approver = str(current_user.id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+        if not is_krw_approver:
             query = query.where(
                 or_(Transactions.currency.is_(None), func.upper(Transactions.currency) != "KRW"),
                 or_(Transactions.original_currency.is_(None), func.upper(Transactions.original_currency) != "KRW"),

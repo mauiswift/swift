@@ -6,7 +6,7 @@ from typing import Dict, Any
 from services.event_bus import payment_event_bus
 from services.admin_notification_service import AdminNotificationService
 from core.database import db_manager
-from core.config import settings
+from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,7 @@ def _payment_recipient_ids(currency: str, original_currency: str | None = None) 
         for value in (currency, original_currency)
     ):
         return None
-    owner_id = str(settings.telegram_bot_owner_id or "").strip()
-    return [owner_id] if owner_id else []
+    return [KRW_PAYMENT_APPROVAL_TELEGRAM_ID]
 
 
 def _format_payment_received_message(data: Dict[str, Any]) -> str:
