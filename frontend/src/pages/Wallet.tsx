@@ -394,13 +394,14 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
     () => dedupeRecords(Array.isArray(transactions) ? transactions.filter(Boolean) : []),
     [transactions],
   );
+  const recentTransactions = safeTransactions.slice(0, 5);
 
   return (
     <Card className="payment-workspace payment-workspace__history bg-white border border-slate-200 shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Receipt className="h-4 w-4 text-slate-600" />
-          {isKorean ? `${currency} 거래 내역` : `${currency} Transaction History`}
+          {isKorean ? `${currency} 최근 거래 내역` : `Recent ${currency} transactions`}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -437,10 +438,13 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
               <span>{isKorean ? '금액' : 'Amount'}</span>
               <span>{isKorean ? '상태' : 'Status'}</span>
             </div>
-            {safeTransactions.map(txn => {
+            {recentTransactions.map(txn => {
               if (!txn) return null;
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
               const meta = getTransactionMeta(txn);
+              const paymentDetailsUrl = txn.payment_transaction_id
+                ? `/payments/${encodeURIComponent(String(txn.payment_transaction_id))}`
+                : null;
               const rowContent = (
                 <div className="wallet-transaction-row grid w-full items-center gap-3">
                   <p className="truncate text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
@@ -461,7 +465,20 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
                   </p>
                 </div>
               );
-              return <div key={txn.id} className="rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50">{rowContent}</div>;
+              return paymentDetailsUrl ? (
+                <Link
+                  key={txn.id}
+                  to={paymentDetailsUrl}
+                  title={isKorean ? '결제 상태 및 상세 정보 보기' : 'View payment status and details'}
+                  className="block rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  {rowContent}
+                </Link>
+              ) : (
+                <div key={txn.id} className="rounded-lg border border-transparent p-3">
+                  {rowContent}
+                </div>
+              );
             })}
           </div>
         )}
@@ -473,7 +490,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolean }) {
   const [vipGold, setVipGold] = useState(false);
-  const { user, platformBranding, loading: authLoading } = useAuth();
+  const { user, platformBranding, loading: authLoading, isSuperAdmin } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -511,6 +528,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
   const canTradeUsdtForPhp = selectedCollectionCurrency === 'PHP';
   const isKoreanWallet = language === 'ko';
+  const sharedWalletIsPrimary = Boolean(
+    !cryptoOnly
+    && !isSuperAdmin
+    && user?.organization_id
+    && user.permissions?.can_manage_wallet,
+  );
+  const primaryWalletBalance = sharedWalletIsPrimary ? organizationWalletBalance : collectionBalance;
+  const primaryWalletUnavailable = sharedWalletIsPrimary
+    ? organizationWalletLoadError || !organizationWalletBalance
+    : balanceLoadErrors.includes('collection') || !collectionBalance;
   useEffect(() => {
     if (!user?.id) return;
     client.get('/api/v1/team/vip-status')
@@ -542,7 +569,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     : isKoreanWallet
       ? 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
       : `Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
-  const collectionWalletLabel = isKoreanWallet ? `${selectedCollectionCurrency} 지갑` : `${selectedCollectionCurrency} Wallet`;
+  const collectionWalletLabel = sharedWalletIsPrimary
+    ? isKoreanWallet ? '공유 조직 지갑' : 'Shared organization wallet'
+    : isKoreanWallet ? `${selectedCollectionCurrency} 지갑` : `${selectedCollectionCurrency} Wallet`;
   const fundWalletTitle = isKoreanWallet ? '은행 계좌이체로 자금 충전' : 'Fund Wallet via bank transfer';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
@@ -1240,7 +1269,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const failedBalanceLabels = [
     ...(balanceLoadErrors.includes('php') ? ['PHP wallet data'] : []),
     ...(balanceLoadErrors.includes('usdt') ? ['USDT wallet'] : []),
-    ...(balanceLoadErrors.includes('collection') ? [`${selectedCollectionCurrency} wallet`] : []),
+    ...(primaryWalletUnavailable ? [collectionWalletLabel] : []),
   ];
   const {
     sourceCurrency: conversionSourceCurrency,
@@ -1307,18 +1336,18 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : balanceLoadErrors.includes('collection') || !collectionBalance
+                ) : primaryWalletUnavailable
                   ? 'Unavailable'
-                  : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
+                  : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'balance'), selectedCollectionCurrency)}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{balanceLoadErrors.includes('collection') || !collectionBalance ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(primaryWalletBalance), selectedCollectionCurrency)}</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 px-2.5 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{balanceLoadErrors.includes('collection') || !collectionBalance ? 'Unavailable' : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'pending_balance'), selectedCollectionCurrency)}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'pending_balance'), selectedCollectionCurrency)}</p>
                 </div>
               </div>
               {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
@@ -1327,8 +1356,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               </div>}
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency, language)}</p>
-                {collectionBalance?.pending_balance ? (
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">{isKoreanWallet ? '처리 중' : 'Pending'}: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
+                {primaryWalletBalance?.pending_balance ? (
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">{isKoreanWallet ? '처리 중' : 'Pending'}: {formatWalletCurrency(primaryWalletBalance.pending_balance, selectedCollectionCurrency)}</span>
                 ) : null}
               </div>
               <div className="mt-4 flex items-center gap-2 min-h-[44px]">
@@ -1378,7 +1407,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           </div>
           )}
 
-          {!cryptoOnly && user?.organization_id && (
+          {!cryptoOnly && user?.organization_id && !sharedWalletIsPrimary && (
             <Card className="card-3d overflow-hidden border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50/50 transition-all hover:shadow-lg">
               <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-300" />
               <CardContent className="p-4 sm:p-6">

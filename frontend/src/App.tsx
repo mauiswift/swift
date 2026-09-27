@@ -221,7 +221,7 @@ function AuthAwareContent() {
       <Route path="/toss-account-approvals" element={<ProtectedAdminRoute permission="can_manage_wallet"><TossAccountApprovals /></ProtectedAdminRoute>} />
       <Route path="/kyc-verifications" element={<RequireSuperAdmin><KycVerificationsPage /></RequireSuperAdmin>} />
       <Route path="/payments" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentsPage /></ProtectedAdminRoute>} />
-      <Route path="/payments/:id" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentDetails /></ProtectedAdminRoute>} />
+      <Route path="/payments/:id" element={<ProtectedAdminRoute permission={["can_manage_payments", "can_manage_wallet"]}><PaymentDetails /></ProtectedAdminRoute>} />
       <Route path="/payments/:id/contract" element={<RequireSuperAdmin><PaymentContract /></RequireSuperAdmin>} />
       <Route path="/transactions" element={<ProtectedAdminRoute permission="can_manage_transactions"><Transactions /></ProtectedAdminRoute>} />
       <Route path="/disbursements/:id" element={<ProtectedAdminRoute permission="can_manage_disbursements"><DisbursementDetails /></ProtectedAdminRoute>} />

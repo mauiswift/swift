@@ -13,7 +13,7 @@ import { canAccessSuperAdminControls } from '@/lib/adminNavigation';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
-  permission?: PermissionKey;
+  permission?: PermissionKey | PermissionKey[];
   allowVipGold?: boolean;
   allowPlatformSuperAdmin?: boolean;
 }
@@ -64,8 +64,11 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
     );
   }
 
-  const canAccessProtectedRoute = permission
-    ? hasPermission(user.permissions, permission)
+  const requiredPermissions = permission
+    ? Array.isArray(permission) ? permission : [permission]
+    : [];
+  const canAccessProtectedRoute = requiredPermissions.length > 0
+    ? requiredPermissions.some(requiredPermission => hasPermission(user.permissions, requiredPermission))
       || (allowVipGold && vipStatus.isVipGold)
       || (allowPlatformSuperAdmin && canAccessSuperAdminControls({ isSuperAdmin }))
     : isAdmin || hasDashboardAccess(user.permissions);
