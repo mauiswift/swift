@@ -9,10 +9,9 @@ from models.transactions import Transactions
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from models.disbursements import Disbursements
-from models.admin_users import AdminUser
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_collection_fee_percent
+from services.app_settings import get_collection_fee_details
 from models.downline import DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
@@ -299,17 +298,11 @@ class TransactionsService(BaseService[Transactions]):
 
         gross_amount = float(txn.amount or 0.0)
 
-        # Check if user is Gold VIP - if so, they don't pay system base fee for THEIR OWN payments
-        user_result = await self.db.execute(
-            select(AdminUser).where(AdminUser.telegram_id == str(txn.user_id)).limit(1)
-        )
-        user = user_result.scalars().first()
-        is_gold_vip = user and user.vip_gold
-
-        # Gold VIP users pay the configured VIP Gold collection fee on their own payments.
-        base_fee_rate = 0.0 if is_customer_payment(txn) else await get_collection_fee_percent(
-            self.db, str(txn.user_id)
-        )
+        base_fee_rate = 0.0
+        if not is_customer_payment(txn):
+            base_fee_rate = (
+                await get_collection_fee_details(self.db, str(txn.user_id))
+            ).rate
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -436,15 +429,8 @@ class TransactionsService(BaseService[Transactions]):
 
     async def calculate_expected_fees(self, user_id: str, gross_amount: float) -> Dict[str, Any]:
         """Calculate expected fees and deductions based on per-user configuration."""
-        # Check if user is Gold VIP
-        user_result = await self.db.execute(
-            select(AdminUser).where(AdminUser.telegram_id == str(user_id)).limit(1)
-        )
-        user = user_result.scalars().first()
-        is_gold_vip = user and user.vip_gold
-
-        # Expected fees must match the configured VIP Gold fee used during settlement.
-        base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
+        fee_details = await get_collection_fee_details(self.db, str(user_id))
+        base_fee_rate = fee_details.rate
 
         breakdown = await DownlineFeeAllocationService(self.db).calculate_fee_breakdown(
             downline_user_id=str(user_id),
@@ -463,11 +449,15 @@ class TransactionsService(BaseService[Transactions]):
             "system_fee_rate": round(base_fee_rate * 100, 2),
             "system_fee_amount": system_fee,
             "upline_fees": breakdown["upline_fees"],
-            "is_gold_vip": is_gold_vip,
-            "vip_note": "Gold VIP configured collection fee applies" if is_gold_vip else None,
+            "is_gold_vip": fee_details.is_gold_vip,
+            "vip_note": (
+                "Gold VIP configured collection fee applies"
+                if fee_details.is_gold_vip
+                else None
+            ),
             "downline_vip_note": (
                 "Relationship-specific upline fee only"
-                if not is_gold_vip
+                if not fee_details.is_gold_vip
                 else "Super Admin configured VIP fee applies"
             ),
         }

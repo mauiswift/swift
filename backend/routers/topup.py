@@ -22,7 +22,6 @@ from services.wallets import WalletsService
 from services.downline import DownlineService
 from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details, get_deposit_rules
 from services.swiftpay_service import SwiftPayService
-from services.app_settings import get_collection_fee_percent
 from services.system_earnings import credit_system_earnings
 from services.user_benefits import unlock_krw_benefits
 

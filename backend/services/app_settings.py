@@ -5,6 +5,7 @@ import logging
 import math
 import random
 import re
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -73,6 +74,14 @@ def _fee_percent(value: object, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         parsed = default
     return max(0.0, min(100.0, parsed))
+
+
+@dataclass(frozen=True)
+class CollectionFeeDetails:
+    """Resolved collection-fee rate and the account's VIP status."""
+
+    rate: float
+    is_gold_vip: Optional[bool]
 
 
 def _user_id_variants(user_id: str) -> tuple[str, ...]:
@@ -627,15 +636,31 @@ async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = 
     """Return the effective incoming commission as a decimal rate."""
     if not FEES_ENABLED:
         return 0.0
+    details = await get_collection_fee_details(db, user_id)
+    return details.rate
+
+
+async def get_collection_fee_details(
+    db: AsyncSession,
+    user_id: Optional[str] = None,
+) -> CollectionFeeDetails:
+    """Resolve an account's effective collection fee and VIP status once."""
+    admin = await get_admin_user(db, user_id) if user_id else None
+    is_gold_vip = admin.vip_gold if admin else None
+
+    if not FEES_ENABLED:
+        return CollectionFeeDetails(rate=0.0, is_gold_vip=is_gold_vip)
+
     base_percent = await get_system_collection_fee_percent(db)
-    if user_id:
-        admin = await get_admin_user(db, user_id)
-        if admin:
-            if admin.vip_gold:
-                base_percent = await get_vip_gold_collection_fee_percent(db) / 100.0
-            base_percent += _fee_percent(admin.service_fee_percent) / 100.0
-            base_percent += _fee_percent(admin.collection_fee_percent) / 100.0
-    return min(1.0, max(0.0, base_percent))
+    if admin:
+        if is_gold_vip:
+            base_percent = await get_vip_gold_collection_fee_percent(db) / 100.0
+        base_percent += _fee_percent(admin.service_fee_percent) / 100.0
+        base_percent += _fee_percent(admin.collection_fee_percent) / 100.0
+    return CollectionFeeDetails(
+        rate=min(1.0, max(0.0, base_percent)),
+        is_gold_vip=is_gold_vip,
+    )
 
 
 async def get_system_collection_fee_percent(db: AsyncSession) -> float:
