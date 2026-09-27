@@ -48,7 +48,7 @@ from schemas.auth import (
     LoginRequest,
     LoginResponse,
 )
-from services.auth import AuthService, _get_platform_organization
+from services.auth import AuthService, _get_platform_organization, normalize_organization_owner_scope
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
@@ -1299,6 +1299,9 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     settlement_data = {}
 
     if admin_record:
+        if normalize_organization_owner_scope(admin_record):
+            await db.commit()
+
         org_id = admin_record.organization_id
         org_name = admin_record.organization_name
         settlement_data = {
@@ -1355,6 +1358,12 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         )
         if admin_record.role in role_map and not has_canonical_permissions:
             repaired = get_role_permissions(role_map[admin_record.role]).model_dump()
+            if (
+                admin_record.role == "owner"
+                and admin_record.organization_id
+                and not admin_record.is_super_admin
+            ):
+                repaired["is_super_admin"] = False
             for key, value in repaired.items():
                 if hasattr(admin_record, key):
                     setattr(admin_record, key, value)

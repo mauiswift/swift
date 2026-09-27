@@ -27,10 +27,10 @@ from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.downline import DownlineService
+from services.auth import normalize_organization_owner_scope
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
-    get_role_permissions_by_name,
     PredefinedRoleEnum,
     validate_role_exists,
 )
@@ -502,6 +502,13 @@ def _can_manage_team(admin: Optional[AdminUser], current_user: Optional[UserResp
     return False
 
 
+async def _get_current_admin(db: AsyncSession, user_id: str) -> Optional[AdminUser]:
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == user_id))
+    if admin and normalize_organization_owner_scope(admin):
+        await db.commit()
+    return admin
+
+
 def _is_org_admin(admin: Optional[AdminUser]) -> bool:
     if not admin:
         return False
@@ -756,7 +763,10 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
         return get_invited_super_admin_permissions().model_dump()
 
     if any(key in requested for key in app_keys):
-        return {key: bool(requested.get(key)) for key in app_keys}
+        permissions = {key: bool(requested.get(key)) for key in app_keys}
+        if role_name == "owner":
+            permissions["is_super_admin"] = False
+        return permissions
 
     if role_name == "approver":
         return {
@@ -785,7 +795,10 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
         "developer": PredefinedRoleEnum.DEVELOPER,
     }
     if role_name in role_map:
-        return get_role_permissions(role_map[role_name]).model_dump()
+        permissions = get_role_permissions(role_map[role_name]).model_dump()
+        if role_name == "owner":
+            permissions["is_super_admin"] = False
+        return permissions
     return {key: False for key in app_keys}
 
 # ────────────────────────────────────────────────────────────────
@@ -801,10 +814,7 @@ async def send_team_invitation(
 ):
     """Send invitation to new team member"""
     # Super admins and organization admins with team permission can invite
-    admin_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin = admin_res.scalar_one_or_none()
+    admin = await _get_current_admin(db, str(current_user.id))
 
     if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to invite team members")
@@ -852,7 +862,7 @@ async def send_team_invitation(
     org_name = admin.organization_name if admin and _is_org_admin(admin) else None
 
     # Super admins can invite to existing org or create a new one (Step 1.1)
-    is_super = current_user.permissions.is_super_admin if current_user.permissions else False
+    is_super = bool(admin and admin.is_super_admin)
     if is_super:
         org_id, org_name = await _resolve_super_admin_org_scope(db, request, role_name)
 
@@ -921,10 +931,7 @@ async def list_invitations(
     db: AsyncSession = Depends(get_db),
 ):
     """List all pending invitations"""
-    admin_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin = admin_res.scalar_one_or_none()
+    admin = await _get_current_admin(db, str(current_user.id))
 
     if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -963,10 +970,7 @@ async def update_invitation(
     db: AsyncSession = Depends(get_db),
 ):
     """Update invitation role and permissions"""
-    admin_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin = admin_res.scalar_one_or_none()
+    admin = await _get_current_admin(db, str(current_user.id))
 
     if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -1045,10 +1049,7 @@ async def revoke_invitation(
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke a pending invitation"""
-    admin_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin = admin_res.scalar_one_or_none()
+    admin = await _get_current_admin(db, str(current_user.id))
 
     if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -1081,10 +1082,7 @@ async def list_roles(
     db: AsyncSession = Depends(get_db),
 ):
     """List all available roles"""
-    admin_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin = admin_res.scalar_one_or_none()
+    admin = await _get_current_admin(db, str(current_user.id))
 
     if not _can_manage_team(admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -1127,10 +1125,7 @@ async def create_custom_role(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a custom role"""
-    admin_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin = admin_res.scalar_one_or_none()
+    admin = await _get_current_admin(db, str(current_user.id))
 
     if not admin or not admin.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -1168,18 +1163,25 @@ async def list_team_members(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List team members. Super admins may include inactive accounts."""
-    admin_scope_res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
-    )
-    admin_scope = admin_scope_res.scalar_one_or_none()
+    """List all admins for super admins or the current organization for its team managers."""
+    admin_scope = await _get_current_admin(db, str(current_user.id))
 
-    if not admin_scope or not admin_scope.is_super_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
+    if not admin_scope or not _can_manage_team(admin_scope, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view team members")
 
     query = select(AdminUser)
     if not include_inactive:
         query = query.where(AdminUser.is_active == True)
+    if _is_org_admin(admin_scope):
+        query = query.where(
+            AdminUser.organization_id == admin_scope.organization_id,
+            AdminUser.is_super_admin.is_(False),
+        )
+    elif not admin_scope.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization membership is required to view team members",
+        )
 
     admin_res = await db.execute(query)
     admins = admin_res.scalars().all()
@@ -1317,7 +1319,7 @@ async def accept_invitation(
     # Invitations accepted by the previous link-only flow can still finish
     # account creation once, as long as no account was created yet.
 
-    permissions = get_role_permissions_by_name(invitation.role).model_dump()
+    permissions = _application_permissions(invitation.role, invitation.permissions)
     telegram_id = f"invite-{secrets.token_urlsafe(18)}"
     admin_user = AdminUser(
         telegram_id=telegram_id,

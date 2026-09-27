@@ -166,6 +166,8 @@ SUPER_ADMIN_PERMISSION_FIELDS = tuple(
 def _apply_role_permissions(admin: AdminUser, role_name: str) -> None:
     permissions = get_role_permissions_by_name(role_name)
     values = permissions.model_dump()
+    if role_name == "owner":
+        values["is_super_admin"] = False
     admin.role = "operator" if role_name == "editor" else role_name
     for field in ROLE_PERMISSION_FIELDS:
         setattr(admin, field, values[field])
@@ -278,6 +280,8 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
     if role_name not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "approver", "super_admin"}:
         raise HTTPException(status_code=400, detail="Invalid role.")
     permission_values = get_role_permissions_by_name(role_name).model_dump()
+    if role_name == "owner":
+        permission_values["is_super_admin"] = False
     permission_values["role"] = role_name
     is_super_admin = permission_values["is_super_admin"]
     if is_super_admin:

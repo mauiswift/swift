@@ -24,6 +24,26 @@ def _get_platform_organization() -> tuple[str, str]:
     )
 
 
+def normalize_organization_owner_scope(admin_record: AdminUser) -> bool:
+    """Keep business owners scoped to their organization, not the platform."""
+    platform_org_id, _ = _get_platform_organization()
+    if (
+        admin_record.role != "owner"
+        or not admin_record.organization_id
+        or admin_record.organization_id == platform_org_id
+        or not admin_record.is_super_admin
+    ):
+        return False
+
+    admin_record.is_super_admin = False
+    if isinstance(admin_record.team_permissions, dict):
+        admin_record.team_permissions = {
+            **admin_record.team_permissions,
+            "is_super_admin": False,
+        }
+    return True
+
+
 class AuthService:
     def __init__(self, db: AsyncSession):
         self.db = db

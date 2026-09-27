@@ -50,6 +50,11 @@ interface WalletTxn {
   note?: string;
 }
 
+interface OrganizationWalletBalance extends WalletBalance {
+  organization_id: string;
+  organization_name?: string | null;
+}
+
 interface BankOption {
   code: string;
   name: string;
@@ -475,6 +480,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
+  const [organizationWalletBalance, setOrganizationWalletBalance] = useState<OrganizationWalletBalance | null>(null);
+  const [organizationWalletLoadError, setOrganizationWalletLoadError] = useState(false);
   const { collectionCurrency } = useCollectionCurrency();
   const selectedCollectionCurrency = String(collectionCurrency || 'PHP').toUpperCase();
   const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
@@ -634,7 +641,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     try {
       const selectedCurrency = selectedCollectionCurrency;
       const institutionCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
-      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes] = await Promise.allSettled([
+      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes, organizationWalletRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
@@ -654,7 +661,44 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           method: 'POST',
           data: { from_currency: 'USDT', to_currency: 'PHP', from_amount: 1 },
         }),
+        user.organization_id && !cryptoOnly
+          ? client.apiCall.invoke({
+            url: `/api/v1/wallet/organization-balance?currency=${encodeURIComponent(selectedCurrency)}`,
+            method: 'GET',
+            data: {},
+          })
+          : Promise.resolve(null),
       ]);
+
+      if (user.organization_id && !cryptoOnly) {
+        const organizationData = organizationWalletRes.status === 'fulfilled'
+          ? organizationWalletRes.value?.data
+          : null;
+        if (
+          organizationData?.organization_id === user.organization_id
+          && organizationData.balance != null
+        ) {
+          setOrganizationWalletBalance({
+            organization_id: organizationData.organization_id,
+            organization_name: organizationData.organization_name || user.organization_name,
+            wallet_id: organizationData.wallet_id,
+            balance: normalizeNumericValue(organizationData.balance),
+            available_balance: normalizeNumericValue(organizationData.available_balance ?? organizationData.balance),
+            pending_balance: normalizeNumericValue(organizationData.pending_balance ?? 0),
+            currency: organizationData.currency || selectedCurrency,
+          });
+          setOrganizationWalletLoadError(false);
+        } else {
+          if (organizationWalletRes.status === 'rejected') {
+            console.error('Organization wallet fetch error:', organizationWalletRes.reason);
+          }
+          setOrganizationWalletBalance(null);
+          setOrganizationWalletLoadError(true);
+        }
+      } else {
+        setOrganizationWalletBalance(null);
+        setOrganizationWalletLoadError(false);
+      }
 
       const failedBalances: string[] = [];
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
@@ -767,7 +811,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     } finally {
       setLoading(false);
     }
-  }, [user, selectedCollectionCurrency]);
+  }, [user, selectedCollectionCurrency, cryptoOnly]);
 
   const handleLiveWalletUpdate = useCallback(() => {
     void fetchData();
@@ -1332,6 +1376,68 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               isKorean={isKoreanWallet}
             />
           </div>
+          )}
+
+          {!cryptoOnly && user?.organization_id && (
+            <Card className="card-3d overflow-hidden border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50/50 transition-all hover:shadow-lg">
+              <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-300" />
+              <CardContent className="p-4 sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                      {isKoreanWallet ? '조직 지갑' : 'Organization wallet'}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {organizationWalletBalance?.organization_name || user.organization_name || user.organization_id}
+                    </p>
+                  </div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <Building2 className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                </div>
+                <p className="text-3xl font-semibold text-foreground">
+                  {loading ? (
+                    <span className="inline-block h-10 w-32 animate-pulse rounded-lg bg-slate-100" />
+                  ) : organizationWalletLoadError || !organizationWalletBalance
+                    ? 'Unavailable'
+                    : formatWalletCurrency(
+                      getWalletBalanceValue(organizationWalletBalance, 'balance'),
+                      organizationWalletBalance.currency,
+                    )}
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                      {isKoreanWallet ? '사용 가능' : 'Available'}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">
+                      {loading ? '—' : organizationWalletLoadError || !organizationWalletBalance
+                        ? 'Unavailable'
+                        : formatWalletCurrency(
+                          getWalletBalanceValue(organizationWalletBalance, 'available_balance'),
+                          organizationWalletBalance.currency,
+                        )}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                      {isKoreanWallet ? '보류 중' : 'Pending'}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs font-bold text-amber-900">
+                      {loading ? '—' : organizationWalletLoadError || !organizationWalletBalance
+                        ? 'Unavailable'
+                        : formatWalletCurrency(
+                          getWalletBalanceValue(organizationWalletBalance, 'pending_balance'),
+                          organizationWalletBalance.currency,
+                        )}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  {isKoreanWallet ? '조직 구성원과 공유' : 'Shared with organization members'}
+                </p>
+              </CardContent>
+            </Card>
           )}
 
           {cryptoOnly && (

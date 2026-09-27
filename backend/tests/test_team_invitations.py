@@ -5,6 +5,8 @@ from routers.kyb import _registration_organization
 from routers.team_invitations import _is_invitation_expired, _normalize_invitation_email
 from models.admin_users import AdminUser
 from services.wallets import WalletsService
+from services.auth import _get_platform_organization, normalize_organization_owner_scope
+from routers.admin_users import _apply_role_permissions
 from routers.team_invitations import _application_permissions, _validate_role_name
 
 
@@ -67,6 +69,45 @@ def test_direct_owner_keeps_personal_wallet():
     )
 
     assert WalletsService._is_direct_owner(direct_owner)
+
+
+def test_organization_owner_role_is_not_platform_super_admin():
+    permissions = _application_permissions("owner")
+    admin = AdminUser(telegram_id="merchant-owner", organization_id="acme")
+
+    _apply_role_permissions(admin, "owner")
+
+    assert permissions["is_super_admin"] is False
+    assert permissions["can_manage_team"] is True
+    assert admin.is_super_admin is False
+    assert admin.can_manage_wallet is True
+
+
+def test_legacy_invited_organization_owner_is_scoped_on_login():
+    invited_owner = AdminUser(
+        telegram_id="invite-owner",
+        role="owner",
+        organization_id="acme",
+        is_super_admin=True,
+        team_permissions={"is_super_admin": True},
+    )
+
+    assert normalize_organization_owner_scope(invited_owner)
+    assert invited_owner.is_super_admin is False
+    assert invited_owner.team_permissions["is_super_admin"] is False
+
+
+def test_platform_owner_remains_super_admin():
+    platform_org_id, _ = _get_platform_organization()
+    platform_owner = AdminUser(
+        telegram_id="platform-owner",
+        role="owner",
+        organization_id=platform_org_id,
+        is_super_admin=True,
+    )
+
+    assert not normalize_organization_owner_scope(platform_owner)
+    assert platform_owner.is_super_admin is True
 
 
 def test_invited_super_admin_cannot_manage_wallet_or_toss_controls():

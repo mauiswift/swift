@@ -10,7 +10,6 @@ from typing import Optional, Dict, Any, List, Tuple
 from sqlalchemy import select, func, case, update, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import settings
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from models.admin_users import AdminUser
@@ -151,10 +150,9 @@ class WalletsService(BaseService[Wallets]):
         )
         admin_user = admin_res.scalar_one_or_none()
 
-        # Direct web/KYB registrations create an organization for the owner, but their
-        # operational wallet must remain keyed to their personal account so it appears
-        # in the admin manual wallet credit/debit screens. Only invited org members
-        # should be forced onto an org-scoped wallet.
+        # Keep a directly registered owner's wallet keyed to their personal account
+        # so it remains visible in admin wallet controls. Other members of that
+        # organization resolve to the direct owner's same wallet.
         is_direct_owner = bool(
             admin_user
             and admin_user.organization_id
@@ -162,6 +160,24 @@ class WalletsService(BaseService[Wallets]):
         )
         if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False) and not is_direct_owner:
             org_id = admin_user.organization_id
+            owner_res = await self.db.execute(
+                select(AdminUser)
+                .where(
+                    AdminUser.organization_id == org_id,
+                    AdminUser.role == "owner",
+                )
+                .order_by(AdminUser.id)
+            )
+            organization_owner = next(
+                (
+                    candidate
+                    for candidate in owner_res.scalars().all()
+                    if self._is_direct_owner(candidate)
+                ),
+                None,
+            )
+            if organization_owner:
+                return str(organization_owner.telegram_id), None
             return f"org:{org_id}", org_id
 
         return user_id, None
