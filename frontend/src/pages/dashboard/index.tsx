@@ -102,8 +102,9 @@ export default function Dashboard() {
   return (
     <div className="page-enter">
       <ResponsiveRoute
-        desktopComponent={() => <DashboardDesktop {...data} />}
-        mobileComponent={() => <DashboardMobile {...data} />}
+        desktopComponent={DashboardDesktop}
+        mobileComponent={DashboardMobile}
+        componentProps={data}
       />
     </div>
   );

@@ -93,23 +93,23 @@ export function LiveExchangeRatesPool() {
     : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 text-white shadow-sm" aria-labelledby="dashboard-live-rates-heading">
-      <div className="p-4 sm:p-5">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 text-white shadow-sm" aria-labelledby="dashboard-live-rates-heading">
+      <div className="p-3 sm:p-5">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               Live market rates
             </div>
             <h2 id="dashboard-live-rates-heading" className="text-base font-semibold tracking-tight sm:text-lg">Exchange rates</h2>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-white/55">
+          <div className="flex min-w-0 items-center gap-2 text-[10px] text-white/55">
             <span>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Loading rates'}</span>
             <button
               type="button"
               onClick={() => void loadRates()}
               disabled={refreshing}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-white/70 transition hover:bg-white/10 disabled:opacity-50"
+              className="app-touch-target inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-white/70 transition hover:bg-white/10 disabled:opacity-50"
               aria-label="Refresh exchange rates"
               title="Refresh exchange rates"
             >
@@ -117,21 +117,21 @@ export function LiveExchangeRatesPool() {
             </button>
           </div>
         </div>
-        <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:gap-3">
           {LIVE_RATE_CURRENCIES.map(currency => (
-            <div key={currency.code} className="min-w-[142px] snap-start rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 sm:min-w-0">
+            <div key={currency.code} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 sm:px-3.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold tracking-[0.1em] text-white/75">{currency.code}</span>
                 <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Live</span>
               </div>
-              <p className="mt-3 text-lg font-semibold text-white">
+              <p className="mt-3 truncate text-base font-semibold leading-tight tabular-nums text-white sm:text-lg">
                 {loading ? '—' : rates[currency.code] ? `₱${formatRate(rates[currency.code])}` : 'Unavailable'}
               </p>
               <p className="mt-0.5 truncate text-[10px] text-white/45">1 {currency.code} · {currency.label}</p>
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[10px] text-white/40">Indicative rates · 1 unit converted to PHP · refreshes every 5 seconds</p>
+        <p className="mt-3 text-[10px] leading-relaxed text-white/40">Indicative rates · 1 unit converted to PHP · refreshes every 5 seconds</p>
       </div>
     </section>
   );
