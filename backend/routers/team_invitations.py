@@ -28,7 +28,7 @@ from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.downline import DownlineService
-from services.auth import normalize_organization_owner_scope
+from services.auth import normalize_organization_owner_scope, normalize_organization_role_state
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
@@ -503,8 +503,9 @@ def _can_manage_team(admin: Optional[AdminUser], current_user: Optional[UserResp
 
 async def _get_current_admin(db: AsyncSession, user_id: str) -> Optional[AdminUser]:
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == user_id))
-    if admin and normalize_organization_owner_scope(admin):
-        await db.commit()
+    if admin:
+        if normalize_organization_role_state(admin) or normalize_organization_owner_scope(admin):
+            await db.commit()
     return admin
 
 
@@ -730,30 +731,6 @@ PREDEFINED_ROLES = {
             "can_manage_team": False,
         }
     },
-    "approver": {
-        "description": "Approval and refund management",
-        "permissions": {
-            "can_add_delete_user": False,
-            "can_edit_user_access": False,
-            "can_edit_business_settings": False,
-            "can_add_edit_delete_cards_promotion": False,
-            "can_upload_delete_batch_disbursements": False,
-            "can_validate_batch_disbursements": False,
-            "can_generate_invoice": False,
-            "can_add_edit_customers": False,
-            "can_view_transaction_details": False,
-            "can_download_csv_report": False,
-            "can_withdraw_funds": False,
-            "can_create_transfers": False,
-            "can_add_edit_delete_withdrawal_account": False,
-            "can_see_api_keys": False,
-            "can_resend_callbacks": False,
-            "can_change_callback_urls": False,
-            "can_approve_batch_disbursements": True,
-            "can_refund_cards_charges": True,
-            "can_manage_team": False,
-        }
-    },
 }
 
 
@@ -785,23 +762,6 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
         if role_name == "owner":
             permissions["is_super_admin"] = False
         return permissions
-
-    if role_name == "approver":
-        return {
-            "is_super_admin": False,
-            "can_manage_payments": False,
-            "can_manage_disbursements": False,
-            "can_view_reports": True,
-            "can_manage_wallet": False,
-            "can_manage_transactions": True,
-            "can_manage_bot": False,
-            "can_approve_topups": True,
-            "can_manage_team": False,
-            "can_credit_wallet": False,
-            "can_debit_wallet": False,
-            "can_freeze_wallet": False,
-            "can_unfreeze_wallet": False,
-        }
 
     role_map = {
         "owner": PredefinedRoleEnum.OWNER,

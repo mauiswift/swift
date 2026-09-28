@@ -16,10 +16,4 @@ export const ROLE_PERMISSION_PRESETS: Record<string, Set<string>> = {
   operator: new Set(['can_manage_payments', 'can_manage_disbursements', 'can_manage_transactions']),
   viewer: new Set(['can_view_reports', 'can_manage_transactions']),
   developer: new Set(['can_manage_bot']),
-  approver: new Set(['can_view_reports', 'can_manage_transactions', 'can_approve_topups']),
-  super_admin: new Set(
-    PERMISSION_DEFINITIONS
-      .filter(({ key }) => !invitedSuperAdminDisabledPermissions.has(key))
-      .map(({ key }) => key),
-  ),
 };

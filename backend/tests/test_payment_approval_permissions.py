@@ -10,9 +10,12 @@ def _user(permissions: UserPermissions) -> UserResponse:
 
 
 def test_payment_approval_permission_is_sufficient():
-    _require_payment_approval_access(
-        _user(UserPermissions(can_approve_topups=True))
-    )
+    with pytest.raises(HTTPException) as error:
+        _require_payment_approval_access(
+            _user(UserPermissions(can_approve_topups=True))
+        )
+
+    assert error.value.status_code == 403
 
 
 def test_super_admin_payment_approval_access_is_preserved():

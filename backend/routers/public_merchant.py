@@ -43,6 +43,8 @@ def _resolve_link_currency(currency: Optional[str], configured_currency: Optiona
     selected = currency.strip().upper() if currency else configured
     if selected not in SUPPORTED_LINK_CURRENCIES:
         raise HTTPException(status_code=400, detail="Unsupported payment currency")
+    if currency and selected != configured:
+        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
     return selected
 
 
@@ -103,12 +105,9 @@ async def _get_public_merchant_owner(
         .where(
             AdminUser.organization_id == config.organization_id,
             AdminUser.is_active.is_(True),
-            or_(AdminUser.role == "owner", AdminUser.is_super_admin.is_(False)),
+            AdminUser.role == "owner",
         )
-        .order_by(
-            (AdminUser.role == "owner").desc(),
-            AdminUser.id.asc(),
-        )
+        .order_by(AdminUser.id.asc())
         .limit(1)
     )
     owner = result.scalars().first()

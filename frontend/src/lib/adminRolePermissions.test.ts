@@ -2,16 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ROLE_PERMISSION_PRESETS } from './adminRolePermissions';
 
 describe('admin role permission previews', () => {
-  it('matches the restricted permissions of an invited super admin', () => {
-    const invitedSuperAdminPermissions = ROLE_PERMISSION_PRESETS.super_admin;
-
-    expect(invitedSuperAdminPermissions.has('can_manage_team')).toBe(false);
-    expect(invitedSuperAdminPermissions.has('can_manage_wallet')).toBe(false);
-    expect(invitedSuperAdminPermissions.has('can_credit_wallet')).toBe(false);
-    expect(invitedSuperAdminPermissions.has('can_debit_wallet')).toBe(false);
-    expect(invitedSuperAdminPermissions.has('can_freeze_wallet')).toBe(false);
-    expect(invitedSuperAdminPermissions.has('can_unfreeze_wallet')).toBe(false);
-    expect(invitedSuperAdminPermissions.has('can_manage_payments')).toBe(true);
-    expect(invitedSuperAdminPermissions.has('can_manage_bot')).toBe(true);
+  it('keeps the org-owned owner and admin presets aligned with the shared organization model', () => {
+    expect(ROLE_PERMISSION_PRESETS.owner.has('can_manage_team')).toBe(true);
+    expect(ROLE_PERMISSION_PRESETS.owner.has('can_manage_wallet')).toBe(true);
+    expect(ROLE_PERMISSION_PRESETS.admin.has('can_manage_team')).toBe(true);
+    expect(ROLE_PERMISSION_PRESETS.admin.has('can_manage_wallet')).toBe(true);
   });
 });

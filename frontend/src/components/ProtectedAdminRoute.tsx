@@ -106,7 +106,6 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
                     editor: '편집자',
                     viewer: '조회자',
                     developer: '개발자',
-                    approver: '승인자',
                     user: '일반 사용자',
                   }[user.role] || user.role) : getRoleDisplayName(user.role)}
                 </div>

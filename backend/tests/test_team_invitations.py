@@ -4,7 +4,11 @@ from models.kyb_registrations import KybRegistration
 from routers.kyb import _registration_organization
 from routers.team_invitations import _is_invitation_expired, _normalize_invitation_email
 from models.admin_users import AdminUser
-from services.auth import _get_platform_organization, normalize_organization_owner_scope
+from services.auth import (
+    _get_platform_organization,
+    normalize_organization_owner_scope,
+    normalize_organization_role_state,
+)
 from routers.admin_users import _apply_role_permissions
 from routers.team_invitations import _application_permissions, _validate_role_name
 
@@ -124,3 +128,21 @@ def test_validate_role_name_accepts_canonical_roles_case_insensitively():
     assert _validate_role_name("Manager") == "manager"
     assert _validate_role_name("OPERATOR") == "operator"
     assert _validate_role_name("owner") == "owner"
+
+
+def test_org_roles_are_normalized_to_org_scope():
+    invited_owner = AdminUser(
+        telegram_id="invite-owner",
+        role="OWNER",
+        organization_id="acme-org",
+        is_super_admin=True,
+        team_permissions={"is_super_admin": True, "can_manage_team": True},
+    )
+
+    changed = normalize_organization_role_state(invited_owner)
+
+    assert changed is True
+    assert invited_owner.role == "owner"
+    assert invited_owner.is_super_admin is False
+    assert invited_owner.team_permissions["is_super_admin"] is False
+    assert invited_owner.team_permissions["can_manage_team"] is True

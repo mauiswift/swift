@@ -139,7 +139,7 @@ def _swiftpay_payment_details(payload: Any) -> dict[str, Optional[str]]:
 
 
 def _require_payment_approval_access(user: UserResponse) -> None:
-    """Ensure user is a super admin or has explicit payment approval permission."""
+    """Only the platform system administrator may approve payment requests."""
     if not (
         str(user.id) in {
             str(settings.telegram_bot_owner_id or "").strip(),
@@ -147,7 +147,7 @@ def _require_payment_approval_access(user: UserResponse) -> None:
         }
         or (
             user.permissions
-            and (user.permissions.is_super_admin or user.permissions.can_approve_topups)
+            and user.permissions.is_super_admin
         )
     ):
         raise HTTPException(

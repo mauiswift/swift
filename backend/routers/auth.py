@@ -801,8 +801,12 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     if token_org_id:
         api_stmt = (
             select(MerchantApiConfig)
-            .where(MerchantApiConfig.organization_id == token_org_id)
-            .order_by(MerchantApiConfig.id.asc())
+            .where(
+                MerchantApiConfig.organization_id == token_org_id,
+                or_(MerchantApiConfig.user_id.is_(None), MerchantApiConfig.user_id == str(telegram_user_id)),
+            )
+            .order_by((MerchantApiConfig.user_id.is_(None)).desc(), MerchantApiConfig.id.asc())
+            .limit(1)
         )
         api_cfg = (await db.execute(api_stmt)).scalars().first()
         if api_cfg:
@@ -1364,7 +1368,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
                     setattr(admin_record, key, value)
             admin_record.team_permissions = repaired
             await db.commit()
-        elif admin_record.role in {"super_admin", "approver"} and not has_canonical_permissions:
+        elif admin_record.role == "super_admin" and not has_canonical_permissions:
             repaired = {
                 "can_approve_topups": True,
                 "can_manage_transactions": True,

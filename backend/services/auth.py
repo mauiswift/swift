@@ -31,7 +31,7 @@ def get_admin_user_permissions(admin_record: AdminUser) -> UserPermissions:
     is_platform_owner = admin_record.organization_id == platform_org_id
     role_name = (admin_record.role or "").strip().lower()
     builtin_roles = {role.value for role in PredefinedRoleEnum}
-    if role_name in builtin_roles | {"editor", "super_admin", "approver"}:
+    if role_name in builtin_roles | {"editor", "super_admin"}:
         permissions = get_role_permissions_by_name(role_name).model_dump()
         if role_name == "owner" and not is_platform_owner:
             permissions["is_super_admin"] = False
@@ -61,6 +61,41 @@ def get_admin_user_permissions(admin_record: AdminUser) -> UserPermissions:
         can_freeze_wallet=bool(admin_record.can_freeze_wallet),
         can_unfreeze_wallet=bool(admin_record.can_unfreeze_wallet),
     )
+
+
+def normalize_organization_role_state(admin_record: AdminUser) -> bool:
+    """Normalize organization-level role state so org members never inherit platform super-admin semantics."""
+    platform_org_id, _ = _get_platform_organization()
+    if not admin_record.organization_id or admin_record.organization_id == platform_org_id:
+        return False
+
+    changed = False
+    raw_role = (admin_record.role or "").strip()
+    normalized_role = raw_role.lower()
+    if normalized_role == "editor":
+        normalized_role = "operator"
+    if normalized_role == "super_admin":
+        normalized_role = "admin"
+
+    if normalized_role and normalized_role != raw_role:
+        admin_record.role = normalized_role
+        changed = True
+
+    if admin_record.is_super_admin:
+        admin_record.is_super_admin = False
+        changed = True
+
+    if isinstance(admin_record.team_permissions, dict):
+        team_permissions = dict(admin_record.team_permissions)
+        if team_permissions.get("is_super_admin"):
+            team_permissions["is_super_admin"] = False
+            changed = True
+        if admin_record.role == "owner" and team_permissions.get("can_manage_team") is not True:
+            team_permissions["can_manage_team"] = True
+            changed = True
+        admin_record.team_permissions = team_permissions
+
+    return changed
 
 
 def normalize_organization_owner_scope(admin_record: AdminUser) -> bool:

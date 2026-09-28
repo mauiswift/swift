@@ -122,6 +122,8 @@ class WalletsService(BaseService[Wallets]):
     async def _resolve_effective_wallet_owner(self, user_id: str, currency: str = "PHP") -> Tuple[str, Optional[str]]:
         """Resolve the effective wallet owner (Org ID vs User ID).
 
+        For organization-owned merchants and payment links, settlement must go to
+        the organization wallet rather than the individual owner's personal wallet.
         Returns: (owner_id, organization_id)
         """
         currency = self._normalize_currency(currency)

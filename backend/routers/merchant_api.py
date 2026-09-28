@@ -5,7 +5,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, field_validator
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -121,6 +121,46 @@ def _merchant_user_id(current_user: UserResponse) -> str:
     return str(current_user.id)
 
 
+async def _get_organization_merchant_config(
+    db: AsyncSession,
+    organization_id: str,
+    current_user_id: Optional[str] = None,
+) -> Optional[MerchantApiConfig]:
+    """Resolve the canonical org-scoped default config before falling back to a user-specific config."""
+    query = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
+    if current_user_id:
+        query = query.where(
+            or_(
+                MerchantApiConfig.user_id.is_(None),
+                MerchantApiConfig.user_id == str(current_user_id),
+            )
+        )
+    else:
+        query = query.where(MerchantApiConfig.user_id.is_(None))
+
+    query = query.order_by(
+        (MerchantApiConfig.user_id.is_(None)).desc(),
+        MerchantApiConfig.id.asc(),
+    ).limit(1)
+    config = (await db.execute(query)).scalars().first()
+    if config is not None:
+        return config
+
+    if current_user_id:
+        fallback = await db.execute(
+            select(MerchantApiConfig)
+            .where(
+                MerchantApiConfig.organization_id == organization_id,
+                MerchantApiConfig.user_id == str(current_user_id),
+            )
+            .order_by(MerchantApiConfig.id.asc())
+            .limit(1)
+        )
+        return fallback.scalars().first()
+
+    return None
+
+
 @router.get("", response_model=ApiConfigResponse)
 async def get_merchant_api_config(
     current_user: UserResponse = Depends(get_current_user),
@@ -129,21 +169,13 @@ async def get_merchant_api_config(
     organization_id = _merchant_organization_id(current_user)
     user_id = _merchant_user_id(current_user)
 
-    stmt = select(MerchantApiConfig).where(
-        MerchantApiConfig.organization_id == organization_id,
-        MerchantApiConfig.user_id == user_id,
-    ).order_by(MerchantApiConfig.id.asc()).limit(1)
-    result = await db.execute(stmt)
-    config = result.scalars().first()
-
+    config = await _get_organization_merchant_config(db, organization_id, user_id)
     if not config:
-        # Create default config if not exists
         random_suffix = secrets.token_hex(3).lower()
         default_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
-        # Ensure slug is unique if necessary, for now we just use org_id as base
         config = MerchantApiConfig(
             organization_id=organization_id,
-            user_id=user_id,
+            user_id=None,
             store_name=current_user.organization_name,
             permanent_link_slug=default_slug,
             store_slug=FIXED_STORE_SLUG,
@@ -152,7 +184,6 @@ async def get_merchant_api_config(
         await db.commit()
         await db.refresh(config)
     elif not config.permanent_link_slug:
-        # Generate default slug if missing
         random_suffix = secrets.token_hex(3).lower()
         config.permanent_link_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
         await db.commit()
@@ -175,15 +206,10 @@ async def update_merchant_api_config(
     organization_id = _merchant_organization_id(current_user)
     user_id = _merchant_user_id(current_user)
 
-    stmt = select(MerchantApiConfig).where(
-        MerchantApiConfig.organization_id == organization_id,
-        MerchantApiConfig.user_id == user_id,
-    ).order_by(MerchantApiConfig.id.asc()).limit(1)
-    result = await db.execute(stmt)
-    config = result.scalars().first()
+    config = await _get_organization_merchant_config(db, organization_id, user_id)
 
     if not config:
-        config = MerchantApiConfig(organization_id=organization_id, user_id=user_id, store_slug=FIXED_STORE_SLUG)
+        config = MerchantApiConfig(organization_id=organization_id, user_id=None, store_slug=FIXED_STORE_SLUG)
         db.add(config)
 
     values = payload.model_dump(exclude_unset=True)

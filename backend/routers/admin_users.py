@@ -276,7 +276,7 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
 
     platform_org_id, platform_org_name = _get_platform_organization()
     role_name = data.role.strip().lower()
-    if role_name not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "approver", "super_admin"}:
+    if role_name not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin"}:
         raise HTTPException(status_code=400, detail="Invalid role.")
     permission_values = get_role_permissions_by_name(role_name).model_dump()
     if role_name == "owner":
@@ -356,7 +356,7 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
     requested_role = payload_data.pop("role", None)
     if requested_role is not None:
         requested_role = requested_role.strip().lower()
-        if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "approver", "super_admin"}:
+        if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin"}:
             raise HTTPException(status_code=400, detail="Invalid role.")
         if admin.telegram_id == current_user.id and requested_role != "owner":
             raise HTTPException(status_code=400, detail="Cannot change your own platform role.")

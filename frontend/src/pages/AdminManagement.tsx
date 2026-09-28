@@ -1349,8 +1349,6 @@ const ADMIN_ROLE_OPTIONS = [
   { value: 'operator', label: 'Operator' },
   { value: 'viewer', label: 'Viewer' },
   { value: 'developer', label: 'Developer' },
-  { value: 'approver', label: 'Approver' },
-  { value: 'super_admin', label: 'Invited super admin' },
 ] as const;
 
 // ── Shared sub-components ─────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ interface InvitationDetails {
   email: string;
   role: string;
   organization_name?: string;
+  organization_id?: string;
   accepted_at?: string;
 }
 
@@ -63,8 +64,8 @@ export default function AcceptInvitation() {
     return (
       <InvitationShell>
         <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-        <h1 className="mt-5 text-2xl font-semibold text-foreground">Account created</h1>
-        <p className="mt-3 text-muted-foreground">Your team access is ready. Sign in with {invitation.email} and the password you created.</p>
+        <h1 className="mt-5 text-2xl font-semibold text-foreground">Organization membership ready</h1>
+        <p className="mt-3 text-muted-foreground">Your organization membership is active. Sign in with {invitation.email} and the password you created.</p>
         <Button asChild className="mt-6 w-full"><Link to="/login">Continue to sign in</Link></Button>
       </InvitationShell>
     );
@@ -72,11 +73,15 @@ export default function AcceptInvitation() {
   return (
     <InvitationShell>
       <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-      <h1 className="mt-5 text-2xl font-semibold text-foreground">Create your account</h1>
+      <h1 className="mt-5 text-2xl font-semibold text-foreground">Join your merchant organization</h1>
       <p className="mt-3 text-muted-foreground">
-        You have been invited as <strong>{invitation.role}</strong>
-        {invitation.organization_name ? <> to <strong>{invitation.organization_name}</strong></> : null}.
+        You are joining <strong>{invitation.organization_name || invitation.organization_id || 'your merchant organization'}</strong> as a <strong>{invitation.role}</strong> member.
       </p>
+      {(invitation.organization_name || invitation.organization_id) && (
+        <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          This organization already has a shared wallet. Direct owners create a new organization during signup; invited users join an existing merchant organization.
+        </p>
+      )}
       <InvitationForm token={token || ''} invitation={invitation} onComplete={(value) => setPage({ status: 'complete', invitation: value })} />
     </InvitationShell>
   );

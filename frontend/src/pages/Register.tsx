@@ -251,7 +251,7 @@ export default function Register() {
             Start accepting payments
           </h1>
           <p className="mt-6 max-w-2xl text-[18px] leading-8 text-[#535353]">
-            Apply for a SwiftPay merchant account and manage local and cross-border payment channels from one platform.
+            Apply as a merchant owner to create your SwiftPay organization and manage local and cross-border payments. Team members join an existing organization by invitation.
           </p>
         </header>
 

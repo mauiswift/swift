@@ -258,12 +258,6 @@ def get_role_permissions_by_name(role_name: str | None) -> RolePermissions:
     normalized = (role_name or "admin").strip().lower()
     if normalized == "super_admin":
         return get_invited_super_admin_permissions()
-    if normalized == "approver":
-        return RolePermissions(
-            can_view_reports=True,
-            can_manage_transactions=True,
-            can_approve_topups=True,
-        )
     role = ROLE_ALIASES.get(normalized)
     if role is None:
         try:

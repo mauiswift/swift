@@ -541,7 +541,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     !cryptoOnly
     && !isSuperAdmin
     && user?.organization_id
-    && user.permissions?.can_manage_wallet,
   );
   const primaryWalletBalance = sharedWalletIsPrimary ? organizationWalletBalance : collectionBalance;
   const primaryWalletUnavailable = sharedWalletIsPrimary
@@ -575,7 +574,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const walletTitle = cryptoOnly ? tx('Cryptocurrency', '암호화폐') : tx('Wallet', '지갑');
   const walletSubtitle = cryptoOnly
     ? tx('Manage your USDT balance, buy and sell cryptocurrency, send funds, and review crypto activity.', 'USDT 잔액을 관리하고, 암호화폐를 사고 팔고, 자금을 보내고, 거래 활동을 확인하세요.')
-    : tx(`Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`, 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.');
+    : sharedWalletIsPrimary
+      ? tx(`Manage the shared organization wallet for ${selectedCollectionCurrency} and USDT balances, fund the org, submit withdrawals, and review activity.`, '조직 공동 지갑에서 KRW 및 USDT 잔액을 관리하고, 조직 자금을 충전하고, 출금 및 거래 내역을 확인하세요.')
+      : tx(`Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`, 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.');
   const collectionWalletLabel = sharedWalletIsPrimary
     ? tx('Shared organization wallet', '공유 조직 지갑')
     : tx(`${selectedCollectionCurrency} Wallet`, `${selectedCollectionCurrency} 지갑`);
@@ -1417,7 +1418,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
-                      {isKoreanWallet ? '조직 지갑' : 'Organization wallet'}
+                      {isKoreanWallet ? '공유 조직 지갑' : 'Shared organization wallet'}
                     </p>
                     <p className="mt-1 truncate text-xs text-slate-500">
                       {organizationWalletBalance?.organization_name || user.organization_name || user.organization_id}
@@ -1466,7 +1467,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">
-                  {isKoreanWallet ? '조직 구성원과 공유' : 'Shared with organization members'}
+                  {isKoreanWallet ? '이 조직의 결제 및 정산은 여기에 집계됩니다.' : 'Payments and settlements for this organization are settled here.'}
                 </p>
               </CardContent>
             </Card>

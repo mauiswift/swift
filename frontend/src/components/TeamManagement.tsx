@@ -354,7 +354,7 @@ export function TeamInvitationsTab() {
           <CardContent className="pt-5 sm:pt-6">
             <div className="space-y-4">
               <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-800">
-                {tx('Team members share your organization wallet. Only grant the permissions they need for their work.', '팀원은 조직 공동 지갑을 함께 사용합니다. 업무에 필요한 권한만 부여하세요.')}
+                {tx('Payment links owned by your organization settle into its single shared wallet. Grant each member only the permissions they need.', '조직 소유 결제 링크의 정산금은 조직 공동 지갑 하나로 입금됩니다. 각 팀원에게 필요한 권한만 부여하세요.')}
               </div>
               <div>
                 <Label htmlFor="team-invitation-email" className="text-sm font-medium">{tx('Email Address', '이메일 주소')}</Label>
@@ -376,12 +376,11 @@ export function TeamInvitationsTab() {
                   </SelectTrigger>
                   <SelectContent>
                     {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
-                    {isSuperAdmin && <SelectItem value="owner">Owner</SelectItem>}
+                    {isSuperAdmin && <SelectItem value="owner">Owner (create organization)</SelectItem>}
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="viewer">Viewer</SelectItem>
                     <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="approver">Approver</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -661,7 +660,7 @@ export function TeamMembersTab() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                  {tx('Organization wallet', '조직 지갑')}
+                  {tx('Shared organization wallet', '공유 조직 지갑')}
                 </p>
                 <p className="mt-1 text-xs text-emerald-700">{orgWallet.organization_name || orgWallet.organization_id}</p>
               </div>

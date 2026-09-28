@@ -1,11 +1,11 @@
 export const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  super_admin: 'Super Admin',
   owner: 'Owner',
   admin: 'Admin',
-  editor: 'Editor',
+  manager: 'Manager',
+  operator: 'Operator',
   viewer: 'Viewer',
-  developer: 'Developers',
-  approver: 'Approver',
+  developer: 'Developer',
+  super_admin: 'Platform Super Admin',
   user: 'Regular user',
 };
 

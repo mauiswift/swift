@@ -43,8 +43,8 @@ describe('VIP sidebar navigation', () => {
 });
 
 describe('payment approval navigation', () => {
-  it('shows the payment approval tab to users with approval permission', () => {
-    expect(hasNavigationItem({ ...noPermissions, can_approve_topups: true })).toBe(true);
+  it('keeps the payment approval tab hidden from org members with the legacy approval permission', () => {
+    expect(hasNavigationItem({ ...noPermissions, can_approve_topups: true })).toBe(false);
   });
 
   it('keeps the payment approval tab hidden from users without approval permission', () => {
@@ -102,7 +102,7 @@ describe('admin management navigation', () => {
 });
 
 describe('dashboard navigation grouping', () => {
-  it('groups available pages into overview, payments, and management', () => {
+  it('groups available pages without exposing system approvals to organization members', () => {
     const permissions: UserPermissions = {
       ...noPermissions,
       can_manage_payments: true,
@@ -113,7 +113,7 @@ describe('dashboard navigation grouping', () => {
     };
     const { sections } = buildAdminNavigation(permissions, false, 'en', key => key);
 
-    expect(sections.map(section => section.label)).toEqual(['OVERVIEW', 'PAYMENTS', 'MANAGEMENT']);
+    expect(sections.map(section => section.label)).toEqual(['OVERVIEW', 'PAYMENTS']);
     expect(sections[0].items.map(item => item.path)).toEqual(['/dashboard', '/reports']);
     expect(sections[1].items.map(item => item.path)).toEqual([
       '/wallet',
@@ -122,7 +122,7 @@ describe('dashboard navigation grouping', () => {
       '/pay-by-link',
       '/disbursements',
     ]);
-    expect(sections[2].items.map(item => item.path)).toEqual(['/payment-approvals']);
+    expect(sections.flatMap(section => section.items.map(item => item.path))).not.toContain('/payment-approvals');
   });
 
   it('keeps super-admin destinations available in the simplified groups', () => {
