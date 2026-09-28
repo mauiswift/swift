@@ -9,11 +9,13 @@ import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
+import { useTranslation } from '@/lib/i18n';
 import '../PaymentActivity.css';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const t = useTranslation(language);
   const { collectionCurrency, enabledCurrencies } = useCollectionCurrency();
   const [selectedCurrency, setSelectedCurrency] = useState(collectionCurrency.toUpperCase());
   const isKorean = language === 'ko';
@@ -98,7 +100,7 @@ export default function PaymentLinksList() {
     <Layout>
       <div className="payment-workspace page-enter w-full space-y-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment links'}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{t('payment_links')}</h1>
 
           <div className="flex items-center gap-3">
             <button
@@ -130,14 +132,14 @@ export default function PaymentLinksList() {
               disabled={selectedCurrency === 'ALL'}
               className="h-9 inline-flex items-center gap-2 border border-slate-300 bg-white text-slate-700 rounded-lg px-4 text-[12px] font-semibold hover:bg-slate-50 disabled:opacity-50"
             >
-              <CircleDollarSign size={15} /> {isKorean ? '영구 링크' : 'Permanent Link'}
+              <CircleDollarSign size={15} /> {t('permanent_link')}
             </button>
             <button
               type="button"
               onClick={() => navigate('/pay-by-link/new')}
               className="h-9 inline-flex items-center gap-2 bg-slate-900 text-white rounded-lg px-4 text-[12px] font-semibold hover:bg-slate-700"
             >
-              <Plus size={16} /> {isKorean ? '새로 만들기' : 'New'}
+              <Plus size={16} /> {t('create_new')}
             </button>
           </div>
         </div>
@@ -149,7 +151,7 @@ export default function PaymentLinksList() {
               aria-label={isKorean ? '통화별 필터' : 'Filter by currency'}
               className="w-full sm:w-auto min-w-36 px-3 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none focus:border-slate-400"
             >
-              <option value="ALL">{isKorean ? '모든 통화' : 'All currencies'}</option>
+              <option value="ALL">{t('all_currencies')}</option>
               {currencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
             </select>
            <div className="relative w-full max-w-sm">
@@ -157,7 +159,7 @@ export default function PaymentLinksList() {
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={isKorean ? '검색...' : 'Search...'}
+              placeholder={t('search_placeholder')}
               className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
             />
           </div>
@@ -213,7 +215,7 @@ export default function PaymentLinksList() {
                       }}
                       className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 hover:text-[#FF6B00]"
                     >
-                      <Copy size={14} /> Copy
+                        <Copy size={14} /> {t('copy')}
                     </button>
                     <button
                       type="button"
@@ -221,9 +223,9 @@ export default function PaymentLinksList() {
                       disabled={updatingCode === l.code || (l.provider === 'swiftpay' && l.status !== 'Active')}
                       className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <X size={14} /> {l.provider === 'swiftpay'
-                        ? (isKorean ? '비활성화' : 'Invalidate')
-                        : l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
+                        <X size={14} /> {l.provider === 'swiftpay'
+                        ? t('invalidate')
+                        : l.status === 'Active' ? t('deactivate') : t('activate')}
                     </button>
                   </div>
                 </div>
@@ -248,7 +250,7 @@ export default function PaymentLinksList() {
             ))
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-[13px] text-slate-400">
-              {isKorean ? '결제 링크가 없습니다' : 'No payment links found.'}
+              {t('no_payment_links_found')}
             </div>
           )}
         </div>
@@ -258,10 +260,10 @@ export default function PaymentLinksList() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">LINK</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">CREATED ON</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">STATUS</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">ACTIONS</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('filter_link')}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">{t('created_on')}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">{t('status_label')}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">{t('actions_label')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -315,7 +317,7 @@ export default function PaymentLinksList() {
                             }}
                             className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-[#FF6B00] transition-colors"
                           >
-                            <Copy size={14} /> Copy
+                            <Copy size={14} /> {t('copy')}
                           </button>
                           <button
                             type="button"
@@ -324,8 +326,8 @@ export default function PaymentLinksList() {
                             className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <X size={14} /> {l.provider === 'swiftpay'
-                              ? (isKorean ? '비활성화' : 'Invalidate')
-                              : l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
+                              ? t('invalidate')
+                              : l.status === 'Active' ? t('deactivate') : t('activate')}
                           </button>
                         </div>
                       </td>
@@ -366,7 +368,7 @@ export default function PaymentLinksList() {
               ) : (
                 <tr>
                 <td colSpan={4} className="px-8 py-10 text-center text-slate-500">
-                  {isKorean ? '결제 링크가 없습니다. 새 링크를 만들어 보세요.' : 'No payment links found. Create one to get started.'}
+                  {t('no_payment_links_found_empty')}
                 </td>
                 </tr>
               )}

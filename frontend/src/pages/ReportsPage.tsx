@@ -35,6 +35,7 @@ const rangeDaysMap = {
 export default function ReportsPage() {
   const { language } = useLanguage();
   const isKorean = language === 'ko';
+  const tx = (en: string, ko: string) => (isKorean ? ko : en);
   const [range, setRange] = useState<'Last 7 days' | 'Last 30 days' | 'Last 90 days'>('Last 7 days');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -64,24 +65,27 @@ export default function ReportsPage() {
     if (report.available && report.file_url) {
       const opened = window.open(report.file_url, '_blank', 'noopener,noreferrer');
       if (!opened) {
-        toast.error(isKorean ? '다운로드 창이 차단되었습니다. 팝업을 허용해 주세요.' : 'The download window was blocked. Please allow pop-ups and try again.');
+        toast.error(tx('The download window was blocked. Please allow pop-ups and try again.', '다운로드 창이 차단되었습니다. 팝업을 허용해 주세요.'));
       }
       return;
     }
-    toast.error(isKorean ? '이 보고서는 아직 다운로드할 수 없습니다.' : 'This report is not available for download yet.');
+    toast.error(tx('This report is not available for download yet.', '이 보고서는 아직 다운로드할 수 없습니다.'));
   };
 
   const reports = reportsData?.data || [];
-  const ui = isKorean ? {
-    title: '보고서', range: '기간:', last7: '최근 7일', last30: '최근 30일', last90: '최근 90일',
-    loading: '보고서를 불러오는 중...', error: '보고서를 불러오지 못했습니다.',
-    empty: '선택한 기간에 보고서가 없습니다.', name: '이름', date: '날짜', download: '다운로드',
-    noData: '보고서 데이터 없음',
-  } : {
-    title: 'Reports', range: 'Range:', last7: 'Last 7 days', last30: 'Last 30 days', last90: 'Last 90 days',
-    loading: 'Loading reports...', error: 'Failed to load reports',
-    empty: 'No reports found for the selected range', name: 'NAME', date: 'DATE', download: 'Download',
-    noData: 'No report data',
+  const ui = {
+    title: tx('Reports', '보고서'),
+    range: tx('Range:', '기간:'),
+    last7: tx('Last 7 days', '최근 7일'),
+    last30: tx('Last 30 days', '최근 30일'),
+    last90: tx('Last 90 days', '최근 90일'),
+    loading: tx('Loading reports...', '보고서를 불러오는 중...'),
+    error: tx('Failed to load reports', '보고서를 불러오지 못했습니다.'),
+    empty: tx('No reports found for the selected range', '선택한 기간에 보고서가 없습니다.'),
+    name: tx('NAME', '이름'),
+    date: tx('DATE', '날짜'),
+    download: tx('Download', '다운로드'),
+    noData: tx('No report data', '보고서 데이터 없음'),
   };
   const rangeLabels: Record<string, string> = {
     'Last 7 days': ui.last7,

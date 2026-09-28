@@ -16,11 +16,13 @@ import { updatePaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/lib/i18n';
 
 export default function PaymentLinkDetails() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const t = useTranslation(language);
   const isKorean = language === 'ko';
   const [link, setLink] = useState<PaymentLink | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -94,15 +96,15 @@ export default function PaymentLinkDetails() {
       <Layout>
         <div className="page-enter w-full">
           <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
-            <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
+            <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{t('payment_links')}</span>
             <span className="text-slate-300">&gt;</span>
-            <span className="text-slate-600 font-medium">Link details</span>
+            <span className="text-slate-600 font-medium">{t('payment_link_details')}</span>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-4">{isKorean ? '결제 링크를 찾을 수 없습니다' : 'Payment link not found'}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-4">{t('payment_link_not_found')}</h1>
             <p className="text-[14px] text-slate-500">
-              {isKorean ? '요청한 결제 링크가 없거나 삭제되었습니다.' : 'The payment link you are looking for does not exist or has been removed.'}
+              {t('payment_link_not_found_desc')}
             </p>
           </div>
         </div>
@@ -121,9 +123,9 @@ export default function PaymentLinkDetails() {
     <Layout>
       <div className="page-enter">
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
-          <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
+          <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{t('payment_links')}</span>
           <span className="text-slate-300">&gt;</span>
-          <span className="text-slate-600 font-semibold">Link details</span>
+          <span className="text-slate-600 font-semibold">{t('payment_link_details')}</span>
         </div>
 
         <div className="flex items-center gap-4 mb-6">
@@ -133,13 +135,13 @@ export default function PaymentLinkDetails() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment link'}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{t('payment_link')}</h1>
         </div>
 
         <div className="mb-8 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 shadow-lg shadow-slate-200/40 text-white">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300 mb-3">{isKorean ? '안전한 송금' : 'Secure transfer'}</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300 mb-3">{t('secure_transfer')}</p>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-4xl font-semibold tracking-tight">{fmtCurrency(link.amount, link.currency)}</span>
                 <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
@@ -158,20 +160,20 @@ export default function PaymentLinkDetails() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm mb-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-8 gap-x-12 mb-10">
-            <DetailItem label={isKorean ? '통화' : 'Amount currency'} value={currencyCode} />
-            <DetailItem label={isKorean ? '코드' : 'Code'} value={link.code} />
-            {link.provider === 'swiftpay' && <DetailItem label={isKorean ? '결제 제공자' : 'Provider'} value="SwiftPay" />}
-            <DetailItem label={isKorean ? '생성일' : 'Created on'} value={link.created} />
-            <DetailItem label={isKorean ? '유효 기간' : 'Valid until'} value={link.validUntil} />
-            <DetailItem label={isKorean ? '설명' : 'Description'} value={link.description} />
-            <DetailItem label={isKorean ? '주문번호' : 'Order number'} value={link.orderNo} />
-            <DetailItem label={isKorean ? '결제자' : 'Payor'} value={link.payor} />
+            <DetailItem label={t('payment_link_currency')} value={currencyCode} />
+            <DetailItem label={t('payment_link_details_label')} value={link.code} />
+            {link.provider === 'swiftpay' && <DetailItem label="SwiftPay" value="SwiftPay" />}
+            <DetailItem label={t('created_on')} value={link.created} />
+            <DetailItem label={t('payment_link_valid_until')} value={link.validUntil} />
+            <DetailItem label={t('payment_link_description')} value={link.description} />
+            <DetailItem label={t('payment_link_order_no')} value={link.orderNo} />
+            <DetailItem label={t('payment_link_payor')} value={link.payor} />
           </div>
 
           {currencyCode === 'KRW' && (link.qrCodeUrl || krwBankAccount) && (
             <div className="mb-10 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h3 className="text-[15px] font-semibold text-amber-900">{krwBankAccount ? '한국 KRW 해외송금 안내' : isKorean ? 'SwiftPay QR 결제' : 'SwiftPay QR payment'}</h3>
+                <h3 className="text-[15px] font-semibold text-amber-900">{krwBankAccount ? '한국 KRW 해외송금 안내' : t('payment_link_qr')}</h3>
                 <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">{isKorean ? 'KRW 송금' : 'KRW transfer'}</span>
               </div>
 
@@ -211,14 +213,14 @@ export default function PaymentLinkDetails() {
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">참조번호</p>
                     <p className="font-mono font-semibold">{link.code}</p>
                   </div>
-                </div> : <div className="text-sm text-amber-900"><p className="font-semibold">{isKorean ? '지원되는 한국 은행 앱으로 이 SwiftPay QR을 스캔하세요.' : 'Scan this SwiftPay QR with a supported Korean banking app.'}</p><p className="mt-2">{isKorean ? '결제 금액과 참조번호가 QR에 이미 포함되어 있습니다.' : 'The payment amount and reference are already attached to the QR.'}</p></div>}
+                </div> : <div className="text-sm text-amber-900"><p className="font-semibold">{t('scan_supported_banking_app')}</p><p className="mt-2">{t('qr_amount_reference_attached')}</p></div>}
               </div>
             </div>
           )}
 
           <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
             <div className="flex-1 w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13px] text-slate-500 flex items-center justify-between">
-              <span className="truncate">{permanentLinkUrl || (isKorean ? '결제 URL을 사용할 수 없습니다' : 'No payment URL available')}</span>
+              <span className="truncate">{permanentLinkUrl || t('payment_url_unavailable')}</span>
               <button
                 type="button"
                 onClick={async () => {
@@ -229,15 +231,15 @@ export default function PaymentLinkDetails() {
 
                   const success = await copyTextToClipboard(permanentLinkUrl);
                   if (success) {
-                    toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
+                    toast.success(t('link_copied'));
                   } else {
-                    toast.error(isKorean ? '결제 링크를 복사할 수 없습니다.' : 'Unable to copy payment link');
+                    toast.error(t('unable_to_copy_link'));
                   }
                 }}
                 className="flex items-center gap-2 text-[12px] font-semibold text-slate-900 hover:text-[#FF6B00] transition-colors whitespace-nowrap ml-4"
               >
                 <Copy size={14} />
-                {isKorean ? '링크 복사' : 'Copy link'}
+                {t('copy_link')}
               </button>
             </div>
           </div>
@@ -248,9 +250,9 @@ export default function PaymentLinkDetails() {
               onClick={async () => {
                 const success = await copyTextToClipboard(permanentLinkUrl);
                 if (success) {
-                  toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
+                  toast.success(t('link_copied'));
                 } else {
-                  toast.error(isKorean ? '결제 링크를 복사할 수 없습니다.' : 'Unable to copy payment link');
+                  toast.error(t('unable_to_copy_link'));
                 }
               }}
               className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
@@ -303,21 +305,21 @@ export default function PaymentLinkDetails() {
             >
               <X size={16} className="text-slate-400" />
               {link.provider === 'swiftpay'
-                ? (isKorean ? '비활성화' : 'Invalidate link')
-                : link.status === 'Active' ? 'Deactivate link' : 'Activate link'}
+                ? t('payment_link_invalidate')
+                : link.status === 'Active' ? t('payment_link_deactivate') : t('payment_link_activate')}
             </button>
           </div>
         </div>
 
-        <h2 className="text-[16px] font-semibold text-slate-900 mb-4">{isKorean ? '결제 내역' : 'Payment history'}</h2>
+        <h2 className="text-[16px] font-semibold text-slate-900 mb-4">{t('payment_history')}</h2>
         <div className="-mx-3 w-[calc(100%+1.5rem)] overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:mx-0 sm:w-full">
           <table className="w-full min-w-[640px] text-left border-collapse sm:min-w-0">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT</th>
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">REFERENCE NO</th>
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">DATE</th>
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT STATUS</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('payment_status_label')}</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('reference_no')}</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('created_on')}</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('payment_status_label')}</th>
               </tr>
             </thead>
             <tbody>
@@ -341,9 +343,9 @@ export default function PaymentLinkDetails() {
                       onClick={async () => {
                         const success = await copyTextToClipboard(link.code);
                         if (success) {
-                          toast.success('Reference copied to clipboard');
+                          toast.success(t('payment_link_copy_reference'));
                         } else {
-                          toast.error('Unable to copy reference');
+                          toast.error(t('unable_to_copy_reference'));
                         }
                       }}
                       className="text-slate-300 hover:text-slate-500 transition-colors"

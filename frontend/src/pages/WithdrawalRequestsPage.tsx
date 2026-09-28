@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { fmtCurrency } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface WithdrawalRequest {
   id: number;
@@ -43,26 +44,29 @@ const fmt_amount = (amt: number, cur: string) => fmtCurrency(amt, normalizeCurre
 
 export default function WithdrawalRequestsPage() {
   const { collectionCurrency } = useCollectionCurrency();
+  const { language } = useLanguage();
   const { isSuperAdmin } = useAuth();
   const isKrwFlow = collectionCurrency === 'KRW' && !isSuperAdmin;
+  const isKorean = language === 'ko';
+  const tx = (en: string, ko: string) => (isKorean ? ko : en);
   const statusConfig = getStatusConfig(isKrwFlow);
   const uiText = {
-    heading: isKrwFlow ? '출금 요청' : 'Withdrawal Requests',
-    description: isKrwFlow ? 'KRW 출금 요청을 검토하고 승인하세요.' : 'Review and approve user withdrawal requests (PHP, KRW and USDT).',
-    refresh: isKrwFlow ? '새로 고침' : 'Refresh',
-    review: isKrwFlow ? '검토' : 'Review',
-    cancel: isKrwFlow ? '취소' : 'Cancel',
-    empty: isKrwFlow ? '출금 요청이 없습니다' : 'No withdrawal requests',
-    requestPrefix: isKrwFlow ? '출금 요청 #' : 'Request #',
+    heading: tx('Withdrawal Requests', '출금 요청'),
+    description: tx('Review and approve user withdrawal requests (PHP, KRW and USDT).', 'KRW 출금 요청을 검토하고 승인하세요.'),
+    refresh: tx('Refresh', '새로 고침'),
+    review: tx('Review', '검토'),
+    cancel: tx('Cancel', '취소'),
+    empty: tx('No withdrawal requests', '출금 요청이 없습니다'),
+    requestPrefix: tx('Request #', '출금 요청 #'),
   } as const;
   const filterLabels: Record<string, string> = {
-    pending: isKrwFlow ? '대기 중' : 'Pending',
-    transferring: isKrwFlow ? '이체 진행 중' : 'Transferring',
-    processing: isKrwFlow ? '처리 중' : 'Processing',
-    completed: isKrwFlow ? '완료됨' : 'Completed',
-    cancelled: isKrwFlow ? '취소됨' : 'Cancelled',
-    failed: isKrwFlow ? '실패' : 'Failed',
-    '': isKrwFlow ? '전체' : 'All',
+    pending: tx('Pending', '대기 중'),
+    transferring: tx('Transferring', '이체 진행 중'),
+    processing: tx('Processing', '처리 중'),
+    completed: tx('Completed', '완료됨'),
+    cancelled: tx('Cancelled', '취소됨'),
+    failed: tx('Failed', '실패'),
+    '': tx('All', '전체'),
   };
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,9 +200,9 @@ export default function WithdrawalRequestsPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, bank, account, address, or request ID" className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tx('Search user, bank, account, address, or request ID', '사용자, 은행, 계좌, 주소 또는 요청 ID 검색')} className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
             </div>
-            {selectedIds.length > 0 && ['pending', 'processing'].includes(filter) && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('cancel')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
+            {selectedIds.length > 0 && ['pending', 'processing'].includes(filter) && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">{tx('Approve', '승인')} {selectedIds.length}</button><button type="button" onClick={() => runBulk('cancel')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">{tx('Reject', '거절')} {selectedIds.length}</button></div>}
           </div>
           <button onClick={fetchRequests}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
@@ -214,7 +218,7 @@ export default function WithdrawalRequestsPage() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
                 }`}>
-                {filterLabels[s || ''] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : (isKrwFlow ? '전체' : 'All'))}
+                {filterLabels[s || ''] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : tx('All', '전체'))}
               </button>
             ))}
           </div>

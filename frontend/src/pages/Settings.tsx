@@ -74,11 +74,11 @@ export default function Settings() {
           <div>
             <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
               <SlidersHorizontal size={14} />
-              {isKo ? '워크스페이스 설정' : 'Workspace settings'}
+              {t('settings_workspace_settings')}
             </div>
-            <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{isKo ? '설정' : 'Settings'}</h1>
+            <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{t('nav_settings')}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              {isKo ? '계정, 상점, 결제 및 운영 환경을 한 곳에서 관리하세요.' : 'Manage your account, store, payments, and operating environment from one place.'}
+              {t('settings_workspace_subtitle')}
             </p>
           </div>
           {isSuperAdmin && (
@@ -92,46 +92,48 @@ export default function Settings() {
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-emerald-700">
               <CheckCircle2 size={16} />
-              <p className="text-xs font-bold uppercase tracking-[0.14em]">Account</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">{t('settings_account')}</p>
             </div>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Security and access</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Manage login protection and Telegram linking.</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{t('settings_security_access')}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{t('settings_manage_login')}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-blue-700">
               <Store size={16} />
-              <p className="text-xs font-bold uppercase tracking-[0.14em]">Workspace</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">{t('settings_workspace')}</p>
             </div>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Store configuration</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Keep your storefront and currencies up to date.</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{t('settings_store_config')}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{t('settings_store_config_desc')}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-amber-700">
               <CircleAlert size={16} />
-              <p className="text-xs font-bold uppercase tracking-[0.14em]">Operations</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">{t('settings_operations')}</p>
             </div>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Review payout details</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Confirm settlement and integration settings before going live.</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{t('settings_review_payout')}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{t('settings_review_payout_desc')}</p>
           </div>
         </section>
 
         <section className="app-panel p-4 sm:p-6">
           <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{isKo ? '계정 및 상점' : 'Account and store'}</h2>
-              <p className="mt-1 text-xs text-slate-500">{isKo ? '자주 사용하는 계정, 상점, 뱅킹 및 연동 설정입니다.' : 'Frequently used account, store, banking, and integration settings.'}</p>
+              <h2 className="text-base font-semibold text-slate-900">{t('settings_account_and_store')}</h2>
+              <p className="mt-1 text-xs text-slate-500">{t('settings_account_and_store_desc')}</p>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">{isKo ? '빠른 설정' : 'Quick settings'}</span>
+            <span className="text-[11px] font-medium text-slate-400">{t('settings_quick_settings')}</span>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ITEMS.map((item) => {
             const Icon = item.icon;
-            const localizedItem = isKo ? ({
-              'Account & Security': { title: '계정 및 보안', description: 'Telegram 연결, 비밀번호 관리 및 계정 보안' },
-              'Store profile': { title: '상점 프로필', description: '상점 이름, 로고, 플랫폼 설정 및 다중 통화' },
-              Banking: { title: '뱅킹', description: '은행 계좌 정보 및 지급 설정' },
-              'API & Integration': { title: 'API 및 연동', description: 'API 키, 웹훅 및 연동 설정' },
-            } as Record<string, { title: string; description: string }>)[item.title] : null;
+            const localizedItem = isKo
+              ? ({
+                  'Account & Security': { title: t('settings_account_security'), description: t('settings_account_security_desc') },
+                  'Store profile': { title: t('settings_store_profile'), description: t('settings_store_profile_desc') },
+                  Banking: { title: t('settings_banking'), description: t('settings_banking_desc') },
+                  'API & Integration': { title: t('settings_api_integration'), description: t('settings_api_integration_desc') },
+                } as Record<string, { title: string; description: string }>)[item.title]
+              : null;
             return (
               <button
                 key={item.title}
@@ -159,21 +161,21 @@ export default function Settings() {
           <div className="flex items-start gap-3">
             <Link2 size={18} className="mt-0.5 flex-shrink-0 text-emerald-600" />
             <div>
-              <h2 className="text-[15px] font-semibold text-slate-900">{isKo ? '팀 등록 링크' : 'Team registration link'}</h2>
-              <p className="mt-1 text-[12px] leading-relaxed text-slate-600">{isKo ? '이 링크를 팀원에게 보내 직접 등록하도록 하세요.' : 'Share this link with team members so they can register directly under your organization.'}</p>
+              <h2 className="text-[15px] font-semibold text-slate-900">{t('settings_team_registration_link')}</h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-slate-600">{t('settings_team_link_help')}</p>
             </div>
           </div>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <input readOnly value={referralLinkLoading ? (isKo ? '불러오는 중...' : 'Loading...') : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label={isKo ? '팀 등록 링크' : 'Team registration link'} />
+            <input readOnly value={referralLinkLoading ? t('settings_loading_link') : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label={t('settings_team_registration_link')} />
             <button
               type="button"
               disabled={!referralLink}
               onClick={() => navigator.clipboard.writeText(referralLink)
-                .then(() => toast.success(isKo ? '링크가 복사되었습니다.' : 'Registration link copied'))
-                .catch(() => toast.error(isKo ? '링크를 복사하지 못했습니다.' : 'Unable to copy registration link'))}
+                .then(() => toast.success(t('settings_link_copied')))
+                .catch(() => toast.error(t('settings_link_copy_failed')))}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Copy size={16} /> {isKo ? '복사' : 'Copy link'}
+              <Copy size={16} /> {t('settings_copy_link')}
             </button>
           </div>
         </div>

@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { fmtCurrency } from '@/lib/format';
 import PaymentStatus from './PaymentStatus';
 import PaymentTransferDetails from './PaymentTransferDetails';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/lib/i18n';
 
 interface PendingPayment {
   id: string;
@@ -39,6 +41,8 @@ interface PendingPayment {
 
 export default function SuperAdminPaymentApprovalDesktop() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const t = useTranslation(language);
   const { isSuperAdmin } = useAuth();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -90,12 +94,12 @@ export default function SuperAdminPaymentApprovalDesktop() {
         );
         setError('');
       } else {
-        const errorMsg = response.data?.detail || 'Failed to fetch pending payments';
+        const errorMsg = response.data?.detail || t('approval_failed_fetch');
         setError(errorMsg);
         if (showLoading) setPayments([]);
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch pending payments';
+      const errorMsg = err instanceof Error ? err.message : t('approval_failed_fetch');
       setError(errorMsg);
       if (showLoading) setPayments([]);
     } finally {
@@ -112,17 +116,17 @@ export default function SuperAdminPaymentApprovalDesktop() {
       });
 
       if (response.ok && response.data?.success) {
-        toast.success(response.data.message || 'Payment processed successfully');
+        toast.success(response.data.message || t('approval_payment_processed'));
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSelectedIds(prev => prev.filter(id => id !== paymentId));
         setReviewPayment(null);
         setReviewNote('');
         await fetchPendingPayments(false);
       } else {
-        toast.error(response.data?.detail || 'Failed to approve payment');
+        toast.error(response.data?.detail || t('approval_failed_approve'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error approving payment');
+      toast.error(err instanceof Error ? err.message : t('approval_error_approve'));
     } finally {
       setApproving(null);
     }
@@ -137,16 +141,16 @@ export default function SuperAdminPaymentApprovalDesktop() {
       });
 
       if (response.ok && response.data?.success) {
-        toast.success(response.data.message || 'Payment rejected successfully');
+        toast.success(response.data.message || t('approval_payment_rejected'));
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSelectedIds(prev => prev.filter(id => id !== paymentId));
         setReviewPayment(null);
         await fetchPendingPayments(false);
       } else {
-        toast.error(response.data?.detail || 'Failed to reject payment');
+        toast.error(response.data?.detail || t('approval_failed_reject'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error rejecting payment');
+      toast.error(err instanceof Error ? err.message : t('approval_error_reject'));
     } finally {
       setApproving(null);
     }
@@ -161,7 +165,8 @@ export default function SuperAdminPaymentApprovalDesktop() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    const locale = language === 'ko' ? 'ko-KR' : language === 'zh' ? 'zh-CN' : 'en-US';
+    return new Date(dateString).toLocaleString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -200,10 +205,10 @@ export default function SuperAdminPaymentApprovalDesktop() {
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
           <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/')}>
-            Dashboard
+            {t('nav_dashboard')}
           </span>
           <span className="text-slate-300">&gt;</span>
-          <span className="text-slate-600 font-semibold">Payment Approvals</span>
+          <span className="text-slate-600 font-semibold">{t('approval_page_title')}</span>
         </div>
 
         {/* Header */}
@@ -215,34 +220,34 @@ export default function SuperAdminPaymentApprovalDesktop() {
             <ChevronLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment Approvals</h1>
-            <p className="mt-1 text-sm text-slate-500">Review incoming payment-link requests before they are credited.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{t('approval_page_title')}</h1>
+            <p className="mt-1 text-sm text-slate-500">{t('approval_page_description')}</p>
           </div>
           <button type="button" onClick={() => void fetchPendingPayments(false)} disabled={loading} className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {t('approval_refresh')}
           </button>
         </div>
 
         <div className="mb-6 grid grid-cols-3 gap-4">
-          <div className="rounded-xl border border-amber-100 bg-amber-50 p-4"><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-700"><Clock3 size={15} /> Awaiting review</div><p className="mt-2 text-2xl font-semibold text-slate-900">{payments.length}</p></div>
-          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Visible requests</p><p className="mt-2 text-2xl font-semibold text-slate-900">{visiblePayments.length}</p></div>
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Selected</p><p className="mt-2 text-2xl font-semibold text-slate-900">{selectedIds.length}</p></div>
+          <div className="rounded-xl border border-amber-100 bg-amber-50 p-4"><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-700"><Clock3 size={15} /> {t('approval_awaiting_review')}</div><p className="mt-2 text-2xl font-semibold text-slate-900">{payments.length}</p></div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-blue-700">{t('approval_visible_requests')}</p><p className="mt-2 text-2xl font-semibold text-slate-900">{visiblePayments.length}</p></div>
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">{t('approval_selected')}</p><p className="mt-2 text-2xl font-semibold text-slate-900">{selectedIds.length}</p></div>
         </div>
 
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="relative max-w-md flex-1">
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search reference, merchant, customer..." className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('approval_search_placeholder')} className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
           </div>
-          <span className="text-xs font-medium text-slate-500">{payments.length} pending</span>
+          <span className="text-xs font-medium text-slate-500">{payments.length} {t('approval_pending_count')}</span>
         </div>
 
         {selectedIds.length > 0 && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
-            <p className="text-sm font-medium text-blue-900">{selectedIds.length} request{selectedIds.length === 1 ? '' : 's'} selected</p>
+            <p className="text-sm font-medium text-blue-900">{selectedIds.length} {t('approval_requests_selected')}</p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve selected</button>
-              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject selected</button>
+              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">{t('approval_approve_selected')}</button>
+              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">{t('approval_reject_selected')}</button>
             </div>
           </div>
         )}
@@ -259,8 +264,8 @@ export default function SuperAdminPaymentApprovalDesktop() {
           {visiblePayments.length === 0 ? (
             <div className="p-12 text-center">
               {payments.length === 0 ? <CheckCircle className="mx-auto mb-4 h-12 w-12 text-emerald-500 opacity-50" /> : <Search className="mx-auto mb-4 h-12 w-12 text-slate-300" />}
-              <p className="font-medium text-slate-600">{payments.length === 0 ? 'No pending payments' : 'No matching requests'}</p>
-              <p className="mt-1 text-sm text-slate-500">{payments.length === 0 ? 'All payments have been processed' : 'Try a different reference, merchant, or customer search.'}</p>
+              <p className="font-medium text-slate-600">{payments.length === 0 ? t('approval_no_pending') : t('approval_no_matches')}</p>
+              <p className="mt-1 text-sm text-slate-500">{payments.length === 0 ? t('approval_all_processed') : t('approval_try_search')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -277,16 +282,16 @@ export default function SuperAdminPaymentApprovalDesktop() {
                             ? ids.filter((id) => !visibleIds.includes(id))
                             : Array.from(new Set([...ids, ...visibleIds])));
                         }}
-                        aria-label="Select all pending payments"
+                        aria-label={t('approval_select_all')}
                       />
                     </th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Store</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Description</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Date &amp; time</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('approval_store')}</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('approval_amount')}</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('approval_type')}</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('approval_description')}</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{t('approval_date_time')}</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">{t('approval_actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -297,7 +302,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                           type="checkbox"
                           checked={selectedIds.includes(payment.id)}
                           onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
-                          aria-label={`Select payment ${payment.id}`}
+                          aria-label={`${t('approval_select_payment')} ${payment.id}`}
                         />
                       </td>
                       <td className="px-8 py-4">
@@ -306,12 +311,12 @@ export default function SuperAdminPaymentApprovalDesktop() {
                         </p>
                       </td>
                       <td className="px-8 py-4">
-                        <p className="text-[12px] font-medium text-slate-700 truncate">{payment.store_name || payment.user_name || payment.customer_name || 'Unknown'}</p>
+                        <p className="text-[12px] font-medium text-slate-700 truncate">{payment.store_name || payment.user_name || payment.customer_name || t('approval_unknown')}</p>
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[14px] font-semibold text-slate-900 whitespace-nowrap">
                           {String(payment.external_id || '').startsWith('OPEN-AMOUNT-') && Number(payment.amount) <= 0
-                            ? 'Custom'
+                            ? t('approval_custom_amount')
                             : fmtCurrency(Number(payment.amount) || 0, payment.currency || 'PHP')}
                         </p>
                         {payment.exchange_rate && payment.processing_currency && payment.processing_currency !== payment.currency && (
@@ -324,7 +329,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       <td className="px-8 py-4">
                         <span className="text-[11px] font-medium text-slate-500 capitalize">
                           {payment.transaction_type === 'payment_link'
-                            ? 'Payment Link'
+                            ? t('approval_payment_link')
                             : payment.transaction_type === 'swiftpay_order'
                             ? 'SwiftPay'
                             : payment.transaction_type}
@@ -353,17 +358,17 @@ export default function SuperAdminPaymentApprovalDesktop() {
                           <button
                             onClick={() => { setReviewNote(''); setReviewPayment(payment); }}
                             disabled={approving === payment.id || !payment.payment_received}
-                            title={!payment.payment_received ? 'Payment must be received before approval' : undefined}
+                            title={!payment.payment_received ? t('approval_payment_received_required') : undefined}
                             className="px-3 py-2 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 disabled:opacity-50"
                           >
-                            {approving === payment.id ? <Loader2 size={14} className="animate-spin" /> : 'Approve'}
+                            {approving === payment.id ? <Loader2 size={14} className="animate-spin" /> : t('approval_approve')}
                           </button>
                           <button
                             onClick={() => rejectPayment(payment.id)}
                             disabled={approving === payment.id}
                             className="px-3 py-2 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
                           >
-                            {approving === payment.id ? <Loader2 size={14} className="animate-spin" /> : 'Reject'}
+                            {approving === payment.id ? <Loader2 size={14} className="animate-spin" /> : t('approval_reject')}
                           </button>
                         </div>
                       </td>
@@ -375,27 +380,27 @@ export default function SuperAdminPaymentApprovalDesktop() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
                 <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
                   <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
-                    <div className="flex gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><ShieldCheck size={20} /></div><div><p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Payment link approval</p><h2 id="approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review before approving</h2></div></div>
-                    <button type="button" aria-label="Close review" onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"><X size={18} /></button>
+                    <div className="flex gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><ShieldCheck size={20} /></div><div><p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t('approval_review_heading')}</p><h2 id="approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">{t('approval_review_before')}</h2></div></div>
+                    <button type="button" aria-label={t('approval_close_review')} onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"><X size={18} /></button>
                   </div>
                   <div className="space-y-5 px-6 py-5">
                     <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm">
-                      <div><p className="text-xs text-slate-400">Store / merchant</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || 'Unknown'}</p></div>
-                      <div><p className="text-xs text-slate-400">Customer</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</p></div>
-                      <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(Number(reviewPayment.amount) || 0, reviewPayment.currency || 'PHP')}</p></div>
-                      <div><p className="text-xs text-slate-400">Submitted</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
-                      <div className="col-span-2"><p className="text-xs text-slate-400">Payment status</p><div className="mt-1"><PaymentStatus payment={reviewPayment} /></div></div>
-                      <div><p className="text-xs text-slate-400">Received at</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</p></div>
-                      <div className="col-span-2"><p className="text-xs text-slate-400">Reference</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
+                      <div><p className="text-xs text-slate-400">{t('approval_store_merchant')}</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || t('approval_unknown')}</p></div>
+                      <div><p className="text-xs text-slate-400">{t('approval_customer')}</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || t('approval_unknown')}</p></div>
+                      <div><p className="text-xs text-slate-400">{t('approval_amount')}</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(Number(reviewPayment.amount) || 0, reviewPayment.currency || 'PHP')}</p></div>
+                      <div><p className="text-xs text-slate-400">{t('approval_submitted')}</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
+                      <div className="col-span-2"><p className="text-xs text-slate-400">{t('approval_payment_status')}</p><div className="mt-1"><PaymentStatus payment={reviewPayment} /></div></div>
+                      <div><p className="text-xs text-slate-400">{t('approval_received_at')}</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.payment_received_at ? formatDate(reviewPayment.payment_received_at) : '—'}</p></div>
+                      <div className="col-span-2"><p className="text-xs text-slate-400">{t('approval_reference')}</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
                     </div>
-                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">Settlement: {fmtCurrency(Number(reviewPayment.processing_amount) || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {Number(reviewPayment.exchange_rate || 0).toFixed(6)} {reviewPayment.processing_currency}</p>}
-                    <div><p className="text-xs font-medium text-slate-500">Description</p><p className="mt-1 text-sm text-slate-700">{reviewPayment.description || 'No description provided.'}</p></div>
-                    <div><label htmlFor="approval-review-note" className="text-xs font-medium text-slate-500">Approval note <span className="font-normal text-slate-400">(optional)</span></label><textarea id="approval-review-note" value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} maxLength={500} rows={3} placeholder="Add an internal note for the approval record" className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" /></div>
-                    <p className="text-xs text-amber-700">Approving authorizes this payment request to proceed. Verify the amount, merchant, and reference before continuing.</p>
+                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">{t('approval_settlement')}: {fmtCurrency(Number(reviewPayment.processing_amount) || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {Number(reviewPayment.exchange_rate || 0).toFixed(6)} {reviewPayment.processing_currency}</p>}
+                    <div><p className="text-xs font-medium text-slate-500">{t('approval_description')}</p><p className="mt-1 text-sm text-slate-700">{reviewPayment.description || t('approval_no_description')}</p></div>
+                    <div><label htmlFor="approval-review-note" className="text-xs font-medium text-slate-500">{t('approval_note')} <span className="font-normal text-slate-400">{t('approval_optional')}</span></label><textarea id="approval-review-note" value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} maxLength={500} rows={3} placeholder={t('approval_internal_note_placeholder')} className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" /></div>
+                    <p className="text-xs text-amber-700">{t('approval_warning')}</p>
                   </div>
                   <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
-                    <button type="button" onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
-                    <button type="button" onClick={() => void approvePayment(reviewPayment.id)} disabled={approving === reviewPayment.id || !reviewPayment.payment_received} title={!reviewPayment.payment_received ? 'Payment must be received before approval' : undefined} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">{approving === reviewPayment.id && <Loader2 size={15} className="animate-spin" />}Approve payment</button>
+                    <button type="button" onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">{t('approval_cancel')}</button>
+                    <button type="button" onClick={() => void approvePayment(reviewPayment.id)} disabled={approving === reviewPayment.id || !reviewPayment.payment_received} title={!reviewPayment.payment_received ? t('approval_payment_received_required') : undefined} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">{approving === reviewPayment.id && <Loader2 size={15} className="animate-spin" />}{t('approval_confirm')}</button>
                   </div>
                 </div>
               </div>

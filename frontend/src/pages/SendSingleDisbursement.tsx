@@ -452,10 +452,12 @@ export default function SendSingleDisbursement() {
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 space-y-3">
                 <div className="flex items-center gap-3 text-amber-900 font-semibold">
                   <AlertCircle size={18} />
-                  <span className="text-[14px]">PHP balance reminder</span>
+                  <span className="text-[14px]">{isKrwFlow ? 'PHP 잔액 알림' : 'PHP balance reminder'}</span>
                 </div>
                 <p className="text-[13px] text-amber-800 leading-relaxed">
-                  Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.
+                  {isKrwFlow
+                    ? 'PHP 지갑에 최소 ₱5,000 이상을 유지해야 하며, 그렇지 않으면 일부 기능에 대한 접근이 제한될 수 있습니다.'
+                    : 'Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.'}
                 </p>
               </div>
             )}

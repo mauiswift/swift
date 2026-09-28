@@ -528,6 +528,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
   const canTradeUsdtForPhp = selectedCollectionCurrency === 'PHP';
   const isKoreanWallet = language === 'ko';
+  const tx = (en: string, ko: string) => (isKoreanWallet ? ko : en);
   const sharedWalletIsPrimary = Boolean(
     !cryptoOnly
     && !isSuperAdmin
@@ -563,25 +564,19 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       : getWalletDepositDestinations(selectedCollectionCurrency, depositAccounts),
     [selectedCollectionCurrency, depositAccounts, isKrwFlow, assignedKrwAccount],
   );
-  const walletTitle = cryptoOnly ? 'Cryptocurrency' : (isKoreanWallet ? '지갑' : 'Wallet');
+  const walletTitle = cryptoOnly ? tx('Cryptocurrency', '암호화폐') : tx('Wallet', '지갑');
   const walletSubtitle = cryptoOnly
-    ? 'Manage your USDT balance, buy and sell cryptocurrency, send funds, and review crypto activity.'
-    : isKoreanWallet
-      ? 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
-      : `Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
+    ? tx('Manage your USDT balance, buy and sell cryptocurrency, send funds, and review crypto activity.', 'USDT 잔액을 관리하고, 암호화폐를 사고 팔고, 자금을 보내고, 거래 활동을 확인하세요.')
+    : tx(`Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`, 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.');
   const collectionWalletLabel = sharedWalletIsPrimary
-    ? isKoreanWallet ? '공유 조직 지갑' : 'Shared organization wallet'
-    : isKoreanWallet ? `${selectedCollectionCurrency} 지갑` : `${selectedCollectionCurrency} Wallet`;
-  const fundWalletTitle = isKoreanWallet ? '은행 계좌이체로 자금 충전' : 'Fund Wallet via bank transfer';
-  const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
-  const withdrawBankTitle = isKrwFlow
-    ? '출금'
-    : 'Withdraw PHP by Bank Transfer';
-  const withdrawSubmitLabel = isKrwFlow
-    ? '출금'
-    : `Withdraw ${selectedCollectionCurrency}`;
-  const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
-  const usdtWalletLabel = isKoreanWallet ? '내 USDT 지갑' : 'Your USDT Wallet';
+    ? tx('Shared organization wallet', '공유 조직 지갑')
+    : tx(`${selectedCollectionCurrency} Wallet`, `${selectedCollectionCurrency} 지갑`);
+  const fundWalletTitle = tx('Fund Wallet via bank transfer', '은행 계좌이체로 자금 충전');
+  const withdrawTitle = tx('Withdraw to Bank Account', '한국 은행 계좌로 출금');
+  const withdrawBankTitle = tx('Withdraw PHP by Bank Transfer', '출금');
+  const withdrawSubmitLabel = isKrwFlow ? tx('Withdraw', '출금') : tx(`Withdraw ${selectedCollectionCurrency}`, `출금 ${selectedCollectionCurrency}`);
+  const rateLabel = tx('Current Rate', '현재 환율');
+  const usdtWalletLabel = tx('Your USDT Wallet', '내 USDT 지갑');
 
   // PHP Deposit Request form state
   const [depositAmount, setDepositAmount] = useState('');
@@ -643,13 +638,13 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         : phpBalance;
 
     if (!frozenBalance) {
-      toast.error(`Unable to verify your ${normalizedCurrency} wallet balance. Refresh the page before ${actionLabel.toLowerCase()}.`);
+      toast.error(tx(`Unable to verify your ${normalizedCurrency} wallet balance. Refresh the page before ${actionLabel.toLowerCase()}.`, `${normalizedCurrency} 지갑 잔액을 확인할 수 없습니다. 페이지를 새로고침한 뒤 ${actionLabel.toLowerCase()}를 다시 시도하세요.`));
       return false;
     }
 
     if (frozenBalance?.is_frozen) {
       setWalletFrozenDialogOpen(true);
-      toast.error(`Your ${normalizedCurrency} wallet is frozen. ${actionLabel} is unavailable until it is unfrozen.`);
+      toast.error(tx(`Your ${normalizedCurrency} wallet is frozen. ${actionLabel} is unavailable until it is unfrozen.`, `${normalizedCurrency} 지갑이 정지 상태입니다. ${actionLabel}는 해제될 때까지 사용할 수 없습니다.`));
       return false;
     }
 

@@ -37,20 +37,32 @@ export default function DisbursementsPage() {
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
   const isKorean = language === 'ko';
-  const ui = isKorean ? {
-    title: '출금', balance: '잔액', send: '자금 보내기', history: '기록', batch: '일괄 처리',
-    range: '기간:', last7: '최근 7일', status: '상태:', all: '전체', search: '검색...',
-    total: '총 건수', average: '평균 금액', totalAmount: '총 금액', transactions: '거래 내역',
-    empty: '출금 내역이 없습니다', disbursement: '출금', reference: '가맹점 참조 번호', date: '날짜',
-    statusLabel: '상태', registered: '등록:', settled: '정산:', noBatch: '일괄 처리 내역이 없습니다',
-    upload: '파일을 업로드하여 여러 출금을 한 번에 처리하세요.', importFile: '파일에서 가져오기',
-  } : {
-    title: 'Disbursements', balance: 'Balance left', send: 'Send Funds', history: 'History', batch: 'Batch Processing',
-    range: 'Range:', last7: 'Last 7 days', status: 'Status:', all: 'All', search: 'Search...',
-    total: 'Total count', average: 'Average amount', totalAmount: 'Total amount', transactions: 'Transactions history',
-    empty: 'No disbursement history found.', disbursement: 'Disbursement', reference: 'Merchant reference number', date: 'Date',
-    statusLabel: 'Status', registered: 'Registered:', settled: 'Settled:', noBatch: 'No batch processing found',
-    upload: 'Upload a file to process multiple disbursements at once.', importFile: 'Import from file',
+  const tx = (en: string, ko: string) => (isKorean ? ko : en);
+  const ui = {
+    title: tx('Disbursements', '출금'),
+    balance: tx('Balance left', '잔액'),
+    send: tx('Send Funds', '자금 보내기'),
+    history: tx('History', '기록'),
+    batch: tx('Batch Processing', '일괄 처리'),
+    range: tx('Range:', '기간:'),
+    last7: tx('Last 7 days', '최근 7일'),
+    status: tx('Status:', '상태:'),
+    all: tx('All', '전체'),
+    search: tx('Search...', '검색...'),
+    total: tx('Total count', '총 건수'),
+    average: tx('Average amount', '평균 금액'),
+    totalAmount: tx('Total amount', '총 금액'),
+    transactions: tx('Transactions history', '거래 내역'),
+    empty: tx('No disbursement history found.', '출금 내역이 없습니다'),
+    disbursement: tx('Disbursement', '출금'),
+    reference: tx('Merchant reference number', '가맹점 참조 번호'),
+    date: tx('Date', '날짜'),
+    statusLabel: tx('Status', '상태'),
+    registered: tx('Registered:', '등록:'),
+    settled: tx('Settled:', '정산:'),
+    noBatch: tx('No batch processing found', '일괄 처리 내역이 없습니다'),
+    upload: tx('Upload a file to process multiple disbursements at once.', '파일을 업로드하여 여러 출금을 한 번에 처리하세요.'),
+    importFile: tx('Import from file', '파일에서 가져오기'),
   };
   const [mainTab, setMainTab] = useState('history');
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
@@ -163,7 +175,7 @@ export default function DisbursementsPage() {
             disabled={!disbursementEnabled}
             className="h-11 bg-[#111111] text-white px-6 rounded-lg font-semibold text-[14px] flex items-center gap-3 shadow-lg hover:bg-black transition-all"
           >
-            {isSuperAdmin ? ui.send : 'Super admin only'}
+            {isSuperAdmin ? ui.send : tx('Super admin only', '슈퍼 관리자만 사용 가능')}
             <ChevronDown size={16} />
           </button>
         </div>
