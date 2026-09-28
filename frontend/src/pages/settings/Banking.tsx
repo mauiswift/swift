@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { KRW_BANKS } from '@/config/krw-banks';
 import BankLogo from '@/components/BankLogo';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const KOREA_CHANNELS = [

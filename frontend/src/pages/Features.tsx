@@ -32,6 +32,7 @@ import {
   Terminal,
   Layers,
   BadgeCheck,
+  Bot,
 } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL } from '@/lib/brand';
 

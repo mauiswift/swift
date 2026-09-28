@@ -21,8 +21,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import BankLogo from '@/components/BankLogo';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { client } from '@/lib/api';
 import { fetchPaymentChannels, type PaymentChannels } from '@/lib/paymentChannels';
 import {
@@ -40,7 +40,6 @@ import {
   ResponsiveSelect,
 } from '@/components/ResponsiveForm';
 import { ResponsiveCard, ResponsiveAlert } from '@/components/ResponsiveCards';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { fmtCurrency } from '@/lib/format';
 
 interface PaymentLink {

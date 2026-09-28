@@ -25,6 +25,7 @@ import {
 import { ResponsiveInput } from '@/components/ResponsiveForm';
 import { ResponsiveCard, ResponsiveBadge } from '@/components/ResponsiveCards';
 import BankLogo from '@/components/BankLogo';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface Bank {
   code: string;

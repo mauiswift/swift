@@ -583,7 +583,12 @@ export default function Checkout() {
       return [currency, response.data as SwiftPayCurrencyQuote] as const;
     }))
       .then(entries => {
-        if (!cancelled) setSwiftPayQuotes(Object.fromEntries(entries.filter(Boolean)) as Partial<Record<'USD' | 'EUR', SwiftPayCurrencyQuote>>);
+        if (!cancelled) {
+          const filteredEntries = entries.filter(
+            (entry): entry is readonly ['USD' | 'EUR', SwiftPayCurrencyQuote] => Boolean(entry),
+          );
+          setSwiftPayQuotes(Object.fromEntries(filteredEntries) as Partial<Record<'USD' | 'EUR', SwiftPayCurrencyQuote>>);
+        }
       })
       .catch(() => {
         if (!cancelled) setSwiftPayQuotes({});

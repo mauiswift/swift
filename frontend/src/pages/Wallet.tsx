@@ -103,7 +103,15 @@ const DEPOSIT_DESTINATIONS = [
 
 const getWalletDepositDestinations = (
   currency: string,
-  configuredAccounts: Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string }>,
+  configuredAccounts: Array<{
+    value: string;
+    label: string;
+    account_number: string;
+    account_name: string;
+    currency: string;
+    swift_code?: string;
+    bank_code?: string;
+  }>,
 ) => {
   if (currency === 'KRW') return configuredAccounts.filter(account => account.currency === 'KRW');
   return configuredAccounts.filter(account => account.currency === currency);
@@ -492,6 +500,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [vipGold, setVipGold] = useState(false);
   const { user, platformBranding, loading: authLoading, isSuperAdmin } = useAuth();
   const { language } = useLanguage();
+  const isKoreanWallet = language === 'ko';
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -521,7 +530,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const buyTradeKeyRef = useRef<string | null>(null);
   const sellTradeKeyRef = useRef<string | null>(null);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
-  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; minimum_amount?: number }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
+  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; minimum_amount?: number; bank_name?: string }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
   const [assignedKrwAccount, setAssignedKrwAccount] = useState<typeof depositAccounts[number] | null>(null);
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');

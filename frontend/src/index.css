@@ -137,6 +137,13 @@
     margin-inline: auto;
   }
 
+  .page-enter {
+    width: 100%;
+    max-width: 80rem;
+    min-width: 0;
+    margin-inline: auto;
+  }
+
   .app-panel {
     border: 1px solid rgb(226 232 240 / 0.9);
     border-radius: 1.25rem;
@@ -1608,7 +1615,11 @@ animation: app-loading-exit var(--dur-med) var(--ease-out) forwards;
   }
 }
 .page-enter {
-animation: page-enter 420ms var(--ease-out) both;
+  width: 100%;
+  max-width: 80rem;
+  min-width: 0;
+  margin-inline: auto;
+  animation: page-enter 420ms var(--ease-out) both;
 }
 
 /* ── Content Appear ── */

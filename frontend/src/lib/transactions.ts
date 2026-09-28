@@ -87,17 +87,17 @@ export function isPendingTransaction(status: string): boolean {
 
 export function getTransactionStatusLabel(
   status: TransactionStatus,
-  language: 'en' | 'ko' = 'en',
+  language: 'en' | 'ko' | 'zh' = 'en',
 ): string {
-  const labels: Record<TransactionStatus, { en: string; ko: string }> = {
-    paid: { en: 'Paid', ko: '결제 완료' },
-    pending: { en: 'Pending', ko: '대기 중' },
-    processing: { en: 'Processing', ko: '처리 중' },
-    failed: { en: 'Failed', ko: '실패' },
-    rejected: { en: 'Rejected', ko: '거부됨' },
-    expired: { en: 'Expired', ko: '만료됨' },
-    cancelled: { en: 'Cancelled', ko: '취소됨' },
-    inactive: { en: 'Unknown', ko: '알 수 없음' },
+  const labels: Record<TransactionStatus, { en: string; ko: string; zh: string }> = {
+    paid: { en: 'Paid', ko: '결제 완료', zh: '已付款' },
+    pending: { en: 'Pending', ko: '대기 중', zh: '待处理' },
+    processing: { en: 'Processing', ko: '처리 중', zh: '处理中' },
+    failed: { en: 'Failed', ko: '실패', zh: '失败' },
+    rejected: { en: 'Rejected', ko: '거부됨', zh: '已拒绝' },
+    expired: { en: 'Expired', ko: '만료됨', zh: '已过期' },
+    cancelled: { en: 'Cancelled', ko: '취소됨', zh: '已取消' },
+    inactive: { en: 'Unknown', ko: '알 수 없음', zh: '未知' },
   };
   return labels[status][language];
 }

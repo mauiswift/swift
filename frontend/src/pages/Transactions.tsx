@@ -110,26 +110,6 @@ export default function Transactions() {
     customerFallback: 'Customer not provided', descriptionFallback: 'Payment transaction',
     showing: 'Showing', of: 'of', activeFilters: ' filters active', transactionCount: ' transactions', clearFilters: 'Clear filters',
   };
-    title: '거래 내역', description: '결제 활동, 상태 및 고객 정보를 실시간으로 확인하세요.',
-    live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
-    search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',
-    allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
-    transaction: '거래', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', created: '생성', paid: '결제 완료', actions: '작업',
-    success: '성공', processing: '처리 중', failed: '실패', noResultsHint: '필터를 변경하거나 새 결제를 만들어 보세요.',
-    invoiceType: '인보이스', qrType: 'QR 결제', paymentLinkType: '결제 링크', type: '유형',
-    customerFallback: '고객 정보 없음', descriptionFallback: '결제 거래',
-    showing: '표시 중', of: '/', activeFilters: '개 필터 적용', transactionCount: '건의 거래', clearFilters: '필터 초기화',
-  } : {
-    title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
-    live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
-    search: 'Search by ID, description, customer...', status: 'Status', allStatus: 'All Status',
-    allTypes: 'All Types', noTransactions: 'No transactions found',
-    transaction: 'Transaction', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', created: 'Created', paid: 'Paid', actions: 'Actions',
-    success: 'Success', processing: 'Processing', failed: 'Failed', noResultsHint: 'Try changing filters or create a new payment to get started.',
-    invoiceType: 'Invoice', qrType: 'QR payment', paymentLinkType: 'Payment link', type: 'Type',
-    customerFallback: 'Customer not provided', descriptionFallback: 'Payment transaction',
-    showing: 'Showing', of: 'of', activeFilters: ' filters active', transactionCount: ' transactions', clearFilters: 'Clear filters',
-  };
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);

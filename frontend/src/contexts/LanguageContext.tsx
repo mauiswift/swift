@@ -27,7 +27,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     if (typeof navigator !== 'undefined') {
-      return detectBrowserLanguage(navigator.languages ?? navigator.language);
+      const browserLanguages = Array.isArray(navigator.languages)
+        ? [...navigator.languages]
+        : [navigator.language];
+      return detectBrowserLanguage(browserLanguages);
     }
 
     return 'ko';
