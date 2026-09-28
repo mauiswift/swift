@@ -65,16 +65,14 @@ class DisbursementsService(BaseService[Disbursements]):
         """
         Calculate the processing fee for a disbursement.
 
-        Uses user-configured withdrawal fees if available, otherwise uses defaults:
+        Uses user-configured withdrawal fees if available, otherwise falls back to
+        the product defaults for the supported fiat/crypto wallet currencies.
         - PHP: 15.0
         - KRW: 1500.0
         - USDT: 1.0
         - CNY: 10.0
         - USD: 1.0
         """
-        if not FEES_ENABLED:
-            return 0.0
-
         currency_upper = str(currency or "PHP").strip().upper()
         if currency_upper not in SUPPORTED_COLLECTION_CURRENCIES:
             raise ValueError(f"Unsupported disbursement currency: {currency_upper}")

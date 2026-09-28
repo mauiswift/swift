@@ -99,7 +99,8 @@ async def get_admin_user(db: AsyncSession, user_id: str) -> Optional[AdminUser]:
         .where(AdminUser.telegram_id.in_(_user_id_variants(user_id)))
         .limit(1)
     )
-    return result.scalars().first()
+    admin_user = result.scalars().first()
+    return admin_user if isinstance(admin_user, AdminUser) else None
 
 
 async def get_user_withdrawal_fee(
@@ -117,8 +118,18 @@ async def get_user_withdrawal_fee(
     if not user:
         return None
     value = getattr(user, field_name, None)
+    if value is None or isinstance(value, bool):
+        return None
+    if not isinstance(value, (int, float)):
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
     try:
-        return max(0.0, float(value)) if value is not None else None
+        numeric_value = float(value)
+        if not math.isfinite(numeric_value):
+            return None
+        return max(0.0, numeric_value)
     except (TypeError, ValueError):
         return None
 
@@ -715,10 +726,12 @@ async def set_additional_collection_fee_percent(db: AsyncSession, percent: float
 
 
 async def get_conversion_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
-    """Return the effective exchange-rate commission as a percentage points value."""
-    if not FEES_ENABLED:
-        return 0.0
+    """Return the effective exchange-rate commission as a percentage points value.
 
+    The default conversion fee is part of the product's standard wallet behavior.
+    If a deployment explicitly turns fee enforcement off, the app can still keep the
+    default schedule as a fallback for user-visible quote calculations and payout logic.
+    """
     value = await _get_setting(db, CONVERSION_FEE_PERCENT_KEY)
     percent = _fee_percent(value, default=DEFAULT_CONVERSION_FEE_PERCENT)
     if user_id:

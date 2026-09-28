@@ -70,6 +70,7 @@ interface Transaction {
   bank_name?: string;
   bank_account_number?: string;
   bank_account_name?: string;
+  toss_deep_link?: string;
   usdt_deposit_address?: string | null;
   created_at: string;
 }
@@ -251,6 +252,7 @@ export default function Checkout() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showQRPhModal, setShowQRPhModal] = useState(false);
+  const [qrInstructionApp, setQrInstructionApp] = useState<'toss' | null>(null);
   const openAmount = searchParams.get('open_amount') === '1';
   const [enteredAmount, setEnteredAmount] = useState('');
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
@@ -366,6 +368,25 @@ export default function Checkout() {
       console.error('Failed to open GCash:', err);
       toast.error('Unable to open GCash app. Please scan the QR code to pay.');
     }
+  };
+
+  const openTossPaymentApp = () => {
+    const tossDeepLink = txn?.toss_deep_link?.trim() || 'supertoss://toss/pay';
+    let appOpened = false;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        appOpened = true;
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
+
+    setQrInstructionApp('toss');
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.location.assign(tossDeepLink);
+    window.setTimeout(() => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (!appOpened) setShowQRPhModal(true);
+    }, 1200);
   };
 
   useEffect(() => {
@@ -1145,6 +1166,10 @@ export default function Checkout() {
   }
 
   const qrCodeUrl = normalizeCheckoutQrValue(txn.qr_code_url);
+  const swiftPayQrphUrl = txn.external_id
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.ph'}/checkout/${encodeURIComponent(txn.external_id)}?payment_method=qrph`
+    : '';
+  const tossQrValue = isKrw ? swiftPayQrphUrl : (qrCodeUrl || '');
 
   return (
     <div
@@ -1391,6 +1416,26 @@ export default function Checkout() {
                           )}
                         </div>
                       </div>
+                    )}
+
+                    {isKrw && (
+                      <button
+                        type="button"
+                        onClick={openTossPaymentApp}
+                        className="group flex min-h-20 w-full items-center gap-3 rounded-2xl border border-[#d7e5ff] bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#0064FF] hover:shadow-md"
+                      >
+                        <PaymentBrandLogo
+                          brand="Toss Pay"
+                          logoUrl="/logos/tosspay.png"
+                          size="lg"
+                          className="h-14 w-20 border-0 bg-[#f7f8ff] p-1.5 shadow-none"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-slate-900">Toss Pay</span>
+                          <span className="mt-0.5 block text-[11px] text-slate-500">토스페이에서 열기</span>
+                        </span>
+                        <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#0064FF]" aria-hidden="true" />
+                      </button>
                     )}
 
                     {isKrw && (
@@ -2123,17 +2168,23 @@ export default function Checkout() {
         <DialogContent className="max-w-md">
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="text-center space-y-2">
-              <h2 className="text-xl font-semibold text-slate-900">Scan QR Code to Pay</h2>
+              <h2 className="text-xl font-semibold text-slate-900">
+                {qrInstructionApp === 'toss' ? 'Pay with Toss' : 'Scan QR Code to Pay'}
+              </h2>
               <p className="text-sm text-slate-500">
-                {checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}
+                {qrInstructionApp === 'toss'
+                  ? 'Open Toss, choose QR scan, and scan this QR code to complete payment.'
+                  : checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}
               </p>
             </div>
-            {qrCodeUrl ? (
+            {(qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl) ? (
               <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
-                {/^https?:\/\//i.test(qrCodeUrl) ? (
-                  <img src={qrCodeUrl} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
+                {qrInstructionApp === 'toss' ? (
+                  <QRCodeSVG value={tossQrValue} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
+                ) : /^https?:\/\//i.test(qrCodeUrl || '') ? (
+                  <img src={qrCodeUrl || ''} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
                 ) : (
-                  <QRCodeSVG value={qrCodeUrl} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
+                  <QRCodeSVG value={qrCodeUrl || ''} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
                 )}
               </div>
             ) : null}
