@@ -88,13 +88,15 @@ export default function Layout({ children }: LayoutProps) {
       if (!response.ok || !Number.isFinite(rate) || rate <= 0) {
         throw new Error('Unable to load the live exchange rate');
       }
+      const effectiveRate = Number(response.data?.effective_rate);
       return {
-        rate,
+        rate: Number.isFinite(effectiveRate) ? effectiveRate : rate,
+        feePercent: Number(response.data?.system_fee_percent) || 0,
         source: String(response.data?.source || 'Market'),
       };
     },
-    staleTime: 1000,
-    refetchInterval: 1000,
+    staleTime: 55_000,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
 
@@ -404,7 +406,11 @@ export default function Layout({ children }: LayoutProps) {
               />
               <div className="min-w-0 leading-tight">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                  {language === 'ko' ? '실시간 환율' : 'Live rate'}
+                  {liveRateQuery.data
+                    ? language === 'ko'
+                      ? `실시간 환율 · 수수료 ${liveRateQuery.data.feePercent.toFixed(2)}%`
+                      : `Live rate · ${liveRateQuery.data.feePercent.toFixed(2)}% fee`
+                    : language === 'ko' ? '실시간 환율' : 'Live rate'}
                 </p>
                 <p className="whitespace-nowrap text-[11px] font-semibold text-slate-800">
                   {liveRateQuery.data

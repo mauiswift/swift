@@ -78,6 +78,8 @@ class UsdtPhpRateResponse(BaseModel):
 
 class LiveUsdtPhpRateResponse(BaseModel):
     rate: float
+    effective_rate: float
+    system_fee_percent: float
     source: str
     cached: bool
 
@@ -211,14 +213,14 @@ async def get_usdt_php_rate_endpoint(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/public-exchange-rates")
-async def get_public_exchange_rates():
-    """Return the cached live market rates shown on the public homepage."""
+async def get_public_exchange_rates(db: AsyncSession = Depends(get_db)):
+    """Return live market rates with the configured wallet conversion fee applied."""
     usdt_rates = {
         currency: await get_rate(f"USDT_{currency}")
         for currency in ("PHP", "USD", "EUR", "KRW", "CNY")
     }
     usdt_php = usdt_rates["PHP"]
-    rates = {
+    market_rates = {
         "PHP": 1.0,
         "USDT": usdt_php,
         "USD": usdt_php / usdt_rates["USD"],
@@ -226,10 +228,18 @@ async def get_public_exchange_rates():
         "KRW": usdt_php / usdt_rates["KRW"],
         "CNY": usdt_php / usdt_rates["CNY"],
     }
+    fee_percent = await get_conversion_fee_percent(db)
+    fee_multiplier = max(0.0, 1.0 - fee_percent / 100.0)
+    rates = {
+        currency: rate if currency == "PHP" else rate * fee_multiplier
+        for currency, rate in market_rates.items()
+    }
     return {
         "success": True,
         "base_currency": "PHP",
         "rates": rates,
+        "market_rates": market_rates,
+        "system_fee_percent": fee_percent,
         "source": "CoinGecko",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -269,10 +279,10 @@ async def set_user_service_fee(
 
 
 @router.get("/usdt-php-rate/live", response_model=LiveUsdtPhpRateResponse)
-async def get_live_usdt_php_rate():
+async def get_live_usdt_php_rate(db: AsyncSession = Depends(get_db)):
     """Fetch the real-time USDT→PHP exchange rate from CoinGecko. Publicly accessible.
 
-    Results are cached for 5 minutes to stay within free-tier API limits.
+    Results are cached for 1 minute to limit calls to the free-tier API.
     """
     try:
         rate = await fetch_live_usdt_php_rate()
@@ -283,9 +293,12 @@ async def get_live_usdt_php_rate():
         ) from exc
 
     _, is_cached = _get_exchange_rate_cache_status()
+    fee_percent = await get_conversion_fee_percent(db)
 
     return LiveUsdtPhpRateResponse(
         rate=rate,
+        effective_rate=rate * max(0.0, 1.0 - fee_percent / 100.0),
+        system_fee_percent=fee_percent,
         source="CoinGecko",
         cached=is_cached,
     )

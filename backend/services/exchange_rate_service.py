@@ -20,7 +20,7 @@ COINGECKO_URL = (
     "?ids=tether&vs_currencies=php,usd,eur,gbp,sgd,krw,cny"
 )
 
-CACHE_TTL_SECONDS = 300  # 5 minutes
+CACHE_TTL_SECONDS = 60  # 1 minute
 HISTORY_RETENTION_DAYS = 90  # Keep 90 days of history
 FALLBACK_RATES: Dict[str, float] = {
     "USDT_PHP": 58.0,
@@ -59,7 +59,7 @@ def _get_http() -> httpx.AsyncClient:
 async def fetch_live_usdt_php_rate() -> float:
     """Return the current live USDT→PHP exchange rate (legacy compatibility).
 
-    Uses a 5-minute in-memory cache to avoid excessive calls to the
+    Uses a 1-minute in-memory cache to avoid excessive calls to the
     CoinGecko public API. Raises ``RuntimeError`` if the request fails.
     """
     return await get_rate("USDT_PHP")

@@ -63,6 +63,7 @@ const LIVE_RATE_CURRENCIES = [
 export function LiveExchangeRatesPool() {
   const [rates, setRates] = useState<Record<string, number>>({});
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [systemFeePercent, setSystemFeePercent] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -74,8 +75,9 @@ export function LiveExchangeRatesPool() {
       const data = await response.json();
       setRates(data.rates || {});
       setUpdatedAt(data.updated_at || null);
+      setSystemFeePercent(Number(data.system_fee_percent) || 0);
     } catch {
-      setRates({});
+      // Keep the last successful quote visible when a refresh temporarily fails.
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -84,7 +86,7 @@ export function LiveExchangeRatesPool() {
 
   useEffect(() => {
     void loadRates();
-    const refreshTimer = window.setInterval(() => void loadRates(), 5_000);
+    const refreshTimer = window.setInterval(() => void loadRates(), 60_000);
     return () => window.clearInterval(refreshTimer);
   }, []);
 
@@ -125,13 +127,21 @@ export function LiveExchangeRatesPool() {
                 <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Live</span>
               </div>
               <p className="mt-3 truncate text-base font-semibold leading-tight tabular-nums text-white sm:text-lg">
-                {loading ? '—' : rates[currency.code] ? `₱${formatRate(rates[currency.code])}` : 'Unavailable'}
+                {loading
+                  ? '—'
+                  : Number.isFinite(rates[currency.code])
+                    ? `₱${formatRate(rates[currency.code])}`
+                    : 'Unavailable'}
               </p>
-              <p className="mt-0.5 truncate text-[10px] text-white/45">1 {currency.code} · {currency.label}</p>
+              <p className="mt-0.5 truncate text-[10px] text-white/45">
+                1 {currency.code} · {systemFeePercent === null ? currency.label : `${systemFeePercent.toFixed(2)}% system fee`}
+              </p>
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[10px] leading-relaxed text-white/40">Indicative rates · 1 unit converted to PHP · refreshes every 5 seconds</p>
+        <p className="mt-3 text-[10px] leading-relaxed text-white/40">
+          Indicative rates · converted to PHP after the system conversion fee · refreshes every minute
+        </p>
       </div>
     </section>
   );
