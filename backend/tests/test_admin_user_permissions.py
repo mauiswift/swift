@@ -94,6 +94,24 @@ def test_custom_role_assignment_persists_role_and_all_permission_fields(monkeypa
     assert auth_router._admin_permissions(admin).can_credit_wallet is True
 
 
+def test_custom_super_admin_role_cannot_grant_platform_access_to_merchant(monkeypatch):
+    monkeypatch.setattr(roles_router, "_get_platform_organization", lambda: ("platform", "Platform"))
+    role = CustomRole(
+        name="Merchant Super Admin",
+        is_super_admin=True,
+        can_manage_team=True,
+        can_manage_payments=True,
+    )
+    admin = AdminUser(telegram_id="merchant-staff", organization_id="merchant")
+
+    roles_router._apply_role_permissions(admin, role)
+
+    assert admin.is_super_admin is False
+    assert admin.team_permissions["is_super_admin"] is False
+    assert admin.can_manage_team is True
+    assert auth_router._admin_permissions(admin).is_super_admin is False
+
+
 def test_role_management_requires_super_admin_team_permission():
     restricted_super_admin = UserResponse(
         id="invited-admin",

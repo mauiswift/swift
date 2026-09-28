@@ -13,7 +13,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.roles import PREDEFINED_ROLES
+from core.roles import PREDEFINED_ROLES, ROLE_DESCRIPTIONS
 from models.custom_roles import CustomRole
 from core.database import db_manager
 
@@ -63,6 +63,10 @@ async def initialize_system_roles():
                     if getattr(existing, k, None) != v:
                         setattr(existing, k, v)
                         changed = True
+                description = ROLE_DESCRIPTIONS.get(role_enum, f"Built-in role: {name}")
+                if existing.description != description:
+                    existing.description = description
+                    changed = True
                 if changed:
                     logger.info("Updating system role '%s' to locked configuration", name)
                     await db.commit()
@@ -73,7 +77,7 @@ async def initialize_system_roles():
                 # Create new system role
                 new_role = CustomRole(
                     name=name,
-                    description=f"Built-in role: {name}",
+                    description=ROLE_DESCRIPTIONS.get(role_enum, f"Built-in role: {name}"),
                     color="blue",
                     is_system=True,
                     created_by="system",

@@ -5,7 +5,7 @@ This module defines the standard predefined roles with locked permission combina
 All roles inherit from PredefinedRole and cannot be modified.
 
 Standard Roles:
-- Owner: Full platform access (including super admin)
+- Owner: Full organization access; platform super admin only for the platform organization
 - Admin: All permissions except super admin status
 - Manager: Payments, Disbursements, Reports, Wallet, Transactions, Team management
 - Operator: Payments, Disbursements, Transactions processing
@@ -59,12 +59,12 @@ WALLET_PERMISSION_KEYS = (
 )
 
 ROLE_DESCRIPTIONS = {
-    PredefinedRoleEnum.OWNER: "Full platform access including super admin functions",
-    PredefinedRoleEnum.ADMIN: "All operational permissions except platform-level admin",
-    PredefinedRoleEnum.MANAGER: "Day-to-day operations: payments, disbursements, reports, team",
-    PredefinedRoleEnum.OPERATOR: "Payment and disbursement processing",
-    PredefinedRoleEnum.VIEWER: "Read-only access to reports and transaction history",
-    PredefinedRoleEnum.DEVELOPER: "Developer portal: API keys, webhooks, bot configuration",
+    PredefinedRoleEnum.OWNER: "Full access to one organization; platform-wide access is reserved for the platform owner",
+    PredefinedRoleEnum.ADMIN: "Manage an organization's day-to-day operations, team, and wallet controls",
+    PredefinedRoleEnum.MANAGER: "Manage organization operations, reports, wallet settings, and team access",
+    PredefinedRoleEnum.OPERATOR: "Process organization payments and disbursements and review transactions",
+    PredefinedRoleEnum.VIEWER: "Read organization reports and transaction history without operational controls",
+    PredefinedRoleEnum.DEVELOPER: "Manage organization bot and integration settings without financial controls",
 }
 
 

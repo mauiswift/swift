@@ -255,6 +255,7 @@ class TestRolesService:
             id=1,
             telegram_id="tg_admin_1",
             email="admin@test.com",
+            organization_id="merchant-org",
             is_super_admin=False,
         )
         async_db.add(admin)
@@ -268,10 +269,34 @@ class TestRolesService:
         )
         
         assert updated_admin is not None
-        assert updated_admin.is_super_admin is True
+        assert updated_admin.is_super_admin is False
         assert updated_admin.can_manage_payments is True
         assert updated_admin.can_manage_bot is True
         assert updated_admin.role == "owner"
+        assert await service.get_admin_role("1") is PredefinedRoleEnum.OWNER
+
+    @pytest.mark.asyncio
+    async def test_assign_owner_role_is_super_admin_only_in_platform_organization(self, async_db):
+        from core.config import settings
+
+        platform_org_id = str(getattr(settings, "platform_organization_id", "swiftpay-ph"))
+        admin = AdminUser(
+            id=4,
+            telegram_id="platform_owner",
+            email="platform-owner@test.com",
+            organization_id=platform_org_id,
+            is_super_admin=False,
+        )
+        async_db.add(admin)
+        await async_db.commit()
+
+        updated_admin = await RolesService(async_db).assign_predefined_role(
+            "4",
+            PredefinedRoleEnum.OWNER,
+        )
+
+        assert updated_admin is not None
+        assert updated_admin.is_super_admin is True
 
     @pytest.mark.asyncio
     async def test_assign_operator_role(self, async_db):
@@ -434,8 +459,8 @@ class TestPermissionMatrix:
             permission_counts[role.value] = count
         
         # Verify expected counts (based on definitions)
-        assert permission_counts["owner"] == 9  # All permissions
-        assert permission_counts["admin"] == 8  # All except super_admin
+        assert permission_counts["owner"] == 13  # All permissions
+        assert permission_counts["admin"] == 12  # All except super_admin
         assert permission_counts["manager"] == 6  # Payments, disbursements, reports, wallet, transactions, team
         assert permission_counts["operator"] == 3  # Limited
         assert permission_counts["viewer"] == 2  # Read-only

@@ -1354,7 +1354,7 @@ async def _get_store_collection_currency(db: AsyncSession, chat_id: str) -> str:
     result = await db.execute(
         select(MerchantApiConfig.collection_currency).where(
             MerchantApiConfig.organization_id == admin.organization_id
-        ).order_by(MerchantApiConfig.id.asc()).limit(1)
+        ).order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc()).limit(1)
     )
     currency = _first_scalar(result)
     return currency.upper() if currency and currency.upper() in {"PHP", "CNY", "KRW"} else "PHP"

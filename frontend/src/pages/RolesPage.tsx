@@ -331,7 +331,8 @@ export default function RolesPage() {
           <p className="text-xs text-muted-foreground leading-relaxed">
             Role presets are permission templates fetched from the server. Applying a preset to an admin instantly
             updates all their permissions to match the role. You can still fine-tune individual permissions afterward
-            in the Admin Management page.
+            in the Admin Management page. Owner access is organization-scoped; platform super-admin access only applies
+            within the platform organization. Approval and wallet-control permissions do not grant access by themselves.
           </p>
         </div>
 
@@ -378,7 +379,7 @@ export default function RolesPage() {
                   onChange={(event) => setRoleForm((current) => ({ ...current, is_super_admin: event.target.checked }))}
                   className="h-4 w-4 accent-amber-600"
                 />
-                Super admin access
+                Super admin access (platform organization only)
               </label>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 {Array.from(new Set(PERMISSION_DEFINITIONS.map(({ group }) => group))).map((group) => (
@@ -452,7 +453,11 @@ export default function RolesPage() {
 
                     {/* Permission summary */}
                     <div className="flex flex-wrap gap-1.5 mb-4">
-                      {role.permissions.is_super_admin && (
+                      {role.name === 'owner' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border bg-blue-500/15 border-blue-500/30 text-blue-400 text-[10px] font-medium">
+                          <Crown className="h-2.5 w-2.5" /> Organization Owner
+                        </span>
+                      ) : role.permissions.is_super_admin && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border bg-amber-500/15 border-amber-500/30 text-amber-400 text-[10px] font-medium">
                           <Crown className="h-2.5 w-2.5" /> Super Admin
                         </span>

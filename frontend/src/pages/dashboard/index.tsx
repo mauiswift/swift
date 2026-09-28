@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useDashboardData } from './shared';
 import DashboardDesktop from './Desktop';
 import DashboardMobile from './Mobile';
+import SystemAdminDashboard from './SystemAdminDashboard';
 
 function DashboardLoadingState({ connected }: { connected: boolean }) {
   const placeholder = 'rounded-xl bg-slate-200/80';
@@ -81,6 +82,10 @@ function DashboardLoadingState({ connected }: { connected: boolean }) {
 
 export default function Dashboard() {
   const data = useDashboardData();
+
+  if (data.isSuperAdmin) {
+    return <SystemAdminDashboard />;
+  }
 
   if (data.initialLoading) {
     return <DashboardLoadingState connected={data.connected} />;

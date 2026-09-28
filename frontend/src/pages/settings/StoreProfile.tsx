@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
+import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, ShoppingBag, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +12,10 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 
 export default function StoreProfile() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
+  const canManageProfile = Boolean(
+    isSuperAdmin || user?.permissions?.can_manage_payments || user?.permissions?.can_manage_team,
+  );
   const { collectionCurrency: sharedCollectionCurrency, enabledCurrencies, setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
 
   const [loading, setLoading] = useState(true);
@@ -23,9 +26,6 @@ export default function StoreProfile() {
   const [logoUrl, setLogoUrl] = useState('');
   const [slug, setSlug] = useState('');
   const [storeSlug, setStoreSlug] = useState('3');
-  const [shopUrl, setShopUrl] = useState('https://kr.swiftpay.site/');
-  const [platform, setPlatform] = useState('Custom');
-  const [dailyStats, setDailyStats] = useState(false);
   const [collectionCurrency, setCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
   const [savedCollectionCurrency, setSavedCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
   const [permanentLinks, setPermanentLinks] = useState<Array<{ currency: string; url: string }>>([]);
@@ -76,6 +76,7 @@ export default function StoreProfile() {
   }, []);
 
   const handleSave = async () => {
+    if (!canManageProfile) return;
     setSaving(true);
     try {
       // If switching to KRW, validate minimum balance requirement first
@@ -129,6 +130,7 @@ export default function StoreProfile() {
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canManageProfile) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -193,7 +195,7 @@ export default function StoreProfile() {
 
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !canManageProfile}
             data-guide-target="store-profile-save"
             className="app-touch-target flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-6 text-sm font-semibold text-white shadow-lg shadow-[#FF6B00]/20 transition-all hover:bg-[#E66000] disabled:opacity-50 sm:w-auto sm:px-8"
           >
@@ -202,12 +204,18 @@ export default function StoreProfile() {
           </button>
         </div>
 
+        {!canManageProfile && (
+          <p role="note" className="mb-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            You have read-only access to this shared store profile. Ask an organization manager to make changes.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-10 items-start">
           {/* Main Card */}
           <div className="space-y-10">
             <div className="app-panel p-5 sm:p-8">
               <p className="mb-8 max-w-2xl text-sm leading-relaxed text-slate-500">
-                Personalize your online store with a unique shop name, custom URL, and the platform that best suits your business needs.
+                Manage the shared merchant name, collection currency, permanent payment link, and store logo.
               </p>
 
               <div className="max-w-2xl space-y-6">
@@ -217,33 +225,9 @@ export default function StoreProfile() {
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
                     placeholder="e.g. Acme Corp"
+                    disabled={!canManageProfile}
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                   />
-                </div>
-
-                <div>
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop URL</label>
-                  <input
-                    value={shopUrl}
-                    onChange={(e) => setShopUrl(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Platform</label>
-                  <div className="relative">
-                    <select
-                      value={platform}
-                      onChange={(e) => setPlatform(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
-                    >
-                      <option>Custom</option>
-                      <option>Shopify</option>
-                      <option>WooCommerce</option>
-                    </select>
-                    <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                  </div>
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
@@ -253,6 +237,7 @@ export default function StoreProfile() {
                     <select
                       value={collectionCurrency}
                       onChange={(e) => setCollectionCurrency(e.target.value)}
+                      disabled={!canManageProfile}
                       className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
                     >
                       {enabledCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
@@ -266,16 +251,6 @@ export default function StoreProfile() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-3 pt-2 border-t border-slate-50 mt-4 pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setDailyStats(!dailyStats)}
-                    className={`relative inline-block w-10 h-5.5 rounded-full transition-all duration-300 ${dailyStats ? 'bg-[#FF6B00]' : 'bg-slate-200'}`}
-                  >
-                    <span className={`absolute top-0.5 ${dailyStats ? 'left-5' : 'left-0.5'} w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm`} />
-                  </button>
-                  <span className="text-[13px] font-semibold text-slate-700">Receive daily stats email</span>
-                </div>
               </div>
             </div>
 
@@ -301,6 +276,7 @@ export default function StoreProfile() {
                       value={slug}
                       onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                       placeholder="my-store"
+                      disabled={!canManageProfile}
                       className="min-w-0 flex-1 basis-40 bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                     />
                   </div>
@@ -356,6 +332,7 @@ export default function StoreProfile() {
                        <span className="text-[12px] text-slate-400 truncate font-medium max-w-[160px]">{logoUrl.split('/').pop()}</span>
                        <button
                         onClick={() => setLogoUrl('')}
+                        disabled={!canManageProfile || saving}
                         className="p-2.5 text-slate-400 hover:text-rose-500 transition-all border border-white bg-white rounded-xl shadow-sm hover:shadow-md"
                        >
                           <Trash2 size={18} />
@@ -379,12 +356,13 @@ export default function StoreProfile() {
                     type="file"
                     accept="image/*"
                     onChange={handleLogoUpload}
+                    disabled={!canManageProfile || saving}
                     className="hidden"
                     id="logo-upload"
                   />
                   <label
                     htmlFor="logo-upload"
-                    className="flex-1 cursor-pointer bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-500 hover:border-[#FF6B00] transition-all flex items-center gap-2"
+                    className={`flex-1 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[14px] text-slate-500 transition-all flex items-center gap-2 ${canManageProfile && !saving ? 'cursor-pointer hover:border-[#FF6B00]' : 'cursor-not-allowed opacity-50'}`}
                   >
                     <ShoppingBag size={18} />
                     {saving ? 'Uploading...' : 'Choose image...'}
@@ -398,6 +376,7 @@ export default function StoreProfile() {
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://example.com/logo.png"
+                  disabled={!canManageProfile}
                   className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
                 <p className="text-[11px] text-slate-400 mt-2">Recommended: Square image, transparent background.</p>

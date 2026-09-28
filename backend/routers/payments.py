@@ -111,8 +111,7 @@ async def get_open_amount_link(
             organization_id = admin.organization_id
             store_name = (admin.organization_name or store_name).strip()
     if organization_id:
-        # Prefer the authenticated user's own store profile. Only fall back to
-        # an unowned organization profile for legacy records.
+        # Store branding and collection currency are organization-wide settings.
         config_query = select(MerchantApiConfig).where(
             MerchantApiConfig.organization_id == organization_id,
             or_(
@@ -120,7 +119,7 @@ async def get_open_amount_link(
                 MerchantApiConfig.user_id.is_(None),
             ),
         ).order_by(
-            (MerchantApiConfig.user_id == str(current_user.id)).desc(),
+            MerchantApiConfig.user_id.is_(None).desc(),
             MerchantApiConfig.id.asc(),
         ).limit(1)
         config_result = await db.execute(config_query)
@@ -1448,9 +1447,12 @@ async def get_checkout_payment(
                     select(MerchantApiConfig)
                     .where(
                         MerchantApiConfig.organization_id == admin.organization_id,
-                        MerchantApiConfig.user_id == str(txn.user_id),
+                        or_(
+                            MerchantApiConfig.user_id.is_(None),
+                            MerchantApiConfig.user_id == str(txn.user_id),
+                        ),
                     )
-                    .order_by(MerchantApiConfig.id.asc())
+                    .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
                     .limit(1)
                 )
                 cfg_res = await db.execute(cfg_stmt)
@@ -1459,7 +1461,7 @@ async def get_checkout_payment(
                     cfg_stmt = (
                         select(MerchantApiConfig)
                         .where(MerchantApiConfig.organization_id == admin.organization_id)
-                        .order_by(MerchantApiConfig.id.asc())
+                        .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
                         .limit(1)
                     )
                     cfg_res = await db.execute(cfg_stmt)

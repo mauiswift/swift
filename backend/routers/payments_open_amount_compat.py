@@ -385,7 +385,7 @@ async def _get_open_amount_link(
                 ),
             )
             .order_by(
-                (MerchantApiConfig.user_id == str(current_user.id)).desc(),
+                MerchantApiConfig.user_id.is_(None).desc(),
                 MerchantApiConfig.id.asc(),
             )
             .limit(1)
@@ -550,9 +550,12 @@ async def get_checkout_payment_compat(
                 select(MerchantApiConfig)
                 .where(
                     MerchantApiConfig.organization_id == admin.organization_id,
-                    MerchantApiConfig.user_id == str(txn.user_id),
+                    or_(
+                        MerchantApiConfig.user_id.is_(None),
+                        MerchantApiConfig.user_id == str(txn.user_id),
+                    ),
                 )
-                .order_by(MerchantApiConfig.id.asc())
+                .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
                 .limit(1)
             )
             config = config_result.scalars().first()
@@ -560,7 +563,7 @@ async def get_checkout_payment_compat(
                 config_result = await db.execute(
                     select(MerchantApiConfig)
                     .where(MerchantApiConfig.organization_id == admin.organization_id)
-                    .order_by(MerchantApiConfig.id.asc())
+                    .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
                     .limit(1)
                 )
                 config = config_result.scalars().first()

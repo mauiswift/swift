@@ -1319,7 +1319,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             api_stmt = (
                 select(MerchantApiConfig)
                 .where(MerchantApiConfig.organization_id == org_id)
-                .order_by(MerchantApiConfig.id.asc())
+                .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
             )
             api_cfg = (await db.execute(api_stmt)).scalars().first()
             if api_cfg:
@@ -1520,7 +1520,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
             api_stmt = (
                 select(MerchantApiConfig)
                 .where(MerchantApiConfig.organization_id == org_id)
-                .order_by(MerchantApiConfig.id.asc())
+                .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
             )
             api_cfg = (await db.execute(api_stmt)).scalars().first()
             if api_cfg:
@@ -1775,7 +1775,7 @@ async def exchange_platform_token(
     api_stmt = (
         select(MerchantApiConfig)
         .where(MerchantApiConfig.organization_id == platform_org_id)
-        .order_by(MerchantApiConfig.id.asc())
+        .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
     )
     api_cfg = (await db.execute(api_stmt)).scalars().first()
     if api_cfg:

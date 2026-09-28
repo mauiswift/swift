@@ -121,7 +121,7 @@ async def get_dashboard_stats(
         currency_result = await db.execute(
             select(MerchantApiConfig.collection_currency)
             .where(MerchantApiConfig.organization_id == current_user.organization_id)
-            .order_by(MerchantApiConfig.id.asc())
+            .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
             .limit(1)
         ) if current_user.organization_id else None
         currency = (currency_result.scalar() if currency_result else None) or "PHP"
@@ -291,7 +291,7 @@ async def _process_xend_request(
         currency_result = await db.execute(
             select(MerchantApiConfig.collection_currency)
             .where(MerchantApiConfig.organization_id == current_user.organization_id)
-            .order_by(MerchantApiConfig.id.asc())
+            .order_by(MerchantApiConfig.user_id.is_(None).desc(), MerchantApiConfig.id.asc())
             .limit(1)
         )
         store_currency = currency_result.scalar()

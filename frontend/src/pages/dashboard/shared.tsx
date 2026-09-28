@@ -383,7 +383,7 @@ export function useDashboardData() {
   const [dataError, setDataError] = useState(false);
 
   const fetchData = useCallback(async (days: RangeKey) => {
-    if (!user) return false;
+    if (!user || isSuperAdmin) return false;
     try {
       const [statsRes, phpRes, usdtRes, krwRes, cnyRes] = await Promise.all([
         client.apiCall.invoke({
@@ -433,17 +433,17 @@ export function useDashboardData() {
       setDataError(true);
       return false;
     }
-  }, [user, collectionCurrency]);
+  }, [user, isSuperAdmin, collectionCurrency]);
 
   const { connected } = usePaymentEvents({
-    enabled: !!user,
+    enabled: !!user && !isSuperAdmin,
     onStatusChange: useCallback(() => { fetchData(range); }, [fetchData, range]),
     onWalletUpdate: useCallback(() => { fetchData(range); }, [fetchData, range]),
     pollInterval: 10000,
   });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isSuperAdmin) return;
     const load = async () => {
       setLoading(true);
       const loaded = await fetchData(range);
@@ -451,7 +451,7 @@ export function useDashboardData() {
       setLoading(false);
     };
     load();
-  }, [user, range, fetchData]);
+  }, [user, isSuperAdmin, range, fetchData]);
 
   const retryFetchData = useCallback(async () => {
     setLoading(true);

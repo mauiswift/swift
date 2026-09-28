@@ -270,19 +270,6 @@ function Navbar() {
   );
 }
 
-// Reserve the hero space while the remote image loads to avoid layout shifts.
-function HeroImage() {
-  return (
-    <div className="relative z-10 aspect-[4/3]">
-      <img
-        src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
-        alt="A smiling businesswoman managing payments on a tablet"
-        className="relative z-[2] h-full w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
-        fetchPriority="high"
-      />
-    </div>
-  );
-}
 
 function SectionIntro({ eyebrow, title, description, center = true }: { eyebrow?: string; title: string; description?: string; center?: boolean }) {
   return (
@@ -462,40 +449,55 @@ function HomePage() {
                 </a>
               </div>
 
-              {/* Hero visual */}
+              {/* Product preview */}
               <div className="relative hidden sm:block">
-                <div className="absolute inset-10 rounded-[2rem] bg-gradient-to-br from-[#fff7ed] via-white to-[#dbeafe] blur-2xl opacity-70" />
-                <HeroImage />
-                {/* Ring card */}
-                <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] text-center">
-                  <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
-                  <div className="flex items-center justify-center">
-                    <div className="relative h-[94px] w-[94px] flex-none">
-                      <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90">
-                        <circle className="stroke-[#e2f5f3]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" />
-                        <circle className="stroke-[#06d6b6]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" strokeLinecap="round" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
-                        <strong className="text-[17px] font-semibold">100%</strong>
-                        <span className="text-[8px] font-semibold uppercase tracking-[0.08em] text-[#007c7c]">Complete</span>
-                      </div>
+                <div className="absolute -inset-5 rounded-[2rem] bg-[#fff4e9]" />
+                <div className="relative z-10 overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white shadow-[0_28px_70px_-32px_rgba(28,26,30,0.28)]">
+                  <div className="flex items-center justify-between border-b border-[#eeeae6] px-6 py-5">
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#1a1a1a]">Payment activity</p>
+                      <p className="mt-1 text-[11px] text-[#78716c]">Sample activity</p>
+                    </div>
+                    <span className="inline-flex items-center gap-2 rounded-full bg-[#e9f7ef] px-3 py-1.5 text-[11px] font-semibold text-[#18794e]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#23a26d]" />All systems operational
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 border-b border-[#eeeae6] bg-[#faf9f7] p-5">
+                    <div className="rounded-lg border border-[#eeeae6] bg-white p-4">
+                      <p className="text-[11px] font-medium text-[#78716c]">Payments collected</p>
+                      <p className="mt-2 text-[23px] font-semibold leading-none text-[#1a1a1a]">₱248,500</p>
+                      <p className="mt-2 text-[11px] text-[#78716c]">Across payment channels</p>
+                    </div>
+                    <div className="rounded-lg border border-[#eeeae6] bg-white p-4">
+                      <p className="text-[11px] font-medium text-[#78716c]">Awaiting settlement</p>
+                      <p className="mt-2 text-[23px] font-semibold leading-none text-[#1a1a1a]">₱32,400</p>
+                      <p className="mt-2 text-[11px] text-[#78716c]">Next payout: tomorrow</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-[11px] text-[#9a9a9a]">0 pending transactions</p>
-                </div>
-                {/* Chip: Collections */}
-                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.07)]">
-                  Collections
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
-                    <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
-                  </span>
-                </div>
-                {/* Chip: Payments */}
-                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.07)]">
-                  Payments
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
-                    <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
-                  </span>
+                  <div className="px-5 py-4">
+                    <div className="mb-3 flex items-center justify-between text-[11px] font-semibold uppercase text-[#78716c]">
+                      <span>Recent payments</span><span>Today</span>
+                    </div>
+                    <div className="divide-y divide-[#f0eeeb]">
+                      {[
+                        { method: 'GCash', reference: 'Order #SP-2048', amount: '₱4,850', color: 'bg-[#e9e9ff] text-[#3730a3]' },
+                        { method: 'Maya', reference: 'Order #SP-2047', amount: '₱2,400', color: 'bg-[#e8f7ef] text-[#18794e]' },
+                        { method: 'QR Ph', reference: 'Order #SP-2046', amount: '₱1,250', color: 'bg-[#fff1e8] text-[#b54708]' },
+                      ].map(payment => (
+                        <div key={payment.reference} className="flex items-center gap-3 py-3">
+                          <span className={`flex h-9 w-9 items-center justify-center rounded-lg text-[10px] font-bold ${payment.color}`}>{payment.method === 'QR Ph' ? 'QR' : payment.method.slice(0, 1)}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[12px] font-semibold text-[#292524]">{payment.method}</p>
+                            <p className="text-[10px] text-[#78716c]">{payment.reference}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[12px] font-semibold text-[#292524]">{payment.amount}</p>
+                            <p className="text-[10px] font-medium text-[#18794e]">Paid</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -9,6 +9,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from core.config import settings
 from models.admin_users import AdminUser
 from core.roles import PERMISSION_KEYS, PredefinedRoleEnum, get_role_permissions, PREDEFINED_ROLES
 
@@ -57,10 +58,14 @@ class RolesService:
                 return None
             
             # Get role permissions
-            permissions = get_role_permissions(role)
+            permission_values = get_role_permissions(role).model_dump()
+            platform_org_id = str(getattr(settings, "platform_organization_id", "swiftpay-ph")).strip()
+            if role is PredefinedRoleEnum.OWNER and admin_user.organization_id != platform_org_id:
+                permission_values["is_super_admin"] = False
             
             for permission in PERMISSION_KEYS:
-                setattr(admin_user, permission, getattr(permissions, permission))
+                setattr(admin_user, permission, permission_values[permission])
+            admin_user.team_permissions = permission_values
             
             # Store the role name for reference
             admin_user.role = role.value
@@ -96,9 +101,16 @@ class RolesService:
             if not admin_user:
                 return None
             
+            platform_org_id = str(getattr(settings, "platform_organization_id", "swiftpay-ph")).strip()
             # Try to match the admin's permission configuration to a predefined role
             for role, permissions in PREDEFINED_ROLES.items():
-                if all(getattr(admin_user, permission, False) is permissions[permission] for permission in PERMISSION_KEYS):
+                expected_permissions = dict(permissions)
+                if role is PredefinedRoleEnum.OWNER and admin_user.organization_id != platform_org_id:
+                    expected_permissions["is_super_admin"] = False
+                if all(
+                    getattr(admin_user, permission, False) is expected_permissions[permission]
+                    for permission in PERMISSION_KEYS
+                ):
                     return role
             
             return None

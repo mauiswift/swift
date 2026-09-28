@@ -121,6 +121,16 @@ def _merchant_user_id(current_user: UserResponse) -> str:
     return str(current_user.id)
 
 
+def _require_store_profile_edit_access(current_user: UserResponse) -> None:
+    permissions = current_user.permissions
+    if not permissions or not (
+        permissions.is_super_admin
+        or permissions.can_manage_payments
+        or permissions.can_manage_team
+    ):
+        raise HTTPException(status_code=403, detail="Permission to manage the merchant store profile is required")
+
+
 async def _get_organization_merchant_config(
     db: AsyncSession,
     organization_id: str,
@@ -161,6 +171,116 @@ async def _get_organization_merchant_config(
     return None
 
 
+async def _get_user_merchant_config(
+    db: AsyncSession,
+    organization_id: str,
+    user_id: str,
+) -> Optional[MerchantApiConfig]:
+    result = await db.execute(
+        select(MerchantApiConfig)
+        .where(
+            MerchantApiConfig.organization_id == organization_id,
+            MerchantApiConfig.user_id == str(user_id),
+        )
+        .order_by(MerchantApiConfig.id.asc())
+        .limit(1)
+    )
+    return result.scalars().first()
+
+
+async def _get_or_create_shared_store_profile(
+    db: AsyncSession,
+    organization_id: str,
+    current_user_id: str,
+    organization_name: Optional[str] = None,
+) -> MerchantApiConfig:
+    shared_result = await db.execute(
+        select(MerchantApiConfig)
+        .where(
+            MerchantApiConfig.organization_id == organization_id,
+            MerchantApiConfig.user_id.is_(None),
+        )
+        .order_by(MerchantApiConfig.id.asc())
+        .limit(1)
+    )
+    shared_config = shared_result.scalars().first()
+    if shared_config:
+        return shared_config
+
+    owner_id = await db.scalar(
+        select(AdminUser.telegram_id)
+        .where(
+            AdminUser.organization_id == organization_id,
+            AdminUser.role == "owner",
+            AdminUser.is_active.is_(True),
+        )
+        .order_by(AdminUser.id.asc())
+        .limit(1)
+    )
+    legacy_config = await _get_organization_merchant_config(
+        db, organization_id, str(owner_id or current_user_id)
+    )
+    if not legacy_config and owner_id and str(owner_id) != str(current_user_id):
+        legacy_config = await _get_organization_merchant_config(
+            db, organization_id, str(current_user_id)
+        )
+
+    shared_config = MerchantApiConfig(
+        organization_id=organization_id,
+        user_id=None,
+        store_name=(legacy_config.store_name if legacy_config else None) or organization_name,
+        store_logo_url=legacy_config.store_logo_url if legacy_config else None,
+        permanent_link_slug=legacy_config.permanent_link_slug if legacy_config else None,
+        store_slug=(legacy_config.store_slug if legacy_config else None) or FIXED_STORE_SLUG,
+        collection_currency=(legacy_config.collection_currency if legacy_config else None) or "PHP",
+        krw_access_granted=bool(legacy_config.krw_access_granted) if legacy_config else False,
+    )
+    if legacy_config and legacy_config.permanent_link_slug:
+        legacy_config.permanent_link_slug = None
+        await db.flush()
+    db.add(shared_config)
+    await db.flush()
+    return shared_config
+
+
+def _build_api_config_response(
+    profile_config: MerchantApiConfig,
+    api_config: MerchantApiConfig,
+) -> ApiConfigResponse:
+    profile_fields = (
+        "store_name",
+        "store_logo_url",
+        "permanent_link_slug",
+        "store_slug",
+        "collection_currency",
+        "krw_access_granted",
+    )
+    api_fields = (
+        "test_access_key",
+        "test_secret_key",
+        "live_access_key",
+        "live_secret_key",
+        "test_callback_url",
+        "test_status_page_mode",
+        "test_external_status_url",
+        "test_success_url",
+        "test_cancel_url",
+        "test_failure_url",
+        "live_callback_url",
+        "live_status_page_mode",
+        "live_external_status_url",
+        "live_success_url",
+        "live_cancel_url",
+        "live_failure_url",
+    )
+    return ApiConfigResponse(
+        organization_id=profile_config.organization_id,
+        user_id=api_config.user_id,
+        **{field: getattr(profile_config, field) for field in profile_fields},
+        **{field: getattr(api_config, field) for field in api_fields},
+    )
+
+
 @router.get("", response_model=ApiConfigResponse)
 async def get_merchant_api_config(
     current_user: UserResponse = Depends(get_current_user),
@@ -169,32 +289,25 @@ async def get_merchant_api_config(
     organization_id = _merchant_organization_id(current_user)
     user_id = _merchant_user_id(current_user)
 
-    config = await _get_organization_merchant_config(db, organization_id, user_id)
-    if not config:
-        random_suffix = secrets.token_hex(3).lower()
-        default_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
-        config = MerchantApiConfig(
-            organization_id=organization_id,
-            user_id=None,
-            store_name=current_user.organization_name,
-            permanent_link_slug=default_slug,
-            store_slug=FIXED_STORE_SLUG,
-        )
-        db.add(config)
-        await db.commit()
-        await db.refresh(config)
-    elif not config.permanent_link_slug:
-        random_suffix = secrets.token_hex(3).lower()
-        config.permanent_link_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
-        await db.commit()
-        await db.refresh(config)
+    profile_config = await _get_or_create_shared_store_profile(
+        db, organization_id, user_id, current_user.organization_name
+    )
+    api_config = await _get_user_merchant_config(db, organization_id, user_id)
+    if not api_config:
+        api_config = profile_config
 
-    if (config.collection_currency or "PHP").upper() in FIXED_STORE_SLUG_CURRENCIES and config.store_slug != FIXED_STORE_SLUG:
-        config.store_slug = FIXED_STORE_SLUG
-        await db.commit()
-        await db.refresh(config)
+    if not profile_config.permanent_link_slug:
+        random_suffix = secrets.token_hex(3).lower()
+        profile_config.permanent_link_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
 
-    return config
+    if (profile_config.collection_currency or "PHP").upper() in FIXED_STORE_SLUG_CURRENCIES and profile_config.store_slug != FIXED_STORE_SLUG:
+        profile_config.store_slug = FIXED_STORE_SLUG
+
+    await db.commit()
+    await db.refresh(profile_config)
+    if api_config is not profile_config:
+        await db.refresh(api_config)
+    return _build_api_config_response(profile_config, api_config)
 
 
 @router.patch("", response_model=ApiConfigResponse)
@@ -206,34 +319,41 @@ async def update_merchant_api_config(
     organization_id = _merchant_organization_id(current_user)
     user_id = _merchant_user_id(current_user)
 
-    config = await _get_organization_merchant_config(db, organization_id, user_id)
-
-    if not config:
-        config = MerchantApiConfig(organization_id=organization_id, user_id=None, store_slug=FIXED_STORE_SLUG)
-        db.add(config)
+    profile_config = await _get_or_create_shared_store_profile(
+        db, organization_id, user_id, current_user.organization_name
+    )
+    api_config = await _get_user_merchant_config(db, organization_id, user_id) or profile_config
 
     values = payload.model_dump(exclude_unset=True)
-    requested_store_slug = values.get("store_slug")
-    # The internal store slug is user-scoped; only the public permanent slug
-    # must remain globally unique because it is used in /pay/{slug} URLs.
+    requested_store_slug = values.pop("store_slug", None)
+    profile_field_names = {
+        "store_name",
+        "store_logo_url",
+        "permanent_link_slug",
+        "collection_currency",
+    }
+    profile_values = {field: value for field, value in values.items() if field in profile_field_names}
+    api_values = {field: value for field, value in values.items() if field not in profile_field_names}
     values.pop("store_slug", None)
-    requested_permanent_slug = values.get("permanent_link_slug")
+    if profile_values or requested_store_slug is not None:
+        _require_store_profile_edit_access(current_user)
+    requested_permanent_slug = profile_values.get("permanent_link_slug")
     if requested_permanent_slug:
         requested_permanent_slug = str(requested_permanent_slug).strip()
-        values["permanent_link_slug"] = requested_permanent_slug or None
+        profile_values["permanent_link_slug"] = requested_permanent_slug or None
         if requested_permanent_slug:
             conflict = await db.scalar(
                 select(MerchantApiConfig.id).where(
                     MerchantApiConfig.permanent_link_slug == requested_permanent_slug,
-                    MerchantApiConfig.id != config.id if config.id is not None else True,
+                    MerchantApiConfig.id != profile_config.id if profile_config.id is not None else True,
                 )
             )
             if conflict is not None:
                 await db.rollback()
                 raise HTTPException(status_code=409, detail="That public store slug is already in use. Choose another slug.")
-    if "collection_currency" in values:
-        requested_currency = str(values["collection_currency"]).upper()
-        values["collection_currency"] = requested_currency
+    if "collection_currency" in profile_values:
+        requested_currency = str(profile_values["collection_currency"]).upper()
+        profile_values["collection_currency"] = requested_currency
         # Validate against settings without flushing a newly-created config.
         with db.no_autoflush:
             enabled_currencies = await get_enabled_collection_currencies(db)
@@ -241,21 +361,25 @@ async def update_merchant_api_config(
             raise HTTPException(status_code=400, detail="That collection currency is currently disabled by the main administrator")
 
         if requested_currency == "KRW":
-            config.krw_access_granted = True
+            profile_config.krw_access_granted = True
 
-    effective_currency = str(values.get("collection_currency", config.collection_currency or "PHP")).upper()
+    effective_currency = str(profile_values.get("collection_currency", profile_config.collection_currency or "PHP")).upper()
     if effective_currency in FIXED_STORE_SLUG_CURRENCIES:
-        config.store_slug = FIXED_STORE_SLUG
+        profile_config.store_slug = FIXED_STORE_SLUG
     elif requested_store_slug is not None:
-        config.store_slug = str(requested_store_slug).strip() or FIXED_STORE_SLUG
+        profile_config.store_slug = str(requested_store_slug).strip() or FIXED_STORE_SLUG
 
-    for field, value in values.items():
-        setattr(config, field, value)
+    for field, value in profile_values.items():
+        setattr(profile_config, field, value)
+    for field, value in api_values.items():
+        setattr(api_config, field, value)
 
     try:
         await db.commit()
-        await db.refresh(config)
-        return config
+        await db.refresh(profile_config)
+        if api_config is not profile_config:
+            await db.refresh(api_config)
+        return _build_api_config_response(profile_config, api_config)
     except IntegrityError:
         logger.warning("Duplicate permanent link slug for organization %s", organization_id)
         await db.rollback()
@@ -379,7 +503,14 @@ async def upload_merchant_logo(
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a new logo for the merchant organization."""
+    _require_store_profile_edit_access(current_user)
     organization_id = _merchant_organization_id(current_user)
+    profile_config = await _get_or_create_shared_store_profile(
+        db,
+        organization_id,
+        _merchant_user_id(current_user),
+        current_user.organization_name,
+    )
 
     # Define upload directory
     uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", "logos")
@@ -397,23 +528,7 @@ async def upload_merchant_logo(
 
     logo_url = f"/uploads/logos/{filename}"
 
-    # Update API config
-    stmt = select(MerchantApiConfig).where(
-        MerchantApiConfig.organization_id == organization_id,
-        MerchantApiConfig.user_id == _merchant_user_id(current_user),
-    ).order_by(MerchantApiConfig.id.asc()).limit(1)
-    result = await db.execute(stmt)
-    config = result.scalars().first()
-
-    if not config:
-        config = MerchantApiConfig(
-            organization_id=organization_id,
-            user_id=_merchant_user_id(current_user),
-            store_slug=FIXED_STORE_SLUG,
-        )
-        db.add(config)
-
-    config.store_logo_url = logo_url
+    profile_config.store_logo_url = logo_url
     await db.commit()
 
     return {"success": True, "logo_url": logo_url}
