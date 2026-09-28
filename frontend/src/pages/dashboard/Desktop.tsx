@@ -19,7 +19,7 @@ import {
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { DashboardPanel, DashboardStatCard, DashboardWorkspaceActions, DailyVolumeChart } from './shared';
+import { DashboardPanel, DashboardStatCard, DashboardWorkspaceActions, DailyVolumeChart, LiveExchangeRatesPool } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -122,6 +122,10 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
             <Button type="button" variant="outline" size="sm" onClick={retryFetchData} disabled={loading}>{ui.retry}</Button>
           </div>
         )}
+
+        <div className="mb-6">
+          <LiveExchangeRatesPool />
+        </div>
 
         <div className="mb-8">
           <div className="relative inline-block">

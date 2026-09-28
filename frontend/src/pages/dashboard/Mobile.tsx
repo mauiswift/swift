@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
 import Layout from '@/components/Layout';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { DashboardPanel, DashboardStatCard, DashboardWorkspaceActions, type DashboardAction } from './shared';
+import { DashboardPanel, DashboardStatCard, DashboardWorkspaceActions, LiveExchangeRatesPool, type DashboardAction } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -125,6 +125,8 @@ export default function DashboardMobile({
             <Button type="button" variant="outline" size="sm" onClick={retryFetchData} disabled={loading}>{ui.retry}</Button>
           </div>
         )}
+
+        <LiveExchangeRatesPool />
 
         <section aria-label={ui.range} className="rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
           <div className="grid grid-cols-3 gap-1" role="group">

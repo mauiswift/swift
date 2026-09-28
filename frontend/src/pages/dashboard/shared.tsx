@@ -7,7 +7,7 @@ import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import React from 'react';
-import { ArrowUpRight, BarChart3, Bot, CheckSquare, CreditCard, Crown, FileCheck2, FileSpreadsheet, Landmark, Link2, Send, Settings, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, BarChart3, Bot, CheckSquare, CreditCard, Crown, FileCheck2, FileSpreadsheet, Landmark, Link2, RefreshCw, Send, Settings, type LucideIcon } from 'lucide-react';
 import { hasPermission, hasSuperAdminAccess, type PermissionKey } from '@/lib/permissions';
 
 export interface DashboardStats {
@@ -54,6 +54,91 @@ export const statusStyles: Record<string, { bg: string; text: string; dot: strin
   Rejected: { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' },
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
+
+const LIVE_RATE_CURRENCIES = [
+  { code: 'USD', label: 'US Dollar' },
+  { code: 'EUR', label: 'Euro' },
+  { code: 'KRW', label: 'South Korean Won' },
+  { code: 'CNY', label: 'Chinese Yuan' },
+  { code: 'USDT', label: 'Tether' },
+] as const;
+
+export function LiveExchangeRatesPool() {
+  const [rates, setRates] = useState<Record<string, number>>({});
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadRates = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch('/api/v1/app-settings/public-exchange-rates');
+      if (!response.ok) throw new Error('Unable to load exchange rates');
+      const data = await response.json();
+      setRates(data.rates || {});
+      setUpdatedAt(data.updated_at || null);
+    } catch {
+      setRates({});
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRates();
+    const refreshTimer = window.setInterval(() => void loadRates(), 5_000);
+    return () => window.clearInterval(refreshTimer);
+  }, []);
+
+  const formatRate = (value: number) => value >= 100
+    ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 text-white shadow-sm" aria-labelledby="dashboard-live-rates-heading">
+      <div className="p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Live market rates
+            </div>
+            <h2 id="dashboard-live-rates-heading" className="text-base font-semibold tracking-tight sm:text-lg">Exchange rates</h2>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-white/55">
+            <span>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Loading rates'}</span>
+            <button
+              type="button"
+              onClick={() => void loadRates()}
+              disabled={refreshing}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-white/70 transition hover:bg-white/10 disabled:opacity-50"
+              aria-label="Refresh exchange rates"
+              title="Refresh exchange rates"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            </button>
+          </div>
+        </div>
+        <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-5">
+          {LIVE_RATE_CURRENCIES.map(currency => (
+            <div key={currency.code} className="min-w-[142px] snap-start rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-3 sm:min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold tracking-[0.1em] text-white/75">{currency.code}</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Live</span>
+              </div>
+              <p className="mt-3 text-lg font-semibold text-white">
+                {loading ? '—' : rates[currency.code] ? `₱${formatRate(rates[currency.code])}` : 'Unavailable'}
+              </p>
+              <p className="mt-0.5 truncate text-[10px] text-white/45">1 {currency.code} · {currency.label}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[10px] text-white/40">Indicative rates · 1 unit converted to PHP · refreshes every 5 seconds</p>
+      </div>
+    </section>
+  );
+}
 
 export function DashboardPanel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
