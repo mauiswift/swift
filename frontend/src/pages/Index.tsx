@@ -508,6 +508,8 @@ function HomePage() {
       `}</style>
 
       <main id="main">
+        <LiveRatesPool />
+
         {/* ── Hero ──────────────────────────────────────────── */}
         <section className="soft-grid relative overflow-hidden" style={{ paddingBlock: 'clamp(48px,7vw,96px) clamp(56px,8vw,104px)', marginTop: '76px' }}>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-full">
@@ -585,8 +587,6 @@ function HomePage() {
             </div>
           </div>
         </section>
-
-        <LiveRatesPool />
 
         {/* ── Client logos marquee ──────────────────────────── */}
         <section className="border-t border-[#f2f2f2]" style={{ paddingBlock: 'clamp(40px,5vw,64px)' }} aria-label="Trusted by leading enterprises">
