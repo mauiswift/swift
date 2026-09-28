@@ -784,6 +784,26 @@ def test_disbursement_institutions_exclude_cards_and_duplicates():
     assert institutions == [{"code": "BDO", "name": "BDO Unibank"}]
 
 
+def test_institution_catalog_preserves_payment_limits_and_enabled_state():
+    institutions = SwiftPayService._normalize_disbursement_institutions([
+        {
+            "code": "BDO",
+            "name": "BDO Unibank",
+            "enabled": True,
+            "minAmount": 100,
+            "maxAmount": 50000,
+        },
+    ])
+
+    assert institutions == [{
+        "code": "BDO",
+        "name": "BDO Unibank",
+        "enabled": True,
+        "minAmount": 100,
+        "maxAmount": 50000,
+    }]
+
+
 def test_disbursement_institutions_keep_korean_banks_for_krw():
     institutions = SwiftPayService._normalize_disbursement_institutions([
         {"code": "KDB", "name": "KDB Bank"},

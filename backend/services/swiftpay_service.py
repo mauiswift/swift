@@ -196,7 +196,7 @@ class SwiftPayService:
         return False
 
     @classmethod
-    def _normalize_disbursement_institutions(cls, data: Any, currency: Optional[str] = None) -> list[Dict[str, str]]:
+    def _normalize_disbursement_institutions(cls, data: Any, currency: Optional[str] = None) -> list[Dict[str, Any]]:
         """Return unique bank/e-wallet payout institutions from SwiftPay's catalog."""
         if isinstance(data, dict):
             for key in ("institutions", "banks", "data", "items"):
@@ -206,7 +206,7 @@ class SwiftPayService:
         if not isinstance(data, list):
             return []
 
-        institutions: list[Dict[str, str]] = []
+        institutions: list[Dict[str, Any]] = []
         seen_codes: set[str] = set()
         seen_names: set[str] = set()
         currency_upper = (currency or "").upper()
@@ -241,6 +241,9 @@ class SwiftPayService:
             institution = {"code": code, "name": name}
             if logo_url:
                 institution["logoUrl"] = logo_url
+            for field in ("enabled", "minAmount", "maxAmount"):
+                if field in item:
+                    institution[field] = item[field]
             institutions.append(institution)
 
         # IMPORTANT: For KRW we must not fall back to returning non-Korean banks.

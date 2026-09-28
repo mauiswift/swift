@@ -37,6 +37,7 @@ from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
 from services.checkout_urls import build_checkout_url, checkout_host
 from services.payment_channel_availability import (
+    institution_supports_amount,
     institution_matches_enabled,
     php_checkout_institution_is_enabled,
 )
@@ -1646,6 +1647,7 @@ async def get_checkout_institutions(
                 item for item in res["data"]
                 if isinstance(item, dict)
                 and item.get("enabled") is not False
+                and institution_supports_amount(item, float(txn.amount or 0))
                 and php_checkout_institution_is_enabled(
                     str(item.get("code") or ""),
                     channels,
@@ -1716,7 +1718,6 @@ async def select_checkout_institution(
         )
     institution_code = payload.institution_code.strip().upper()
     channels = await get_payment_channels(db)
-    channels = await get_payment_channels(db)
     if not php_checkout_institution_is_enabled(institution_code, channels):
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
     service = SwiftPayService()
@@ -1728,17 +1729,20 @@ async def select_checkout_institution(
     # orders unless the live catalog confirms that the institution is available.
     if institution_code not in {"GCASH", "QRPH", "ALIPAY"}:
         live_institutions = await service.get_collection_institutions()
-        live_codes = {
-            str(item.get("code") or "").strip().upper()
+        live_matches = [
+            item
             for item in (live_institutions.get("data") or [])
-            if isinstance(item, dict) and item.get("enabled") is not False
-        }
-        live_match = any(
-            code == institution_code
-            or institution_matches_enabled(code, {institution_code})
-            for code in live_codes
-        )
-        if not live_institutions.get("success") or not live_match:
+            if isinstance(item, dict)
+            and item.get("enabled") is not False
+            and (
+                str(item.get("code") or "").strip().upper() == institution_code
+                or institution_matches_enabled(
+                    str(item.get("code") or "").strip().upper(),
+                    {institution_code},
+                )
+            )
+        ]
+        if not live_institutions.get("success") or not live_matches:
             logger.warning(
                 "SwiftPay %s checkout rejected because the institution is not live for this account: %s",
                 institution_code,
@@ -1747,6 +1751,11 @@ async def select_checkout_institution(
             raise HTTPException(
                 status_code=503,
                 detail=f"{institution_code} is currently unavailable on SwiftPay. Please choose another payment method or contact the payment administrator.",
+            )
+        if not any(institution_supports_amount(item, amount_php) for item in live_matches):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{institution_code} does not support this payment amount. Please choose another payment method.",
             )
 
     if institution_code in {"GCASH", "QRPH", "ALIPAY"}:

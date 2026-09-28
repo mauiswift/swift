@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 
@@ -55,3 +56,24 @@ def php_checkout_institution_is_enabled(
         code,
         {str(enabled).strip().upper() for enabled in enabled_institutions},
     )
+
+
+def institution_supports_amount(institution: dict[str, Any], amount: float) -> bool:
+    if not math.isfinite(amount):
+        return False
+
+    for field, is_minimum in (("minAmount", True), ("maxAmount", False)):
+        value = institution.get(field)
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            return False
+        try:
+            bound = float(value)
+        except (TypeError, ValueError):
+            return False
+        if not math.isfinite(bound):
+            return False
+        if (is_minimum and amount < bound) or (not is_minimum and amount > bound):
+            return False
+    return True

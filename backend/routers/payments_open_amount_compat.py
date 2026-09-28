@@ -25,6 +25,7 @@ from services.toss_account_pool import assign_toss_account_to_transaction
 from services.transactions import publish_payment_link_created
 from services.checkout_urls import build_checkout_url
 from services.payment_channel_availability import (
+    institution_supports_amount,
     institution_matches_enabled,
     php_checkout_institution_is_enabled,
 )
@@ -128,6 +129,7 @@ async def get_checkout_institutions_compat(
         item for item in data
         if isinstance(item, dict)
         and item.get("enabled") is not False
+        and institution_supports_amount(item, float(txn.amount or 0))
         and php_checkout_institution_is_enabled(str(item.get("code") or ""), channels)
     ]
     returned_codes = {str(item.get("code") or "").upper() for item in institutions}
@@ -169,19 +171,28 @@ async def select_checkout_institution_compat(
 
     if institution_code not in {"GCASH", "QRPH", "ALIPAY"}:
         live_institutions = await service.get_collection_institutions()
-        live_codes = {
-            str(item.get("code") or "").strip().upper()
+        live_matches = [
+            item
             for item in (live_institutions.get("data") or [])
-            if isinstance(item, dict) and item.get("enabled") is not False
-        }
-        if not live_institutions.get("success") or not any(
-            code == institution_code
-            or institution_matches_enabled(code, {institution_code})
-            for code in live_codes
-        ):
+            if isinstance(item, dict)
+            and item.get("enabled") is not False
+            and (
+                str(item.get("code") or "").strip().upper() == institution_code
+                or institution_matches_enabled(
+                    str(item.get("code") or "").strip().upper(),
+                    {institution_code},
+                )
+            )
+        ]
+        if not live_institutions.get("success") or not live_matches:
             raise HTTPException(
                 status_code=503,
                 detail=f"{institution_code} is currently unavailable on SwiftPay. Please choose another payment method or contact the payment administrator.",
+            )
+        if not any(institution_supports_amount(item, float(txn.amount or 0)) for item in live_matches):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{institution_code} does not support this payment amount. Please choose another payment method.",
             )
 
     if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
