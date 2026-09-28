@@ -254,40 +254,116 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
 
   const current = config[currency] || { checkout: [], withdrawal: [], disbursement: [] };
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Payment Channels</h2>
           <p className="mt-1 text-sm text-slate-500">Choose which channels appear for each currency and flow.</p>
         </div>
-        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+        <Button onClick={save} disabled={saving} className="w-full shrink-0 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">
+          {saving ? 'Saving...' : 'Save changes'}
+        </Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Payment channel currency">
+      <div className="mt-6 grid grid-cols-3 rounded-xl bg-slate-100 p-1" role="group" aria-label="Payment channel currency">
         {['PHP', 'CNY', 'KRW'].map(value => (
-          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+          <button
+            key={value}
+            type="button"
+            aria-pressed={currency === value}
+            onClick={() => setCurrency(value)}
+            className={`motion-interactive min-h-11 rounded-lg px-3 text-sm font-semibold transition-colors ${
+              currency === value
+                ? 'bg-white text-[#FF6B00] shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {value}
+          </button>
         ))}
       </div>
-      <div className="mt-6 overflow-x-auto">
-        <div className="min-w-full sm:min-w-0">
-          <div className="grid grid-cols-[1fr_repeat(3,minmax(80px,100px))] gap-2 sm:gap-3 border-b border-slate-100 pb-3 text-xs font-semibold uppercase tracking-wider text-slate-400"><span>Channel</span><span className="text-center">Checkout</span><span className="text-center">Withdrawal</span><span className="text-center">Disbursement</span></div>
-          {channelOptions.map(channel => (
-            <div key={channel.id} className="grid grid-cols-[1fr_repeat(3,minmax(80px,100px))] gap-2 sm:gap-3 items-center border-b border-slate-100 py-3 text-xs sm:text-sm text-slate-700">
-              <span className="font-medium truncate">{channel.label}</span>
+      <div className="mt-5 hidden overflow-hidden rounded-xl border border-slate-200 sm:block">
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,minmax(96px,120px))] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <span>Channel</span>
+          <span className="text-center">Checkout</span>
+          <span className="text-center">Withdrawal</span>
+          <span className="text-center">Disbursement</span>
+        </div>
+        {channelOptions.map(channel => (
+          <div key={channel.id} className="grid grid-cols-[minmax(0,1fr)_repeat(3,minmax(96px,120px))] items-center gap-3 border-t border-slate-100 px-4 py-3 text-sm text-slate-700">
+            <span className="min-w-0 truncate font-medium">{channel.label}</span>
+            {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
+              const enabled = current[flow].includes(channel.id);
+              return (
+                <button
+                  key={flow}
+                  type="button"
+                  onClick={() => toggle(flow, channel.id)}
+                  aria-label={`${channel.label} ${flow}`}
+                  aria-pressed={enabled}
+                  className={`motion-interactive mx-auto min-h-9 min-w-14 rounded-full px-3 text-xs font-semibold ${
+                    enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {enabled ? 'On' : 'Off'}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 space-y-3 sm:hidden">
+        {channelOptions.map(channel => (
+          <div key={channel.id} className="rounded-xl border border-slate-200 p-3">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">{channel.label}</h3>
+            <div className="grid grid-cols-3 gap-2">
               {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
                 const enabled = current[flow].includes(channel.id);
-                return <button key={flow} type="button" onClick={() => toggle(flow, channel.id)} aria-label={`${channel.label} ${flow}`} aria-pressed={enabled} className={`motion-interactive w-fit mx-auto rounded-full px-2 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
+                const label = flow === 'disbursement' ? 'Disburse' : flow;
+                return (
+                  <button
+                    key={flow}
+                    type="button"
+                    onClick={() => toggle(flow, channel.id)}
+                    aria-label={`${channel.label} ${flow}`}
+                    aria-pressed={enabled}
+                    className={`motion-interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 text-[11px] font-semibold capitalize ${
+                      enabled
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-slate-200 bg-slate-50 text-slate-500'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <span className="text-[10px] font-medium">{enabled ? 'On' : 'Off'}</span>
+                  </button>
+                );
               })}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
+
       <div className="mt-8 border-t border-slate-200 pt-6">
         <h3 className="text-sm font-semibold text-slate-900">PHP checkout banks</h3>
         <p className="mt-1 text-sm text-slate-500">Turn individual SwiftPay institutions on or off for the public checkout page.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3">
           {phpInstitutionOptions.map(institution => {
             const enabled = (config.PHP?.checkout_institutions || phpInstitutionOptions.map(option => option.id)).includes(institution.id);
-            return <button key={institution.id} type="button" onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`motion-interactive flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
+            return (
+              <button
+                key={institution.id}
+                type="button"
+                onClick={() => toggleInstitution(institution.id)}
+                aria-pressed={enabled}
+                className={`motion-interactive flex min-h-12 items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm font-medium ${
+                  enabled
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-slate-200 bg-slate-50 text-slate-500'
+                }`}
+              >
+                <span className="min-w-0 truncate">{institution.label}</span>
+                <span className="shrink-0 text-xs font-semibold">{enabled ? 'On' : 'Off'}</span>
+              </button>
+            );
           })}
         </div>
       </div>

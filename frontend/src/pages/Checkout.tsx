@@ -36,7 +36,11 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
-import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
+import {
+  fetchPaymentChannels,
+  isPaymentChannelEnabled,
+  type PaymentChannels,
+} from '@/lib/paymentChannels';
 import {
   normalizeCheckoutQrValue,
   resolveCheckoutQrPanelMode,
@@ -233,15 +237,6 @@ function isSecurityBankName(value: unknown): boolean {
   return normalized.includes('securitybank') || normalized === 'secbank';
 }
 
-const SWIFTPAY_INSTITUTION_PREFIXES: Record<string, string[]> = {
-  BDO: ['BNORPHM'], BPI: ['BOPIPHM'], RCBC: ['RCBCPHM'], UNIONBANK: ['UBPHPHM'],
-  METROBANK: ['MBTCPHM'], LANDBANK: ['TLBPPHM'], PNB: ['PNBMPHM'],
-  EASTWEST: ['EWB CPHM'.replace(' ', ''), 'EAWRPHM'], CHINABANK: ['CHSVPHM', 'CHBKPHM'],
-  SECURITYBANK: ['SETCPHM'], UBP: ['UBPHPHM'], UCPB: ['UCPVPHM'],
-  PSBANK: ['PSB PPHM'.replace(' ', '')], CIMB: ['CIPHPHM'], MAYBANK: ['MBBEPHM'],
-  ROBINSONS: ['ROBPPHM'],
-};
-
 export default function Checkout() {
   const { externalId, identifier } = useParams<{ externalId?: string; identifier?: string }>();
   const checkoutId = externalId ?? identifier;
@@ -255,6 +250,7 @@ export default function Checkout() {
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingInstitutions, setLoadingLoadingInstitutions] = useState(false);
+  const [institutionLoadFailed, setInstitutionLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -419,7 +415,7 @@ export default function Checkout() {
           throw new Error('Invalid response: amount must be a non-negative number');
         }
         setTxn(response.data);
-        fetchInstitutions(response.data.currency);
+        fetchInstitutions();
         if (searchParams.get('open_amount') === '1') {
           setEnteredAmount('');
         }
@@ -436,7 +432,9 @@ export default function Checkout() {
 
     if (checkoutId) {
       fetchTransaction();
-      fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
+      fetchPaymentChannels().then(setPaymentChannels).catch(err => {
+        console.error('Failed to load payment channel branding:', err);
+      });
     } else {
       setError('Invalid checkout URL');
       setLoading(false);
@@ -479,14 +477,15 @@ export default function Checkout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchInstitutions = async (currency?: string) => {
+  const fetchInstitutions = async () => {
     try {
       setLoadingLoadingInstitutions(true);
+      setInstitutionLoadFailed(false);
       const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
-        const shouldShowPhpWallets = String(currency || txn?.currency || '').toUpperCase() === 'PHP';
         const returnedInstitutions = (response.data.data as Partial<Institution>[])
           .filter(item => item && String(item.code || '').trim() && String(item.name || '').trim())
+          .filter(item => item.enabled !== false)
           .map(item => ({
             ...item,
             id: String(item.id || item.code),
@@ -496,64 +495,15 @@ export default function Checkout() {
             loginMethod: item.loginMethod || 'redirect',
           })) as Institution[];
         const availableInstitutions = returnedInstitutions;
-        const requiredPhpWallets: Institution[] = [
-          {
-            id: 'GCASH',
-            code: 'GCASH',
-            name: 'GCash',
-            logoUrl: '/logos/gcash.png',
-            enabled: true,
-            loginMethod: 'qr',
-          },
-          {
-            id: 'ALIPAY',
-            code: 'ALIPAY',
-            name: 'Alipay',
-            logoUrl: '/logos/alipay.png',
-            enabled: true,
-            loginMethod: 'qr',
-          },
-        ];
-        if (shouldShowPhpWallets) {
-          const existingCodes = new Set(availableInstitutions.map(institution => institutionCode(institution)));
-          setInstitutions([
-            ...availableInstitutions,
-            ...requiredPhpWallets.filter(wallet => !existingCodes.has(wallet.code)),
-          ]);
-        } else {
-          setInstitutions(availableInstitutions);
-        }
+        setInstitutions(availableInstitutions);
+      } else {
+        setInstitutions([]);
+        setInstitutionLoadFailed(true);
       }
     } catch (err) {
       console.error('Failed to fetch institutions:', err);
-      if (String(currency || txn?.currency || '').toUpperCase() === 'PHP') {
-        setInstitutions([
-          {
-            id: 'QRPH',
-            code: 'QRPH',
-            name: 'QR Ph',
-            logoUrl: '/logos/qrph.svg',
-            enabled: true,
-            loginMethod: 'qr',
-          },
-          {
-            id: 'GCASH',
-            code: 'GCASH',
-            name: 'GCash',
-            logoUrl: '/logos/gcash.png',
-            enabled: true,
-            loginMethod: 'qr',
-          },
-          {
-            id: 'ALIPAY',
-            code: 'ALIPAY',
-            name: 'Alipay',
-            logoUrl: '/logos/alipay.png',
-            enabled: true,
-            loginMethod: 'qr',
-          },
-        ]);
-      }
+      setInstitutions([]);
+      setInstitutionLoadFailed(true);
     } finally {
       setLoadingLoadingInstitutions(false);
     }
@@ -757,18 +707,9 @@ export default function Checkout() {
     `NAME:${krwAccountName}`,
     `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
   ].join('\n');
-  const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
   const swiftpayVirtualAccountEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'virtual_account');
   const institutionCode = (institution: Institution) => String(institution.code || '').trim().toUpperCase();
-  const enabledInstitutionCode = (code: string) => String(code || '').trim().toUpperCase();
-  const institutionIsEnabled = (providerCode: string, enabledCodes: string[]) => {
-    const normalized = enabledInstitutionCode(providerCode);
-    return enabledCodes.some(code => {
-      const enabled = enabledInstitutionCode(code);
-      return enabled === normalized || (SWIFTPAY_INSTITUTION_PREFIXES[enabled] || []).some(prefix => normalized.startsWith(prefix));
-    });
-  };
   const isSupportedKrwInstitution = (institution: Institution) => {
     const code = institutionCode(institution);
     const name = institution.name.trim();
@@ -778,12 +719,7 @@ export default function Checkout() {
     ));
   };
   const visibleInstitutions = institutions.filter(institution => (
-    (!isKrw || isSupportedKrwInstitution(institution))
-    && (!isPhp
-    || institutionCode(institution) === 'QRPH'
-    || institutionCode(institution) === 'ALIPAY'
-    || !Array.isArray(enabledPhpInstitutions)
-    || institutionIsEnabled(institutionCode(institution), enabledPhpInstitutions))
+    institution.enabled && (!isKrw || isSupportedKrwInstitution(institution))
   ));
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH', 'ALIPAY'].includes(institutionCode(i)));
@@ -1724,7 +1660,17 @@ export default function Checkout() {
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
                   </button>
-                ) : institutions.length > 0 ? (
+                ) : isPhp && loadingInstitutions ? (
+                  <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
+                    <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
+                    {checkoutText('Loading available payment methods…', '사용 가능한 결제 수단을 불러오는 중…')}
+                  </div>
+                ) : isPhp && institutionLoadFailed ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-8 text-center text-sm text-amber-800">
+                    <AlertCircle className="mx-auto mb-3 h-5 w-5" />
+                    {checkoutText('Payment methods could not be loaded. Please refresh to try again.', '결제 수단을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.')}
+                  </div>
+                ) : visibleInstitutions.length > 0 ? (
                   <div className="space-y-6">
                     {/* QRPH first for PHP checkout */}
                     {qrphInstitutions.length > 0 && (
@@ -1798,6 +1744,11 @@ export default function Checkout() {
                         )}
                       </div>
                     )}
+                  </div>
+                ) : isPhp ? (
+                  <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl">
+                    <AlertCircle className="h-10 w-10 mx-auto mb-4 text-slate-200" />
+                    <p className="text-[14px] font-semibold text-slate-400">{checkoutText('No payment methods are currently available', '현재 사용 가능한 결제 수단이 없습니다')}</p>
                   </div>
                 ) : hasCheckoutLink ? (
                   <button

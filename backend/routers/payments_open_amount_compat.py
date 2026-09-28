@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.config import settings
-from core.constants import PHP_CHECKOUT_INSTITUTIONS
 from dependencies.auth import get_payment_user
 from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
@@ -21,34 +20,19 @@ from schemas.auth import UserResponse
 from services.magpie_services import MagpieService
 from services.app_settings import get_payment_channels
 from services.swiftpay_service import SwiftPayService
-from services.ph_banks_service import PHBanksService
 from services.paymentwall_service import PaymentwallService
 from services.toss_account_pool import assign_toss_account_to_transaction
 from services.transactions import publish_payment_link_created
 from services.checkout_urls import build_checkout_url
+from services.payment_channel_availability import (
+    institution_matches_enabled,
+    php_checkout_institution_is_enabled,
+)
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 xend_compat_router = APIRouter(prefix="/api/v1/xend", tags=["xend"])
 
 SUPPORTED_CURRENCIES = {"PHP", "KRW", "CNY", "USDT"}
-SWIFTPAY_INSTITUTION_PREFIXES = {
-    "BDO": ("BNORPHM",),
-    "BPI": ("BOPIPHM",),
-    "RCBC": ("RCBCPHM",),
-    "UNIONBANK": ("UBPHPHM",),
-    "METROBANK": ("MBTCPHM",),
-    "LANDBANK": ("TLBPPHM",),
-    "PNB": ("PNBMPHM",),
-    "EASTWEST": ("EWB CPHM".replace(" ", ""), "EAWRPHM"),
-    "CHINABANK": ("CHSVPHM", "CHBKPHM"),
-    "SECURITYBANK": ("SETCPHM",),
-    "UBP": ("UBPHPHM",),
-    "UCPB": ("UCPVPHM",),
-    "PSBANK": ("PSB PPHM".replace(" ", ""),),
-    "CIMB": ("CIPHPHM",),
-    "MAYBANK": ("MBBEPHM",),
-    "ROBINSONS": ("ROBPPHM",),
-}
 
 
 def _link_currency(requested: Optional[str], configured: Optional[str]) -> str:
@@ -68,15 +52,6 @@ async def _get_checkout_transaction(identifier: str, db: AsyncSession) -> Transa
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     return txn
-
-
-def _institution_matches_enabled(code: str, enabled_codes: set[str]) -> bool:
-    normalized = str(code or "").strip().upper()
-    return normalized in enabled_codes or any(
-        normalized.startswith(prefix)
-        for enabled in enabled_codes
-        for prefix in SWIFTPAY_INSTITUTION_PREFIXES.get(enabled, ())
-    )
 
 
 @router.post("/create-payment-link", include_in_schema=False)
@@ -140,34 +115,36 @@ async def get_checkout_institutions_compat(
     if (txn.currency or "").upper() != "PHP":
         return {"success": True, "data": []}
     channels = await get_payment_channels(db)
-    enabled = channels.get("PHP", {}).get("checkout_institutions")
-    enabled_codes = {
-        str(code).strip().upper()
-        for code in (enabled if isinstance(enabled, list) else PHP_CHECKOUT_INSTITUTIONS)
-    }
     result = await SwiftPayService().get_collection_institutions()
     data = result.get("data") if result.get("success") else []
     if not isinstance(data, list) or not data:
-        data = PHBanksService.get_all_banks_dict()
+        data = []
+    provider_disabled_codes = {
+        str(item.get("code") or "").strip().upper()
+        for item in data
+        if isinstance(item, dict) and item.get("enabled") is False
+    }
     institutions = [
         item for item in data
-        if isinstance(item, dict) and _institution_matches_enabled(item.get("code"), enabled_codes)
+        if isinstance(item, dict)
+        and item.get("enabled") is not False
+        and php_checkout_institution_is_enabled(str(item.get("code") or ""), channels)
     ]
     returned_codes = {str(item.get("code") or "").upper() for item in institutions}
-    if "QRPH" not in returned_codes:
-        institutions.insert(0, {
-            "id": "QRPH", "code": "QRPH", "name": "QR Ph",
-            "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr",
-        })
-    if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
-        institutions.append({
-            "id": "NETBANK", "code": "NETBANK", "name": "NetBank",
-            "logoUrl": "/logos/netbank.png", "enabled": True, "loginMethod": "redirect",
-        })
-    institutions.append({
-        "id": "ALIPAY", "code": "ALIPAY", "name": "Alipay",
-        "logoUrl": "/logos/alipay.png", "enabled": True, "loginMethod": "qr",
-    })
+    for code, name, logo_url in (
+        ("QRPH", "QR Ph", "/logos/qrph.svg"),
+        ("GCASH", "GCash", "/logos/gcash.png"),
+        ("ALIPAY", "Alipay", "/logos/alipay.png"),
+    ):
+        if (
+            code not in returned_codes
+            and code not in provider_disabled_codes
+            and php_checkout_institution_is_enabled(code, channels)
+        ):
+            institutions.append({
+                "id": code, "code": code, "name": name, "logoUrl": logo_url,
+                "enabled": True, "loginMethod": "qr",
+            })
     return {"success": True, "data": institutions}
 
 
@@ -183,9 +160,29 @@ async def select_checkout_institution_compat(
     institution_code = str(payload.get("institution_code") or "").strip().upper()
     if not institution_code:
         raise HTTPException(status_code=422, detail="Institution code is required")
+    channels = await get_payment_channels(db)
+    if not php_checkout_institution_is_enabled(institution_code, channels):
+        raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+
+    if institution_code not in {"GCASH", "QRPH", "ALIPAY"}:
+        live_institutions = await service.get_collection_institutions()
+        live_codes = {
+            str(item.get("code") or "").strip().upper()
+            for item in (live_institutions.get("data") or [])
+            if isinstance(item, dict) and item.get("enabled") is not False
+        }
+        if not live_institutions.get("success") or not any(
+            code == institution_code
+            or institution_matches_enabled(code, {institution_code})
+            for code in live_codes
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail=f"{institution_code} is currently unavailable on SwiftPay. Please choose another payment method or contact the payment administrator.",
+            )
 
     if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
         qr_result = await service.generate_qrph(

@@ -34,43 +34,18 @@ from services.toss_account_pool import assign_toss_account_to_transaction
 from services.paymentwall_service import PaymentwallService
 from services.transactions import TransactionsService, publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
-from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
 from services.checkout_urls import build_checkout_url, checkout_host
+from services.payment_channel_availability import (
+    institution_matches_enabled,
+    php_checkout_institution_is_enabled,
+)
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 
-
-SWIFTPAY_INSTITUTION_PREFIXES = {
-    "BDO": ("BNORPHM",),
-    "BPI": ("BOPIPHM",),
-    "RCBC": ("RCBCPHM",),
-    "UNIONBANK": ("UBPHPHM",),
-    "METROBANK": ("MBTCPHM",),
-    "LANDBANK": ("TLBPPHM",),
-    "PNB": ("PNBMPHM",),
-    "EASTWEST": ("EWB CPHM".replace(" ", ""), "EAWRPHM"),
-    "CHINABANK": ("CHSVPHM", "CHBKPHM"),
-    "SECURITYBANK": ("SETCPHM",),
-    "UBP": ("UBPHPHM",),
-    "UCPB": ("UCPVPHM",),
-    "PSBANK": ("PSB PPHM".replace(" ", ""),),
-    "CIMB": ("CIPHPHM",),
-    "MAYBANK": ("MBBEPHM",),
-    "ROBINSONS": ("ROBPPHM",),
-}
-
-
-def _institution_matches_enabled(provider_code: str, enabled_codes: set[str]) -> bool:
-    code = str(provider_code or "").strip().upper()
-    return code in enabled_codes or any(
-        code.startswith(prefix)
-        for enabled in enabled_codes
-        for prefix in SWIFTPAY_INSTITUTION_PREFIXES.get(enabled, ())
-    )
 
 # Simple in-memory cache for demo QR images (do NOT use in prod)
 _QR_CACHE: dict = {}
@@ -1656,68 +1631,46 @@ async def get_checkout_institutions(
 
         res = await gateway.swift.get_collection_institutions()
         if not res.get("success"):
-            # Never advertise the static disbursement catalog as live checkout
-            # institutions. Those codes may be valid generally but unavailable
-            # for this SwiftPay account.
-            return {
-                "success": True,
-                "data": [
-                    {"id": "QRPH", "code": "QRPH", "name": "QR Ph", "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr"},
-                    {"id": "ALIPAY", "code": "ALIPAY", "name": "Alipay", "logoUrl": "/logos/alipay.png", "enabled": True, "loginMethod": "qr"},
-                ],
-            }
+            res = {"success": True, "data": []}
         if not isinstance(res.get("data"), list) or not res["data"]:
             res["data"] = []
 
         if (txn.currency or "").upper() == "PHP":
             channels = await get_payment_channels(db)
-            enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
-            if isinstance(enabled_institutions, list):
-                enabled_codes = {str(code).upper() for code in enabled_institutions}
-                res["data"] = [
-                    item for item in res.get("data", [])
-                    if _institution_matches_enabled(item.get("code", ""), enabled_codes)
-                ]
-                returned_codes = {str(item.get("code", "")).upper() for item in res["data"]}
-                # QRPH is always available for PHP checkout
-                if "QRPH" not in returned_codes:
-                    res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QR Ph", "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr"})
-                if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
-                    res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "logoUrl": "/logos/netbank.png", "enabled": True, "loginMethod": "redirect"})
-                if "BDO" in enabled_codes and "BDO" not in returned_codes:
-                    res["data"].append({"id": "BDO", "code": "BDO", "name": "BDO", "logoUrl": "/logos/bdo.svg", "enabled": True, "loginMethod": "redirect"})
-                # Alipay is exposed as a SwiftPay institution checkout. Some
-                # accounts do not include it in the provider catalog response,
-                # even though it is enabled in the merchant channel settings.
-                # Alipay is handled through the QR Ph flow below, so it does
-                # not need to be present in SwiftPay's bank catalog.
-                res["data"] = [
-                    item for item in res["data"]
-                    if str(item.get("code", "")).upper() != "ALIPAY"
-                ]
-                if not res["data"]:
-                    res["data"] = PHBanksService.get_all_banks_dict()
-                res["data"].append({
-                    "id": "ALIPAY",
-                    "code": "ALIPAY",
-                    "name": "Alipay",
-                    "logoUrl": "/logos/alipay.png",
-                    "enabled": True,
-                    "loginMethod": "qr",
-                })
-        if (txn.currency or "").upper() == "PHP" and not any(
-            str(item.get("code", "")).upper() == "ALIPAY"
-            for item in (res.get("data") or [])
-            if isinstance(item, dict)
-        ):
-            res.setdefault("data", []).append({
-                "id": "ALIPAY",
-                "code": "ALIPAY",
-                "name": "Alipay",
-                "logoUrl": "/logos/alipay.png",
-                "enabled": True,
-                "loginMethod": "qr",
-            })
+            provider_disabled_codes = {
+                str(item.get("code") or "").strip().upper()
+                for item in res["data"]
+                if isinstance(item, dict) and item.get("enabled") is False
+            }
+            res["data"] = [
+                item for item in res["data"]
+                if isinstance(item, dict)
+                and item.get("enabled") is not False
+                and php_checkout_institution_is_enabled(
+                    str(item.get("code") or ""),
+                    channels,
+                )
+            ]
+            returned_codes = {str(item.get("code") or "").strip().upper() for item in res["data"]}
+            fallback_institutions = (
+                ("QRPH", "QR Ph", "/logos/qrph.svg", "qr"),
+                ("GCASH", "GCash", "/logos/gcash.png", "qr"),
+                ("ALIPAY", "Alipay", "/logos/alipay.png", "qr"),
+            )
+            for code, name, logo_url, login_method in fallback_institutions:
+                if (
+                    code not in returned_codes
+                    and code not in provider_disabled_codes
+                    and php_checkout_institution_is_enabled(code, channels)
+                ):
+                    res["data"].append({
+                        "id": code,
+                        "code": code,
+                        "name": name,
+                        "logoUrl": logo_url,
+                        "enabled": True,
+                        "loginMethod": login_method,
+                    })
         return res
     except HTTPException:
         raise
@@ -1761,21 +1714,11 @@ async def select_checkout_institution(
             status_code=400,
             detail="PHP institution checkout requires an amount of at least PHP 1.",
         )
-
     institution_code = payload.institution_code.strip().upper()
     channels = await get_payment_channels(db)
-    enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
-    bank_transfer_enabled = "bank_transfer" in channels.get("PHP", {}).get("checkout", [])
-    enabled_codes = {str(code).strip().upper() for code in enabled_institutions} if isinstance(enabled_institutions, list) else set()
-    if (
-        isinstance(enabled_institutions, list)
-        and institution_code not in {"QRPH", "NETBANK"}
-        and not _institution_matches_enabled(institution_code, enabled_codes)
-    ):
+    channels = await get_payment_channels(db)
+    if not php_checkout_institution_is_enabled(institution_code, channels):
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
-    # QRPH is always available for PHP checkout
-    if institution_code == "NETBANK" and not bank_transfer_enabled:
-        raise HTTPException(status_code=400, detail="Netbank is currently unavailable")
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
@@ -1783,17 +1726,16 @@ async def select_checkout_institution(
     # SwiftPay can keep an institution in the merchant configuration while
     # temporarily disabling it at the provider level. Do not send provider
     # orders unless the live catalog confirms that the institution is available.
-    # NETBANK is a local/manual channel and is not a SwiftPay institution.
-    if institution_code not in {"GCASH", "QRPH", "ALIPAY", "NETBANK"}:
+    if institution_code not in {"GCASH", "QRPH", "ALIPAY"}:
         live_institutions = await service.get_collection_institutions()
         live_codes = {
             str(item.get("code") or "").strip().upper()
             for item in (live_institutions.get("data") or [])
-            if isinstance(item, dict)
+            if isinstance(item, dict) and item.get("enabled") is not False
         }
         live_match = any(
             code == institution_code
-            or _institution_matches_enabled(code, {institution_code})
+            or institution_matches_enabled(code, {institution_code})
             for code in live_codes
         )
         if not live_institutions.get("success") or not live_match:
