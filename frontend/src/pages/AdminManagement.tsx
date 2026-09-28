@@ -103,7 +103,6 @@ interface AdminUser {
   settlement_type?: string | null;
   settlement_currency?: string | null;
   service_fee_percent?: number;
-  exchange_rate_fee_percent?: number;
   collection_fee_percent?: number;
   withdrawal_fee_percent?: number;
   withdrawal_fee_php?: number;
@@ -1557,7 +1556,6 @@ function FeeSettingsModal({
   onError: (message: string) => void;
 }) {
   const [baseFee, setBaseFee] = useState(String(admin.service_fee_percent ?? 0));
-  const [exchangeRateFee, setExchangeRateFee] = useState(String(admin.exchange_rate_fee_percent ?? 0));
   const [collectionFee, setCollectionFee] = useState(String(admin.collection_fee_percent ?? 0));
   const [withdrawalFeePercent, setWithdrawalFeePercent] = useState(String(admin.withdrawal_fee_percent ?? 0));
   const [withdrawalFees, setWithdrawalFees] = useState({
@@ -1574,15 +1572,14 @@ function FeeSettingsModal({
   };
 
   const save = async () => {
-    const exchangeValue = Number(exchangeRateFee);
     const collectionValue = Number(collectionFee);
     const withdrawalPercentValue = Number(withdrawalFeePercent);
     const baseValue = Number(baseFee);
     const parsedWithdrawals = Object.fromEntries(
       Object.entries(withdrawalFees).map(([currency, value]) => [currency, Number(value)]),
     );
-    const values = [baseValue, exchangeValue, collectionValue, withdrawalPercentValue, ...Object.values(parsedWithdrawals)];
-    if (values.some(value => !Number.isFinite(value) || value < 0) || [baseValue, exchangeValue, collectionValue, withdrawalPercentValue].some(value => value > 100)) {
+    const values = [baseValue, collectionValue, withdrawalPercentValue, ...Object.values(parsedWithdrawals)];
+    if (values.some(value => !Number.isFinite(value) || value < 0) || [baseValue, collectionValue, withdrawalPercentValue].some(value => value > 100)) {
       onError('Percentage fees must be between 0 and 100. Withdrawal fees must be non-negative.');
       return;
     }
@@ -1594,7 +1591,6 @@ function FeeSettingsModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           service_fee_percent: baseValue,
-          exchange_rate_fee_percent: exchangeValue,
           collection_fee_percent: collectionValue,
           withdrawal_fee_percent: withdrawalPercentValue,
           withdrawal_fee_php: parsedWithdrawals.PHP,
@@ -1642,10 +1638,6 @@ function FeeSettingsModal({
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Upline service surcharge (%)</span>
               <input type="number" min="0" max="100" step="0.01" value={baseFee} onChange={event => setBaseFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
               <span className="block text-xs text-slate-400">Applied to eligible payments from this user’s downline. Set 0% to disable the surcharge.</span>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Exchange-rate fee (%)</span>
-              <input type="number" min="0" max="100" step="0.01" value={exchangeRateFee} onChange={event => setExchangeRateFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
             </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection fee (%)</span>

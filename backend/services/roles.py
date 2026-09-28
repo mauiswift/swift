@@ -42,6 +42,11 @@ async def initialize_system_roles():
                 "can_manage_transactions": perms.get("can_manage_transactions", False),
                 "can_manage_bot": perms.get("can_manage_bot", False),
                 "can_approve_topups": perms.get("can_approve_topups", False),
+                "can_manage_team": perms.get("can_manage_team", False),
+                "can_credit_wallet": perms.get("can_credit_wallet", False),
+                "can_debit_wallet": perms.get("can_debit_wallet", False),
+                "can_freeze_wallet": perms.get("can_freeze_wallet", False),
+                "can_unfreeze_wallet": perms.get("can_unfreeze_wallet", False),
             }
 
             # Upsert by name

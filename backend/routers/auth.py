@@ -48,11 +48,15 @@ from schemas.auth import (
     LoginRequest,
     LoginResponse,
 )
-from services.auth import AuthService, _get_platform_organization, normalize_organization_owner_scope
+from services.auth import (
+    AuthService,
+    _get_platform_organization,
+    get_admin_user_permissions,
+    normalize_organization_owner_scope,
+)
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
-    get_role_permissions_by_name,
     PredefinedRoleEnum,
 )
 from services.telegram_service import TelegramService
@@ -80,26 +84,10 @@ logger = logging.getLogger(__name__)
 
 
 def _admin_permissions(admin: Optional[AdminUser]) -> UserPermissions:
-    """Build login permissions from the canonical role matrix."""
+    """Build login permissions from the persisted permission assignments."""
     if not admin:
         return UserPermissions(is_super_admin=False)
-    if admin.role:
-        return UserPermissions(**get_role_permissions_by_name(admin.role).model_dump())
-    return UserPermissions(
-        is_super_admin=bool(admin.is_super_admin),
-        can_manage_payments=bool(admin.can_manage_payments),
-        can_manage_disbursements=bool(admin.can_manage_disbursements),
-        can_view_reports=bool(admin.can_view_reports),
-        can_manage_wallet=bool(admin.can_manage_wallet),
-        can_manage_transactions=bool(admin.can_manage_transactions),
-        can_manage_bot=bool(admin.can_manage_bot),
-        can_approve_topups=bool(admin.can_approve_topups),
-        can_manage_team=bool(admin.can_manage_team),
-        can_credit_wallet=bool(admin.can_credit_wallet),
-        can_debit_wallet=bool(admin.can_debit_wallet),
-        can_freeze_wallet=bool(admin.can_freeze_wallet),
-        can_unfreeze_wallet=bool(admin.can_unfreeze_wallet),
-    )
+    return get_admin_user_permissions(admin)
 
 
 def _passkey_origin(request: Request) -> str:
@@ -250,23 +238,10 @@ async def verify_transaction_otp(
 async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
     admin_result = await db.execute(select(AdminUser).where(AdminUser.telegram_id == user.id))
     admin = admin_result.scalar_one_or_none()
+    if not admin or not admin.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin account is inactive or unavailable")
+
     permissions = _admin_permissions(admin)
-    if user.role == "admin" and not admin:
-        permissions = UserPermissions(
-            is_super_admin=True,
-            can_manage_payments=True,
-            can_manage_disbursements=True,
-            can_view_reports=True,
-            can_manage_wallet=True,
-            can_manage_transactions=True,
-            can_manage_bot=True,
-            can_approve_topups=True,
-            can_manage_team=True,
-            can_credit_wallet=True,
-            can_debit_wallet=True,
-            can_freeze_wallet=True,
-            can_unfreeze_wallet=True,
-        )
     auth_service = AuthService(db)
     token, _, _ = await auth_service.issue_app_token(
         user=user,
@@ -393,7 +368,7 @@ async def passkey_login(payload: dict, request: Request, db: AsyncSession = Depe
         raise HTTPException(status_code=400, detail="Passkey credential ID is missing")
     result = await db.execute(select(AdminUser).where(AdminUser.passkey_credential_id == credential_id))
     admin = result.scalar_one_or_none()
-    if not admin or not admin.passkey_public_key:
+    if not admin or not admin.is_active or not admin.passkey_public_key:
         raise HTTPException(status_code=401, detail="Passkey is not registered")
     try:
         client_data_value = credential.get("response", {}).get("clientDataJSON", "")
@@ -698,6 +673,9 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     except Exception as e:
         logger.error("[telegram-login-widget] DB lookup failed: %s", e)
 
+    if db_admin and not db_admin.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin account is inactive")
+
     in_env = telegram_user_id in allowed_admin_ids or payload_username in allowed_admin_usernames
     in_db = db_admin is not None and db_admin.is_active
 
@@ -733,6 +711,10 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             can_manage_bot=True,
             can_approve_topups=True,
             can_manage_team=True,
+            can_credit_wallet=True,
+            can_debit_wallet=True,
+            can_freeze_wallet=True,
+            can_unfreeze_wallet=True,
         )
         platform_org_id, platform_org_name = _get_platform_organization()
         if db_admin:
@@ -741,6 +723,10 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
                 db_admin.can_manage_bot = True
                 db_admin.can_approve_topups = True
                 db_admin.can_manage_team = True
+                db_admin.can_credit_wallet = True
+                db_admin.can_debit_wallet = True
+                db_admin.can_freeze_wallet = True
+                db_admin.can_unfreeze_wallet = True
                 db_admin.name = display_name
                 db_admin.telegram_username = payload.username or db_admin.telegram_username
                 db_admin.organization_id = platform_org_id
@@ -764,6 +750,10 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
                     can_manage_bot=True,
                     can_approve_topups=True,
                     can_manage_team=True,
+                    can_credit_wallet=True,
+                    can_debit_wallet=True,
+                    can_freeze_wallet=True,
+                    can_unfreeze_wallet=True,
                     organization_id=platform_org_id,
                     organization_name=platform_org_name,
                     added_by="env_config",
@@ -1100,6 +1090,9 @@ async def google_login(
                 select(AdminUser).where(AdminUser.telegram_id == configured_admin_id)
             )
 
+    if admin_record and not admin_record.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin account is inactive")
+
     if admin_record and not admin_record.email:
         admin_record.email = email
         await db.commit()
@@ -1290,6 +1283,8 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
 
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
+    if admin_record and not admin_record.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin account is inactive")
 
     org_id = None
     org_name = None
@@ -1389,21 +1384,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             admin_record.team_permissions = repaired
             await db.commit()
 
-        perms = UserPermissions(
-            is_super_admin=bool(admin_record.is_super_admin),
-            can_manage_payments=bool(admin_record.can_manage_payments),
-            can_manage_disbursements=bool(admin_record.can_manage_disbursements),
-            can_view_reports=bool(admin_record.can_view_reports),
-            can_manage_wallet=bool(admin_record.can_manage_wallet),
-            can_manage_transactions=bool(admin_record.can_manage_transactions),
-            can_manage_bot=bool(admin_record.can_manage_bot),
-            can_approve_topups=bool(admin_record.can_approve_topups),
-            can_manage_team=bool(admin_record.can_manage_team),
-            can_credit_wallet=bool(admin_record.can_credit_wallet),
-            can_debit_wallet=bool(admin_record.can_debit_wallet),
-            can_freeze_wallet=bool(admin_record.can_freeze_wallet),
-            can_unfreeze_wallet=bool(admin_record.can_unfreeze_wallet),
-        )
+        perms = _admin_permissions(admin_record)
     elif authenticated_user.role == "admin":
         # Fallback for environment-configured admin
         org_id, org_name = _get_platform_organization()
@@ -1506,6 +1487,8 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
 
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
+    if admin_record and not admin_record.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin account is inactive")
 
     org_id = None
     org_name = None
@@ -1541,17 +1524,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
                 store_logo = api_cfg.store_logo_url
                 perm_link = api_cfg.permanent_link_slug
 
-        perms = UserPermissions(
-            is_super_admin=admin_record.is_super_admin,
-            can_manage_payments=admin_record.can_manage_payments,
-            can_manage_disbursements=admin_record.can_manage_disbursements,
-            can_view_reports=admin_record.can_view_reports,
-            can_manage_wallet=admin_record.can_manage_wallet,
-            can_manage_transactions=admin_record.can_manage_transactions,
-            can_manage_bot=admin_record.can_manage_bot,
-            can_approve_topups=admin_record.can_approve_topups,
-            can_manage_team=admin_record.can_manage_team,
-        )
+        perms = _admin_permissions(admin_record)
     elif authenticated_user.role == "admin":
         # Fallback for environment-configured admin
         org_id, org_name = _get_platform_organization()
@@ -1565,6 +1538,10 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
             can_manage_bot=True,
             can_approve_topups=True,
             can_manage_team=True,
+            can_credit_wallet=True,
+            can_debit_wallet=True,
+            can_freeze_wallet=True,
+            can_unfreeze_wallet=True,
         )
     else:
         perms = UserPermissions(is_super_admin=False)

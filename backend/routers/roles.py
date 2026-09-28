@@ -16,6 +16,7 @@ from dependencies.auth import get_current_user
 from models.custom_roles import CustomRole
 from models.admin_users import AdminUser
 from schemas.auth import UserResponse
+from services.auth import _get_platform_organization
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +94,41 @@ class RoleApplyRequest(BaseModel):
 
 def _require_super_admin(current_user: UserResponse) -> None:
     perms = current_user.permissions
-    if not perms or not perms.is_super_admin:
+    if not perms or not perms.is_super_admin or not perms.can_manage_team:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Super admin access required.",
+            detail="Platform super admin access required.",
         )
+
+
+ROLE_PERMISSION_FIELDS = (
+    "is_super_admin",
+    "can_manage_payments",
+    "can_manage_disbursements",
+    "can_view_reports",
+    "can_manage_wallet",
+    "can_manage_transactions",
+    "can_manage_bot",
+    "can_approve_topups",
+    "can_manage_team",
+    "can_credit_wallet",
+    "can_debit_wallet",
+    "can_freeze_wallet",
+    "can_unfreeze_wallet",
+)
+
+
+def _apply_role_permissions(admin: AdminUser, role: CustomRole) -> None:
+    """Persist a role assignment consistently for every authentication path."""
+    permissions = {field: bool(getattr(role, field)) for field in ROLE_PERMISSION_FIELDS}
+    platform_org_id, _ = _get_platform_organization()
+    if role.name == "owner" and admin.organization_id != platform_org_id:
+        permissions["is_super_admin"] = False
+
+    for field, value in permissions.items():
+        setattr(admin, field, value)
+    admin.role = role.name
+    admin.team_permissions = permissions
 
 
 # ---------- Endpoints ----------
@@ -168,6 +199,10 @@ async def update_role(
     if not role:
         raise HTTPException(status_code=404, detail="Role not found.")
 
+    if role.is_system:
+        raise HTTPException(status_code=400, detail="System roles cannot be updated.")
+
+    previous_name = role.name
     update_data = data.model_dump(exclude_none=True)
 
     # If renaming, check uniqueness
@@ -178,6 +213,12 @@ async def update_role(
 
     for field, value in update_data.items():
         setattr(role, field, value)
+
+    assigned_admins = await db.execute(
+        select(AdminUser).where(AdminUser.role == previous_name)
+    )
+    for admin in assigned_admins.scalars().all():
+        _apply_role_permissions(admin, role)
 
     await db.commit()
     await db.refresh(role)
@@ -201,6 +242,12 @@ async def delete_role(
 
     if role.is_system:
         raise HTTPException(status_code=400, detail="System roles cannot be deleted.")
+
+    assigned_admin = await db.scalar(
+        select(AdminUser.id).where(AdminUser.role == role.name).limit(1)
+    )
+    if assigned_admin is not None:
+        raise HTTPException(status_code=409, detail="Role is assigned to an admin user and cannot be deleted.")
 
     await db.delete(role)
     await db.commit()
@@ -227,23 +274,13 @@ async def apply_role_to_admin(
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found.")
 
-    # Protect current super admin from downgrading themselves
-    if admin.telegram_id == current_user.id and not role.is_super_admin:
+    # Prevent changing the active account's own super-admin status.
+    if admin.telegram_id == current_user.id and (
+        not role.is_super_admin or not role.can_manage_team
+    ):
         raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
 
-    admin.is_super_admin = role.is_super_admin
-    admin.can_manage_payments = role.can_manage_payments
-    admin.can_manage_disbursements = role.can_manage_disbursements
-    admin.can_view_reports = role.can_view_reports
-    admin.can_manage_wallet = role.can_manage_wallet
-    admin.can_manage_transactions = role.can_manage_transactions
-    admin.can_manage_bot = role.can_manage_bot
-    admin.can_approve_topups = role.can_approve_topups
-    admin.can_manage_team = role.can_manage_team
-    admin.can_credit_wallet = role.can_credit_wallet
-    admin.can_debit_wallet = role.can_debit_wallet
-    admin.can_freeze_wallet = role.can_freeze_wallet
-    admin.can_unfreeze_wallet = role.can_unfreeze_wallet
+    _apply_role_permissions(admin, role)
 
     await db.commit()
     logger.info(

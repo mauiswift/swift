@@ -729,7 +729,6 @@ async def convert_wallet_balance(
 			from_currency=normalized_from,
 			to_currency=normalized_to,
 			from_amount=request.from_amount,
-			user_id=owner_id,
 		)
 		if trade:
 			trade.quoted_amount = quote["to_amount"]
@@ -1029,7 +1028,6 @@ async def approve_admin_usdt_trade(
 			from_currency="PHP",
 			to_currency="USD",
 			from_amount=float(trade.requested_amount),
-			user_id=trade.user_id,
 		)
 		if float(from_wallet.available_balance or from_wallet.balance or 0) < float(trade.requested_amount):
 			raise ValueError("Insufficient PHP balance to approve this trade")
@@ -1126,7 +1124,6 @@ async def quote_wallet_conversion(
 			from_currency=from_currency,
 			to_currency=to_currency,
 			from_amount=request.from_amount,
-			user_id=str(current_user.id),
 		)
 	except ValueError as exc:
 		raise HTTPException(status_code=400, detail=str(exc)) from exc

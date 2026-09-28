@@ -498,8 +498,6 @@ def _can_manage_team(admin: Optional[AdminUser], current_user: Optional[UserResp
         return True
     if current_user and current_user.permissions and current_user.permissions.can_manage_team:
         return True
-    if current_user and current_user.permissions and current_user.permissions.is_super_admin:
-        return True
     return False
 
 
@@ -1149,7 +1147,12 @@ async def create_custom_role(
     """Create a custom role"""
     admin = await _get_current_admin(db, str(current_user.id))
 
-    if not admin or not admin.is_super_admin:
+    if (
+        not admin
+        or not admin.is_super_admin
+        or not current_user.permissions
+        or not current_user.permissions.can_manage_team
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     # Check if role exists

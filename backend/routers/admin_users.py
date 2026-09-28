@@ -100,7 +100,6 @@ class AdminUserCreate(BaseModel):
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
     service_fee_percent: float = Field(default=0.0, ge=0, le=100)
-    exchange_rate_fee_percent: float = Field(default=0.0, ge=0, le=100)
     collection_fee_percent: float = Field(default=0.0, ge=0, le=100)
     withdrawal_fee_percent: float = Field(default=0.0, ge=0, le=100)
     withdrawal_fee_php: float = Field(default=15.0, ge=0)
@@ -317,7 +316,6 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         added_by=current_user.id,
         usdt_wallet_address=normalized_address,
         service_fee_percent=float(data.service_fee_percent or 0.0),
-        exchange_rate_fee_percent=float(data.exchange_rate_fee_percent or 0.0),
         collection_fee_percent=float(data.collection_fee_percent or 0.0),
         withdrawal_fee_percent=float(data.withdrawal_fee_percent or 0.0),
         withdrawal_fee_php=float(data.withdrawal_fee_php),
@@ -385,7 +383,6 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
     for field, value in payload_data.items():
         if field in {
             "service_fee_percent",
-            "exchange_rate_fee_percent",
             "collection_fee_percent",
             "withdrawal_fee_percent",
             "withdrawal_fee_php",

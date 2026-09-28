@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from core.mask_crypto import decrypt_text, key_prefix
 from models.api_configs import Api_configs
+from models.admin_users import AdminUser
+from services.auth import get_admin_user_permissions
 from schemas.auth import UserResponse, UserPermissions
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,11 @@ async def get_bearer_token(
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication credentials were not provided")
 
 
-async def get_current_user(request: Request, token: str = Depends(get_bearer_token)) -> UserResponse:
+async def get_current_user(
+    request: Request,
+    token: str = Depends(get_bearer_token),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
     """Dependency to get current authenticated user via JWT token."""
     try:
         payload = decode_access_token(token)
@@ -48,6 +54,16 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication token")
+
+    permissions = UserPermissions(**payload["permissions"]) if payload.get("permissions") else None
+    if payload.get("role") == "admin":
+        admin = await db.scalar(
+            select(AdminUser).where(AdminUser.telegram_id == str(user_id))
+        )
+        if admin is not None:
+            if not admin.is_active:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin account is inactive")
+            permissions = get_admin_user_permissions(admin)
 
     # Secure Device Binding Verification
     claimed_device_id = payload.get("device_id")
@@ -84,7 +100,7 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
         must_change_password=bool(payload.get("must_change_password", False)),
         organization_id=payload.get("organization_id"),
         organization_name=payload.get("organization_name"),
-        permissions=UserPermissions(**payload["permissions"]) if payload.get("permissions") else None,
+        permissions=permissions,
         store_name=payload.get("store_name"),
         store_logo_url=payload.get("store_logo_url"),
         permanent_link_slug=payload.get("permanent_link_slug"),
@@ -215,7 +231,7 @@ def get_payment_user(required_scope: str):
         # Primary path: bearer token (backward-compatible)
         if credentials and credentials.scheme.lower() == "bearer":
             try:
-                return await get_current_user(request=request, token=credentials.credentials)
+                return await get_current_user(request=request, token=credentials.credentials, db=db)
             except HTTPException:
                 # If bearer auth is invalid but API key is provided, allow key fallback.
                 pass

@@ -1041,7 +1041,6 @@ async def _send_usdt_trade_quote(
             from_currency=from_currency,
             to_currency=to_currency,
             from_amount=amount,
-            user_id=f"tg-{chat_id}",
         )
     except ValueError as exc:
         await tg.send_message(chat_id, f"❌ Unable to quote this trade: {exc}")

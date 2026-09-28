@@ -66,7 +66,6 @@ class CurrencyService:
         from_currency: str,
         to_currency: str,
         from_amount: float,
-        user_id: Optional[str] = None,
     ) -> Dict[str, float]:
         """Get a conversion quote with a locked rate (valid for 30 seconds).
         
@@ -75,16 +74,9 @@ class CurrencyService:
             from_currency: Source currency (e.g., "USD")
             to_currency: Target currency (e.g., "PHP")
             from_amount: Amount to convert
-            user_id: Optional user id for per-user fee overrides
-        
         Returns:
             Dict with: from_amount, to_amount, rate, fee_amount, fee_rate, expires_at
         """
-        if user_id is None and wallet_id:
-            wallet = await self.db.get(Wallets, wallet_id)
-            if wallet and wallet.user_id:
-                user_id = str(wallet.user_id)
-
         from_currency, to_currency = self._validate_conversion_input(
             from_currency, to_currency, from_amount
         )
@@ -114,8 +106,8 @@ class CurrencyService:
             except RuntimeError:
                 raise ValueError(f"Cannot get rate for {pair}")
 
-        # Calculate conversion, including any user-specific surcharge on the exchange-rate fee.
-        fee_rate = (await get_conversion_fee_percent(self.db, user_id)) / 100.0
+        # The system-wide fee is configured by the super admin.
+        fee_rate = (await get_conversion_fee_percent(self.db)) / 100.0
         to_amount, fee_amount = self._calculate_conversion(from_amount, rate, fee_rate)
 
         return {
@@ -185,8 +177,8 @@ class CurrencyService:
         if not math.isfinite(rate) or rate <= 0:
             raise ValueError("Exchange rate must be a positive finite number")
 
-        # Calculate amounts; apply the configured user fee in addition to the system default.
-        fee_rate = (await get_conversion_fee_percent(self.db, user_id)) / 100.0
+        # Apply the configured system-wide conversion fee.
+        fee_rate = (await get_conversion_fee_percent(self.db)) / 100.0
         to_amount, fee_amount = self._calculate_conversion(from_amount, rate, fee_rate)
 
         # Update source wallet

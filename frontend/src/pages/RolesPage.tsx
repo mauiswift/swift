@@ -191,12 +191,8 @@ export default function RolesPage() {
     setError('');
     setSuccess('');
     try {
-      const res = await client.fetch(`/api/v1/admin-users/${admin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: role.name,
-        }),
+      const res = await client.fetch(`/api/v1/roles/${role.id}/apply/${admin.id}`, {
+        method: 'POST',
       });
       if (!res.ok) throw new Error(await res.text());
       setSuccess(`Applied "${role.name}" to ${admin.name || admin.telegram_username || `ID: ${admin.telegram_id}`}`);

@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Tuple
 from core.auth import create_access_token
 from core.config import settings
 from core.database import db_manager
+from core.roles import PredefinedRoleEnum, get_role_permissions_by_name
 from models.auth import OIDCState, User
 from models.admin_users import AdminUser
 from schemas.auth import UserPermissions
@@ -21,6 +22,44 @@ def _get_platform_organization() -> tuple[str, str]:
     return (
         getattr(settings, "platform_organization_id", "swiftpay-ph").strip() or "swiftpay-ph",
         getattr(settings, "platform_organization_name", "SwiftPay Philippines").strip() or "SwiftPay Philippines",
+    )
+
+
+def get_admin_user_permissions(admin_record: AdminUser) -> UserPermissions:
+    """Build effective permissions from the current persisted admin assignment."""
+    platform_org_id, _ = _get_platform_organization()
+    is_platform_owner = admin_record.organization_id == platform_org_id
+    role_name = (admin_record.role or "").strip().lower()
+    builtin_roles = {role.value for role in PredefinedRoleEnum}
+    if role_name in builtin_roles | {"editor", "super_admin", "approver"}:
+        permissions = get_role_permissions_by_name(role_name).model_dump()
+        if role_name == "owner" and not is_platform_owner:
+            permissions["is_super_admin"] = False
+        return UserPermissions(**permissions)
+
+    if isinstance(admin_record.team_permissions, dict):
+        return UserPermissions(
+            **{
+                field: bool(admin_record.team_permissions.get(field, False))
+                for field in UserPermissions.model_fields
+            }
+        )
+
+    return UserPermissions(
+        is_super_admin=bool(admin_record.is_super_admin)
+        and (role_name != "owner" or is_platform_owner),
+        can_manage_payments=bool(admin_record.can_manage_payments),
+        can_manage_disbursements=bool(admin_record.can_manage_disbursements),
+        can_view_reports=bool(admin_record.can_view_reports),
+        can_manage_wallet=bool(admin_record.can_manage_wallet),
+        can_manage_transactions=bool(admin_record.can_manage_transactions),
+        can_manage_bot=bool(admin_record.can_manage_bot),
+        can_approve_topups=bool(admin_record.can_approve_topups),
+        can_manage_team=bool(admin_record.can_manage_team),
+        can_credit_wallet=bool(admin_record.can_credit_wallet),
+        can_debit_wallet=bool(admin_record.can_debit_wallet),
+        can_freeze_wallet=bool(admin_record.can_freeze_wallet),
+        can_unfreeze_wallet=bool(admin_record.can_unfreeze_wallet),
     )
 
 

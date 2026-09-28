@@ -725,20 +725,17 @@ async def set_additional_collection_fee_percent(db: AsyncSession, percent: float
     return percent
 
 
-async def get_conversion_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
-    """Return the effective exchange-rate commission as a percentage points value.
+async def get_conversion_fee_percent(db: AsyncSession) -> float:
+    """Return the system-wide exchange-rate fee in percentage points.
 
     The default conversion fee is part of the product's standard wallet behavior.
     If a deployment explicitly turns fee enforcement off, the app can still keep the
     default schedule as a fallback for user-visible quote calculations and payout logic.
+    Conversion fees are set by the system super admin and do not vary by the account
+    initiating a conversion.
     """
     value = await _get_setting(db, CONVERSION_FEE_PERCENT_KEY)
-    percent = _fee_percent(value, default=DEFAULT_CONVERSION_FEE_PERCENT)
-    if user_id:
-        admin = await get_admin_user(db, user_id)
-        if admin:
-            percent = min(100.0, percent + _fee_percent(admin.exchange_rate_fee_percent))
-    return percent
+    return _fee_percent(value, default=DEFAULT_CONVERSION_FEE_PERCENT)
 
 
 async def set_conversion_fee_percent(db: AsyncSession, percent: float) -> float:

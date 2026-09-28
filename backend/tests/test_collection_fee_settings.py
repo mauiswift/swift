@@ -52,6 +52,22 @@ def test_collection_fee_percent_wrapper_uses_resolved_rate(monkeypatch):
     assert asyncio.run(app_settings.get_collection_fee_percent(object(), "merchant")) == 0.015
 
 
+def test_conversion_fee_is_system_wide_not_account_specific(monkeypatch):
+    async def get_setting(_db, key):
+        assert key == app_settings.CONVERSION_FEE_PERCENT_KEY
+        return "2.5"
+
+    async def unexpected_admin_lookup(*_args, **_kwargs):
+        raise AssertionError("Conversion fee must not look up an account-specific surcharge")
+
+    monkeypatch.setattr(app_settings, "_get_setting", get_setting)
+    monkeypatch.setattr(app_settings, "get_admin_user", unexpected_admin_lookup)
+
+    fee_percent = asyncio.run(app_settings.get_conversion_fee_percent(object()))
+
+    assert fee_percent == 2.5
+
+
 def _async_result(value):
     async def resolve(*args, **kwargs):
         _ = args, kwargs
