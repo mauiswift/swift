@@ -77,8 +77,16 @@ describe('isPaymentChannelEnabled', () => {
     expect(KRW_BANKS.find(bank => bank.code === '092')?.logo).toBe('/logos/toss-bank.png');
   });
 
+  it('uses an official logo for every Korean bank by name and bank code', () => {
+    for (const bank of KRW_BANKS) {
+      expect(bank.logo, bank.name).not.toBe('');
+      expect(resolveBrandLogoPath(bank.name), bank.name).toBe(bank.logo);
+      expect(resolveBrandLogoPath(bank.code), bank.code).toBe(bank.logo);
+    }
+  });
+
   it('does not mistake K Bank for KB Kookmin Bank', () => {
-    expect(resolveBrandLogoPath('K Bank')).toBe('');
+    expect(resolveBrandLogoPath('K Bank')).toBe('/logos/kbank.png');
     expect(resolveBrandLogoPath('KB Kookmin Bank')).toBe('/logos/kb-kookmin.svg');
   });
 
