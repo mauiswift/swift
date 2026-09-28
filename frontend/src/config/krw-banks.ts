@@ -29,7 +29,7 @@ export const KRW_BANK_DEFINITIONS = [
   ['088', 'Shinhan Bank', '/logos/shinhan-bank.svg'],
   ['089', 'K Bank', ''],
   ['090', 'Kakao Bank', '/logos/kakao-bank.svg'],
-  ['092', 'Toss Bank', '/logos/toss-bank-account.png'],
+  ['092', 'Toss Bank', '/logos/toss-bank.png'],
 ] as const;
 
 const KRW_BANK_CODE_ALIASES: Record<string, string> = {

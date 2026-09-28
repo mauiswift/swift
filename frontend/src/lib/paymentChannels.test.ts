@@ -1,6 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { KRW_BANKS, normalizeKrwBankName } from '@/config/krw-banks';
-import { getBrandLogoCandidates, resolveBrandLogoPath } from '@/config/payment-logo-registry';
+import { PH_BANKS } from '@/config/ph-banks';
+import { BANK_LOGO_ALIASES, getBrandLogoCandidates, normalizeBrandKey, resolveBrandLogoPath } from '@/config/payment-logo-registry';
+import { getBankLogo } from './bankBranding';
 import type { PaymentChannels } from './paymentChannels';
 
 const originalFetch = globalThis.fetch;
@@ -64,18 +68,56 @@ describe('isPaymentChannelEnabled', () => {
     expect(normalizeKrwBankName('Toss Bank')).toBe('Toss Bank');
     expect(normalizeKrwBankName('토스뱅크')).toBe('Toss Bank');
     expect(normalizeKrwBankName('토스페이')).toBe('Toss Pay');
-    expect(resolveBrandLogoPath('Toss Bank')).toBe('/logos/toss-bank-account.png');
+    expect(resolveBrandLogoPath('Toss Bank')).toBe('/logos/toss-bank.png');
     expect(resolveBrandLogoPath('토스페이')).toBe('/logos/tosspay.png');
   });
 
   it('uses the correct original logos for KDB and Toss Bank', () => {
     expect(resolveBrandLogoPath('KDB Bank')).toBe('/logos/kdb-bank.png');
-    expect(resolveBrandLogoPath('Toss Bank')).not.toBe('/logos/toss-bank.png');
+    expect(KRW_BANKS.find(bank => bank.code === '092')?.logo).toBe('/logos/toss-bank.png');
   });
 
   it('does not mistake K Bank for KB Kookmin Bank', () => {
     expect(resolveBrandLogoPath('K Bank')).toBe('');
     expect(resolveBrandLogoPath('KB Kookmin Bank')).toBe('/logos/kb-kookmin.svg');
+  });
+
+  it('does not show a parent bank logo for distinct Philippine institutions', () => {
+    const bdoNetwork = PH_BANKS.find(bank => bank.code === 'ORNNPHM1XXX');
+    const bpiBanKo = PH_BANKS.find(bank => bank.code === 'BPDIPHM1XXX');
+
+    expect(bdoNetwork).toBeDefined();
+    expect(bpiBanKo).toBeDefined();
+    expect(getBankLogo('BDO Network Bank', 'ORNNPHM1XXX')).toBeUndefined();
+    expect(getBankLogo('BPI Direct BanKo A Savings Bank', 'BPDIPHM1XXX')).toBeUndefined();
+    expect(getBankLogo('Banco de Oro Unibank Inc (BDO)', 'BNORPHMXXX')).toBe('/logos/bdo.svg');
+    expect(getBankLogo('Bank of the Philippine Islands (BPI)', 'BOPIPHMXXX')).toBe('/logos/bpi.svg');
+  });
+
+  it('uses exact aliases rather than matching unrelated names by prefix', () => {
+    expect(resolveBrandLogoPath('East West Banking Corporation')).toBe('/logos/eastwest-bank.svg');
+    expect(resolveBrandLogoPath('East West Rural Bank / Komo')).toBe('');
+    expect(resolveBrandLogoPath('BPI Direct BanKo A Savings Bank')).toBe('');
+    expect(resolveBrandLogoPath('BDO Network Bank')).toBe('');
+  });
+
+  it('has an existing public asset for every registered logo', () => {
+    for (const logoPath of Object.keys(BANK_LOGO_ALIASES)) {
+      const assetPath = fileURLToPath(new URL(`../../public${logoPath}`, import.meta.url));
+      expect(existsSync(assetPath), logoPath).toBe(true);
+    }
+  });
+
+  it('does not assign a normalized bank alias to multiple logos', () => {
+    const aliasOwners = new Map<string, string>();
+    for (const [logoPath, aliases] of Object.entries(BANK_LOGO_ALIASES)) {
+      for (const alias of aliases) {
+        const normalizedAlias = normalizeBrandKey(alias);
+        const existingOwner = aliasOwners.get(normalizedAlias);
+        expect(existingOwner === undefined || existingOwner === logoPath, normalizedAlias).toBe(true);
+        aliasOwners.set(normalizedAlias, logoPath);
+      }
+    }
   });
 
   it('prefers the registered official logo before a provider-supplied logo', () => {

@@ -13,8 +13,8 @@ export const normalizeBrandKey = (value: string): string => {
 };
 
 export const BANK_LOGO_ALIASES: Record<string, string[]> = {
-  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation', 'bnorphmxxx', 'ornnphm1xxx'],
-  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc', 'bankofthephilippineislandscorporation', 'bopiphmxxx', 'bpdiphm1xxx'],
+  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc', 'bdounibankcorporation', 'bancodeorounibankincbdo', 'bnorphmxxx'],
+  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsbpi', 'bankofthephilippineislandsinc', 'bankofthephilippineislandscorporation', 'bopiphmxxx'],
   '/logos/metrobank.svg': ['metrobank', 'metrobankphilippines', 'mbtc', 'metropolitanbank', 'metropolitanbankandtrust', 'metropolitanbankandtrustcompany', 'mbtcphmmxxx'],
   '/logos/unionbank.svg': ['unionbank', 'unionbankofthephilippines', 'unionbankofthephilippinesinc', 'unionbankofthephilippinescorporation', 'ubphphmmxxx'],
   '/logos/security-bank.svg': ['securitybank', 'security_bank', 'secbank', 'secbankph', 'securitybankcorp', 'securitybankcorporation', 'setcphmmxxx'],
@@ -23,7 +23,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/rcbc.svg': ['rcbc', 'rizalcommercialbankingcorporation', 'rcbcphmmxxx'],
   '/logos/psbank.svg': ['psbank', 'psb', 'philippinesavingsbank', 'philippinesavingsbankinc', 'phbmphmmxxx'],
   '/logos/asia-united-bank.png': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation', 'aubkphmmxxx'],
-  '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation', 'ewbcphmmxxx'],
+  '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation', 'eastwestbankingcorporation', 'ewbcphmmxxx'],
   '/logos/netbank.png': ['netbank', 'net_bank', 'cuobphm1xxx'],
   '/logos/diskartech.png': ['diskartech', 'rcbcdigital'],
   '/logos/bsp.svg': ['bsp', 'bangkosentralngpilipinas', 'centralbankofthephilippines'],
@@ -47,7 +47,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/ibk-bank.svg': ['ibk', 'industrialbankofkorea', 'ibkindustrialbankofkorea'],
   '/logos/kdb-bank.png': ['kdb', 'kdbbank'],
   '/logos/kakao-bank.svg': ['kakaobank', 'kakao'],
-  '/logos/toss-bank-account.png': ['tossbank', 'tossbankaccount'],
+  '/logos/toss-bank.png': ['tossbank'],
   '/logos/sc-first-bank.svg': ['sc', 'scfirstbank', 'scbank'],
   '/logos/naver.svg': ['naver'],
   '/logos/kakaopay.png': ['kakaopay'],
@@ -66,11 +66,7 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = Object.fromE
 export const resolveBrandLogoPath = (value: string): string => {
   const key = normalizeBrandKey(value);
   if (!key) return '';
-  return OFFICIAL_BRAND_LOGO_REGISTRY[key]
-    || Object.entries(OFFICIAL_BRAND_LOGO_REGISTRY).find(([alias]) =>
-      alias.length >= 4 && key.length >= 4 && (key.startsWith(alias) || alias.startsWith(key))
-    )?.[1]
-    || '';
+  return OFFICIAL_BRAND_LOGO_REGISTRY[key] || '';
 };
 
 export const getBrandLogoCandidates = (value: string, providerLogoUrl?: string): string[] => {
