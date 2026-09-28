@@ -190,7 +190,7 @@ function RevokeConfirmDialog({
   onCancel: () => void;
 }) {
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="presentation">
       <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="revoke-invitation-title" aria-describedby="revoke-invitation-description">
@@ -234,7 +234,7 @@ function RevokeConfirmDialog({
 
 export function TeamInvitationsTab() {
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const { isSuperAdmin } = useAuth();
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -547,7 +547,7 @@ export function TeamInvitationsTab() {
 
 export function TeamMembersTab() {
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const { isSuperAdmin, user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);

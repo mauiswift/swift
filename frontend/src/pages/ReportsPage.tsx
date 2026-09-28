@@ -34,8 +34,7 @@ const rangeDaysMap = {
 
 export default function ReportsPage() {
   const { language } = useLanguage();
-  const isKorean = language === 'ko';
-  const tx = (en: string, ko: string) => (isKorean ? ko : en);
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const [range, setRange] = useState<'Last 7 days' | 'Last 30 days' | 'Last 90 days'>('Last 7 days');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 

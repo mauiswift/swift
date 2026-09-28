@@ -42,7 +42,7 @@ declare global {
 export default function AccountSecure() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const { user, refetch } = useAuth();
   const [loading, setLoading] = useState(false);
   const [telegramLinkStatus, setTelegramLinkStatus] = useState<{

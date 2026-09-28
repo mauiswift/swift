@@ -50,8 +50,8 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 
 export default function Approvals() {
   const { language } = useLanguage();
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const isKorean = language === 'ko';
-  const tx = (en: string, ko: string) => isKorean ? ko : en;
   const localizedFilterLabels: Record<FilterType, string> = isKorean
     ? {
       kyb: 'KYB 등록',

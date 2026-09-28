@@ -37,7 +37,7 @@ export default function DisbursementsPage() {
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
   const isKorean = language === 'ko';
-  const tx = (en: string, ko: string) => (isKorean ? ko : en);
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const ui = {
     title: tx('Disbursements', '출금'),
     balance: tx('Balance left', '잔액'),

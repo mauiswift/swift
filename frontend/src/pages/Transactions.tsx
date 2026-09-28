@@ -77,8 +77,39 @@ export default function Transactions() {
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
   const isKorean = language === 'ko';
-  const dateLocale = isKorean ? 'ko-KR' : 'en-PH';
-  const ui = isKorean ? {
+  const isChinese = language === 'zh';
+  const dateLocale = isChinese ? 'zh-CN' : isKorean ? 'ko-KR' : 'en-PH';
+  const ui = isChinese ? {
+    title: '交易记录', description: '实时查看支付活动、状态和客户详情。',
+    live: '实时更新', offline: '离线更新', newPayment: '新支付',
+    search: '按 ID、说明、客户搜索...', status: '状态', allStatus: '全部状态',
+    allTypes: '全部类型', noTransactions: '没有找到交易记录',
+    transaction: '交易', descriptionHeader: '说明', customer: '客户', amount: '金额', date: '日期', created: '创建', paid: '已支付', actions: '操作',
+    success: '成功', processing: '处理中', failed: '失败', noResultsHint: '尝试调整筛选条件或创建一笔新支付。',
+    invoiceType: '发票', qrType: '二维码支付', paymentLinkType: '付款链接', type: '类型',
+    customerFallback: '未提供客户信息', descriptionFallback: '支付交易',
+    showing: '显示', of: '共', activeFilters: ' 个筛选条件', transactionCount: ' 笔交易', clearFilters: '清除筛选',
+  } : isKorean ? {
+    title: '거래 내역', description: '결제 활동, 상태 및 고객 정보를 실시간으로 확인하세요.',
+    live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
+    search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',
+    allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
+    transaction: '거래', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', created: '생성', paid: '결제 완료', actions: '작업',
+    success: '성공', processing: '처리 중', failed: '실패', noResultsHint: '필터를 변경하거나 새 결제를 만들어 보세요.',
+    invoiceType: '인보이스', qrType: 'QR 결제', paymentLinkType: '결제 링크', type: '유형',
+    customerFallback: '고객 정보 없음', descriptionFallback: '결제 거래',
+    showing: '표시 중', of: '/', activeFilters: '개 필터 적용', transactionCount: '건의 거래', clearFilters: '필터 초기화',
+  } : {
+    title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
+    live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
+    search: 'Search by ID, description, customer...', status: 'Status', allStatus: 'All Status',
+    allTypes: 'All Types', noTransactions: 'No transactions found',
+    transaction: 'Transaction', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', created: 'Created', paid: 'Paid', actions: 'Actions',
+    success: 'Success', processing: 'Processing', failed: 'Failed', noResultsHint: 'Try changing filters or create a new payment to get started.',
+    invoiceType: 'Invoice', qrType: 'QR payment', paymentLinkType: 'Payment link', type: 'Type',
+    customerFallback: 'Customer not provided', descriptionFallback: 'Payment transaction',
+    showing: 'Showing', of: 'of', activeFilters: ' filters active', transactionCount: ' transactions', clearFilters: 'Clear filters',
+  };
     title: '거래 내역', description: '결제 활동, 상태 및 고객 정보를 실시간으로 확인하세요.',
     live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
     search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',

@@ -537,7 +537,7 @@ export function useDashboardData() {
         weekdays: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
       };
 
-  const rangeLabels = rangeLabelsByLanguage[language === 'ko' ? 'ko' : 'en'];
+  const rangeLabels = rangeLabelsByLanguage[language === 'zh' ? 'zh' : language === 'en' ? 'en' : 'ko'];
   const formatAmount = (amount: number) => fmtCurrency(amount, collectionCurrency);
   const statusLabels = language === 'ko'
     ? { Executed: '실행됨', Pending: '대기 중', Rejected: '거부됨', Expired: '만료됨' }

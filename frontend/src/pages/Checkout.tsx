@@ -632,7 +632,7 @@ export default function Checkout() {
       ? Number(txn.processing_amount || 0)
       : null;
   const requiresDigitalSignature = phpEquivalent !== null && phpEquivalent > 100000;
-  const currencyName = getCurrencyName(currencyCode, language === 'ko' ? 'ko' : 'en');
+  const currencyName = getCurrencyName(currencyCode, language === 'zh' ? 'zh' : language === 'en' ? 'en' : 'ko');
   const signatureComplete = digitalSignature.length > 0;
   const getSignaturePoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = signatureCanvasRef.current;

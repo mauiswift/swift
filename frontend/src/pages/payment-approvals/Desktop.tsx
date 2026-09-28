@@ -165,7 +165,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
   };
 
   const formatDate = (dateString: string) => {
-    const locale = language === 'ko' ? 'ko-KR' : language === 'zh' ? 'zh-CN' : 'en-US';
+    const locale = language === 'zh' ? 'zh-CN' : language === 'en' ? 'en-US' : 'ko-KR';
     return new Date(dateString).toLocaleString(locale, {
       month: 'short',
       day: 'numeric',

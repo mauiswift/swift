@@ -56,7 +56,7 @@ function statusStyle(status: string) {
 export default function SupportPage() {
   const { user, isSuperAdmin } = useAuth();
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);

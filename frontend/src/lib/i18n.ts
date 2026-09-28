@@ -1,5 +1,33 @@
 export type Language = 'en' | 'zh' | 'ko';
 
+export function normalizeLanguage(language?: string | null): Language {
+  if (language === 'en' || language === 'zh' || language === 'ko') {
+    return language;
+  }
+  return 'ko';
+}
+
+export function detectBrowserLanguage(browserLanguage?: string | string[] | null): Language {
+  const languages = Array.isArray(browserLanguage) ? browserLanguage : browserLanguage ? [browserLanguage] : [];
+
+  for (const entry of languages) {
+    const normalized = (entry || '').trim().toLowerCase();
+    if (!normalized) continue;
+    if (normalized.startsWith('zh')) return 'zh';
+    if (normalized.startsWith('ko') || normalized.startsWith('kr')) return 'ko';
+    if (normalized.startsWith('en')) return 'en';
+  }
+
+  return 'ko';
+}
+
+export function getLocalizedText(language: Language | string | null, english: string, korean: string, chinese?: string): string {
+  const normalized = normalizeLanguage(language);
+  if (normalized === 'zh') return chinese ?? english;
+  if (normalized === 'en') return english;
+  return korean;
+}
+
 export const translations = {
   en: {
     /* Nav sections */
@@ -793,10 +821,11 @@ export const translations = {
 
 export type TranslationKey = keyof typeof translations.en;
 
-export function getTranslation(language: Language, key: TranslationKey): string {
-  return translations[language][key] || translations.en[key] || key;
+export function getTranslation(language: Language | string | null, key: TranslationKey): string {
+  const normalized = normalizeLanguage(language);
+  return translations[normalized][key] || translations.ko[key] || translations.en[key] || key;
 }
 
-export function useTranslation(language: Language) {
+export function useTranslation(language: Language | string | null) {
   return (key: TranslationKey): string => getTranslation(language, key);
 }

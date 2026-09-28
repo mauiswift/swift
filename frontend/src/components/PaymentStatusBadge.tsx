@@ -21,7 +21,7 @@ export function PaymentStatusBadge({
   className,
 }: PaymentStatusBadgeProps) {
   const { language } = useLanguage();
-  const localizedLanguage = language === 'ko' ? 'ko' : 'en';
+  const localizedLanguage = language === 'zh' ? 'zh' : language === 'en' ? 'en' : 'ko';
   const status = getTransactionStatus(transaction);
   const awaitingApproval = isAwaitingApproval(transaction);
   const approvalRejected = transaction.approval_status?.trim().toLowerCase() === 'rejected';

@@ -52,7 +52,7 @@ function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: str
       {!collapsed && (
         <div className="flex flex-col min-w-0">
           <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-white">{name || 'SwiftPay Philippines'}</span>
-          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">{language === 'ko' ? '테크놀로지' : 'Technology'}</span>
+          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">{language === 'zh' ? '技术' : language === 'en' ? 'Technology' : '테크놀로지'}</span>
         </div>
       )}
     </div>

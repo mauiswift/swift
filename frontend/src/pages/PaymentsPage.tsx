@@ -170,7 +170,7 @@ export default function PaymentsPage() {
       if (activeCurrency === 'PHP') {
         rawItems.push(...await fetchAllPages({ currency: null }));
       }
-      const locale = language === 'ko' ? 'ko-KR' : 'en-PH';
+      const locale = language === 'zh' ? 'zh-CN' : language === 'en' ? 'en-PH' : 'ko-KR';
       const mapped: Payment[] = rawItems.map((item) => {
         const createdDate = item.created_at ? new Date(item.created_at) : null;
         const paidDate = item.paid_at || item.updated_at;

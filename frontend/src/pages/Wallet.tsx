@@ -527,8 +527,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
   const canTradeUsdtForPhp = selectedCollectionCurrency === 'PHP';
-  const isKoreanWallet = language === 'ko';
-  const tx = (en: string, ko: string) => (isKoreanWallet ? ko : en);
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const sharedWalletIsPrimary = Boolean(
     !cryptoOnly
     && !isSuperAdmin

@@ -12,7 +12,7 @@ const DEFAULT_TAX_NUMBER = '330-460-536-00000';
 export default function CreateInvoice() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const { collectionCurrency } = useCollectionCurrency();
   const [currency, setCurrency] = useState(collectionCurrency || 'PHP');
   const [invoiceNumber, setInvoiceNumber] = useState(() => `INV-${Date.now().toString().slice(-8)}`);

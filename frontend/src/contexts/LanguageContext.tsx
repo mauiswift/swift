@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { translations, type Language, type TranslationKey } from '@/lib/i18n';
+import { detectBrowserLanguage, normalizeLanguage, translations, type Language, type TranslationKey } from '@/lib/i18n';
 
 interface LanguageContextType {
   language: Language;
@@ -17,24 +17,24 @@ export const useLanguage = (): LanguageContextType => {
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    let storedLang: Language | null = null;
-    let storedCurrency = 'PHP';
     try {
-      storedLang = localStorage.getItem('language') as Language | null;
-      storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+      const storedLang = localStorage.getItem('language');
+      if (storedLang) {
+        return normalizeLanguage(storedLang);
+      }
     } catch {
-      // Use English/PHP defaults when browser storage is unavailable.
+      // Ignore storage issues and fall back to browser detection.
     }
 
-    if (storedLang === 'zh' || storedLang === 'ko') {
-      return storedLang;
+    if (typeof navigator !== 'undefined') {
+      return detectBrowserLanguage(navigator.languages ?? navigator.language);
     }
 
-    return storedCurrency === 'KRW' ? 'ko' : 'en';
+    return 'ko';
   });
 
   const setLanguage = (lang: Language) => {
-    const normalizedLang = lang === 'zh' || lang === 'ko' ? lang : 'en';
+    const normalizedLang = normalizeLanguage(lang);
     setLanguageState(normalizedLang);
     try {
       localStorage.setItem('language', normalizedLang);

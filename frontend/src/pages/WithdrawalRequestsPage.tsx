@@ -47,8 +47,7 @@ export default function WithdrawalRequestsPage() {
   const { language } = useLanguage();
   const { isSuperAdmin } = useAuth();
   const isKrwFlow = collectionCurrency === 'KRW' && !isSuperAdmin;
-  const isKorean = language === 'ko';
-  const tx = (en: string, ko: string) => (isKorean ? ko : en);
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const statusConfig = getStatusConfig(isKrwFlow);
   const uiText = {
     heading: tx('Withdrawal Requests', '출금 요청'),

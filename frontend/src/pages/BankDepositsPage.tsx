@@ -42,7 +42,7 @@ const authHeaders = (json = false): HeadersInit => {
 
 export default function BankDepositsPage() {
   const { language } = useLanguage();
-  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const [requests, setRequests] = useState<BankDepositRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending');
