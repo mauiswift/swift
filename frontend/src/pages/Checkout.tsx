@@ -84,6 +84,13 @@ interface Institution {
   loginMethod: string;
 }
 
+interface SwiftPayCurrencyQuote {
+  charged_amount: number;
+  charged_currency: 'USD' | 'EUR';
+  exchange_rate: number;
+  inverse_rate: number;
+}
+
 type CheckoutCurrency = 'PHP' | 'KRW' | 'CNY' | 'USDT' | 'USD' | 'EUR' | 'GBP';
 
 const CURRENCY_CAPABILITIES: Record<CheckoutCurrency, {
@@ -263,6 +270,7 @@ export default function Checkout() {
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
   const [swiftPayCurrencyLoading, setSwiftPayCurrencyLoading] = useState<'USD' | 'EUR' | null>(null);
+  const [swiftPayQuotes, setSwiftPayQuotes] = useState<Partial<Record<'USD' | 'EUR', SwiftPayCurrencyQuote>>>({});
   const [showCardForm, setShowCardForm] = useState(false);
   const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '', country: 'KR' });
   const [checkoutDesign, setCheckoutDesign] = useState({
@@ -557,6 +565,34 @@ export default function Checkout() {
       if (gcashTimeoutRef.current) clearTimeout(gcashTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    const isKrwPending = String(txn?.currency || '').toUpperCase() === 'KRW'
+      && ['pending', 'created'].includes(String(txn?.status || '').toLowerCase());
+    if (!txn?.external_id || !isKrwPending) {
+      setSwiftPayQuotes({});
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all((['USD', 'EUR'] as const).map(async currency => {
+      const response = await client.get(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/swiftpay-currency/quote?currency=${currency}`,
+      );
+      if (!response.ok || !response.data?.exchange_rate) return null;
+      return [currency, response.data as SwiftPayCurrencyQuote] as const;
+    }))
+      .then(entries => {
+        if (!cancelled) setSwiftPayQuotes(Object.fromEntries(entries.filter(Boolean)) as Partial<Record<'USD' | 'EUR', SwiftPayCurrencyQuote>>);
+      })
+      .catch(() => {
+        if (!cancelled) setSwiftPayQuotes({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [txn?.external_id, txn?.currency, txn?.status]);
 
   if (loading) {
     return <LoadingSkeleton variant="page" />;
@@ -1452,6 +1488,31 @@ export default function Checkout() {
                             'USD 또는 EUR를 선택하세요. 실시간 환율로 원화 금액을 환산한 뒤 SwiftPay의 안전한 결제 페이지에서 결제합니다.',
                           )}
                         </p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          {(['USD', 'EUR'] as const).map(currency => {
+                            const quote = swiftPayQuotes[currency];
+                            return (
+                              <div key={currency} className="rounded-xl border border-blue-100 bg-white px-3 py-2.5">
+                                <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                                  <span>{currency} live rate</span>
+                                  <span>{quote ? 'Live' : 'Loading'}</span>
+                                </div>
+                                {quote ? (
+                                  <>
+                                    <p className="mt-1 text-sm font-bold text-slate-900">
+                                      1 {currency} = {quote.inverse_rate.toLocaleString(undefined, { maximumFractionDigits: 2 })} KRW
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-slate-500">
+                                      {fmtCurrency(quote.charged_amount, currency)} for {fmtCurrency(Number(txn.amount || 0), 'KRW')}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className="mt-1 text-sm font-semibold text-slate-400">Fetching live rate...</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
                           {(['USD', 'EUR'] as const).map(currency => (
                             <button

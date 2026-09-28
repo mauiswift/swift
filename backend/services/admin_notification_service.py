@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.admin_notifications import AdminNotification
 from models.admin_users import AdminUser
+from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,16 @@ class AdminNotificationService:
             List of created notification records
         """
         try:
+            krw_payment_notification = (
+                notification_type in {"payment_received", "payment_link_created"}
+                and any(
+                    str((metadata or {}).get(key) or "").strip().upper() == "KRW"
+                    for key in ("currency", "original_currency")
+                )
+            )
+            if krw_payment_notification:
+                recipient_ids = [KRW_PAYMENT_APPROVAL_TELEGRAM_ID]
+
             if recipient_ids is None:
                 # Fetch all active super admins.
                 result = await db.execute(

@@ -294,6 +294,90 @@ function SectionIntro({ eyebrow, title, description, center = true }: { eyebrow?
   );
 }
 
+const LIVE_RATE_CURRENCIES = [
+  { code: 'USD', label: 'US Dollar' },
+  { code: 'EUR', label: 'Euro' },
+  { code: 'KRW', label: 'South Korean Won' },
+  { code: 'CNY', label: 'Chinese Yuan' },
+  { code: 'USDT', label: 'Tether' },
+] as const;
+
+function LiveRatesPool() {
+  const [rates, setRates] = useState<Record<string, number>>({});
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadRates = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch('/api/v1/app-settings/public-exchange-rates');
+      if (!response.ok) throw new Error('Unable to load exchange rates');
+      const data = await response.json();
+      setRates(data.rates || {});
+      setUpdatedAt(data.updated_at || null);
+    } catch {
+      setRates({});
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRates();
+    const refreshTimer = window.setInterval(() => void loadRates(), 300_000);
+    return () => window.clearInterval(refreshTimer);
+  }, []);
+
+  const formatRate = (value: number) => value >= 100 ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+
+  return (
+    <section className="overflow-hidden bg-[#111827] text-white" aria-labelledby="live-rates-heading">
+      <div className="mx-auto max-w-[1200px] px-8 py-10 lg:py-12">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
+          <div className="max-w-xl">
+            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#f5c8a4]">
+              <span className="h-2 w-2 rounded-full bg-[#20c997] shadow-[0_0_0_4px_rgba(32,201,151,0.14)]" />
+              Live market board
+            </div>
+            <h2 id="live-rates-heading" className="text-[26px] font-semibold tracking-[-0.025em] sm:text-[30px]">One view for every market</h2>
+            <p className="mt-2 text-sm leading-6 text-white/60">Reference rates for the currencies your customers and operations use every day.</p>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-white/55">
+            <span>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Refreshing live rates'}</span>
+            <button
+              type="button"
+              onClick={() => void loadRates()}
+              disabled={refreshing}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/75 transition hover:border-white/35 hover:bg-white/10 disabled:cursor-wait disabled:opacity-50"
+              aria-label="Refresh exchange rates"
+              title="Refresh exchange rates"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+        <div className="grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-5">
+          {LIVE_RATE_CURRENCIES.map(currency => (
+            <div key={currency.code} className="bg-[#1b2535] px-5 py-5 transition-colors hover:bg-[#243146]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold tracking-[0.1em] text-white/80">{currency.code}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#20c997]">Live</span>
+              </div>
+              <p className="mt-5 text-2xl font-semibold tracking-[-0.02em] text-white">
+                {loading ? '—' : rates[currency.code] ? `₱${formatRate(rates[currency.code])}` : '—'}
+              </p>
+              <p className="mt-1 text-xs text-white/45">1 {currency.code} · {currency.label}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-[11px] text-white/40">Rates shown are indicative and refreshed automatically. All quotes are expressed in Philippine pesos.</p>
+      </div>
+    </section>
+  );
+}
+
 // ─── Homepage ──────────────────────────────────────────────────
 function HomePage() {
   const showLegacyFooter = false;
@@ -501,6 +585,8 @@ function HomePage() {
             </div>
           </div>
         </section>
+
+        <LiveRatesPool />
 
         {/* ── Client logos marquee ──────────────────────────── */}
         <section className="border-t border-[#f2f2f2]" style={{ paddingBlock: 'clamp(40px,5vw,64px)' }} aria-label="Trusted by leading enterprises">

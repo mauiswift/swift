@@ -668,17 +668,32 @@ class TransactionsService(BaseService[Transactions]):
         approved_by: str,
         note: Optional[str] = None,
         manual_receipt: bool = False,
+        force_approval: bool = False,
     ) -> bool:
         """Approve a received payment and credit its wallet exactly once."""
         if not is_customer_payment(txn):
             logger.warning("Attempted to approve non-customer transaction %s", txn.id)
             return False
-        if not is_payment_received(txn) and not manual_receipt:
+        if not force_approval and not is_payment_received(txn) and not manual_receipt:
             logger.warning(
                 "Attempted to approve payment %s before provider receipt",
                 txn.external_id,
             )
             return False
+        if force_approval:
+            now = datetime.now(timezone.utc)
+            txn.status = "paid"
+            txn.approval_status = "approved"
+            txn.approved_by = str(approved_by)
+            txn.approved_at = now
+            txn.updated_at = now
+            await self.credit_wallet_from_transaction(
+                txn,
+                gateway_label="admin-manual",
+                wallet_note=note,
+            )
+            await self.db.commit()
+            return True
         approval_pending = txn.approval_status in {None, "pending"}
         if txn.status in {"paid", "completed"}:
             if not approval_pending:

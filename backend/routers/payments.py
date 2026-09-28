@@ -235,6 +235,45 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+@router.get("/checkout/{identifier}/swiftpay-currency/quote")
+async def get_swiftpay_currency_quote(
+    identifier: str,
+    currency: Literal["USD", "EUR"] = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the live KRW-to-foreign-currency quote without creating an order."""
+    result = await db.execute(
+        select(Transactions)
+        .where(func.lower(Transactions.external_id) == identifier.lower())
+        .limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if str(txn.status or "").lower() not in {"pending", "created"} or txn.paid_at:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    if str(txn.currency or "").strip().upper() != "KRW":
+        raise HTTPException(status_code=400, detail="Multicurrency checkout is only available for KRW payments")
+
+    amount_krw = float(txn.original_amount if txn.original_amount is not None else txn.amount or 0)
+    try:
+        converted_amount = await CurrencyConverter.convert_live(amount_krw, "KRW", currency)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if converted_amount <= 0:
+        raise HTTPException(status_code=502, detail="SwiftPay returned an invalid exchange rate")
+
+    return {
+        "success": True,
+        "quoted_amount": amount_krw,
+        "quoted_currency": "KRW",
+        "charged_amount": converted_amount,
+        "charged_currency": currency,
+        "exchange_rate": converted_amount / amount_krw if amount_krw else None,
+        "inverse_rate": amount_krw / converted_amount,
+    }
+
+
 @router.post("/checkout/{identifier}/swiftpay-currency")
 async def create_swiftpay_currency_checkout(
     identifier: str,

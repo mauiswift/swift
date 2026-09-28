@@ -54,6 +54,45 @@ def test_krw_detection_uses_original_currency_when_set():
     assert not _is_krw_payment(SimpleNamespace(currency="PHP", original_currency="USD"))
 
 
+@pytest.mark.asyncio
+async def test_force_approval_credits_krw_payment_from_any_status():
+    from services.transactions import TransactionsService
+
+    db = Mock()
+    db.commit = AsyncMock()
+    service = TransactionsService(db)
+    service.credit_wallet_from_transaction = AsyncMock()
+    txn = SimpleNamespace(
+        id=42,
+        transaction_type="payment_link",
+        external_id="krw-any-status-42",
+        amount=1250.0,
+        currency="KRW",
+        status="cancelled",
+        approval_status="rejected",
+        paid_at=None,
+        user_id="merchant-1",
+    )
+
+    approved = await service.approve_payment_link(
+        txn,
+        approved_by=KRW_PAYMENT_APPROVAL_TELEGRAM_ID,
+        note="Approved by designated KRW reviewer",
+        force_approval=True,
+    )
+
+    assert approved is True
+    assert txn.status == "paid"
+    assert txn.approval_status == "approved"
+    assert txn.approved_by == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    service.credit_wallet_from_transaction.assert_awaited_once_with(
+        txn,
+        gateway_label="admin-manual",
+        wallet_note="Approved by designated KRW reviewer",
+    )
+    db.commit.assert_awaited_once()
+
+
 def test_only_designated_user_is_selected_for_krw_approval_notifications():
     assert _payment_recipient_ids("KRW") == [KRW_PAYMENT_APPROVAL_TELEGRAM_ID]
     assert _payment_recipient_ids("PHP", "KRW") == [KRW_PAYMENT_APPROVAL_TELEGRAM_ID]
@@ -84,6 +123,34 @@ async def test_targeted_approval_notification_only_sends_to_designated_telegram_
 
     assert len(notifications) == 1
     assert notifications[0].admin_id == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    telegram.send_message.assert_awaited_once()
+    assert telegram.send_message.await_args.kwargs["chat_id"] == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+
+
+@pytest.mark.asyncio
+async def test_krw_approval_notification_overrides_other_recipient_ids(monkeypatch):
+    db = Mock()
+    db.add = Mock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    telegram = Mock()
+    telegram.send_message = AsyncMock()
+    monkeypatch.setattr("services.telegram_service.TelegramService", lambda: telegram)
+
+    notifications = await AdminNotificationService.notify_super_admins(
+        db,
+        notification_type="payment_received",
+        title="KRW payment received",
+        message="Payment requires approval",
+        resource_type="payment",
+        resource_id="43",
+        metadata={"currency": "KRW"},
+        recipient_ids=["other-admin", "another-admin"],
+    )
+
+    assert [notification.admin_id for notification in notifications] == [
+        KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    ]
     telegram.send_message.assert_awaited_once()
     assert telegram.send_message.await_args.kwargs["chat_id"] == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
 

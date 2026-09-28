@@ -195,18 +195,21 @@ async def list_pending_payment_approvals(
             ]),
             Transactions.amount > 0,
             Transactions.external_id.is_not(None),
-            or_(
-                Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
-                and_(
-                    Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
-                    or_(
-                        Transactions.approval_status.is_(None),
-                        Transactions.approval_status == "pending",
-                    ),
-                ),
-            ),
         )
         is_krw_approver = str(current_user.id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+        if not is_krw_approver:
+            query = query.where(
+                or_(
+                    Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
+                    and_(
+                        Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
+                        or_(
+                            Transactions.approval_status.is_(None),
+                            Transactions.approval_status == "pending",
+                        ),
+                    ),
+                )
+            )
         if not is_krw_approver:
             query = query.where(
                 or_(Transactions.currency.is_(None), func.upper(Transactions.currency) != "KRW"),
@@ -386,6 +389,10 @@ async def approve_payment_link(
         raise HTTPException(status_code=404, detail="Payment link not found")
     if _is_krw_payment(txn):
         _require_krw_payment_owner(current_user)
+    force_krw_approval = (
+        _is_krw_payment(txn)
+        and str(current_user.id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    )
 
     approval_pending = txn.approval_status in {None, "pending"}
     retryable_settlement = (
@@ -393,7 +400,7 @@ async def approve_payment_link(
         and txn.approval_status == "approved"
         and is_customer_payment(txn)
     )
-    if txn.status not in APPROVABLE_PAYMENT_STATUSES and not retryable_settlement and not (
+    if not force_krw_approval and txn.status not in APPROVABLE_PAYMENT_STATUSES and not retryable_settlement and not (
         txn.status in EXTERNALLY_PAID_STATUSES and approval_pending
     ):
         raise HTTPException(
@@ -402,12 +409,12 @@ async def approve_payment_link(
         )
 
     approval_status = getattr(txn, 'approval_status', None)
-    if approval_status == "approved":
+    if approval_status == "approved" and not force_krw_approval:
         raise HTTPException(
             status_code=400,
             detail="Payment link already approved",
         )
-    if not is_payment_received(txn):
+    if not force_krw_approval and not is_payment_received(txn):
         raise HTTPException(
             status_code=400,
             detail=f"Payment has not been received; current payment status is {get_payment_status(txn) or 'unknown'}.",
@@ -437,6 +444,7 @@ async def approve_payment_link(
             txn,
             approved_by=str(current_user.id),
             note=body.note,
+            force_approval=force_krw_approval,
         )
         if not approved:
             logger.error(f"Failed to approve payment {txn_id} - service returned false")

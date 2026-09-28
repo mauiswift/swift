@@ -117,7 +117,13 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
                 )
                 return {"ok": False}
             approved = await TransactionsService(db).approve_payment_link(
-                txn, approved_by=admin_id, note=note,
+                txn,
+                approved_by=admin_id,
+                note=note,
+                force_approval=(
+                    _is_krw_payment(txn)
+                    and str(user_id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+                ),
             )
             if not approved:
                 raise ValueError("Payment could not be approved")

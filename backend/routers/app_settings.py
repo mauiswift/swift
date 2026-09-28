@@ -9,7 +9,7 @@ from models.app_settings import AppSettings
 from models.admin_users import AdminUser
 from pydantic import BaseModel
 from schemas.auth import UserResponse
-from services.exchange_rate_service import fetch_live_usdt_php_rate, get_cache_status as _get_exchange_rate_cache_status
+from services.exchange_rate_service import fetch_live_usdt_php_rate, get_cache_status as _get_exchange_rate_cache_status, get_rate
 from services.app_settings import (
     _get_setting,
     _set_setting,
@@ -208,6 +208,31 @@ async def get_usdt_php_rate_endpoint(db: AsyncSession = Depends(get_db)):
     """Return the current USDT→PHP exchange rate used for topup conversion. Publicly accessible."""
     details = await get_usdt_php_rate_details(db)
     return UsdtPhpRateResponse(rate=float(details["rate"]), source=str(details["source"]))
+
+
+@router.get("/public-exchange-rates")
+async def get_public_exchange_rates():
+    """Return the cached live market rates shown on the public homepage."""
+    usdt_rates = {
+        currency: await get_rate(f"USDT_{currency}")
+        for currency in ("PHP", "USD", "EUR", "KRW", "CNY")
+    }
+    usdt_php = usdt_rates["PHP"]
+    rates = {
+        "PHP": 1.0,
+        "USDT": usdt_php,
+        "USD": usdt_php / usdt_rates["USD"],
+        "EUR": usdt_php / usdt_rates["EUR"],
+        "KRW": usdt_php / usdt_rates["KRW"],
+        "CNY": usdt_php / usdt_rates["CNY"],
+    }
+    return {
+        "success": True,
+        "base_currency": "PHP",
+        "rates": rates,
+        "source": "CoinGecko",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.get("/users/{user_id}/service-fee", response_model=UserServiceFeeResponse)
