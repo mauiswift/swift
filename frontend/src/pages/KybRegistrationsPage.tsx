@@ -236,10 +236,10 @@ export default function KybRegistrationsPage() {
 
   return (
     <Layout>
-      <div className="space-y-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="mx-auto w-full max-w-7xl space-y-5 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               KYB Registrations
               {pending_count > 0 && (
                 <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
@@ -249,7 +249,7 @@ export default function KybRegistrationsPage() {
           </div>
           <button
             onClick={fetchRegistrations}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0"
+            className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
@@ -262,7 +262,7 @@ export default function KybRegistrationsPage() {
               <button
                 key={value || 'all'}
                 onClick={() => setFilter(value)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === value ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
                 }`}
               >

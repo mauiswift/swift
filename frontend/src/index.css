@@ -221,13 +221,13 @@
     .app-main {
       padding: 1.25rem 1.5rem calc(3rem + env(safe-area-inset-bottom));
     }
+  }
 
-    @media (max-width: 639px) {
-      input:not([type='checkbox']):not([type='radio']):not([type='range']),
-      select,
-      textarea {
-        font-size: 16px;
-      }
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px;
     }
   }
 

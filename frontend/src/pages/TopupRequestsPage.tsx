@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { client } from '@/lib/api';
-import SiteContainer from '@/components/SiteContainer';
 import { CheckCircle, XCircle, Eye, RefreshCw, DollarSign, TrendingUp, Save, Pencil, X, Search } from 'lucide-react';
 import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 
@@ -229,10 +228,10 @@ export default function TopupRequestsPage() {
 
   return (
     <Layout>
-      <SiteContainer className="space-y-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="mx-auto w-full max-w-7xl space-y-5 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               Topup Requests
               {pending_count > 0 && (
                 <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
@@ -240,22 +239,22 @@ export default function TopupRequestsPage() {
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Review and approve USDT TRC20 → PHP wallet top-ups</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
+          <div className="flex min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1 sm:w-64 lg:w-80">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, chat ID, or request ID" className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
             </div>
-            {selectedIds.length > 0 && filter === 'pending' && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
+            {selectedIds.length > 0 && filter === 'pending' && <div className="grid grid-cols-2 gap-2 sm:flex"><button type="button" onClick={() => runBulk('approve')} className="min-h-11 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('reject')} className="min-h-11 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
           </div>
           <button onClick={() => void fetchRequests()} type="button" aria-label="Refresh top-up requests" title="Refresh top-up requests"
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
+            className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
         </div>
 
         {/* Exchange rate card */}
         <div className="bg-background border border-blue-500/20 rounded-2xl p-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                 <TrendingUp className="h-4 w-4 text-blue-400" />
@@ -284,12 +283,12 @@ export default function TopupRequestsPage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
               <button
                 onClick={fetchLiveRate}
                 disabled={liveRateLoading}
                 type="button"
-                className="text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 transition-colors">
+                className="min-h-11 rounded-lg border border-blue-500/30 px-3 py-1.5 text-xs text-blue-400 transition-colors hover:bg-blue-500/10 disabled:opacity-50 sm:min-h-9">
                 <RefreshCw className={`inline-block mr-1.5 h-3.5 w-3.5 ${liveRateLoading ? 'animate-spin' : ''}`} />
                 {liveRateLoading ? 'Fetching…' : 'Live Rate'}
               </button>
@@ -299,13 +298,13 @@ export default function TopupRequestsPage() {
                     onClick={saveRate}
                     disabled={rateLoading}
                     type="button"
-                    className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors">
+                    className="min-h-11 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-500 disabled:opacity-50 sm:min-h-9">
                     {rateLoading ? 'Saving…' : <><Save className="inline-block mr-1.5 h-3.5 w-3.5" />Save Rate</>}
                   </button>
                   <button
                     onClick={cancelRateEdit}
                     type="button"
-                    className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                    className="min-h-11 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-9">
                     <X className="inline-block mr-1.5 h-3.5 w-3.5" />Cancel
                   </button>
                 </>
@@ -313,7 +312,7 @@ export default function TopupRequestsPage() {
                 <button
                   onClick={() => setRateEditMode(true)}
                   type="button"
-                  className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                  className="min-h-11 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-9">
                   <Pencil className="inline-block mr-1.5 h-3.5 w-3.5" />Edit Rate
                 </button>
               )}
@@ -323,7 +322,7 @@ export default function TopupRequestsPage() {
 
         {/* TRC20 deposit address card */}
         <div className="bg-background border border-teal-500/20 rounded-2xl p-4">
-          <div className="flex items-start justify-between flex-wrap gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <div className="h-9 w-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
                 <DollarSign className="h-4 w-4 text-teal-400" />
@@ -343,20 +342,20 @@ export default function TopupRequestsPage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center">
               {addressEditMode ? (
                 <>
                   <button
                     onClick={saveAddress}
                     disabled={addressLoading}
                     type="button"
-                    className="text-xs px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-50 transition-colors">
+                    className="min-h-11 rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-teal-500 disabled:opacity-50 sm:min-h-9">
                     {addressLoading ? 'Saving…' : <><Save className="inline-block mr-1.5 h-3.5 w-3.5" />Save Address</>}
                   </button>
                   <button
                     onClick={() => { setAddressEditMode(false); setAddressInput(trc20Address); }}
                     type="button"
-                    className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                    className="min-h-11 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-9">
                     <X className="inline-block mr-1.5 h-3.5 w-3.5" />Cancel
                   </button>
                 </>
@@ -364,7 +363,7 @@ export default function TopupRequestsPage() {
                 <button
                   onClick={() => setAddressEditMode(true)}
                   type="button"
-                  className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+                  className="min-h-11 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-9">
                   <Pencil className="inline-block mr-1.5 h-3.5 w-3.5" />Edit Address
                 </button>
               )}
@@ -377,7 +376,7 @@ export default function TopupRequestsPage() {
           <div className="flex gap-2 min-w-max">
           {['pending', 'approved', 'rejected', ''].map((s) => (
             <button key={s || 'all'} onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
                 filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
               }`}>
               {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
@@ -428,10 +427,12 @@ export default function TopupRequestsPage() {
               const phpEquivalent = (req.amount_usdt * usdtPhpRate).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
-                  <div className="p-4 flex items-start gap-4">
-                    {req.status === 'pending' && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="mt-3 h-4 w-4 rounded border-border" aria-label={`Select request ${req.id}`} />}
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                      <DollarSign className="h-5 w-5 text-emerald-400" />
+                  <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:gap-4 sm:p-4">
+                    <div className="flex items-center gap-3 sm:contents">
+                      {req.status === 'pending' && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="h-5 w-5 self-start rounded border-border sm:mt-3 sm:h-4 sm:w-4" aria-label={`Select request ${req.id}`} />}
+                      <div className="h-10 w-10 shrink-0 rounded-xl border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-emerald-400" />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -442,7 +443,7 @@ export default function TopupRequestsPage() {
                           showDot
                         />
                       </div>
-                      <p className="text-muted-foreground text-sm mt-0.5">
+                      <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">
                         <span className="text-foreground font-medium">{req.user_name || req.telegram_username || req.chat_id}</span>
                         {' · '}
                         <span className="text-emerald-400 font-semibold">${req.amount_usdt.toFixed(2)} USDT</span>
@@ -452,22 +453,22 @@ export default function TopupRequestsPage() {
                         {' · '}{fmt_time(req.created_at)}
                       </p>
                       {req.note && <p className="text-muted-foreground text-xs mt-1">Note: {req.note}</p>}
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className={`text-xs ${req.receipt_file_id ? 'text-emerald-400' : 'text-amber-400'}`}>
                           {req.receipt_file_id ? '📎 Receipt uploaded' : '⚠️ No receipt yet'}
                         </span>
                         {req.receipt_file_id && (
                           <button type="button" onClick={() => openReceiptFile(req.receipt_file_id!)}
-                            className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 transition-colors">
+                            className="app-touch-target -my-1 inline-flex items-center gap-1 text-xs text-blue-400 transition-colors hover:text-blue-300">
                             <Eye className="h-3 w-3" /> View
                           </button>
                         )}
                       </div>
                     </div>
                     {req.status === 'pending' && (
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
                         <button onClick={() => setActiveId(isActive ? null : req.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors">
+                          className="min-h-11 w-full rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-slate-400 sm:min-h-9 sm:w-auto">
                           {isActive ? 'Cancel' : 'Review'}
                         </button>
                       </div>
@@ -476,7 +477,7 @@ export default function TopupRequestsPage() {
 
                   {/* Action panel */}
                   {isActive && req.status === 'pending' && (
-                    <div className="px-4 pb-4 border-t border-border/40 pt-3">
+                    <div className="border-t border-border/40 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
                         💱 Approving will credit <strong>₱{phpEquivalent} PHP</strong> to the user's wallet
                         {' '}(${req.amount_usdt.toFixed(2)} USDT × ₱{usdtPhpRate.toFixed(2)} rate)
@@ -487,16 +488,16 @@ export default function TopupRequestsPage() {
                         placeholder="e.g. Receipt verified, transaction confirmed"
                         className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 mb-3"
                       />
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <button onClick={() => doAction(req.id, 'approve')}
                           disabled={actionLoading === req.id}
-                          className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm">
+                          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50">
                           {actionLoading === req.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                           Approve & Credit ₱{phpEquivalent} PHP
                         </button>
                         <button onClick={() => doAction(req.id, 'reject')}
                           disabled={actionLoading === req.id}
-                          className="flex-1 flex items-center justify-center gap-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm">
+                          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-red-600/80 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
                           <XCircle className="h-4 w-4" /> Reject
                         </button>
                       </div>
@@ -507,7 +508,7 @@ export default function TopupRequestsPage() {
             })}
           </div>
         )}
-      </SiteContainer>
+      </div>
     </Layout>
   );
 }

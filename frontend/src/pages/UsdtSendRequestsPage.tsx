@@ -104,10 +104,10 @@ export default function UsdtSendRequestsPage() {
 
   return (
     <Layout>
-      <div className="space-y-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="mx-auto w-full max-w-7xl space-y-5 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               <Send className="h-5 w-5 text-teal-400 shrink-0" />
               <span>USDT Send Requests</span>
               {pendingCount > 0 && (
@@ -117,7 +117,7 @@ export default function UsdtSendRequestsPage() {
             <p className="text-muted-foreground text-sm mt-0.5">Approve or deny USDT TRC20 outgoing transfer requests</p>
           </div>
           <button onClick={fetchRequests}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
+            className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
         </div>
@@ -127,7 +127,7 @@ export default function UsdtSendRequestsPage() {
           <div className="flex gap-2 min-w-max">
           {['pending', 'approved', 'denied', ''].map((s) => (
             <button key={s || 'all'} onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
                 filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
               }`}>
               {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
@@ -169,18 +169,18 @@ export default function UsdtSendRequestsPage() {
               const shortAddr = `${req.to_address.slice(0, 10)}...${req.to_address.slice(-6)}`;
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
-                  <div className="p-4 flex items-start gap-4">
+                  <div className="flex flex-row flex-wrap items-start gap-3 p-3 sm:gap-4 sm:p-4">
                     <div className="h-10 w-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
                       <Send className="h-5 w-5 text-teal-400" />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-foreground font-semibold font-mono text-sm">{shortAddr}</p>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${sc.color}`}>
                           {sc.icon} {req.status}
                         </span>
                       </div>
-                      <p className="text-muted-foreground text-sm mt-0.5">
+                      <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">
                         <span className="text-teal-400 font-semibold">${req.amount.toFixed(2)} USDT</span>
                         {' · '}Request #{req.id}
                         {' · '}{fmt_time(req.created_at)}
@@ -195,21 +195,21 @@ export default function UsdtSendRequestsPage() {
                       )}
                     </div>
                     {req.status === 'pending' && (
-                      <div className="flex flex-row items-center gap-2 shrink-0">
+                      <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:flex sm:w-auto">
                         {!isActive ? (
                           <>
                             <button onClick={() => openReview(req.id, false)}
-                              className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 transition-colors whitespace-nowrap">
+                              className="min-h-11 rounded-lg border border-emerald-500/30 bg-emerald-600/20 px-3 py-1.5 text-xs text-emerald-400 transition-colors hover:bg-emerald-600/30 whitespace-nowrap sm:min-h-9">
                               Approve
                             </button>
                             <button onClick={() => openReview(req.id, true)}
-                              className="text-xs px-3 py-1.5 rounded-lg bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30 transition-colors whitespace-nowrap">
+                              className="min-h-11 rounded-lg border border-red-500/30 bg-red-600/20 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-600/30 whitespace-nowrap sm:min-h-9">
                               Deny
                             </button>
                           </>
                         ) : (
                           <button onClick={cancelReview}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors">
+                            className="min-h-11 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-slate-400 sm:min-h-9">
                             Cancel
                           </button>
                         )}
@@ -219,7 +219,7 @@ export default function UsdtSendRequestsPage() {
 
                   {/* Action panel */}
                   {isActive && req.status === 'pending' && (
-                    <div className="px-4 pb-4 border-t border-border/40 pt-3">
+                    <div className="border-t border-border/40 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
                       {denyMode ? (
                         <>
                           <p className="text-red-400 text-sm font-medium mb-2 flex items-center gap-1.5">
@@ -234,7 +234,7 @@ export default function UsdtSendRequestsPage() {
                             className="w-full bg-muted/60 border border-red-500/30 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-red-500/60 mb-3 resize-none"
                           />
                           {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
-                          <div className="flex gap-2">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <button onClick={cancelReview}
                               className="flex-1 py-2 rounded-xl border border-border text-muted-foreground hover:border-slate-400 text-sm transition-colors">
                               Cancel
@@ -256,7 +256,7 @@ export default function UsdtSendRequestsPage() {
                             <span className="font-mono text-muted-foreground">{shortAddr}</span>? This will deduct from the user's USD wallet.
                           </p>
                           {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
-                          <div className="flex gap-2">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <button onClick={cancelReview}
                               className="flex-1 py-2 rounded-xl border border-border text-muted-foreground hover:border-slate-400 text-sm transition-colors">
                               Cancel
