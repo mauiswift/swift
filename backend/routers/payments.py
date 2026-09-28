@@ -36,6 +36,7 @@ from services.transactions import TransactionsService, publish_payment_link_crea
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
 from services.checkout_urls import build_checkout_url, checkout_host
+from services.private_receipts import save_private_receipt
 from services.payment_channel_availability import (
     institution_supports_amount,
     institution_matches_enabled,
@@ -1246,18 +1247,14 @@ async def create_payment(
                     metadata[k[5:]] = v
 
             # Handle receipt file saving
-            receipt_path = None
+            receipt_file_id = None
             if receipt and getattr(receipt, "filename", None):
-                uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", BANK_RECEIPTS_SUBDIR)
-                os.makedirs(uploads_dir, exist_ok=True)
-                ext = os.path.splitext(receipt.filename)[1] or ".bin"
-                filename = f"{uuid.uuid4().hex}{ext}"
-                file_path = os.path.join(uploads_dir, filename)
-                content = await receipt.read()
-                with open(file_path, "wb") as f:
-                    f.write(content)
-                receipt_path = f"/uploads/{BANK_RECEIPTS_SUBDIR}/{filename}"
-                metadata["receipt_path"] = receipt_path
+                receipt_rules = await get_deposit_rules(db)
+                receipt_file_id = await save_private_receipt(
+                    receipt,
+                    receipt_rules.get("receipt_max_size_mb"),
+                )
+                metadata["receipt_file_id"] = receipt_file_id
 
             # Call gateway
             result = await gateway.create_payment(
@@ -1328,7 +1325,10 @@ async def get_payment(
 ):
     processor = PaymentProcessor(db)
     try:
-        return await processor.get_payment(payment_id=payment_id)
+        return await processor.get_payment(
+            payment_id=payment_id,
+            user_id=str(current_user.id),
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -1359,6 +1359,7 @@ async def update_payment_status(
     try:
         return await processor.update_payment_status(
             payment_id=payment_id,
+            user_id=str(current_user.id),
             status=payload.status,
             provider_reference=payload.provider_reference or None,
             metadata=payload.metadata,

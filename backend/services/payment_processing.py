@@ -79,8 +79,11 @@ class PaymentProcessor:
         })
         return response
 
-    async def get_payment(self, *, payment_id: str) -> Dict[str, Any]:
-        stmt = select(Transactions).where(Transactions.external_id == payment_id).limit(1)
+    async def get_payment(self, *, payment_id: str, user_id: str) -> Dict[str, Any]:
+        stmt = select(Transactions).where(
+            Transactions.external_id == payment_id,
+            Transactions.user_id == user_id,
+        ).limit(1)
         result = await self.db.execute(stmt)
         txn = result.scalars().first()
         if not txn:
@@ -92,11 +95,15 @@ class PaymentProcessor:
         self,
         *,
         payment_id: str,
+        user_id: str,
         status: str,
         provider_reference: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        stmt = select(Transactions).where(Transactions.external_id == payment_id).limit(1)
+        stmt = select(Transactions).where(
+            Transactions.external_id == payment_id,
+            Transactions.user_id == user_id,
+        ).limit(1)
         result = await self.db.execute(stmt)
         txn = result.scalars().first()
         if not txn:

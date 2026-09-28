@@ -97,12 +97,18 @@ class TelegramService:
 
     async def set_webhook(self, webhook_url: str) -> Dict[str, Any]:
         """Set the Telegram webhook URL"""
+        from dependencies.webhook_auth import get_telegram_webhook_secret
+
+        secret_token = get_telegram_webhook_secret()
+        if not secret_token:
+            return {"success": False, "error": "Telegram webhook secret is not configured"}
+
         logger.info(f"Setting Telegram webhook to: {webhook_url}")
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(
                     f"{self.api_url}/setWebhook",
-                    json={"url": webhook_url},
+                    json={"url": webhook_url, "secret_token": secret_token},
                 )
                 logger.info(f"Telegram setWebhook response status: {response.status_code}")
                 logger.info(f"Telegram setWebhook response body: {response.text}")

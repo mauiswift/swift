@@ -2,7 +2,7 @@
 KRW Payment Link and Disbursement Service
 
 Provides KRW-specific payment processing, including:
-- KRW payment link creation via SwiftPay API
+- Self-hosted KRW payment links with manual approval
 - KRW disbursement/payout processing
 - Bank account validation for Korean banks
 - Currency conversion and fee handling
@@ -11,6 +11,7 @@ Provides KRW-specific payment processing, including:
 import asyncio
 import base64
 import logging
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
@@ -21,6 +22,8 @@ from sqlalchemy import select
 
 from core.config import settings
 from models.disbursements import Disbursements
+from models.transactions import Transactions
+from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +154,7 @@ KOREAN_BANKS = {
 
 
 class KRWPaymentService:
-    """Service for KRW payment links and disbursements via SwiftPay API."""
+    """Service for KRW checkout links and provider-backed disbursements."""
 
     def __init__(self):
         """Initialize KRW payment service with SwiftPay credentials."""
@@ -172,6 +175,75 @@ class KRWPaymentService:
     def _format_amount(self, amount: float) -> str:
         """Format amount with exactly 2 decimal places as per SwiftPay spec."""
         return f"{Decimal(str(amount)):.2f}"
+
+    async def create_self_hosted_payment_link(
+        self,
+        request: KRWPaymentLinkRequest,
+        user_id: str,
+        db: AsyncSession,
+    ) -> KRWPaymentLinkResponse:
+        """Create a local KRW checkout that remains pending admin approval."""
+        result = await PaymentGateway(db).create_payment(
+            db,
+            user_id=user_id,
+            amount=request.amount,
+            description=request.description or "KRW Payment Link",
+            transaction_type="payment_link",
+            customer_name=request.customer_name or "",
+            customer_email=request.customer_email or "",
+            external_id=request.reference_no,
+            payment_methods=["bank_transfer"],
+            metadata={
+                "manual_krw_checkout": True,
+                "self_hosted_checkout": True,
+            },
+            currency="KRW",
+        )
+        if not result.get("success"):
+            return KRWPaymentLinkResponse(
+                success=False,
+                error=result.get("error", "KRW checkout could not be created"),
+                code="CHECKOUT_ERROR",
+            )
+
+        payment_data = result.get("data") or {}
+        payment_url = payment_data.get("checkout_url") or payment_data.get("payment_url")
+        transaction_id = payment_data.get("transaction_id")
+        if not payment_url or transaction_id is None:
+            return KRWPaymentLinkResponse(
+                success=False,
+                error="KRW checkout could not be initialized",
+                code="CHECKOUT_ERROR",
+            )
+
+        transaction = await db.get(Transactions, transaction_id)
+        if not transaction:
+            return KRWPaymentLinkResponse(
+                success=False,
+                error="KRW checkout transaction could not be loaded",
+                code="CHECKOUT_ERROR",
+            )
+
+        expires_at = datetime.now(timezone.utc) + timedelta(days=request.expiry_days)
+        transaction.expires_at = expires_at
+        transaction.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        return KRWPaymentLinkResponse(
+            success=True,
+            transaction_id=transaction_id,
+            payment_link=payment_url,
+            payment_url=payment_url,
+            gateway=payment_data.get("gateway", "swiftpay_self_hosted"),
+            bank_account=payment_data.get("bank_account"),
+            approval_required=True,
+            manual_verification=True,
+            reference_no=request.reference_no,
+            amount=request.amount,
+            currency="KRW",
+            status="pending",
+            expires_at=expires_at.isoformat(),
+        )
 
     async def create_payment_link(
         self,

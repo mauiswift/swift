@@ -2,11 +2,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+from dependencies.webhook_auth import get_telegram_webhook_secret
 
 
 @pytest.fixture(scope="module")
 def client():
     with TestClient(app) as c:
+        c.headers["X-Telegram-Bot-Api-Secret-Token"] = get_telegram_webhook_secret()
         yield c
 
 

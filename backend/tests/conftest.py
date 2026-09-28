@@ -13,7 +13,11 @@ os.environ["ENVIRONMENT"] = "test"
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_os_db_path.as_posix()}"
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-ci"
 os.environ["TELEGRAM_BOT_TOKEN"] = "123456:TEST_BOT_TOKEN"
+os.environ["TELEGRAM_WEBHOOK_SECRET"] = "test-telegram-webhook-secret"
 os.environ["TELEGRAM_ADMIN_IDS"] = "123456789"
+os.environ["SWIFTPAY_ACCESS_KEY"] = "ABC123"
+os.environ["SWIFTPAY_SECRET_KEY"] = "SECRET"
+os.environ["SWIFTPAY_MODE"] = "sandbox"
 # Enable legacy magpie compatibility within tests so older expectations pass.
 os.environ.setdefault("ENABLE_LEGACY_MAGPIE", "1")
 # Ensure Magpie appears configured in tests so magpie routing is exercised by the gateway

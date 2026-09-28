@@ -10,6 +10,7 @@ import PaymentStatus from './PaymentStatus';
 import PaymentTransferDetails from './PaymentTransferDetails';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTranslation } from '@/lib/i18n';
+import { filterVisiblePaymentApprovals } from '@/lib/paymentApprovalAccess';
 
 interface PendingPayment {
   id: string;
@@ -43,7 +44,7 @@ export default function SuperAdminPaymentApprovalMobile() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = useTranslation(language);
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +85,10 @@ export default function SuperAdminPaymentApprovalMobile() {
       const response = await client.get('/api/v1/admin/payment-approvals/pending');
       if (response.ok && response.data?.success) {
         const nextPayments = response.data.data;
-        const refreshedPayments = Array.isArray(nextPayments) ? nextPayments : [];
+        const refreshedPayments = filterVisiblePaymentApprovals(
+          user?.id,
+          Array.isArray(nextPayments) ? nextPayments : [],
+        );
         setPayments(refreshedPayments);
         setReviewPayment((current) =>
           current

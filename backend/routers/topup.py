@@ -24,6 +24,7 @@ from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits,
 from services.swiftpay_service import SwiftPayService
 from services.system_earnings import credit_system_earnings
 from services.user_benefits import unlock_krw_benefits
+from services.private_receipts import save_private_receipt
 
 logger = logging.getLogger(__name__)
 
@@ -88,23 +89,11 @@ async def create_topup_request_with_receipt(
     existing_hash = await db.scalar(select(TopupRequest.id).where(TopupRequest.tx_hash == normalized_tx_hash))
     if existing_hash:
         raise HTTPException(status_code=409, detail="This transaction hash has already been submitted")
-    if receipt.content_type and not (receipt.content_type.startswith("image/") or receipt.content_type == "application/pdf"):
-        raise HTTPException(status_code=400, detail="Receipt must be an image or PDF")
-
-    receipt_bytes = await receipt.read()
-    if not receipt_bytes:
-        raise HTTPException(status_code=400, detail="Receipt file is empty")
-    receipt_max_size_mb = (await get_deposit_rules(db))["receipt_max_size_mb"]
-    if receipt_max_size_mb > 0 and len(receipt_bytes) > receipt_max_size_mb * 1024 * 1024:
-        raise HTTPException(status_code=400, detail=f"Receipt file must be {receipt_max_size_mb:g} MB or smaller")
-
-    uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", "usdt-receipts")
-    os.makedirs(uploads_dir, exist_ok=True)
-    extension = os.path.splitext(receipt.filename or "receipt")[1].lower() or ".bin"
-    filename = f"{uuid.uuid4().hex}{extension}"
-    receipt_path = os.path.join(uploads_dir, filename)
-    with open(receipt_path, "wb") as output:
-        output.write(receipt_bytes)
+    deposit_rules = await get_deposit_rules(db)
+    receipt_ref = await save_private_receipt(
+        receipt,
+        deposit_rules.get("receipt_max_size_mb"),
+    )
 
     now = datetime.now(timezone.utc)
     new_request = TopupRequest(
@@ -113,7 +102,7 @@ async def create_topup_request_with_receipt(
         amount_usdt=round(amount_usdt, 2),
         currency="USDT",
         tx_hash=normalized_tx_hash,
-        receipt_file_id=f"/uploads/usdt-receipts/{filename}",
+        receipt_file_id=receipt_ref,
         status="pending",
         note=note or "USDT top-up submitted via web",
         created_at=now,

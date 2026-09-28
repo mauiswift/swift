@@ -273,6 +273,7 @@ class TestWalletsService:
         wallet.balance = 60000.0
         wallet.available_balance = None
         wallet.pending_balance = None
+        wallet.reserved_balance = 0.0
         wallet.is_frozen = False
         wallet.freeze_reason = None
         wallet.total_debits = 0.0
@@ -301,6 +302,61 @@ class TestWalletsService:
         assert result["success"] is True
         assert result["balance"] == 54985.0
         assert wallet.available_balance == 54985.0
+
+    @pytest.mark.asyncio
+    async def test_withdraw_request_does_not_spend_reserved_funds(self):
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        service = WalletsService(db)
+        wallet = MagicMock(
+            id=42,
+            user_id="tg-123",
+            currency="PHP",
+            balance=60000.0,
+            available_balance=0.0,
+            pending_balance=0.0,
+            reserved_balance=60000.0,
+            is_frozen=False,
+        )
+        db.execute = AsyncMock(
+            return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=wallet))
+        )
+        service._resolve_effective_wallet_user_id = AsyncMock(return_value="tg-123")
+        service._ensure_wallet_active = AsyncMock()
+
+        with pytest.raises(ValueError, match="Insufficient available liquidity"):
+            await service.withdraw_request(
+                user_id="123",
+                amount=5000.0,
+                bank_name="BDO",
+                account_number="1234567890",
+                account_name="Juan Dela Cruz",
+            )
+
+        assert wallet.available_balance == 0.0
+
+    @pytest.mark.asyncio
+    async def test_refund_reference_is_idempotent(self):
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock, Mock
+
+        db = AsyncMock()
+        db.scalar = AsyncMock(side_effect=[None, 1])
+        db.flush = AsyncMock()
+        db.add = Mock()
+        service = WalletsService(db)
+        wallet = MagicMock(id=42, balance=100.0, available_balance=100.0, pending_balance=0.0)
+        service.get_or_create_wallet = AsyncMock(return_value=wallet)
+
+        await service.refund_wallet_debit("user-1", 10.0, "PHP", "wd-1-refund")
+        await service.refund_wallet_debit("user-1", 10.0, "PHP", "wd-1-refund")
+
+        assert wallet.balance == 110.0
+        assert wallet.available_balance == 110.0
+        db.add.assert_called_once()
+        db.flush.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_withdraw_request_allows_zero_security_deposit_minimum(self):

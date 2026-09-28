@@ -171,6 +171,14 @@ def _require_krw_payment_owner(user: UserResponse) -> None:
         )
 
 
+def _enforce_krw_payment_approver(txn: Transactions, user: UserResponse) -> bool:
+    """Enforce KRW ownership and return whether this approval may be forced."""
+    if not _is_krw_payment(txn):
+        return False
+    _require_krw_payment_owner(user)
+    return str(user.id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+
+
 @router.get("/payment-approvals/pending")
 async def list_pending_payment_approvals(
     current_user: UserResponse = Depends(get_current_user),
@@ -314,8 +322,7 @@ async def get_payment_approval_details(
     txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
-    if _is_krw_payment(txn):
-        _require_krw_payment_owner(current_user)
+    _enforce_krw_payment_approver(txn, current_user)
     if not is_payment_received(txn):
         raise HTTPException(status_code=409, detail="Payment has not been received yet")
 
@@ -387,12 +394,7 @@ async def approve_payment_link(
     txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
-    if _is_krw_payment(txn):
-        _require_krw_payment_owner(current_user)
-    force_krw_approval = (
-        _is_krw_payment(txn)
-        and str(current_user.id) == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
-    )
+    force_krw_approval = _enforce_krw_payment_approver(txn, current_user)
 
     approval_pending = txn.approval_status in {None, "pending"}
     retryable_settlement = (
@@ -533,8 +535,7 @@ async def reject_payment_link(
     txn = result.scalar_one_or_none()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
-    if _is_krw_payment(txn):
-        _require_krw_payment_owner(current_user)
+    _enforce_krw_payment_approver(txn, current_user)
 
     if txn.status not in APPROVABLE_PAYMENT_STATUSES and not (
         txn.status in EXTERNALLY_PAID_STATUSES

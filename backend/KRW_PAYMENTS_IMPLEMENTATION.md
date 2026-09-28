@@ -6,7 +6,7 @@ This document provides comprehensive guidance for integrating KRW (Korean Won) p
 
 ### Key Features
 
-- ✅ KRW payment link creation via SwiftPay API
+- ✅ Self-hosted KRW checkout links with manual payment verification and approval
 - ✅ KRW disbursement/payout processing to Korean bank accounts
 - ✅ Support for all major Korean banks (40+ institutions)
 - ✅ HTTP Basic Authentication as per SwiftPay specification
@@ -37,7 +37,7 @@ service = KRWPaymentService()
 
 | Method | Purpose |
 |--------|---------|
-| `create_payment_link()` | Create a KRW payment link via SwiftPay |
+| `create_self_hosted_payment_link()` | Create and persist a KRW checkout link for manual verification and approval |
 | `create_disbursement()` | Initiate a KRW disbursement/payout |
 | `get_disbursement_status()` | Check disbursement processing status |
 | `validate_bank_account()` | Validate Korean bank account details |
@@ -53,6 +53,8 @@ RESTful endpoints for KRW payment operations:
 - `GET /api/v1/krw/banks` — List supported Korean banks
 
 The disbursement request does not call the payout provider. A super admin must approve it first; rejection refunds the reserved wallet funds.
+
+KRW payment links use the shared self-hosted checkout and remain pending until the designated KRW approver verifies and approves the payment. Approval credits the merchant wallet; the KRW approver restriction applies to payment details, approval, and rejection.
 
 ---
 

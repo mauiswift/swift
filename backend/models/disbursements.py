@@ -1,5 +1,5 @@
 from core.database import Base
-from sqlalchemy import Column, DateTime, Float, Index, Integer, JSON, String
+from sqlalchemy import Column, DateTime, Float, Index, Integer, JSON, String, UniqueConstraint
 
 
 class Disbursements(Base):
@@ -11,6 +11,7 @@ class Disbursements(Base):
         Index("idx_disbursements_status", "status"),
         # Index for settlement batch tracking
         Index("idx_disbursements_settlement_batch", "settlement_batch_id"),
+        UniqueConstraint("external_id", name="uq_disbursements_external_id"),
         {"extend_existing": True},
     )
 

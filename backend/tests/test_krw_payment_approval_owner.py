@@ -5,6 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from routers.payment_approvals import (
+    _enforce_krw_payment_approver,
     _is_krw_payment,
     _require_krw_payment_owner,
     _require_payment_approval_access,
@@ -41,6 +42,22 @@ def test_only_bot_owner_can_approve_krw(monkeypatch):
 
     with pytest.raises(HTTPException) as exc:
         _require_krw_payment_owner(_user("owner-1", can_approve_topups=True))
+
+    assert exc.value.status_code == 403
+
+
+def test_transaction_approval_policy_only_forces_designated_krw_approver():
+    krw_payment = SimpleNamespace(currency="KRW", original_currency=None)
+    php_payment = SimpleNamespace(currency="PHP", original_currency=None)
+
+    assert _enforce_krw_payment_approver(
+        krw_payment,
+        _user(KRW_PAYMENT_APPROVAL_TELEGRAM_ID),
+    ) is True
+    assert _enforce_krw_payment_approver(php_payment, _user("merchant-1")) is False
+
+    with pytest.raises(HTTPException) as exc:
+        _enforce_krw_payment_approver(krw_payment, _user("other-admin"))
 
     assert exc.value.status_code == 403
 

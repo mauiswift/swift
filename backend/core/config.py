@@ -126,6 +126,7 @@ class Settings(BaseSettings):
     # API Keys - MUST BE SET IN ENVIRONMENT VARIABLES, NOT IN CODE
     telegram_bot_token: str = ""
     telegram_bot_username: str = ""
+    telegram_webhook_secret: str = ""
     telegram_mini_app_url: str = ""
     xendit_secret_key: str = ""
     xendit_webhook_secret: str = ""

@@ -258,8 +258,10 @@ async def cancel_disbursements(
     db: AsyncSession = Depends(get_db),
 ):
     """Cancel a pending disbursement and refund the wallet."""
-    service = DisbursementsService(db)
-    disb = await service.get_by_id(id)
+    result = await db.execute(
+        select(Disbursements).where(Disbursements.id == id).with_for_update()
+    )
+    disb = result.scalar_one_or_none()
     if not disb:
         raise HTTPException(status_code=404, detail="Disbursement not found")
 
@@ -311,6 +313,7 @@ async def cancel_disbursements(
         return disb
 
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error cancelling disbursement: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 

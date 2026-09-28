@@ -22,11 +22,13 @@ os.environ["TELEGRAM_ADMIN_IDS"] = "123456789"
 from fastapi.testclient import TestClient
 from main import app  # noqa: E402
 from routers import telegram as telegram_router  # noqa: E402
+from dependencies.webhook_auth import get_telegram_webhook_secret  # noqa: E402
 
 
 @pytest.fixture(scope="module")
 def client():
     with TestClient(app) as c:
+        c.headers["X-Telegram-Bot-Api-Secret-Token"] = get_telegram_webhook_secret()
         yield c
 
 

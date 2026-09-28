@@ -27,6 +27,7 @@ from services.app_settings import (
     get_user_manual_deposit_account,
     is_valid_manual_deposit_account,
 )
+from services.private_receipts import save_private_receipt
 
 logger = logging.getLogger(__name__)
 
@@ -138,15 +139,10 @@ async def create_bank_deposit_request(
 
     receipt_path: Optional[str] = None
     if receipt and receipt.filename:
-        uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", _RECEIPTS_SUBDIR)
-        os.makedirs(uploads_dir, exist_ok=True)
-        ext = os.path.splitext(receipt.filename)[1] or ".bin"
-        filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = os.path.join(uploads_dir, filename)
-        content = await receipt.read()
-        with open(file_path, "wb") as f:
-            f.write(content)
-        receipt_path = f"/uploads/{_RECEIPTS_SUBDIR}/{filename}"
+        receipt_path = await save_private_receipt(
+            receipt,
+            deposit_rules.get("receipt_max_size_mb"),
+        )
 
     note_parts = [f"Transfer method: {transfer_method}"]
     if ref_number:

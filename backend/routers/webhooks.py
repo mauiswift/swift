@@ -5,6 +5,9 @@ Handles callbacks from:
 - Magpie (International: Visa, Mastercard, Alipay, WeChat Pay)
 """
 import logging
+import hashlib
+import hmac
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request, HTTPException, Depends
@@ -44,14 +47,22 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
     """
     try:
         query_payload = dict(request.query_params)
-        if query_payload.get("signature"):
-            service = SwiftPayService()
-            signature = str(query_payload.get("signature", ""))
-            if not service.verify_signature(query_payload, signature):
-                raise HTTPException(status_code=400, detail="Invalid SwiftPay webhook signature")
-            payload = query_payload
-        else:
-            payload = await request.json()
+        payload = dict(query_payload)
+        if request.method == "POST":
+            content_type = (request.headers.get("content-type") or "").lower()
+            if "application/json" in content_type:
+                body = await request.json()
+            else:
+                form = await request.form()
+                body = dict(form)
+            if not isinstance(body, dict):
+                raise HTTPException(status_code=400, detail="Invalid SwiftPay webhook payload")
+            payload.update(body)
+
+        signature = str(payload.get("signature") or payload.get("sign") or "")
+        service = SwiftPayService()
+        if not signature or not service.verify_signature(payload, signature):
+            raise HTTPException(status_code=400, detail="Invalid or missing SwiftPay webhook signature")
         
         reference_no = _payload_value(
             payload,
@@ -176,8 +187,23 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     - Alipay payments
     - WeChat Pay payments
     """
+    raw_body = await request.body()
+    secret = str(settings.magpie_webhook_secret or "").strip()
+    signature = request.headers.get("X-Magpie-Signature", "").strip()
+    if not secret:
+        raise HTTPException(status_code=503, detail="Magpie webhook is not configured")
+    expected_signature = hmac.new(
+        secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    if not signature or not hmac.compare_digest(signature, expected_signature):
+        raise HTTPException(status_code=403, detail="Invalid or missing Magpie webhook signature")
+
     try:
-        payload = await request.json()
+        payload = json.loads(raw_body)
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid Magpie webhook payload")
         
         order_id = _payload_value(payload, "order_id", "orderId", "checkout_id", "checkoutId", "reference_no", "referenceNo")
         status = _payload_value(
@@ -238,9 +264,11 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 logger.info("Magpie: Updated transaction %s to %s", order_id or transaction_id, internal_status)
         
         return {"success": True, "received": True, "order_id": order_id or transaction_id}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Magpie webhook error: {e}", exc_info=True)
-        return {"success": False, "error": str(e)}
+        raise HTTPException(status_code=500, detail="Magpie webhook processing failed") from e
 
 
 @router.get("/test")

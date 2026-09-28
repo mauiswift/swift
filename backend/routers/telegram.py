@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.database import get_db
+from dependencies.webhook_auth import require_telegram_webhook_secret
 from core.constants import PAYBOT_BANK_ACCOUNTS
 from services.app_settings import get_deposit_accounts
 from dependencies.auth import get_current_user
@@ -1935,7 +1936,11 @@ async def auto_setup_webhook(
 
 
 @router.post("/webhook")
-async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+async def telegram_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _webhook_auth: None = Depends(require_telegram_webhook_secret),
+):
     """Receive Telegram bot updates (no auth required).
 
     Design principle: ALWAYS send the Telegram reply FIRST, then attempt
@@ -4558,6 +4563,9 @@ async def proxy_telegram_file(
     """
     import mimetypes
     from fastapi.responses import Response as FastAPIResponse
+
+    if not (current_user.permissions and current_user.permissions.is_super_admin):
+        raise HTTPException(status_code=403, detail="Receipt review access required")
 
     svc = TelegramService()
     meta = await svc.get_file(file_id)

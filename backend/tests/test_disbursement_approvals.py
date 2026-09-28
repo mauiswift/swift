@@ -1,9 +1,14 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from fastapi import HTTPException
 
 from models.disbursements import Disbursements
-from routers.disbursements import DisbursementsData, create_disbursement_request
+from routers.disbursements import (
+    DisbursementsData,
+    cancel_disbursements,
+    create_disbursement_request,
+)
 
 
 @pytest.mark.asyncio
@@ -57,3 +62,40 @@ async def test_entity_disbursement_creation_reserves_funds_and_notifies_admins()
         external_reference="admin-review-123",
     )
     notify_admins.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_cancel_disbursement_cannot_refund_twice():
+    disbursement = Disbursements(
+        id=124,
+        user_id="merchant-1",
+        external_id="cancel-once-124",
+        amount=500,
+        processing_fee=15,
+        currency="PHP",
+        status="processing",
+        description="Bank transfer",
+    )
+    result = Mock()
+    result.scalar_one_or_none.return_value = disbursement
+    db = AsyncMock()
+    db.execute.return_value = result
+    user = Mock(id="merchant-1", permissions=None)
+    wallet_service = Mock()
+    wallet_service.refund_wallet_debit = AsyncMock()
+
+    with patch("services.wallets.WalletsService", return_value=wallet_service):
+        canceled = await cancel_disbursements(124, user, db)
+        assert canceled is disbursement
+
+        with pytest.raises(HTTPException) as error:
+            await cancel_disbursements(124, user, db)
+
+    assert error.value.status_code == 400
+    wallet_service.refund_wallet_debit.assert_awaited_once_with(
+        "merchant-1",
+        515,
+        "PHP",
+        "cancel-once-124-refund",
+        "Withdrawal refund: Bank transfer",
+    )

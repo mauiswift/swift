@@ -12,6 +12,7 @@ class Wallets(Base):
         # Index for organization-level wallet lookup and aggregation
         Index("idx_wallets_organization_currency", "organization_id", "currency"),
         UniqueConstraint("organization_id", "currency", name="uq_wallets_organization_currency"),
+        UniqueConstraint("user_id", "currency", name="uq_wallets_user_currency"),
         # extend_existing allows the table definition to be updated if it already exists
         {"extend_existing": True},
     )

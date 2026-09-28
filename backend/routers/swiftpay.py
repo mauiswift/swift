@@ -164,7 +164,7 @@ async def create_swiftpay_payment_link(
         valid_until = valid_until.astimezone(timezone.utc)
         provider_payload["validUntil"] = valid_until.isoformat().replace("+00:00", "Z")
 
-    result = await SwiftPayService().create_payment_link(provider_payload)
+    result = await SwiftPayService.create_payment_link(provider_payload)
     if not result.get("success"):
         _raise_payment_link_error(result)
 
@@ -215,7 +215,7 @@ async def get_swiftpay_payment_link(
     db: AsyncSession = Depends(get_db),
 ):
     await _get_owned_payment_link(code, str(current_user.id), db)
-    result = await SwiftPayService().get_payment_link(code)
+    result = await SwiftPayService.get_payment_link(code)
     if not result.get("success"):
         _raise_payment_link_error(result)
     return {"success": True, "data": result.get("data")}
@@ -228,7 +228,7 @@ async def invalidate_swiftpay_payment_link(
     db: AsyncSession = Depends(get_db),
 ):
     transaction = await _get_owned_payment_link(code, str(current_user.id), db)
-    result = await SwiftPayService().invalidate_payment_link(code)
+    result = await SwiftPayService.invalidate_payment_link(code)
     if not result.get("success"):
         _raise_payment_link_error(result)
 

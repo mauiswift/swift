@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID, settings
 from core.database import get_db
+from dependencies.webhook_auth import require_telegram_webhook_secret
 from models.transactions import Transactions
 from models.admin_users import AdminUser
 from routers.bank_deposit import (
@@ -214,7 +215,11 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
 
 
 @router.post("/callbacks")
-async def handle_telegram_callback(update: TelegramCallbackUpdate, db: AsyncSession = Depends(get_db)):
+async def handle_telegram_callback(
+    update: TelegramCallbackUpdate,
+    db: AsyncSession = Depends(get_db),
+    _webhook_auth: None = Depends(require_telegram_webhook_secret),
+):
     """
     Handle Telegram inline button callbacks.
 

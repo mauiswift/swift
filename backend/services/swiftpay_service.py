@@ -673,48 +673,58 @@ class SwiftPayService:
             }
         return {"success": True, "data": data}
 
-    async def create_payment_link(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a provider-hosted payment link using SwiftPay's Basic Auth API."""
-        if not self.is_configured():
+    async def create_payment_link(self_or_payload: Any, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Create a provider-hosted payment link using SwiftPay's Basic Auth API.
+
+        This accepts both the normal instance call pattern and the legacy/class-level
+        compatibility pattern used across the codebase/tests.
+        """
+        service = self_or_payload if isinstance(self_or_payload, SwiftPayService) else SwiftPayService()
+        provider_payload = payload if payload is not None else self_or_payload if isinstance(self_or_payload, dict) else {}
+        if not service.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
-        url = f"{self.base_url}/api/payments/links"
+        url = f"{service.base_url}/api/payments/links"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=payload, headers=self._basic_auth_headers())
+            async with httpx.AsyncClient(timeout=service.timeout) as client:
+                response = await client.post(url, json=provider_payload, headers=service._basic_auth_headers())
         except httpx.TransportError:
             logger.warning("SwiftPay create payment link transport failure", exc_info=True)
             return {"success": False, "status_code": 502, "error": "Unable to reach SwiftPay payment-link service"}
-        return self._parse_payment_link_response(response)
+        return service._parse_payment_link_response(response)
 
-    async def get_payment_link(self, code: str) -> Dict[str, Any]:
+    async def get_payment_link(self_or_code: Any, code: Optional[str] = None) -> Dict[str, Any]:
         """Read a provider-hosted payment link by its immutable code."""
-        if not self.is_configured():
+        service = self_or_code if isinstance(self_or_code, SwiftPayService) else SwiftPayService()
+        requested_code = code if code is not None else (self_or_code if isinstance(self_or_code, str) else "")
+        if not service.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
-        url = f"{self.base_url}/api/payments/links/{quote(code, safe='')}"
+        url = f"{service.base_url}/api/payments/links/{quote(requested_code, safe='')}"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, headers=self._basic_auth_headers())
+            async with httpx.AsyncClient(timeout=service.timeout) as client:
+                response = await client.get(url, headers=service._basic_auth_headers())
         except httpx.TransportError:
             logger.warning("SwiftPay read payment link transport failure", exc_info=True)
             return {"success": False, "status_code": 502, "error": "Unable to reach SwiftPay payment-link service"}
-        return self._parse_payment_link_response(response)
+        return service._parse_payment_link_response(response)
 
-    async def invalidate_payment_link(self, code: str) -> Dict[str, Any]:
+    async def invalidate_payment_link(self_or_code: Any, code: Optional[str] = None) -> Dict[str, Any]:
         """Irreversibly invalidate a provider-hosted payment link."""
-        if not self.is_configured():
+        service = self_or_code if isinstance(self_or_code, SwiftPayService) else SwiftPayService()
+        requested_code = code if code is not None else (self_or_code if isinstance(self_or_code, str) else "")
+        if not service.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
-        url = f"{self.base_url}/api/payments/links/{quote(code, safe='')}/invalidate"
+        url = f"{service.base_url}/api/payments/links/{quote(requested_code, safe='')}/invalidate"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.delete(url, headers=self._basic_auth_headers())
+            async with httpx.AsyncClient(timeout=service.timeout) as client:
+                response = await client.delete(url, headers=service._basic_auth_headers())
         except httpx.TransportError:
             logger.warning("SwiftPay invalidate payment link transport failure", exc_info=True)
             return {"success": False, "status_code": 502, "error": "Unable to reach SwiftPay payment-link service"}
         if response.status_code >= 400:
-            return self._parse_payment_link_response(response)
+            return service._parse_payment_link_response(response)
         try:
             data = response.json() if response.text else {}
         except ValueError:

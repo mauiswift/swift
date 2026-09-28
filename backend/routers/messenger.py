@@ -324,13 +324,21 @@ async def receive_webhook(
     """Receive incoming Messenger webhook events from Facebook."""
     payload_bytes = await request.body()
     x_hub_signature = request.headers.get("X-Hub-Signature-256", "")
+    if not x_hub_signature:
+        logger.warning("Messenger webhook signature verification failed: missing X-Hub-Signature-256 header")
+        raise HTTPException(status_code=403, detail="Invalid or missing signature")
 
-    app_secret = settings.messenger_app_secret or ""
-    if app_secret and x_hub_signature:
-        messenger = MessengerService()
-        if not messenger.verify_webhook_signature(payload_bytes, x_hub_signature, app_secret):
-            logger.warning("Messenger webhook signature verification failed")
-            raise HTTPException(status_code=403, detail="Invalid signature")
+    app_secret = str(getattr(settings, "messenger_app_secret", "") or "").strip()
+    if not app_secret:
+        raise HTTPException(status_code=503, detail="Messenger webhook is not configured")
+    messenger = MessengerService()
+    if not messenger.verify_webhook_signature(
+        payload_bytes,
+        x_hub_signature,
+        app_secret,
+    ):
+        logger.warning("Messenger webhook signature verification failed")
+        raise HTTPException(status_code=403, detail="Invalid or missing signature")
 
     try:
         body = await request.json()

@@ -356,11 +356,15 @@ except Exception:
     logger.warning("Frontend asset sync skipped; static UI may still be served by an external build step.")
 
 # Ensure directories exist for mounting
-for d in ("images", "uploads", "assets", "logos"):
+for d in ("images", "uploads", "uploads/logos", "assets", "logos"):
     (_STATIC / d).mkdir(parents=True, exist_ok=True)
 
 app.mount("/images", StaticFiles(directory=str(_STATIC / "images")), name="images")
-app.mount("/uploads", StaticFiles(directory=str(_STATIC / "uploads")), name="uploads")
+app.mount(
+    "/uploads/logos",
+    StaticFiles(directory=str(_STATIC / "uploads" / "logos")),
+    name="public-merchant-logos",
+)
 app.mount("/assets", StaticFiles(directory=str(_STATIC / "assets")), name="assets")
 app.mount("/logos", StaticFiles(directory=str(_STATIC / "logos")), name="logos")
 
@@ -402,13 +406,25 @@ async def download_api_guide():
 
 @app.get("/{full_path:path}", include_in_schema=False)
 async def catch_all_spa(full_path: str):
+    normalized = str(full_path or "")
+
     # API 404
-    if full_path.startswith("api/"):
+    if normalized.startswith("api/"):
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+    # Never serve upload or private receipt paths through the SPA shell.
+    if (
+        normalized.startswith("uploads/")
+        and not normalized.startswith("uploads/logos/")
+        or normalized.startswith("private_uploads/")
+        or normalized.startswith("../")
+        or ".." in Path(normalized).parts
+    ):
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
     # Check for direct files (e.g. manifest.json, robots.txt)
-    f = _STATIC / full_path
-    if f.is_file():
+    f = (_STATIC / normalized).resolve()
+    if _STATIC.resolve() in f.parents and f.is_file():
         return FileResponse(f)
 
     # Fallback to index.html for React

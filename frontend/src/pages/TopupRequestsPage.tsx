@@ -146,7 +146,10 @@ export default function TopupRequestsPage() {
 
     newWindow.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading receipt...</p>');
     try {
-      const res = await client.fetch(`/api/v1/telegram/file/${encodeURIComponent(fileId)}`);
+      const endpoint = fileId.startsWith('private-receipt:') || fileId.startsWith('/uploads/')
+        ? `/api/v1/receipts/${encodeURIComponent(fileId)}`
+        : `/api/v1/telegram/file/${encodeURIComponent(fileId)}`;
+      const res = await client.fetch(endpoint);
       if (!res.ok) {
         throw new Error(`Failed to load receipt (${res.status})`);
       }

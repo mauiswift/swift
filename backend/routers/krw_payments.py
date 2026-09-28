@@ -14,7 +14,6 @@ Endpoints:
 
 import base64
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Header
@@ -33,11 +32,9 @@ from services.krw_payment_service import (
     KOREAN_BANKS,
 )
 from models.disbursements import Disbursements
-from models.transactions import Transactions
 from sqlalchemy import select
 from services.wallets import WalletsService
 from services.admin_notification_service import AdminNotificationService
-from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
 
@@ -113,59 +110,10 @@ async def create_krw_payment_link(
     ```
     """
     try:
-        result = await PaymentGateway(db).create_payment(
-            db,
+        return await KRWPaymentService().create_self_hosted_payment_link(
+            request,
             user_id=str(current_user.id),
-            amount=request.amount,
-            description=request.description or "KRW Payment Link",
-            transaction_type="payment_link",
-            customer_name=request.customer_name or "",
-            customer_email=request.customer_email or "",
-            external_id=request.reference_no,
-            payment_methods=["bank_transfer"],
-            metadata={
-                "manual_krw_checkout": True,
-                "self_hosted_checkout": True,
-            },
-            currency="KRW",
-        )
-        if not result.get("success"):
-            return KRWPaymentLinkResponse(
-                success=False,
-                error=result.get("error", "KRW checkout could not be created"),
-                code="CHECKOUT_ERROR",
-            )
-
-        payment_data = result.get("data") or {}
-        payment_url = payment_data.get("checkout_url") or payment_data.get("payment_url")
-        if not payment_url:
-            logger.error("KRW self-hosted checkout returned no URL for %s", request.reference_no)
-            raise HTTPException(status_code=502, detail="KRW checkout could not be initialized")
-
-        expires_at = datetime.now(timezone.utc) + timedelta(days=request.expiry_days)
-        transaction_id = payment_data.get("transaction_id")
-        transaction = await db.get(Transactions, transaction_id) if transaction_id is not None else None
-        if not transaction:
-            logger.error("KRW self-hosted checkout transaction missing for %s", request.reference_no)
-            raise HTTPException(status_code=500, detail="KRW checkout transaction could not be loaded")
-        transaction.expires_at = expires_at
-        transaction.updated_at = datetime.now(timezone.utc)
-        await db.commit()
-
-        return KRWPaymentLinkResponse(
-            success=True,
-            transaction_id=transaction_id,
-            payment_link=payment_url,
-            payment_url=payment_url,
-            gateway="swiftpay_self_hosted",
-            bank_account=payment_data.get("bank_account"),
-            approval_required=True,
-            manual_verification=True,
-            reference_no=request.reference_no,
-            amount=request.amount,
-            currency="KRW",
-            status="pending",
-            expires_at=expires_at.isoformat(),
+            db=db,
         )
     
     except Exception as e:

@@ -150,7 +150,7 @@ class TestKRWPaymentLinkRequest:
         assert request.expiry_days == 30
 
     @pytest.mark.asyncio
-    async def test_krw_payment_link_uses_self_hosted_manual_approval_checkout(self):
+    async def test_service_creates_self_hosted_manual_approval_checkout(self):
         request = KRWPaymentLinkRequest(
             amount=50000,
             reference_no="order-manual-123",
@@ -179,14 +179,14 @@ class TestKRWPaymentLinkRequest:
         }
 
         with patch(
-            "routers.krw_payments.PaymentGateway.create_payment",
+            "services.krw_payment_service.PaymentGateway.create_payment",
             new=AsyncMock(return_value=gateway_result),
-        ) as create_payment, patch.object(
-            KRWPaymentService,
-            "create_payment_link",
-            new=AsyncMock(),
-        ) as create_provider_link:
-            response = await create_krw_payment_link(request, current_user, db)
+        ) as create_payment:
+            response = await KRWPaymentService().create_self_hosted_payment_link(
+                request,
+                user_id=str(current_user.id),
+                db=db,
+            )
 
         assert response.success is True
         assert response.payment_url == "https://swiftpay.ph/checkout/order-manual-123"
@@ -201,7 +201,27 @@ class TestKRWPaymentLinkRequest:
             "manual_krw_checkout": True,
             "self_hosted_checkout": True,
         }
-        create_provider_link.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_krw_payment_link_route_delegates_to_service(self):
+        request = KRWPaymentLinkRequest(amount=50000, reference_no="order-route-123")
+        current_user = Mock(id="merchant-1")
+        db = AsyncMock()
+        service_response = Mock(success=True)
+
+        with patch.object(
+            KRWPaymentService,
+            "create_self_hosted_payment_link",
+            new=AsyncMock(return_value=service_response),
+        ) as create_link:
+            response = await create_krw_payment_link(request, current_user, db)
+
+        assert response is service_response
+        create_link.assert_awaited_once_with(
+            request,
+            user_id="merchant-1",
+            db=db,
+        )
 
 
 class TestKRWDisbursementRequest:

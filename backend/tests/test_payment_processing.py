@@ -50,11 +50,26 @@ async def test_create_and_mark_payment_flow():
         assert payment["payment_id"]
         assert payment["amount"] == 125.5
 
-        fetched = await processor.get_payment(payment_id=payment["payment_id"])
+        fetched = await processor.get_payment(
+            payment_id=payment["payment_id"],
+            user_id="user-1",
+        )
         assert fetched["payment_id"] == payment["payment_id"]
+
+        with pytest.raises(LookupError):
+            await processor.get_payment(payment_id=payment["payment_id"], user_id="user-2")
+
+        with pytest.raises(LookupError):
+            await processor.update_payment_status(
+                payment_id=payment["payment_id"],
+                user_id="user-2",
+                status="cancelled",
+                provider_reference="attacker-reference",
+            )
 
         updated = await processor.update_payment_status(
             payment_id=payment["payment_id"],
+            user_id="user-1",
             status="paid",
             provider_reference="prov-123",
         )

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Tuple
 
 from sqlalchemy import select, func, case, update, and_, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.wallets import Wallets
@@ -198,15 +199,19 @@ class WalletsService(BaseService[Wallets]):
                 created_at=now,
                 updated_at=now,
             )
-            self.db.add(wallet)
-            await self.db.flush()
+            try:
+                async with self.db.begin_nested():
+                    self.db.add(wallet)
+                    await self.db.flush()
+            except IntegrityError:
+                result = await self.db.execute(query)
+                wallet = result.scalar_one_or_none()
+                if wallet is None:
+                    raise
+                return wallet
             if lock:
-                # Re-fetch with lock to be absolutely sure
-                return await self.get_or_create_wallet(
-                    effective_owner_id,
-                    currency_upper,
-                    lock=True,
-                )
+                result = await self.db.execute(query)
+                return result.scalar_one()
             logger.info(f"Created new {currency_upper} wallet for owner {effective_owner_id}")
 
         return wallet
@@ -487,6 +492,18 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Refund amount must be positive")
 
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
+        existing_refund = await self.db.scalar(
+            select(Wallet_transactions.id)
+            .where(
+                Wallet_transactions.wallet_id == wallet.id,
+                Wallet_transactions.reference_id == reference_id,
+                Wallet_transactions.transaction_type == "refund",
+            )
+            .limit(1)
+        )
+        if existing_refund is not None:
+            return wallet
+
         wallet.balance = float(wallet.balance or 0.0)
         wallet.available_balance = float(wallet.available_balance or 0.0)
         wallet.pending_balance = float(wallet.pending_balance or 0.0)
@@ -741,20 +758,27 @@ class WalletsService(BaseService[Wallets]):
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
         wallet = await self.get_or_create_wallet(effective_user_id, currency_upper, lock=True)
         await self._ensure_wallet_active(wallet, "submit a withdrawal request")
+        if ext_id and await self.db.scalar(
+            select(Disbursements.id).where(Disbursements.external_id == ext_id).limit(1)
+        ) is not None:
+            raise ValueError("A withdrawal with this reference has already been submitted")
 
-        current_balance = float(wallet.balance or 0.0)
-
-        wallet.available_balance = float(wallet.available_balance or wallet.balance or 0.0)
         wallet.balance = float(wallet.balance or 0.0)
+        current_balance = wallet.balance
+        pending_balance = float(wallet.pending_balance or 0.0)
+        reserved_balance = float(wallet.reserved_balance or 0.0)
+        if wallet.available_balance is None:
+            wallet.available_balance = max(
+                0.0,
+                round(current_balance - pending_balance - reserved_balance, 2),
+            )
+        else:
+            wallet.available_balance = float(wallet.available_balance)
         available_balance = wallet.available_balance
         if available_balance < total_debit:
-            if available_balance == 0 and wallet.balance >= total_debit:
-                wallet.available_balance = float(wallet.balance or 0.0)
-                available_balance = wallet.available_balance
-            else:
-                raise ValueError(
-                    f"Insufficient available liquidity (Available: {currency_upper} {available_balance:,.2f}, required: {currency_upper} {total_debit:,.2f})"
-                )
+            raise ValueError(
+                f"Insufficient available liquidity (Available: {currency_upper} {available_balance:,.2f}, required: {currency_upper} {total_debit:,.2f})"
+            )
         if limits["minimum_balance"] > 0 and current_balance - total_debit < limits["minimum_balance"]:
             raise ValueError(
                 f"Minimum maintaining balance is {currency_upper} "
@@ -849,7 +873,15 @@ class WalletsService(BaseService[Wallets]):
                 reference_id=f"{ext_id}-fee",
                 created_at=now,
             )
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            if ext_id and await self.db.scalar(
+                select(Disbursements.id).where(Disbursements.external_id == ext_id).limit(1)
+            ) is not None:
+                raise ValueError("A withdrawal with this reference has already been submitted") from exc
+            raise
         await self.db.refresh(txn)
 
         # 4. Notify via event bus

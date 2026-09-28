@@ -582,6 +582,7 @@ class PaymentGateway:
             customer_name=customer_name,
             customer_email=customer_email,
             payment_url=checkout_url,
+            receipt_file_id=(metadata or {}).get("receipt_file_id"),
             **{
                 key: value
                 for key, value in transfer_account.items()
