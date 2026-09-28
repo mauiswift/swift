@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
-import { getStoredToken } from '@/lib/auth';
+import { client } from '@/lib/api';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, Search } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
@@ -32,13 +32,6 @@ const statusConfig: Record<string, { color: string; dot: string; icon: React.Rea
 };
 
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
-const authHeaders = (json = false): HeadersInit => {
-  const token = getStoredToken();
-  return {
-    ...(json ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
 
 export default function BankDepositsPage() {
   const { language } = useLanguage();
@@ -57,8 +50,8 @@ export default function BankDepositsPage() {
     setLoading(true);
     try {
       const url = filter ? `/api/v1/bank-deposits?status=${filter}` : '/api/v1/bank-deposits';
-      const res = await fetch(url, { credentials: 'include', headers: authHeaders() });
-      if (res.ok) { const d = await res.json(); setRequests(d.items || []); }
+      const { data, ok } = await client.get(url);
+      if (ok) { setRequests(data?.items || []); }
     } catch (e) { console.error(e); }
     setLoading(false);
   }, [filter]);
@@ -78,30 +71,25 @@ export default function BankDepositsPage() {
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id); setError('');
     try {
-      const res = await fetch(`/api/v1/bank-deposits/${id}/${action}`, {
-        method: 'POST', credentials: 'include',
-        headers: authHeaders(true),
-        body: JSON.stringify({ note: notes[id] || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
+      const { data, ok } = await client.request(`/api/v1/bank-deposits/${id}/${action}`, 'POST', {
+        note: notes[id] || (action === 'approve' ? 'Approved' : 'Rejected by admin'),
       });
-      if (res.ok) {
-        const result = await res.json().catch(() => ({}));
+      if (ok) {
         if (action === 'approve') {
-          toast.success(result.message || 'Deposit approved and credited to the user wallet');
+          toast.success(data?.message || 'Deposit approved and credited to the user wallet');
         } else {
           toast.success('Deposit rejected successfully');
         }
         setNotes(prev => { const n = { ...prev }; delete n[id]; return n; }); setActiveId(null);
         fetchRequests();
       } else {
-        const d = await res.json();
-        setError(d.detail || `Failed to ${action}`);
+        setError(data?.detail || `Failed to ${action}`);
       }
     } catch (e: any) { setError(e.message); }
     setActionLoading(null);
   };
 
   const openReceiptFile = async (fileId: string) => {
-    const token = getStoredToken();
     const newWindow = window.open('', '_blank');
     if (!newWindow) {
       setError('Popup blocked. Please allow popups and try again.');
@@ -110,9 +98,7 @@ export default function BankDepositsPage() {
 
     newWindow.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading receipt...</p>');
     try {
-      const headers = new Headers();
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      const res = await fetch(`/api/v1/telegram/file/${encodeURIComponent(fileId)}`, { headers });
+      const res = await client.fetch(`/api/v1/telegram/file/${encodeURIComponent(fileId)}`);
       if (!res.ok) {
         throw new Error(`Failed to load receipt (${res.status})`);
       }

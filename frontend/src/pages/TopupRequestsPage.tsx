@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
-import { getStoredToken } from '@/lib/auth';
+import { client } from '@/lib/api';
 import SiteContainer from '@/components/SiteContainer';
 import { CheckCircle, XCircle, Eye, RefreshCw, DollarSign, TrendingUp, Save, Pencil, X, Search } from 'lucide-react';
 import { StatusBadge, getStatusType } from '@/components/StatusBadge';
@@ -29,13 +29,6 @@ const uniqueRequests = (items: TopupRequest[]) => {
     seen.add(item.id);
     return true;
   });
-};
-const authHeaders = (json = false): HeadersInit => {
-  const token = getStoredToken();
-  return {
-    ...(json ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
 };
 
 export default function TopupRequestsPage() {
@@ -64,12 +57,11 @@ export default function TopupRequestsPage() {
 
   const fetchRate = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-php-rate', { headers: authHeaders() });
-      if (res.ok) {
-        const d = await res.json();
-        setUsdtPhpRate(d.rate);
-        setRateSource(d.source || 'Standard SwiftPay rate');
-        setRateInput(String(d.rate));
+      const { data, ok } = await client.get('/api/v1/app-settings/usdt-php-rate');
+      if (ok && data) {
+        setUsdtPhpRate(data.rate);
+        setRateSource(data.source || 'Standard SwiftPay rate');
+        setRateInput(String(data.rate));
       }
     } catch (e) { console.error(e); }
   }, []);
@@ -77,15 +69,13 @@ export default function TopupRequestsPage() {
   const fetchLiveRate = async () => {
     setLiveRateLoading(true); setError('');
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-php-rate/live', { headers: authHeaders() });
-      if (res.ok) {
-        const d = await res.json();
-        setLiveRate(d.rate);
-        setRateInput(d.rate.toFixed(2));
+      const { data, ok } = await client.get('/api/v1/app-settings/usdt-php-rate/live');
+      if (ok && data) {
+        setLiveRate(data.rate);
+        setRateInput(data.rate.toFixed(2));
         if (!rateEditMode) setRateEditMode(true);
       } else {
-        const d = await res.json();
-        setError(d.detail || 'Failed to fetch live rate.');
+        setError(data?.detail || 'Failed to fetch live rate.');
       }
     } catch (e: any) { setError(e.message || 'Failed to fetch live rate.'); }
     setLiveRateLoading(false);
@@ -93,11 +83,10 @@ export default function TopupRequestsPage() {
 
   const fetchAddress = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-trc20-address');
-      if (res.ok) {
-        const d = await res.json();
-        setTrc20Address(d.address);
-        setAddressInput(d.address);
+      const { data, ok } = await client.get('/api/v1/app-settings/usdt-trc20-address');
+      if (ok && data) {
+        setTrc20Address(data.address);
+        setAddressInput(data.address);
       } else {
         setError('Failed to load TRC20 deposit address.');
       }
@@ -109,20 +98,14 @@ export default function TopupRequestsPage() {
     if (!parsed || parsed <= 0) { setError('Rate must be a positive number.'); return; }
     setRateLoading(true); setError('');
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-php-rate', {
-        method: 'PUT', credentials: 'include',
-        headers: authHeaders(true),
-        body: JSON.stringify({ rate: parsed }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setUsdtPhpRate(d.rate);
-        setRateInput(String(d.rate));
+      const { data, ok } = await client.request('/api/v1/app-settings/usdt-php-rate', 'PUT', { rate: parsed });
+      if (ok && data) {
+        setUsdtPhpRate(data.rate);
+        setRateInput(String(data.rate));
         setRateEditMode(false);
         setLiveRate(null);
       } else {
-        const d = await res.json();
-        setError(d.detail || 'Failed to update rate');
+        setError(data?.detail || 'Failed to update rate');
       }
     } catch (e: any) { setError(e.message); }
     setRateLoading(false);
@@ -143,26 +126,19 @@ export default function TopupRequestsPage() {
     }
     setAddressLoading(true); setError('');
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-trc20-address', {
-        method: 'PUT', credentials: 'include',
-        headers: authHeaders(true),
-        body: JSON.stringify({ address: addr }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setTrc20Address(d.address);
-        setAddressInput(d.address);
+      const { data, ok } = await client.request('/api/v1/app-settings/usdt-trc20-address', 'PUT', { address: addr });
+      if (ok && data) {
+        setTrc20Address(data.address);
+        setAddressInput(data.address);
         setAddressEditMode(false);
       } else {
-        const d = await res.json();
-        setError(d.detail || 'Failed to update address');
+        setError(data?.detail || 'Failed to update address');
       }
     } catch (e: any) { setError(e.message); }
     setAddressLoading(false);
   };
 
   const openReceiptFile = async (fileId: string) => {
-    const token = getStoredToken();
     const newWindow = window.open('', '_blank');
     if (!newWindow) {
       setError('Popup blocked. Please allow popups and try again.');
@@ -171,9 +147,7 @@ export default function TopupRequestsPage() {
 
     newWindow.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading receipt...</p>');
     try {
-      const headers = new Headers();
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      const res = await fetch(`/api/v1/telegram/file/${encodeURIComponent(fileId)}`, { headers });
+      const res = await client.fetch(`/api/v1/telegram/file/${encodeURIComponent(fileId)}`);
       if (!res.ok) {
         throw new Error(`Failed to load receipt (${res.status})`);
       }
@@ -191,10 +165,9 @@ export default function TopupRequestsPage() {
     if (showLoading) setLoading(true);
     try {
       const url = filter ? `/api/v1/topup?status=${filter}` : '/api/v1/topup';
-      const res = await fetch(url, { credentials: 'include', headers: authHeaders() });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.detail || `Failed to load top-up requests (${res.status}).`);
+      const { data, ok, status } = await client.get(url);
+      if (!ok) {
+        throw new Error(data?.detail || `Failed to load top-up requests (${status}).`);
       }
       if (!Array.isArray(data?.items)) {
         throw new Error('The server returned an invalid top-up request list.');
@@ -227,18 +200,15 @@ export default function TopupRequestsPage() {
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id); setError('');
     try {
-      const res = await fetch(`/api/v1/topup/${id}/${action}`, {
-        method: 'POST', credentials: 'include',
-        headers: authHeaders(true),
-        body: JSON.stringify({ note: notes[id] || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
+      const { data, ok } = await client.request(`/api/v1/topup/${id}/${action}`, 'POST', {
+        note: notes[id] || (action === 'approve' ? 'Approved' : 'Rejected by admin'),
       });
-      if (res.ok) {
+      if (ok) {
         toast.success(`Top-up ${action}d successfully`);
         setNotes(prev => { const n = { ...prev }; delete n[id]; return n; }); setActiveId(null);
         void fetchRequests();
       } else {
-        const d = await res.json();
-        setError(d.detail || `Failed to ${action}`);
+        setError(data?.detail || `Failed to ${action}`);
       }
     } catch (e: any) { setError(e.message); }
     setActionLoading(null);

@@ -1395,63 +1395,56 @@ function AdminCard({
   const roleLabel = ADMIN_ROLE_OPTIONS.find(option => option.value === admin.role)?.label || admin.role || 'Admin';
 
   return (
-    <Card className={`border-slate-200 transition-all duration-300 hover:shadow-md ${
-      admin.is_active
-        ? 'bg-white opacity-100'
-        : 'bg-slate-50/50 opacity-75'
+    <Card className={`border-slate-200 transition-all duration-300 hover:shadow-sm ${
+      admin.is_active ? 'bg-white opacity-100' : 'bg-slate-50/50 opacity-75'
     }`}>
-      <CardContent className="p-6">
-        <div className="flex flex-col gap-4 mb-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ${
+      <CardContent className="p-4 sm:p-5">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
               admin.is_super_admin
-                ? 'bg-amber-100 border-amber-200 text-amber-600'
-                : 'bg-blue-100 border-blue-200 text-blue-600'
+                ? 'border-amber-200 bg-amber-100 text-amber-600'
+                : 'border-blue-200 bg-blue-100 text-blue-600'
             }`}>
-              {admin.is_super_admin
-                ? <Crown className="h-6 w-6" />
-                : <User className="h-6 w-6" />
-              }
+              {admin.is_super_admin ? <Crown className="h-5 w-5" /> : <User className="h-5 w-5" />}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-slate-900 truncate">
-                  {displayName}
-                </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="truncate text-sm font-semibold text-slate-900">{displayName}</span>
                 {admin.telegram_username && (
-                  <span className="text-blue-500 text-xs font-semibold">@{admin.telegram_username}</span>
+                  <span className="text-[11px] font-semibold text-blue-500">@{admin.telegram_username}</span>
                 )}
-                <div className="flex items-center gap-1.5 ml-1">
-                  {admin.is_super_admin && (
-                    <Badge className="bg-amber-100 border-amber-200 text-amber-700 text-[9px] font-semibold uppercase tracking-widest px-2 h-5">
-                      SUPER
-                    </Badge>
-                  )}
-                  <Badge className="border-slate-200 bg-slate-50 text-slate-600 text-[9px] font-semibold uppercase tracking-widest px-2 h-5">
-                    {roleLabel}
-                  </Badge>
-                  <Badge className={`text-[9px] font-semibold uppercase tracking-widest px-2 h-5 border ${
-                    admin.is_active
-                      ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
-                      : 'bg-slate-200 border-slate-300 text-slate-500'
-                  }`}>
-                    {admin.is_active ? 'Active' : 'Disabled'}
-                  </Badge>
-                </div>
               </div>
-              <p className="text-[12px] text-slate-500 mt-1 font-medium">TGID: <span className="font-mono">{admin.telegram_id}</span></p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                {admin.is_super_admin && (
+                  <Badge className="h-5 border border-amber-200 bg-amber-100 px-1.5 text-[9px] font-semibold uppercase tracking-widest text-amber-700">
+                    Super
+                  </Badge>
+                )}
+                <Badge className="h-5 border border-slate-200 bg-slate-50 px-1.5 text-[9px] font-semibold uppercase tracking-widest text-slate-600">
+                  {roleLabel}
+                </Badge>
+                <Badge className={`h-5 border px-1.5 text-[9px] font-semibold uppercase tracking-widest ${
+                  admin.is_active
+                    ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                    : 'border-slate-200 bg-slate-200 text-slate-600'
+                }`}>
+                  {admin.is_active ? 'Active' : 'Disabled'}
+                </Badge>
+              </div>
+              <p className="mt-1 text-[11px] font-medium text-slate-500">TGID: <span className="font-mono">{admin.telegram_id}</span></p>
             </div>
           </div>
 
           {isSuperAdmin && (
-            <div className="flex flex-wrap items-center gap-1 shrink-0 sm:justify-end">
+            <div className="flex flex-wrap items-center gap-1 sm:justify-end">
               <label className="sr-only" htmlFor={`admin-role-${admin.id}`}>Role for {displayName}</label>
               <select
                 id={`admin-role-${admin.id}`}
                 value={admin.role || 'admin'}
                 disabled={String(admin.telegram_id) === String(currentUserId)}
                 onChange={event => onChangeRole(admin, event.target.value)}
-                className="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {ADMIN_ROLE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
@@ -1460,36 +1453,36 @@ function AdminCard({
                 onClick={() => onEditPassword(admin)}
                 aria-label={`Change dashboard password for ${displayName}`}
                 title="Change Dashboard Password"
-                className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-purple-50 hover:text-purple-600"
               >
-                <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
+                <KeyRound aria-hidden="true" className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => onEditBank(admin)}
                 aria-label={`Edit bank information for ${displayName}`}
                 title="Edit Bank Information"
-                className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
               >
-                <Tag aria-hidden="true" className="h-4.5 w-4.5" />
+                <Tag aria-hidden="true" className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => onEditApiKeys(admin)}
                 aria-label={`Edit API keys for ${displayName}`}
                 title="Edit API Keys"
-                className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-teal-50 hover:text-teal-600"
               >
-                <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
+                <KeyRound aria-hidden="true" className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => onEditFees(admin)}
                 aria-label={`Edit fee settings for ${displayName}`}
                 title="Edit Fee Settings"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-2.5 py-2 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-100"
+                className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[10px] font-semibold text-orange-700 transition hover:bg-orange-100"
               >
-                <DollarSign aria-hidden="true" className="h-4.5 w-4.5" />
+                <DollarSign aria-hidden="true" className="h-3.5 w-3.5" />
                 <span>Fees</span>
               </button>
               <button
@@ -1497,37 +1490,35 @@ function AdminCard({
                 onClick={() => onToggleActive(admin)}
                 title={admin.is_active ? 'Deactivate' : 'Activate'}
                 aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${displayName}`}
-                className={`p-2 rounded-xl transition-all ${
-                  admin.is_active
-                    ? 'text-amber-500 hover:bg-amber-50'
-                    : 'text-emerald-500 hover:bg-emerald-50'
+                className={`rounded-lg p-1.5 transition ${
+                  admin.is_active ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'
                 }`}
               >
-                {admin.is_active ? <PowerOff className="h-4.5 w-4.5" /> : <Power className="h-4.5 w-4.5" />}
+                {admin.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
               </button>
               <button
                 type="button"
                 onClick={() => onDelete(admin)}
                 title="Remove administrator"
                 aria-label={`Remove administrator ${displayName}`}
-                className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
               >
-                <Trash2 aria-hidden="true" className="h-4.5 w-4.5" />
+                <Trash2 aria-hidden="true" className="h-4 w-4" />
               </button>
             </div>
           )}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {(['People & access', 'Payments & configuration', 'Approvals & wallets', 'Governance'] as const).map(group => {
             const permissions = PERMISSION_KEYS.filter(({ key }) => (
               PERMISSION_DEFINITIONS.find(definition => definition.key === key)?.group === group
             ));
             if (!permissions.length) return null;
             return (
-              <div key={group} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{group}</p>
-                <div className="flex flex-wrap gap-1.5">
+              <div key={group} className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
+                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">{group}</p>
+                <div className="flex flex-wrap gap-1">
                   {permissions.map(({ key, label, color }) => (
                     <PermissionBadge
                       key={key}
@@ -1542,9 +1533,12 @@ function AdminCard({
             );
           })}
         </div>
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
-          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-slate-400" />{permissionCount} permissions enabled</span>
-          {admin.settlement_currency && <span className="inline-flex items-center gap-1.5"><WalletIcon className="h-3.5 w-3.5 text-slate-400" />Settlement: {admin.settlement_currency}</span>}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+          <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-slate-400" />{permissionCount} enabled</span>
+          {admin.settlement_currency && (
+            <span className="inline-flex items-center gap-1"><WalletIcon className="h-3.5 w-3.5 text-slate-400" />Settlement: {admin.settlement_currency}</span>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -3550,62 +3544,48 @@ export default function AdminManagement() {
 
   return (
     <Layout>
-      <div className="w-full bg-gradient-to-b from-slate-50 to-white min-h-screen">
-        {/* Page Header */}
-        <div className="border-b border-slate-200 bg-white sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#FF6B00] to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-900/20">
-                  <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#C2410C]">Control center</span>
-                    {isSuperAdmin && (
-                      <Badge className="border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                        Super Admin
-                      </Badge>
-                    )}
-                  </div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
-                    Admin Management
-                  </h1>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1 font-medium">
-                    Manage access, platform controls, and operational configuration from one place.
-                  </p>
-                </div>
+      <div className="w-full min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-7xl px-4 pb-8 pt-5 sm:px-6 lg:px-8">
+          <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 md:flex-row md:items-center md:justify-between md:rounded-2xl">
+            <div className="min-w-0">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#C2410C]">Control center</span>
+                {isSuperAdmin && (
+                  <Badge className="border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                    Super Admin
+                  </Badge>
+                )}
               </div>
-              {selectedTab === 'admins' && canAccessAdminUsers && (
-                <Button
-                  onClick={() => setShowAdd(!showAdd)}
-                  className={`gap-2 text-sm font-semibold h-10 sm:h-11 px-4 sm:px-6 rounded-lg sm:rounded-xl whitespace-nowrap transition-all ${
-                    showAdd
-                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-900'
-                      : 'bg-[#FF6B00] hover:bg-[#E66000] text-white shadow-lg shadow-orange-900/20'
-                  }`}
-                >
-                  {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  <span className="hidden sm:inline">{showAdd ? 'Cancel' : 'Add Admin'}</span>
-                  <span className="sm:hidden">{showAdd ? '✕' : '+'}</span>
-                </Button>
-              )}
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Admin Management</h1>
             </div>
 
-            {/* Error Alert */}
-            {error && (
-              <div className="mt-4 flex items-start gap-3 bg-red-500/10 border border-red-500/25 text-red-700 rounded-lg px-4 py-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
-                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-                <span className="font-medium flex-1">{error}</span>
-                <button type="button" onClick={() => setError('')} className="motion-interactive shrink-0 hover:opacity-70" aria-label="Dismiss error">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+            {selectedTab === 'admins' && canAccessAdminUsers && (
+              <Button
+                onClick={() => setShowAdd(!showAdd)}
+                className={`gap-2 h-10 whitespace-nowrap rounded-xl text-sm font-semibold transition-all ${
+                  showAdd
+                    ? 'bg-slate-200 text-slate-900 hover:bg-slate-300'
+                    : 'bg-[#FF6B00] text-white hover:bg-[#E66000] shadow-lg shadow-orange-900/20'
+                }`}
+              >
+                {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {showAdd ? 'Cancel' : 'Add Admin'}
+              </Button>
             )}
           </div>
+
+          {error && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <span className="flex-1 font-medium">{error}</span>
+              <button type="button" onClick={() => setError('')} className="shrink-0 hover:opacity-70" aria-label="Dismiss error">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-8 pt-4 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-8 pt-0 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:px-8">
           {/* Vertical Navigation Sidebar */}
           <AdminSidebar
             tabs={tabs}
@@ -3620,23 +3600,12 @@ export default function AdminManagement() {
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 w-full space-y-6">
             {selectedTabMeta && (
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-6">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 rounded-lg bg-orange-50 p-2 text-[#C2410C]">
-                    <selectedTabMeta.icon className={`h-4 w-4 ${selectedTabMeta.iconClassName || ''}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                        {selectedTabMeta.group || 'Administration'}
-                      </p>
-                      <span className="text-slate-300" aria-hidden="true">/</span>
-                      <h2 className="text-sm font-bold text-slate-900">{selectedTabMeta.label}</h2>
-                    </div>
-                    {selectedTabMeta.description && (
-                      <p className="mt-1 text-sm leading-relaxed text-slate-500">{selectedTabMeta.description}</p>
-                    )}
-                  </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <selectedTabMeta.icon className={`h-3.5 w-3.5 ${selectedTabMeta.iconClassName || ''}`} />
+                  <span className="font-semibold uppercase tracking-[0.14em] text-slate-400">{selectedTabMeta.group || 'Administration'}</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="font-semibold text-slate-700">{selectedTabMeta.label}</span>
                 </div>
               </div>
             )}
@@ -3644,193 +3613,56 @@ export default function AdminManagement() {
             {canAccessAdminUsers && selectedTab === 'admins' && (
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <AdminSummaryCard
-                  label="Administrators"
+                  label="Admins"
                   value={admins.length}
-                  description="Total accounts"
+                  description="Total"
                   icon={<Users className="h-5 w-5" />}
                   tone="orange"
                 />
                 <AdminSummaryCard
-                  label="Active access"
+                  label="Active"
                   value={activeAdmins.length}
                   description={`${inactiveAdmins.length} inactive`}
                   icon={<Power className="h-5 w-5" />}
                   tone="emerald"
                 />
                 <AdminSummaryCard
-                  label="Super admins"
+                  label="Super"
                   value={superAdminCount}
-                  description="Full platform access"
+                  description="Full access"
                   icon={<Crown className="h-5 w-5" />}
                   tone="indigo"
                 />
                 <AdminSummaryCard
-                  label="Security"
-                  value={maintenanceMode ? 'Paused' : 'Operational'}
-                  description={maintenanceMode ? 'Maintenance mode enabled' : 'Public services available'}
+                  label="Status"
+                  value={maintenanceMode ? 'Paused' : 'Live'}
+                  description={maintenanceMode ? 'Maintenance' : 'Operational'}
                   icon={<ShieldCheck className="h-5 w-5" />}
                   tone={maintenanceMode ? 'slate' : 'emerald'}
                 />
               </div>
             )}
 
-            {canAccessAdminUsers && selectedTab === 'admins' && (
-              <Card className="border border-slate-200 bg-white shadow-sm">
-                <CardContent className="p-5 sm:p-6">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h2 className="text-base font-semibold text-slate-900">Quick controls</h2>
-                      <p className="mt-1 text-sm text-slate-500">Jump directly to the areas that affect daily platform operations.</p>
-                    </div>
-                    <span className="text-xs font-medium text-slate-400">Super admin only</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {[
-                      { id: 'operations', label: 'Operational workflows', detail: 'Payments, deposits, withdrawals, and verifications', icon: <RefreshCw className="h-4 w-4" /> },
-                      { id: 'wallet-settings', label: 'Wallet settings', detail: 'Limits, deposits, and receiving accounts', icon: <WalletIcon className="h-4 w-4" /> },
-                      { id: 'payment-channels', label: 'Payment channels', detail: 'Enable or disable checkout and payout methods', icon: <Power className="h-4 w-4" /> },
-                      { id: 'bitgo', label: 'BitGo USDT', detail: 'Address assignment and transfer monitoring', icon: <Bitcoin className="h-4 w-4" /> },
-                      { id: 'platform-settings', label: 'Platform settings', detail: 'Currencies, fees, and backup tools', icon: <WrenchIcon className="h-4 w-4" /> },
-                      { id: 'audit-logs', label: 'Audit logs', detail: 'Review administrative activity', icon: <FileText className="h-4 w-4" /> },
-                    ].filter(action => tabs.some(tab => tab.id === action.id)).map(action => (
-                      <button
-                        key={action.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveTab(action.id);
-                          setShowAdd(false);
-                          setError('');
-                        }}
-                        className="motion-interactive flex min-h-[76px] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left transition hover:border-orange-200 hover:bg-orange-50"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#C2410C] shadow-sm">{action.icon}</span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-slate-800">{action.label}</span>
-                          <span className="mt-0.5 block text-xs leading-5 text-slate-500">{action.detail}</span>
-                        </span>
-                        <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Maintenance Mode Toggle (super admin only) */}
             {canAccessPlatformSettings && (
-              <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between gap-6 flex-wrap">
-                    <div className="flex items-center gap-4">
-                      <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
-                        maintenanceMode
-                          ? 'bg-amber-100 border-amber-200 text-amber-600'
-                          : 'bg-slate-100 border-slate-200 text-slate-400'
-                      }`}>
-                        <WrenchIcon className="h-6 w-6" />
+              <Card className="border border-slate-200 bg-white shadow-sm">
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${maintenanceMode ? 'border-amber-200 bg-amber-100 text-amber-600' : 'border-slate-200 bg-slate-100 text-slate-500'}`}>
+                        <WrenchIcon className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-slate-900">System Maintenance Mode</span>
-                          {!maintenanceLoading && (
-                            <Badge className={`px-2 py-0.5 text-[10px] font-semibold tracking-widest uppercase border ${
-                              maintenanceMode
-                                ? 'bg-amber-100 border-amber-200 text-amber-700'
-                                : 'bg-emerald-100 border-emerald-200 text-emerald-700'
-                            }`}>
-                              {maintenanceMode ? 'ACTIVE' : 'OFFLINE'}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-[13px] text-slate-500 mt-1 font-medium leading-relaxed max-w-lg">
-                          {maintenanceMode
-                            ? 'The platform is currently locked. Only administrators can access the system.'
-                            : 'All systems operational. Enable maintenance to block public access during updates.'}
-                        </p>
+                        <p className="text-sm font-semibold text-slate-900">Maintenance mode</p>
+                        <p className="text-xs text-slate-500">{maintenanceMode ? 'Platform is paused for admins only.' : 'Public access is enabled.'}</p>
                       </div>
                     </div>
                     <Button
                       onClick={handleToggleMaintenance}
                       disabled={maintenanceLoading || maintenanceUpdating}
-                      className={`gap-2 text-[12px] font-semibold h-10 px-5 rounded-xl transition-all ${
-                        maintenanceMode
-                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-900/20'
-                      }`}
+                      className={`h-9 rounded-lg px-3 text-xs font-semibold ${maintenanceMode ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                     >
-                      {maintenanceUpdating ? (
-                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent motion-safe:animate-spin" />
-                      ) : maintenanceMode ? (
-                        <><Power className="h-4 w-4" />Resume Operations</>
-                      ) : (
-                        <><WrenchIcon className="h-4 w-4" />Enable Maintenance</>
-                      )}
+                      {maintenanceUpdating ? 'Updating...' : maintenanceMode ? 'Resume' : 'Enable'}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {canAccessPlatformSettings && selectedTab === 'admins' && (
-              <Card className="border border-slate-200 bg-white shadow-sm">
-                <CardContent className="p-6">
-                  <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h2 className="text-base font-semibold text-slate-900">Collection fee</h2>
-                      <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">
-                        Set the base collection commission charged by SwiftPay. Admin-specific commission surcharges are added to this rate.
-                      </p>
-                    </div>
-                    <div className="flex items-end gap-3">
-                      <label className="block">
-                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Additional fee (%)</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={additionalFeePercent}
-                          disabled={feeLoading || feeSaving}
-                          onChange={event => setAdditionalFeePercent(event.target.value)}
-                          className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">System fee (%)</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={systemFeePercent}
-                          disabled={feeLoading || feeSaving}
-                          onChange={event => setSystemFeePercent(event.target.value)}
-                          className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
-                        />
-                      </label>
-                      <Button onClick={handleSaveCollectionFee} disabled={feeLoading || feeSaving} className="h-10 bg-[#FF6B00] px-4 text-sm text-white hover:bg-[#E66000]">
-                        {feeSaving ? 'Saving...' : 'Save fee'}
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-xs font-semibold text-slate-500">
-                    Total collection fee: <span className="text-slate-900">{Number(totalFeePercent).toFixed(2)}%</span>
-                  </p>
-                  <div className="mt-4 flex items-center gap-3">
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">VIP Gold processing fee (%)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={vipGoldFeePercent}
-                        disabled={feeLoading || feeSaving}
-                        onChange={event => setVipGoldFeePercent(event.target.value)}
-                        className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
-                      />
-                    </label>
-                    <p className="pt-5 text-xs text-slate-500">Applied to users with the VIP Gold badge.</p>
                   </div>
                 </CardContent>
               </Card>

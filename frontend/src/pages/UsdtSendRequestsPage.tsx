@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import { client } from '@/lib/api';
 import { CheckCircle, XCircle, Clock, RefreshCw, Send, ShieldAlert } from 'lucide-react';
 
 interface UsdtSendRequest {
@@ -37,10 +38,9 @@ export default function UsdtSendRequestsPage() {
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/wallet/usdt-send-requests', { credentials: 'include' });
-      if (res.ok) {
-        const d = await res.json();
-        const items: UsdtSendRequest[] = d.items || [];
+      const { data, ok } = await client.get('/api/v1/wallet/usdt-send-requests');
+      if (ok) {
+        const items: UsdtSendRequest[] = data?.items || [];
         setRequests(filter ? items.filter(r => r.status === filter) : items);
       }
     } catch (e) { console.error(e); }
@@ -70,17 +70,13 @@ export default function UsdtSendRequestsPage() {
   const doApprove = async (id: number) => {
     setActionLoading(id); setError('');
     try {
-      const res = await fetch(`/api/v1/wallet/usdt-send-requests/${id}/approve`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (res.ok) {
+      const { data, ok } = await client.request(`/api/v1/wallet/usdt-send-requests/${id}/approve`, 'POST');
+      if (ok) {
         toast.success('USDT send request approved');
         cancelReview();
         fetchRequests();
       } else {
-        const d = await res.json();
-        setError(d.detail || 'Failed to approve');
+        setError(data?.detail || 'Failed to approve');
       }
     } catch (e: any) { setError(e.message); }
     setActionLoading(null);
@@ -90,18 +86,15 @@ export default function UsdtSendRequestsPage() {
     if (!denialReason.trim()) { setError('Denial reason is required.'); return; }
     setActionLoading(id); setError('');
     try {
-      const res = await fetch(`/api/v1/wallet/usdt-send-requests/${id}/deny`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: denialReason.trim() }),
+      const { data, ok } = await client.request(`/api/v1/wallet/usdt-send-requests/${id}/deny`, 'POST', {
+        reason: denialReason.trim(),
       });
-      if (res.ok) {
+      if (ok) {
         toast.success('USDT send request denied');
         cancelReview();
         fetchRequests();
       } else {
-        const d = await res.json();
-        setError(d.detail || 'Failed to deny');
+        setError(data?.detail || 'Failed to deny');
       }
     } catch (e: any) { setError(e.message); }
     setActionLoading(null);

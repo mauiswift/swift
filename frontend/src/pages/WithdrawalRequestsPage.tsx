@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import { getStoredToken } from '@/lib/auth';
+import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, DollarSign, Search } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
@@ -80,16 +80,15 @@ export default function WithdrawalRequestsPage() {
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const url = filter && filter !== 'all' 
-        ? `/api/v1/wallet/admin/withdrawals?status=${filter}` 
+      const url = filter && filter !== 'all'
+        ? `/api/v1/wallet/admin/withdrawals?status=${filter}`
         : `/api/v1/wallet/admin/withdrawals`;
-      const res = await fetch(url, { credentials: 'include' });
-      if (res.ok) { 
-        const d = await res.json(); 
-        setRequests(d.items || []); 
+      const { data, ok } = await client.get(url);
+      if (ok) {
+        setRequests(data?.items || []);
       }
-    } catch (e) { 
-      console.error(e); 
+    } catch (e) {
+      console.error(e);
       setError(isKrwFlow ? '출금 요청을 불러오지 못했습니다.' : 'Failed to load withdrawal requests');
     }
     setLoading(false);
@@ -123,18 +122,14 @@ export default function WithdrawalRequestsPage() {
     setActionLoading(id);
     setError('');
     try {
-      const res = await fetch(`/api/v1/wallet/admin/withdrawals/${id}/reconcile`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const result = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const message = result.detail || 'Failed to refresh SwiftPay withdrawal status';
+      const { data, ok } = await client.request(`/api/v1/wallet/admin/withdrawals/${id}/reconcile`, 'POST');
+      if (!ok) {
+        const message = data?.detail || 'Failed to refresh SwiftPay withdrawal status';
         setError(message);
         toast.error(message);
         return;
       }
-      toast.success(result.message || 'SwiftPay withdrawal status refreshed');
+      toast.success(data?.message || 'SwiftPay withdrawal status refreshed');
       await fetchRequests();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Network error. Please try again.';
@@ -153,23 +148,18 @@ export default function WithdrawalRequestsPage() {
         ? `/api/v1/wallet/admin/withdrawals/${id}/approve`
         : `/api/v1/wallet/admin/withdrawals/${id}/reject`;
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        ...(action === 'cancel' && { body: JSON.stringify({ reason: notes[id] || 'Rejected by admin' }) }),
-      });
+      const payload = action === 'cancel' ? { reason: notes[id] || 'Rejected by admin' } : undefined;
+      const { data, ok } = await client.request(endpoint, 'POST', payload);
 
-      const result = await res.json().catch(() => ({}));
-      if (res.ok) {
+      if (ok) {
         setNotes(prev => { const n = { ...prev }; delete n[id]; return n; });
         setActiveId(null);
         toast.success(action === 'approve'
-          ? (result.message || (isKrwFlow ? '출금이 처리되어 이체되었습니다.' : 'Withdrawal processed successfully'))
-          : (result.message || (isKrwFlow ? '출금이 거절되었습니다.' : 'Withdrawal rejected')));
+          ? (data?.message || (isKrwFlow ? '출금이 처리되어 이체되었습니다.' : 'Withdrawal processed successfully'))
+          : (data?.message || (isKrwFlow ? '출금이 거절되었습니다.' : 'Withdrawal rejected')));
         fetchRequests();
       } else {
-        const message = result.detail || (isKrwFlow
+        const message = data?.detail || (isKrwFlow
           ? `출금 ${action === 'approve' ? '승인' : '거절'}에 실패했습니다.`
           : `Failed to ${action} withdrawal`);
         setError(message);

@@ -56,10 +56,7 @@ export const statusStyles: Record<string, { bg: string; text: string; dot: strin
 };
 
 const LIVE_RATE_CURRENCIES = [
-  { code: 'USD', label: 'US Dollar' },
-  { code: 'EUR', label: 'Euro' },
   { code: 'KRW', label: 'South Korean Won' },
-  { code: 'CNY', label: 'Chinese Yuan' },
   { code: 'USDT', label: 'Tether' },
 ] as const;
 

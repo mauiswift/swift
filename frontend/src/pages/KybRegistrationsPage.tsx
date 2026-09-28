@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { client } from '@/lib/api';
 import { CheckCircle, XCircle, Clock, RefreshCw, ClipboardList, ChevronDown, ChevronUp, Copy, Check, KeyRound, X, AlertTriangle } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
@@ -150,10 +151,9 @@ export default function KybRegistrationsPage() {
     setError('');
     try {
       const url = filter ? `/api/v1/kyb?status=${filter}` : '/api/v1/kyb';
-      const res = await fetch(url, { credentials: 'include' });
-      if (res.ok) {
-        const d = await res.json();
-        setRegistrations(d.items || []);
+      const { data, ok } = await client.get(url);
+      if (ok) {
+        setRegistrations(data?.items || []);
       } else {
         setError('Failed to load KYB registrations. Please try again.');
       }
@@ -195,7 +195,7 @@ export default function KybRegistrationsPage() {
       const body = action === 'approve'
         ? {
             note: '',
-          vip_gold: approvalForm.vip_gold,
+            vip_gold: approvalForm.vip_gold,
             bank_name: approvalForm.bank_name,
             bank_account_number: approvalForm.bank_account_number,
             bank_account_name: approvalForm.bank_account_name,
@@ -205,28 +205,21 @@ export default function KybRegistrationsPage() {
             settlement_currency: approvalForm.settlement_currency,
           }
         : { reason: rejectReason || 'Rejected by admin.' };
-      const res = await fetch(`/api/v1/kyb/${id}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        const d = await res.json();
+      const { data, ok } = await client.request(`/api/v1/kyb/${id}/${action}`, 'POST', body);
+      if (ok) {
         const successText = action === 'approve'
           ? 'KYB registration approved successfully.'
           : 'KYB registration rejected successfully.';
         setSuccessMessage(successText);
-        if (action === 'approve' && d.credentials) {
-          setIssuedCredentials(d.credentials);
+        if (action === 'approve' && data?.credentials) {
+          setIssuedCredentials(data.credentials);
         }
         setRejectReason('');
         setActiveId(null);
         setRejectMode(false);
         await fetchRegistrations();
       } else {
-        const d = await res.json();
-        setError(d.detail || `Failed to ${action}`);
+        setError(data?.detail || `Failed to ${action}`);
       }
     } catch (e: any) { setError(e.message); }
     setActionLoading(null);
