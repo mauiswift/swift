@@ -326,7 +326,7 @@ function LiveRatesPool() {
 
   useEffect(() => {
     void loadRates();
-    const refreshTimer = window.setInterval(() => void loadRates(), 300_000);
+    const refreshTimer = window.setInterval(() => void loadRates(), 5_000);
     return () => window.clearInterval(refreshTimer);
   }, []);
 
@@ -358,9 +358,9 @@ function LiveRatesPool() {
             </button>
           </div>
         </div>
-        <div className="grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="-mx-2 flex snap-x gap-px overflow-x-auto overscroll-x-contain rounded-2xl border border-white/10 bg-white/10 px-2 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-hidden sm:px-0 sm:pb-0 lg:grid-cols-5">
           {LIVE_RATE_CURRENCIES.map(currency => (
-            <div key={currency.code} className="bg-[#1b2535] px-5 py-5 transition-colors hover:bg-[#243146]">
+            <div key={currency.code} className="min-w-[190px] snap-start bg-[#1b2535] px-5 py-5 transition-colors hover:bg-[#243146] sm:min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold tracking-[0.1em] text-white/80">{currency.code}</span>
                 <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#20c997]">Live</span>
