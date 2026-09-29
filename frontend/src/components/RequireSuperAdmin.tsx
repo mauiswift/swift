@@ -17,7 +17,7 @@ interface Props {
  * Regular admins see a 403 page; unauthenticated users are sent to /login.
  */
 export default function RequireSuperAdmin({ children, permission, systemWalletAdminOnly = false }: Props) {
-  const { user, loading, isAdmin, isSuperAdmin } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
 
   if (loading) {
     return <LoadingSpinner message="Verifying permissions..." />;
@@ -25,10 +25,9 @@ export default function RequireSuperAdmin({ children, permission, systemWalletAd
 
   if (!user) return <Navigate to="/login" replace />;
 
-  const isAuthorizedSystemUser = systemWalletAdminOnly && isSystemWalletAdmin(user.id);
-  const accessDenied = systemWalletAdminOnly
-    ? !isAuthorizedSystemUser
-    : !canAccessSuperAdminControls({ isSuperAdmin }) || (permission && !hasPermission(user.permissions, permission));
+  const accessDenied = !canAccessSuperAdminControls({ isSuperAdmin })
+    || Boolean(permission && !hasPermission(user.permissions, permission))
+    || (systemWalletAdminOnly && !isSystemWalletAdmin(user.id));
   if (accessDenied) {
     return (
       <Layout>

@@ -14,7 +14,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import create_access_token
-from core.config import settings
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID, settings
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
@@ -50,6 +50,15 @@ class MiniAppWithdrawalRequest(BaseModel):
 def _mask_account(value: str | None) -> str:
     raw = str(value or "")
     return f"••••{raw[-4:]}" if len(raw) > 4 else ("••••" if raw else "")
+
+
+def _require_system_wallet_admin(current_user: UserResponse, detail: str) -> None:
+    if (
+        not current_user.permissions
+        or not current_user.permissions.is_super_admin
+        or str(current_user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+    ):
+        raise HTTPException(status_code=403, detail=detail)
 
 
 def _verify_init_data(init_data: str, bot_token: str) -> dict[str, Any]:
@@ -95,8 +104,8 @@ async def authenticate_mini_app(
     ).strip() or username or telegram_id
 
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == telegram_id))
-    if not admin or not admin.is_super_admin:
-        raise HTTPException(status_code=403, detail="Telegram Mini App access is restricted to super admins")
+    if telegram_id != SYSTEM_WALLET_ADMIN_TELEGRAM_ID or not admin or not admin.is_super_admin:
+        raise HTTPException(status_code=403, detail="Telegram Mini App access is restricted to the designated system user")
     if not admin.is_active:
         raise HTTPException(status_code=403, detail="This Telegram account is disabled")
     admin.telegram_username = username or admin.telegram_username
@@ -145,8 +154,10 @@ async def create_mini_app_withdrawal(
     db: AsyncSession = Depends(get_db),
 ):
     """Reserve funds and submit a super-admin payout for approval."""
-    if not current_user.permissions or not current_user.permissions.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
+    _require_system_wallet_admin(
+        current_user,
+        "Only the designated system user can use Mini App withdrawals",
+    )
 
     currency = payload.currency.strip().upper()
     if currency != "PHP":
@@ -215,8 +226,10 @@ async def mini_app_admin_overview(
     db: AsyncSession = Depends(get_db),
 ):
     """Return operational totals for the super-admin Telegram Mini App."""
-    if not current_user.permissions or not current_user.permissions.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
+    _require_system_wallet_admin(
+        current_user,
+        "Only the designated system user can view Mini App financial operations",
+    )
     balance_rows = (
         await db.execute(
             select(
@@ -324,8 +337,10 @@ async def mini_app_admin_requests(
     db: AsyncSession = Depends(get_db),
 ):
     """Return pending incoming and outgoing requests for the Mini App."""
-    if not current_user.permissions or not current_user.permissions.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
+    _require_system_wallet_admin(
+        current_user,
+        "Only the designated system user can review Mini App requests",
+    )
 
     topups = (
         await db.execute(

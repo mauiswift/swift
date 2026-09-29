@@ -18,7 +18,6 @@ from services.toss_account_pool import assign_toss_account_to_transaction
 from services.app_settings import (
     get_enabled_collection_currencies,
     get_payment_channels,
-    get_wallet_currency_limits,
     get_deposit_accounts,
     is_toss_bank_account,
 )
@@ -37,7 +36,7 @@ def _is_security_bank_name(value: object) -> bool:
     return "securitybank" in normalized or normalized == "secbank"
 
 
-async def _select_manual_transfer_account(db: AsyncSession, currency: str, amount: float) -> dict[str, str]:
+async def _select_manual_transfer_account(db: AsyncSession, currency: str) -> dict[str, str]:
     accounts = [
         account for account in await get_deposit_accounts(db)
         if str(account.get("currency", "")).upper() == currency
@@ -56,10 +55,7 @@ async def _select_manual_transfer_account(db: AsyncSession, currency: str, amoun
             if is_toss_bank_account(account)
         ]
         accounts = toss_accounts
-    eligible = [
-        account for account in accounts
-        if float(account.get("minimum_amount") or 0) <= amount
-    ] or accounts
+    eligible = accounts
     if not eligible:
         return {}
     if currency.upper() == "KRW" and len(eligible) > 1:
@@ -182,9 +178,17 @@ class PaymentGateway:
         ):
             benefits = await get_krw_benefits(db, str(user_id))
             if not benefits["unlocked"]:
+                threshold = benefits["threshold_usdt"]
                 return {
                     "success": False,
-                    "error": "KRW payment features unlock after an approved USDT deposit of at least 600 USDT",
+                    "error": (
+                        "KRW payment features unlock after any positive approved USDT deposit"
+                        if threshold == 0
+                        else (
+                            "KRW payment features unlock after an approved USDT deposit of at least "
+                            f"{threshold:g} USDT"
+                        )
+                    ),
                 }
             merchant = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
             configured_channels = (
@@ -207,17 +211,6 @@ class PaymentGateway:
                     "success": False,
                     "error": f"KRW channel '{unsupported_local[0]}' is unavailable until a Korean acquiring provider is configured",
                 }
-        limits = await get_wallet_currency_limits(db, currency)
-        if limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
-            return {
-                "success": False,
-                "error": f"Minimum deposit is {currency} {limits['minimum_deposit']:,.2f}",
-            }
-        if limits["max_incoming"] > 0 and amount > limits["max_incoming"]:
-            return {
-                "success": False,
-                "error": f"Incoming amount exceeds the {currency} maximum of {limits['max_incoming']:,.2f}",
-            }
         currency_is_explicit = bool(selected_currency)
         if currency == "KRW" and original_transaction_type == "payment_link":
             transaction_type = "invoice"

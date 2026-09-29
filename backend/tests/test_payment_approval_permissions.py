@@ -3,8 +3,12 @@ from fastapi import HTTPException
 
 from routers.payment_approvals import _require_payment_approval_access
 from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
-from routers.private_admin_payments import _require_designated_payment_approver
+from routers.private_admin_payments import (
+    _require_designated_payment_approver,
+    _require_super_admin as _require_private_payment_admin,
+)
 from routers.topup import _can_approve_requests
+from routers.bank_deposit import _can_approve_requests as _can_approve_bank_deposits
 from schemas.auth import UserPermissions, UserResponse
 
 
@@ -56,11 +60,41 @@ def test_private_payment_approval_is_restricted_to_designated_user():
 
 def test_topup_approval_requires_super_admin_and_approval_permission():
     assert _can_approve_requests(
-        _user(UserPermissions(is_super_admin=True, can_approve_topups=True))
+        _user(
+            UserPermissions(is_super_admin=True, can_approve_topups=True),
+            SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+        )
     )
     assert not _can_approve_requests(
-        _user(UserPermissions(is_super_admin=True, can_approve_topups=False))
+        _user(
+            UserPermissions(is_super_admin=True, can_approve_topups=False),
+            SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+        )
     )
     assert not _can_approve_requests(
-        _user(UserPermissions(can_approve_topups=True))
+        _user(
+            UserPermissions(is_super_admin=True, can_approve_topups=True),
+            "other-admin",
+        )
     )
+    assert not _can_approve_requests(_user(UserPermissions(can_approve_topups=True)))
+
+
+def test_bank_deposit_approval_is_restricted_to_system_user():
+    assert _can_approve_bank_deposits(
+        _user(UserPermissions(is_super_admin=True), SYSTEM_WALLET_ADMIN_TELEGRAM_ID)
+    )
+    assert not _can_approve_bank_deposits(
+        _user(UserPermissions(is_super_admin=True), "other-admin")
+    )
+
+
+def test_private_payment_operations_require_designated_super_admin():
+    _require_private_payment_admin(
+        _user(UserPermissions(is_super_admin=True), SYSTEM_WALLET_ADMIN_TELEGRAM_ID)
+    )
+    with pytest.raises(HTTPException) as error:
+        _require_private_payment_admin(
+            _user(UserPermissions(is_super_admin=True), "other-admin")
+        )
+    assert error.value.status_code == 403

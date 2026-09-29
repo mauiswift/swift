@@ -150,7 +150,7 @@ async def test_checkout_toss_account_rotates_from_previous_session(monkeypatch):
             return FakeResult()
 
     monkeypatch.setattr(payment_gateway, "get_deposit_accounts", AsyncMock(return_value=accounts))
-    selected = await payment_gateway._select_manual_transfer_account(FakeDb(), "KRW", 1250)
+    selected = await payment_gateway._select_manual_transfer_account(FakeDb(), "KRW")
 
     assert selected["bank_account_number"] == "444-555-666"
 
@@ -172,7 +172,7 @@ from fastapi import HTTPException
 
 
 @pytest.mark.asyncio
-async def test_set_deposit_accounts_accepts_numeric_string_minimum_amount(monkeypatch):
+async def test_deposit_account_minimum_amount_is_ignored(monkeypatch):
     from services import app_settings
 
     captured = {}
@@ -196,7 +196,22 @@ async def test_set_deposit_accounts_accepts_numeric_string_minimum_amount(monkey
     )
 
     payload = json.loads(captured["value"])
-    assert payload[0]["minimum_amount"] == 400000.0
+    assert "minimum_amount" not in payload[0]
+
+    async def fake_get_setting(_db, key):
+        assert key == app_settings.DEPOSIT_ACCOUNTS_KEY
+        return json.dumps([{
+            "value": "kbank-high",
+            "label": "Korean Premium Account",
+            "account_number": "123-456-789",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+            "minimum_amount": 400000,
+        }])
+
+    monkeypatch.setattr(app_settings, "_get_setting", fake_get_setting)
+    configured_accounts = await app_settings.get_deposit_accounts(None)
+    assert "minimum_amount" not in configured_accounts[0]
 
 
 @pytest.mark.asyncio
@@ -296,14 +311,19 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
     async def fake_create_payment(self, db, *, user_id, amount, description, transaction_type, customer_name, customer_email, external_id=None, payment_methods=None, metadata=None, currency=None):
         assert db is not None
         assert user_id == "42"
-        assert amount == 2500
-        assert currency == "KRW"
+        assert amount == 1.85
+        assert currency == "USD"
         assert external_id == "paymentwall-abc123"
         assert transaction_type == "invoice"
         return {"success": True, "data": {"payment_url": "https://paymentwall.example/checkout"}}
 
     import routers.paymentwall as paymentwall_router
     monkeypatch.setattr(paymentwall_router.PaymentGateway, "create_payment", fake_create_payment)
+    monkeypatch.setattr(
+        paymentwall_router.CurrencyConverter,
+        "convert_live",
+        AsyncMock(return_value=1.85),
+    )
 
     from routers.paymentwall import create_paymentwall_payment
 
@@ -322,7 +342,7 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
         current_user=FakeUser(),
         db=object(),
     )
-
+    assert result["success"] is True
     assert result["success"] is True
     assert result["data"]["payment_url"] == "https://paymentwall.example/checkout"
 
@@ -344,7 +364,7 @@ async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch
     )
 
     assert result["success"] is True
-    assert result["data"]["gateway"] == "manual_external_verification"
+    assert result["data"]["gateway"] == "manual_internal"
 
 
 @pytest.mark.asyncio
@@ -352,13 +372,16 @@ async def test_krw_payment_link_does_not_require_600_usdt_benefit(monkeypatch):
     gateway = PaymentGateway(db=None)
     gateway.swift = SimpleNamespace(is_configured=lambda: False)
     gateway.magpie = SimpleNamespace(api_key="")
-    monkeypatch.setattr(
-        "services.payment_gateway.get_wallet_currency_limits",
-        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    get_benefits = AsyncMock(
+        return_value={"unlocked": False, "threshold_usdt": 600}
     )
-
+    monkeypatch.setattr("services.payment_gateway.get_krw_benefits", get_benefits)
+    monkeypatch.setattr(
+        "services.payment_gateway.get_enabled_collection_currencies",
+        AsyncMock(return_value=["KRW"]),
+    )
     result = await gateway.create_payment(
-        db=None,
+        db=object(),
         user_id="user-without-600-usdt",
         amount=10_000,
         description="KRW payment link",
@@ -366,8 +389,8 @@ async def test_krw_payment_link_does_not_require_600_usdt_benefit(monkeypatch):
         currency="KRW",
     )
 
-    assert result["success"] is True
-    assert result["data"]["approval_required"] is True
+    assert result == {"success": False, "error": "PhotonPay KRW checkout is not configured"}
+    get_benefits.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -389,10 +412,6 @@ async def test_php_payment_link_uses_self_hosted_checkout_and_defers_provider_or
         created.update(kwargs)
         return transaction
 
-    monkeypatch.setattr(
-        "services.payment_gateway.get_wallet_currency_limits",
-        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
-    )
     monkeypatch.setattr(
         "services.payment_gateway.get_enabled_collection_currencies",
         AsyncMock(return_value=["PHP", "KRW", "CNY", "USDT"]),
@@ -492,11 +511,6 @@ async def test_magpie_payment_link_persists_requested_currency_and_owner(monkeyp
         "services.payment_gateway.get_enabled_collection_currencies",
         AsyncMock(return_value=["PHP", "CNY", "KRW", "USDT"]),
     )
-    monkeypatch.setattr(
-        "services.payment_gateway.get_wallet_currency_limits",
-        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
-    )
-
     result = await gateway.create_payment(
         db=object(),
         user_id="merchant-cny",

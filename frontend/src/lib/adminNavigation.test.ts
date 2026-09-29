@@ -57,8 +57,9 @@ describe('payment approval navigation', () => {
     expect(hasNavigationItem(permissions, true, 'other-admin')).toBe(false);
   });
 
-  it('shows payment approval only to the designated system user, independent of role permissions', () => {
-    expect(hasNavigationItem(noPermissions, false, '7851923260')).toBe(true);
+  it('shows payment approval to the designated system super admin, independent of approval permissions', () => {
+    expect(hasNavigationItem(noPermissions, true, '7851923260')).toBe(true);
+    expect(hasNavigationItem(noPermissions, false, '7851923260')).toBe(false);
     expect(hasNavigationItem({ ...noPermissions, is_super_admin: true }, true, 'owner-1')).toBe(false);
   });
 

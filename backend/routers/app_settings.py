@@ -7,7 +7,7 @@ from dependencies.auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictFloat
 from schemas.auth import UserResponse
 from services.exchange_rate_service import fetch_live_usdt_php_rate, get_cache_status as _get_exchange_rate_cache_status, get_rate
 from services.app_settings import (
@@ -44,6 +44,8 @@ from services.app_settings import (
     get_usdt_php_rate_details,
     get_wallet_limits,
     set_wallet_limits,
+    get_krw_benefit_threshold,
+    set_krw_benefit_threshold,
     get_checkout_design,
     set_checkout_design,
 )
@@ -53,6 +55,7 @@ from core.constants import (
     DEFAULT_USDT_PHP_RATE,
     USDT_TRC20_ADDRESS_KEY,
 )
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -162,6 +165,10 @@ class DepositAccountsUpdateRequest(BaseModel):
 
 class WalletLimitsUpdateRequest(BaseModel):
     limits: dict[str, dict[str, float]]
+
+
+class KrwBenefitThresholdUpdateRequest(BaseModel):
+    threshold_usdt: StrictFloat
 
 
 class CheckoutDesignUpdateRequest(BaseModel):
@@ -405,6 +412,32 @@ async def set_wallet_limits_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info("Wallet limits updated by super admin %s", current_user.id)
     return {"limits": limits}
+
+
+@router.get("/krw-benefit-threshold")
+async def get_krw_benefit_threshold_endpoint(db: AsyncSession = Depends(get_db)):
+    """Return the configured USDT deposit threshold for KRW benefits."""
+    return {"threshold_usdt": await get_krw_benefit_threshold(db)}
+
+
+@router.put("/krw-benefit-threshold")
+async def set_krw_benefit_threshold_endpoint(
+    body: KrwBenefitThresholdUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if (
+        not current_user.permissions
+        or not current_user.permissions.is_super_admin
+        or str(current_user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="System wallet administrator access required.")
+    try:
+        threshold = await set_krw_benefit_threshold(db, body.threshold_usdt)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("KRW benefit threshold updated to %s USDT by user %s", threshold, current_user.id)
+    return {"threshold_usdt": threshold}
 
 
 @router.get("/checkout-design")

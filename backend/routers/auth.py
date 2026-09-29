@@ -77,7 +77,7 @@ from webauthn.helpers.structs import (
     ResidentKeyRequirement,
     UserVerificationRequirement,
 )
-from sqlalchemy import select, and_, inspect, func
+from sqlalchemy import select, and_, inspect, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])

@@ -371,14 +371,6 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
   );
 }
 
-type WalletLimitValues = {
-  max_incoming: number;
-  minimum_balance: number;
-  minimum_deposit: number;
-  max_withdrawal_daily: number;
-  max_withdrawal_monthly: number;
-};
-
 type DepositAccount = {
   value: string;
   label: string;
@@ -390,7 +382,6 @@ type DepositAccount = {
   bank_code?: string;
   branch_code?: string;
   bank_address?: string;
-  minimum_amount?: number;
 };
 
 const createDepositAccount = (number: number): DepositAccount => ({
@@ -404,7 +395,6 @@ const createDepositAccount = (number: number): DepositAccount => ({
   bank_code: '',
   branch_code: '',
   bank_address: '',
-  minimum_amount: undefined,
 });
 
 const isTossDepositAccount = (account: DepositAccount) => (
@@ -530,14 +520,16 @@ function PlatformSettingsTab({ onError }: { onError: (message: string) => void }
   );
 }
 
-function AdminOperationsTab({ canAccessPaymentApprovals }: { canAccessPaymentApprovals: boolean }) {
+function AdminOperationsTab({ canAccessFinancialApprovals }: { canAccessFinancialApprovals: boolean }) {
   const navigate = useNavigate();
   const operations = [
-    ...(canAccessPaymentApprovals ? [['Payment approvals', '/payment-approvals']] : []),
-    ['Bank deposits', '/bank-deposits'],
-    ['Top-up requests', '/topup-requests'],
-    ['Withdrawals', '/withdrawals'],
-    ['USDT send requests', '/withdrawals/usdt-send-requests'],
+    ...(canAccessFinancialApprovals ? [
+      ['Payment approvals', '/payment-approvals'],
+      ['Bank deposits', '/bank-deposits'],
+      ['Top-up requests', '/topup-requests'],
+      ['Withdrawals', '/withdrawals'],
+      ['USDT send requests', '/withdrawals/usdt-send-requests'],
+    ] : []),
     ['TOSS Bank applications', '?tab=toss-approvals'],
     ['KYB registrations', '/kyb-registrations'],
     ['KYC verifications', '/kyc-verifications'],
@@ -761,22 +753,25 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
   );
 }
 
-function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
-  const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
+function WalletSettingsTab({
+  onError,
+  canEditKrwBenefitThreshold,
+}: {
+  onError: (message: string) => void;
+  canEditKrwBenefitThreshold: boolean;
+}) {
   const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
   const receivingCurrencies = ['PHP', 'KRW', 'CNY', 'HKD', 'USD', 'USDT'];
-  const [currency, setCurrency] = useState('PHP');
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
-  const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
   const [depositRules, setDepositRules] = useState({
     bank_deposit_currencies: ['PHP', 'KRW'],
     topup_currencies: ['PHP', 'USDT', 'KRW'],
     receipt_max_size_mb: 10,
-    first_usdt_topup_amount: 600,
-    first_usdt_topup_rule_enabled: true,
   });
   const [depositAccounts, setDepositAccounts] = useState<DepositAccount[]>([]);
+  const [krwBenefitThreshold, setKrwBenefitThreshold] = useState('600');
+  const [thresholdSaving, setThresholdSaving] = useState(false);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null);
   const [accountDraft, setAccountDraft] = useState<DepositAccount>(() => createDepositAccount(1));
@@ -786,16 +781,16 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     setLoading(true);
     try {
       const responses = await Promise.all([
-        authenticatedFetch('/api/v1/app-settings/wallet-limits'),
         authenticatedFetch('/api/v1/app-settings/deposit-rules'),
         authenticatedFetch('/api/v1/app-settings/deposit-accounts'),
+        authenticatedFetch('/api/v1/app-settings/krw-benefit-threshold'),
       ]);
       const failedResponse = responses.find(response => !response.ok);
       if (failedResponse) throw new Error(await failedResponse.text());
-      const [limitsData, rulesData, accountsData] = await Promise.all(responses.map(response => response.json()));
-      setLimits(limitsData.limits || {});
+      const [rulesData, accountsData, thresholdData] = await Promise.all(responses.map(response => response.json()));
       setDepositRules(current => ({ ...current, ...(rulesData.rules || {}) }));
       setDepositAccounts(accountsData.accounts || []);
+      setKrwBenefitThreshold(String(thresholdData.threshold_usdt ?? 600));
       setLoaded(true);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
@@ -806,32 +801,33 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
 
   useEffect(() => { load(); }, [load]);
 
-  const current = limits[currency] || {
-    max_incoming: 0,
-    minimum_balance: 0,
-    minimum_deposit: 0,
-    max_withdrawal_daily: 0,
-    max_withdrawal_monthly: 0,
-  };
-
-  const update = (key: keyof WalletLimitValues, value: string) => {
-    const parsed = value === '' ? 0 : Number(value);
-    setLimits(previous => ({
-      ...previous,
-      [currency]: { ...current, [key]: Number.isFinite(parsed) ? parsed : 0 },
-    }));
+  const saveKrwBenefitThreshold = async () => {
+    const threshold = Number(krwBenefitThreshold);
+    if (!Number.isFinite(threshold) || threshold < 0) {
+      onError('KRW eligibility threshold must be a finite amount of zero or greater');
+      return;
+    }
+    setThresholdSaving(true);
+    try {
+      const response = await authenticatedFetch('/api/v1/app-settings/krw-benefit-threshold', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold_usdt: threshold }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      setKrwBenefitThreshold(String(data.threshold_usdt));
+      toast.success('KRW eligibility threshold saved');
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save KRW eligibility threshold');
+    } finally {
+      setThresholdSaving(false);
+    }
   };
 
   const save = async () => {
     setSaving(true);
     try {
-      const response = await authenticatedFetch('/api/v1/app-settings/wallet-limits', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limits }),
-      });
-      if (!response.ok) throw new Error(await response.text());
-      setLimits((await response.json()).limits || limits);
       const rulesResponse = await authenticatedFetch('/api/v1/app-settings/deposit-rules', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -899,17 +895,31 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     .map((account, index) => ({ account, index }))
     .filter(({ account }) => !isTossDepositAccount(account));
 
-  const fields: Array<{ key: keyof WalletLimitValues; label: string; help: string }> = [
-    { key: 'max_incoming', label: 'Maximum incoming amount', help: 'Maximum amount accepted in one incoming transaction.' },
-    { key: 'minimum_balance', label: 'Minimum maintaining balance', help: 'Wallet balance must remain at or above this amount after withdrawal.' },
-    { key: 'minimum_deposit', label: 'Minimum deposit', help: 'Smallest amount accepted for a deposit or top-up.' },
-    { key: 'max_withdrawal_daily', label: 'Maximum withdrawal per day', help: 'Total withdrawal amount allowed from 00:00 UTC each day.' },
-    { key: 'max_withdrawal_monthly', label: 'Maximum withdrawal per month', help: 'Total withdrawal amount allowed from the first day of each month.' },
-  ];
-  const visibleFields = fields.filter(field => !(currency === 'PHP' && field.key === 'minimum_balance'));
-
   return (
     <div className="space-y-5">
+      {canEditKrwBenefitThreshold && (
+        <Card className="border-slate-200 bg-white">
+          <CardHeader><CardTitle className="text-base text-slate-900">KRW eligibility threshold</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label htmlFor="krw-benefit-threshold" className="text-sm font-semibold text-slate-700">Approved USDT deposit threshold</label>
+              <input
+                id="krw-benefit-threshold"
+                type="number"
+                min="0"
+                step="0.01"
+                value={krwBenefitThreshold}
+                onChange={event => setKrwBenefitThreshold(event.target.value)}
+                className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 font-normal text-slate-900"
+              />
+              <p className="mt-1 text-xs text-slate-500">Default is 600 USDT. Set to 0 to require any positive approved USDT deposit.</p>
+            </div>
+            <Button type="button" onClick={saveKrwBenefitThreshold} disabled={thresholdSaving || loading} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
+              {thresholdSaving ? 'Saving...' : 'Save threshold'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       <header className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-lg">
         <div className="flex flex-col gap-5 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
@@ -920,12 +930,11 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Platform controls</p>
               <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">Wallet settings</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Configure transaction limits, accepted deposit currencies, and the receiving accounts shown to customers.
+                Configure accepted deposit currencies and the receiving accounts shown to customers.
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">{currencies.length} wallet currencies</span>
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">{depositAccounts.length} receiving accounts</span>
             <Button onClick={save} disabled={loading || !loaded || saving} className="w-full gap-2 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -935,7 +944,6 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
         </div>
         <nav aria-label="Wallet settings sections" className="flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 sm:px-7">
           {[
-            { href: '#wallet-limits', label: 'Wallet limits', icon: <Settings2 className="h-3.5 w-3.5" /> },
             { href: '#deposit-accounts', label: 'Receiving accounts', icon: <Landmark className="h-3.5 w-3.5" /> },
             { href: '#deposit-rules', label: 'Deposit rules', icon: <DollarSign className="h-3.5 w-3.5" /> },
           ].map(section => (
@@ -961,47 +969,6 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
         </div>
       ) : (
         <>
-      <section id="wallet-limits" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><Settings2 className="h-5 w-5" /></span>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Wallet limits</h3>
-              <p className="mt-1 text-sm text-slate-500">Configure balance and transaction limits independently for each wallet currency.</p>
-            </div>
-          </div>
-          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">{currency} configuration</span>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Wallet settings currency">
-          {currencies.map(value => (
-            <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive min-w-20 rounded-xl border px-4 py-2.5 text-sm font-bold transition ${currency === value ? 'border-orange-200 bg-orange-50 text-[#C2410C] shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}>{value}</button>
-          ))}
-        </div>
-        <div className="mt-5 grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {visibleFields.map(field => (
-            <label key={field.key} className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition-colors focus-within:border-orange-300 focus-within:bg-white">
-              <span className="text-sm font-semibold text-slate-800">{field.label}</span>
-              <span className="mt-1 min-h-10 text-xs leading-5 text-slate-500">{field.help}</span>
-              <span className="mt-3 flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/5">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={current[field.key] || ''}
-                  onChange={event => update(field.key, event.target.value)}
-                  className="h-10 min-w-0 flex-1 rounded-lg bg-transparent px-3 text-sm font-bold text-slate-900 outline-none"
-                />
-                <span className="pr-3 text-xs font-bold text-slate-400">{currency}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-        {currency === 'PHP' && (
-          <p className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            PHP wallets have no minimum maintaining balance; withdrawals can use the full available balance.
-          </p>
-        )}
-      </section>
       <section id="deposit-accounts" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
@@ -1141,7 +1108,6 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
                   <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Account</TableHead>
                   <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Bank details</TableHead>
                   <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Currencies</TableHead>
-                  <TableHead className="whitespace-nowrap text-xs font-bold uppercase tracking-wide text-slate-500">Minimum</TableHead>
                   <TableHead className="min-w-48 text-xs font-bold uppercase tracking-wide text-slate-500">Shown to customers in</TableHead>
                   <TableHead className="w-24 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</TableHead>
                 </TableRow>
@@ -1167,9 +1133,6 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
                       {account.receiving_currency && account.receiving_currency !== account.currency && (
                         <p className="mt-1 text-xs text-slate-500">Receives as {account.receiving_currency}</p>
                       )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm text-slate-700">
-                      {account.minimum_amount ? `${account.minimum_amount.toLocaleString()} ${account.currency}` : 'None'}
                     </TableCell>
                     <TableCell className="min-w-48 text-xs leading-5 text-slate-600">
                       <p>Wallet &gt; Deposit</p>
@@ -1246,10 +1209,6 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
               </select>
             </label>
             <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-              Minimum collection amount (optional)
-              <input type="number" min="0" step="0.01" value={accountDraft.minimum_amount ?? ''} onChange={event => setAccountDraft(draft => ({ ...draft, minimum_amount: event.target.value ? Number(event.target.value) : undefined }))} placeholder={`Amount in ${accountDraft.currency}`} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
-            </label>
-            <label className="space-y-1.5 text-xs font-semibold text-slate-600">
               Bank code (optional)
               <input value={accountDraft.bank_code || ''} onChange={event => setAccountDraft(draft => ({ ...draft, bank_code: event.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
             </label>
@@ -1279,7 +1238,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><DollarSign className="h-5 w-5" /></span>
           <div>
             <h3 className="text-base font-bold text-slate-900">Deposit rules</h3>
-            <p className="mt-1 text-sm text-slate-500">Control accepted currencies, receipt uploads, and first-time USDT funding.</p>
+            <p className="mt-1 text-sm text-slate-500">Control accepted currencies and receipt uploads.</p>
           </div>
         </div>
         <div className="mt-5 grid items-start gap-4 md:grid-cols-2">
@@ -1309,17 +1268,6 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
               <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="h-full min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm font-normal text-slate-900 outline-none" />
               <span className="pr-3 text-xs font-semibold text-slate-400">MB</span>
             </span>
-          </label>
-          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
-            First USDT top-up amount
-            <span className="flex h-11 items-center rounded-xl border border-slate-200 bg-white focus-within:border-[#FF6B00] focus-within:ring-4 focus-within:ring-[#FF6B00]/5">
-              <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="h-full min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm font-normal text-slate-900 outline-none" />
-              <span className="pr-3 text-xs font-semibold text-slate-400">USDT</span>
-            </span>
-          </label>
-          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 md:col-span-2">
-            <input type="checkbox" className="h-4 w-4 accent-[#FF6B00]" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
-            Enforce the first USDT top-up amount rule
           </label>
         </div>
       </section>
@@ -3445,11 +3393,11 @@ export default function AdminManagement() {
   const canManageWallet = Boolean(user?.permissions?.can_manage_wallet);
   const canManageTransactions = Boolean(user?.permissions?.can_manage_transactions);
   const canManageBot = Boolean(user?.permissions?.can_manage_bot);
-  const canApproveTopups = Boolean(user?.permissions?.can_approve_topups);
+  const canApproveTopups = isSystemWalletAdmin(user?.id) && Boolean(user?.permissions?.can_approve_topups);
   const canManageTeam = Boolean(user?.permissions?.can_manage_team);
   const canAccessAdminUsers = isSuperAdmin && canManageTeam;
   const canAccessUserManagement = isSuperAdmin;
-  const canAccessCryptoRequests = isSuperAdmin && canApproveTopups;
+  const canAccessCryptoRequests = isSystemWalletAdmin(user?.id) && isSuperAdmin && canApproveTopups;
   const canAccessWalletControl = isSystemWalletAdmin(user?.id) && isSuperAdmin && canManageWallet;
   const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
   const canAccessTossApprovals = isSuperAdmin && canManageWallet;
@@ -4148,7 +4096,7 @@ export default function AdminManagement() {
               <WalletControlTab onError={setError} />
             )}
             {selectedTab === 'operations' && canAccessOperations && (
-              <AdminOperationsTab canAccessPaymentApprovals={isSystemWalletAdmin(user?.id)} />
+              <AdminOperationsTab canAccessFinancialApprovals={isSystemWalletAdmin(user?.id)} />
             )}
             {selectedTab === 'toss-approvals' && canAccessTossApprovals && (
               <TossAccountApprovalsPanel />
@@ -4157,7 +4105,7 @@ export default function AdminManagement() {
               <PaymentChannelsTab onError={setError} />
             )}
             {selectedTab === 'wallet-settings' && canAccessWalletSettings && (
-              <WalletSettingsTab onError={setError} />
+              <WalletSettingsTab onError={setError} canEditKrwBenefitThreshold={isSystemWalletAdmin(user?.id)} />
             )}
             {selectedTab === 'bitgo' && canAccessBitgo && (
               <BitGoWalletTab onError={setError} />

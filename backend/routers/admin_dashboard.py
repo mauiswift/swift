@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from dependencies.auth import get_current_user
 from models.bank_deposit_requests import BankDepositRequest
 from models.disbursements import Disbursements
@@ -38,6 +39,10 @@ def _require_super_admin(current_user: UserResponse) -> None:
         )
 
 
+def _can_review_financial_queues(current_user: UserResponse) -> bool:
+    return str(current_user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+
+
 async def _count_statuses(
     db: AsyncSession,
     model: type,
@@ -56,15 +61,26 @@ async def get_admin_dashboard_overview(
 ) -> AdminDashboardOverview:
     """Return aggregate pending queue counts for system administrators."""
     _require_super_admin(current_user)
+    can_review_financial_queues = _can_review_financial_queues(current_user)
 
     return AdminDashboardOverview(
         pending_queues=PendingQueueCounts(
             kyb=await _count_statuses(db, KybRegistration, ("pending_review",)),
             kyc=await _count_statuses(db, KycVerification, ("pending_review",)),
-            bank_deposits=await _count_statuses(db, BankDepositRequest, ("pending",)),
-            topups=await _count_statuses(db, TopupRequest, ("pending",)),
-            withdrawals=await _count_statuses(
-                db, Disbursements, ("pending", "processing", "transferring")
+            bank_deposits=(
+                await _count_statuses(db, BankDepositRequest, ("pending",))
+                if can_review_financial_queues
+                else 0
+            ),
+            topups=(
+                await _count_statuses(db, TopupRequest, ("pending",))
+                if can_review_financial_queues
+                else 0
+            ),
+            withdrawals=(
+                await _count_statuses(db, Disbursements, ("pending", "processing", "transferring"))
+                if can_review_financial_queues
+                else 0
             ),
         )
     )

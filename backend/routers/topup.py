@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.topup_requests import TopupRequest
@@ -19,8 +20,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
-from services.downline import DownlineService
-from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details, get_deposit_rules
+from services.app_settings import get_usdt_php_rate, get_usdt_php_rate_details, get_deposit_rules
 from services.swiftpay_service import SwiftPayService
 from services.system_earnings import credit_system_earnings
 from services.user_benefits import unlock_krw_benefits
@@ -33,7 +33,12 @@ router = APIRouter(prefix="/api/v1/topup", tags=["topup"])
 
 def _can_approve_requests(user: UserResponse) -> bool:
     permissions = user.permissions
-    return bool(permissions and permissions.is_super_admin and permissions.can_approve_topups)
+    return bool(
+        permissions
+        and permissions.is_super_admin
+        and permissions.can_approve_topups
+        and str(user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+    )
 
 
 
@@ -208,17 +213,6 @@ async def create_topup_request(
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {input_currency}")
     if not math.isfinite(data.amount) or data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
-    limits = await get_wallet_currency_limits(db, input_currency)
-    if limits["minimum_deposit"] > 0 and data.amount < limits["minimum_deposit"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Minimum deposit is {input_currency} {limits['minimum_deposit']:,.2f}",
-        )
-    if limits["max_incoming"] > 0 and data.amount > limits["max_incoming"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Incoming amount exceeds the {input_currency} maximum of {limits['max_incoming']:,.2f}",
-        )
     if not math.isfinite(rate) or rate <= 0:
         raise HTTPException(status_code=503, detail="USDT/PHP exchange rate is unavailable")
     amount_usdt = round(data.amount / rate, 2) if input_currency == "PHP" else data.amount
@@ -255,18 +249,6 @@ async def initialize_swiftpay_topup(
     deposit_rules = await get_deposit_rules(db)
     if input_currency not in deposit_rules["topup_currencies"]:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {input_currency}")
-    limits = await get_wallet_currency_limits(db, input_currency)
-    if limits["minimum_deposit"] > 0 and data.amount < limits["minimum_deposit"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Minimum deposit is {input_currency} {limits['minimum_deposit']:,.2f}",
-        )
-    if limits["max_incoming"] > 0 and data.amount > limits["max_incoming"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Incoming amount exceeds the {input_currency} maximum of {limits['max_incoming']:,.2f}",
-        )
-
     order_amount = data.amount
     if input_currency == "USDT":
         rate = await get_usdt_php_rate(db)
@@ -339,33 +321,6 @@ async def approve_topup_request(
     deposit_rules = await get_deposit_rules(db)
     if request_currency not in deposit_rules["topup_currencies"]:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
-
-    prior_approved = await db.execute(
-        select(TopupRequest).where(
-            TopupRequest.chat_id == user_id,
-            TopupRequest.status == "approved",
-        ).limit(1)
-    )
-    has_prior_approved = prior_approved.scalar_one_or_none() is not None
-
-    has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(user_id)
-    if (
-        request_currency == "USDT"
-        and deposit_rules["first_usdt_topup_rule_enabled"]
-        and not has_prior_approved
-        and not has_vip_gold_upline
-        and amount_usdt != deposit_rules["first_usdt_topup_amount"]
-    ):
-        req.status = "pending"
-        req.note = (
-            f"Pending onboarding rule: the first approved USDT top-up must be exactly {deposit_rules['first_usdt_topup_amount']:g} USDT. "
-            f"This request for {amount_usdt:.2f} USDT remains pending."
-            + (f" — {body.note}" if body.note else "")
-        )
-        req.updated_at = datetime.now(timezone.utc)
-        await db.commit()
-        await db.refresh(req)
-        return req
 
     if request_currency == "PHP":
         rate = await get_usdt_php_rate(db)

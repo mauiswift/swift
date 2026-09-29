@@ -9,8 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.admin_users import AdminUser
 from models.crypto_topup import CryptoTopupRequest
 from models.topup_requests import TopupRequest
-
-KRW_BENEFIT_THRESHOLD_USDT = 600.0
+from services.app_settings import get_krw_benefit_threshold
 
 
 async def unlock_krw_benefits(
@@ -18,6 +17,7 @@ async def unlock_krw_benefits(
     user_id: str,
     *,
     source: Optional[str] = None,
+    threshold_usdt: Optional[float] = None,
 ) -> bool:
     """Persist the KRW entitlement when a qualifying approved USDT deposit exists.
 
@@ -27,13 +27,28 @@ async def unlock_krw_benefits(
     if not admin:
         return False
 
+    threshold = (
+        threshold_usdt
+        if threshold_usdt is not None
+        else await get_krw_benefit_threshold(db)
+    )
+    topup_amount_filter = (
+        TopupRequest.amount_usdt > 0
+        if threshold == 0
+        else TopupRequest.amount_usdt >= threshold
+    )
+    crypto_amount_filter = (
+        CryptoTopupRequest.amount_usdt > 0
+        if threshold == 0
+        else CryptoTopupRequest.amount_usdt >= threshold
+    )
     qualifying_topup = await db.scalar(
         select(TopupRequest.id)
         .where(
             TopupRequest.chat_id == str(user_id),
             TopupRequest.status == "approved",
             TopupRequest.currency == "USDT",
-            TopupRequest.amount_usdt >= KRW_BENEFIT_THRESHOLD_USDT,
+            topup_amount_filter,
         )
         .order_by(TopupRequest.id.asc())
         .limit(1)
@@ -43,7 +58,7 @@ async def unlock_krw_benefits(
         .where(
             CryptoTopupRequest.user_id == str(user_id),
             CryptoTopupRequest.status == "approved",
-            CryptoTopupRequest.amount_usdt >= KRW_BENEFIT_THRESHOLD_USDT,
+            crypto_amount_filter,
         )
         .order_by(CryptoTopupRequest.id.asc())
         .limit(1)
@@ -63,18 +78,19 @@ async def unlock_krw_benefits(
 
 async def get_krw_benefits(db: AsyncSession, user_id: str) -> dict:
     """Return the canonical KRW entitlement and its audit metadata."""
+    threshold = await get_krw_benefit_threshold(db)
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     if not admin:
         return {
             "unlocked": False,
             "unlocked_at": None,
             "unlock_source": None,
-            "threshold_usdt": KRW_BENEFIT_THRESHOLD_USDT,
+            "threshold_usdt": threshold,
         }
-    unlocked = await unlock_krw_benefits(db, user_id)
+    unlocked = await unlock_krw_benefits(db, user_id, threshold_usdt=threshold)
     return {
         "unlocked": unlocked,
         "unlocked_at": admin.krw_benefits_unlocked_at,
         "unlock_source": admin.krw_benefits_unlock_source,
-        "threshold_usdt": KRW_BENEFIT_THRESHOLD_USDT,
+        "threshold_usdt": threshold,
     }

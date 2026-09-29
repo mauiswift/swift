@@ -48,6 +48,8 @@ from core.constants import (
     CHECKOUT_DESIGN_KEY,
     WALLET_SETTING_CURRENCIES,
     DEFAULT_WALLET_LIMITS,
+    KRW_BENEFIT_THRESHOLD_KEY,
+    DEFAULT_KRW_BENEFIT_THRESHOLD_USDT,
     public_currency,
 )
 from core.constants import FEES_ENABLED
@@ -144,7 +146,12 @@ async def get_deposit_accounts(db: AsyncSession) -> list[dict]:
         return [dict(account) for account in DEFAULT_DEPOSIT_ACCOUNTS]
     if not isinstance(configured, list):
         return [dict(account) for account in DEFAULT_DEPOSIT_ACCOUNTS]
-    return configured
+    return [
+        {key: item for key, item in account.items() if key != "minimum_amount"}
+        if isinstance(account, dict)
+        else account
+        for account in configured
+    ]
 
 
 def is_toss_bank_account(account: dict) -> bool:
@@ -233,7 +240,6 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
         bank_code = str(account.get("bank_code", "")).strip()
         branch_code = str(account.get("branch_code", "")).strip()
         bank_address = str(account.get("bank_address", "")).strip()
-        minimum_amount = account.get("minimum_amount")
         currency = str(account.get("currency", "PHP")).strip().upper()
         if not value or not label or not number or not name:
             raise ValueError("Deposit accounts require value, label, account number, and account name")
@@ -241,16 +247,6 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
             raise ValueError(f"Unsupported deposit account currency: {currency}")
         if receiving_currency and receiving_currency not in {"PHP", "KRW", "CNY", "HKD", "USD", "USDT"}:
             raise ValueError(f"Unsupported receiving currency: {receiving_currency}")
-        if minimum_amount is not None:
-            if isinstance(minimum_amount, bool):
-                raise ValueError("Minimum amount must be a non-negative number")
-            try:
-                parsed_minimum_amount = float(minimum_amount)
-            except (TypeError, ValueError):
-                raise ValueError("Minimum amount must be a non-negative number") from None
-            if not math.isfinite(parsed_minimum_amount) or parsed_minimum_amount < 0:
-                raise ValueError("Minimum amount must be a non-negative number")
-            minimum_amount = parsed_minimum_amount
         normalized_account = {
             "value": value,
             "label": label,
@@ -268,8 +264,6 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
         ):
             if value:
                 normalized_account[key] = value
-        if minimum_amount is not None:
-            normalized_account["minimum_amount"] = float(minimum_amount)
         normalized.append(normalized_account)
     if not normalized:
         raise ValueError("At least one deposit account is required")
@@ -445,46 +439,22 @@ async def set_enabled_collection_currencies(db: AsyncSession, currencies: list[s
 
 
 def _default_wallet_limits() -> dict[str, dict[str, float]]:
-    limits = {
+    return {
         currency: {key: float(value) for key, value in DEFAULT_WALLET_LIMITS.items()}
         for currency in WALLET_SETTING_CURRENCIES
     }
-    # Keep the deposit floor configurable and default to zero so small test/development
-    # top-ups are not blocked until an admin explicitly sets a minimum.
-    return limits
 
 
 async def get_wallet_limits(db: AsyncSession) -> dict[str, dict[str, float]]:
-    """Return normalized per-currency wallet limits; zero disables a limit."""
-    configured = _default_wallet_limits()
-    value = await _get_setting(db, WALLET_SETTINGS_KEY)
-    if value:
-        try:
-            raw = json.loads(value)
-        except (TypeError, ValueError):
-            logger.warning("Invalid wallet limit setting; using defaults")
-            raw = {}
-        if isinstance(raw, dict):
-            for currency in WALLET_SETTING_CURRENCIES:
-                values = raw.get(currency, {})
-                if not isinstance(values, dict):
-                    continue
-                for key in DEFAULT_WALLET_LIMITS:
-                    try:
-                        parsed = float(values.get(key, configured[currency][key]))
-                        if math.isfinite(parsed) and parsed >= 0:
-                            configured[currency][key] = parsed
-                    except (TypeError, ValueError):
-                        continue
-    configured["PHP"]["minimum_balance"] = 0.0
-    return configured
+    """Return zero for all wallet amount limits; legacy configured limits are ignored."""
+    return _default_wallet_limits()
 
 
 async def set_wallet_limits(
     db: AsyncSession,
     limits: dict[str, dict[str, float]],
 ) -> dict[str, dict[str, float]]:
-    """Validate and persist per-currency wallet limits."""
+    """Keep the legacy settings endpoint compatible while rejecting active limits."""
     normalized = _default_wallet_limits()
     for currency in WALLET_SETTING_CURRENCIES:
         values = limits.get(currency, {})
@@ -497,6 +467,8 @@ async def set_wallet_limits(
                 raise ValueError(f"{currency} {key} must be a valid number") from exc
             if not math.isfinite(value) or value < 0:
                 raise ValueError(f"{currency} {key} must be zero or greater")
+            if value != 0:
+                raise ValueError("Wallet amount limits are disabled")
             normalized[currency][key] = round(value, 2)
     normalized["PHP"]["minimum_balance"] = 0.0
     await _set_setting(db, WALLET_SETTINGS_KEY, json.dumps(normalized, sort_keys=True))
@@ -507,6 +479,39 @@ async def get_wallet_currency_limits(db: AsyncSession, currency: str) -> dict[st
     normalized_currency = public_currency(currency)
     limits = await get_wallet_limits(db)
     return dict(limits.get(normalized_currency, DEFAULT_WALLET_LIMITS))
+
+
+async def get_krw_benefit_threshold(db: AsyncSession | None) -> float:
+    """Return the configured minimum approved USDT deposit for KRW benefits."""
+    value = await _get_setting(db, KRW_BENEFIT_THRESHOLD_KEY)
+    if value is None:
+        return DEFAULT_KRW_BENEFIT_THRESHOLD_USDT
+    try:
+        threshold = float(value)
+    except (TypeError, ValueError):
+        logger.warning("Invalid KRW benefit threshold %r; using default", value)
+        return DEFAULT_KRW_BENEFIT_THRESHOLD_USDT
+    if not math.isfinite(threshold) or threshold < 0:
+        logger.warning("Invalid KRW benefit threshold %r; using default", value)
+        return DEFAULT_KRW_BENEFIT_THRESHOLD_USDT
+    return threshold
+
+
+async def set_krw_benefit_threshold(db: AsyncSession, threshold_usdt: float) -> float:
+    """Persist the minimum approved USDT deposit required for KRW benefits.
+
+    A zero threshold still requires an approved positive USDT deposit.
+    """
+    if isinstance(threshold_usdt, bool):
+        raise ValueError("Threshold must be a finite number zero or greater")
+    try:
+        normalized = float(threshold_usdt)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Threshold must be a finite number zero or greater") from exc
+    if not math.isfinite(normalized) or normalized < 0:
+        raise ValueError("Threshold must be a finite number zero or greater")
+    await _set_setting(db, KRW_BENEFIT_THRESHOLD_KEY, str(normalized))
+    return normalized
 
 
 DEFAULT_CHECKOUT_DESIGN = {
@@ -786,15 +791,15 @@ async def get_deposit_rules(db: AsyncSession) -> dict:
         values = configured.get(key)
         if isinstance(values, list):
             rules[key] = [str(item).strip().upper() for item in values if str(item).strip()]
-    for key in ("receipt_max_size_mb", "first_usdt_topup_amount"):
+    for key in ("receipt_max_size_mb",):
         try:
             number = float(configured.get(key, rules[key]))
             if math.isfinite(number) and number >= 0:
                 rules[key] = number
         except (TypeError, ValueError):
             pass
-    if isinstance(configured.get("first_usdt_topup_rule_enabled"), bool):
-        rules["first_usdt_topup_rule_enabled"] = configured["first_usdt_topup_rule_enabled"]
+    rules["first_usdt_topup_amount"] = 0.0
+    rules["first_usdt_topup_rule_enabled"] = False
     return rules
 
 
@@ -806,16 +811,14 @@ async def set_deposit_rules(db: AsyncSession, rules: dict) -> dict:
             if not isinstance(values, list) or not values:
                 raise ValueError(f"{key} must be a non-empty list")
             normalized[key] = [str(item).strip().upper() for item in values if str(item).strip()]
-    for key in ("receipt_max_size_mb", "first_usdt_topup_amount"):
+    for key in ("receipt_max_size_mb",):
         if key in rules:
             value = float(rules[key])
             if not math.isfinite(value) or value < 0:
                 raise ValueError(f"{key} must be zero or greater")
             normalized[key] = round(value, 2)
-    if "first_usdt_topup_rule_enabled" in rules:
-        if not isinstance(rules["first_usdt_topup_rule_enabled"], bool):
-            raise ValueError("first_usdt_topup_rule_enabled must be boolean")
-        normalized["first_usdt_topup_rule_enabled"] = rules["first_usdt_topup_rule_enabled"]
+    normalized["first_usdt_topup_amount"] = 0.0
+    normalized["first_usdt_topup_rule_enabled"] = False
     await _set_setting(db, DEPOSIT_RULES_KEY, json.dumps(normalized, sort_keys=True))
     return normalized
 

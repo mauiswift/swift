@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from core.database import get_db
 from core.constants import PAYBOT_BANK_ACCOUNTS, BANK_RECEIPTS_SUBDIR
 from dependencies.auth import get_current_user
@@ -21,7 +22,6 @@ from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import (
-    get_wallet_currency_limits,
     get_deposit_rules,
     get_deposit_accounts,
     get_user_manual_deposit_account,
@@ -57,7 +57,11 @@ async def list_deposit_accounts(
 
 def _can_approve_requests(user: UserResponse) -> bool:
     permissions = user.permissions
-    return bool(permissions and permissions.is_super_admin)
+    return bool(
+        permissions
+        and permissions.is_super_admin
+        and str(user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+    )
 
 
 # ---------- Schemas ----------
@@ -120,18 +124,10 @@ async def create_bank_deposit_request(
     deposit_rules = await get_deposit_rules(db)
     if deposit_currency not in deposit_rules["bank_deposit_currencies"]:
         raise HTTPException(status_code=400, detail="Currency must be PHP or KRW.")
-    limits = await get_wallet_currency_limits(db, deposit_currency)
-    if not math.isfinite(amount_php) or (
-        limits["minimum_deposit"] > 0 and amount_php < limits["minimum_deposit"]
-    ):
+    if not math.isfinite(amount_php) or amount_php <= 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Minimum deposit is {deposit_currency} {limits['minimum_deposit']:,.2f}.",
-        )
-    if limits["max_incoming"] > 0 and amount_php > limits["max_incoming"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Incoming amount exceeds the {deposit_currency} maximum of {limits['max_incoming']:,.2f}.",
+            detail="Deposit amount must be a positive finite number.",
         )
     if deposit_currency == "KRW":
         if not await is_valid_manual_deposit_account(db, "KRW", account_number):

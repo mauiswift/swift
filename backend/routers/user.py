@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 from services.user import UserService
-from services.user_benefits import KRW_BENEFIT_THRESHOLD_USDT, get_krw_benefits
+from services.user_benefits import get_krw_benefits
 from services.toss_virtual_accounts import create_toss_virtual_account
 from services.email_service import EmailService
 from models.toss_account_pool import TossAccountPool
@@ -593,10 +593,18 @@ async def submit_toss_virtual_account_application(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     if user.toss_virtual_account_status == "pending_review":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Your TOSS Virtual Account application is already under review.")
-    if not (await get_krw_benefits(db, str(user_id)))["unlocked"]:
+    benefits = await get_krw_benefits(db, str(user_id))
+    if not benefits["unlocked"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Complete an approved USDT deposit of at least {KRW_BENEFIT_THRESHOLD_USDT:g} USDT before applying.",
+            detail=(
+                "Complete an approved positive USDT deposit before applying."
+                if benefits["threshold_usdt"] == 0
+                else (
+                    "Complete an approved USDT deposit of at least "
+                    f"{benefits['threshold_usdt']:g} USDT before applying."
+                )
+            ),
         )
     data.legal_name = data.legal_name.strip()
     data.country = data.country.strip()
@@ -641,9 +649,13 @@ async def get_user_payment_channels(
     user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    eligible = (await get_krw_benefits(db, str(user_id)))["unlocked"]
+    benefits = await get_krw_benefits(db, str(user_id))
     channels = user.payment_channels if isinstance(user.payment_channels, dict) else _default_user_payment_channels()
-    return {"eligible": eligible, "minimum_deposit_usdt": KRW_BENEFIT_THRESHOLD_USDT, "channels": channels}
+    return {
+        "eligible": benefits["unlocked"],
+        "minimum_deposit_usdt": benefits["threshold_usdt"],
+        "channels": channels,
+    }
 
 
 @router.put("/{user_id}/payment-channels")
@@ -659,10 +671,18 @@ async def update_user_payment_channels(
     user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    if not (await get_krw_benefits(db, str(user_id)))["unlocked"]:
+    benefits = await get_krw_benefits(db, str(user_id))
+    if not benefits["unlocked"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Payment channels can be changed after one approved USDT deposit of at least 600 USDT.",
+            detail=(
+                "Payment channels can be changed after one approved positive USDT deposit."
+                if benefits["threshold_usdt"] == 0
+                else (
+                    "Payment channels can be changed after one approved USDT deposit of at least "
+                    f"{benefits['threshold_usdt']:g} USDT."
+                )
+            ),
         )
     normalized: dict[str, list[str]] = {}
     for currency in SUPPORTED_COLLECTION_CURRENCIES:
@@ -675,7 +695,7 @@ async def update_user_payment_channels(
         normalized[currency] = list(dict.fromkeys(values))
     user.payment_channels = normalized
     await db.commit()
-    return {"eligible": True, "minimum_deposit_usdt": KRW_BENEFIT_THRESHOLD_USDT, "channels": normalized}
+    return {"eligible": True, "minimum_deposit_usdt": benefits["threshold_usdt"], "channels": normalized}
 
 
 @router.patch("/{user_id}/settlement", response_model=UserResponse)

@@ -132,7 +132,7 @@ export function buildAdminTabs(access: AdminTabAccess, adminCount: number): Admi
       label: 'Wallet Settings',
       icon: WrenchIcon,
       group: 'Payments & configuration',
-      description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.',
+      description: 'Configure accepted deposit currencies and receiving accounts for user wallets.',
     });
   }
   if (access.canAccessBitgo) {

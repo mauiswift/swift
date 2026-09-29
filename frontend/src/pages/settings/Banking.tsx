@@ -67,6 +67,7 @@ export default function Banking() {
   const [channelLoading, setChannelLoading] = useState(true);
   const [channelSaving, setChannelSaving] = useState(false);
   const [channelEligible, setChannelEligible] = useState(false);
+  const [krwBenefitThreshold, setKrwBenefitThreshold] = useState(600);
   const channelCurrency = 'KRW';
   const [paymentChannels, setPaymentChannels] = useState<Record<string, string[]>>({});
   const [tossStatus, setTossStatus] = useState('not_started');
@@ -111,6 +112,7 @@ export default function Banking() {
       .then((res) => {
         if (!res.ok) throw new Error(res.data?.detail || 'Unable to load payment channels');
         setChannelEligible(Boolean(res.data?.eligible));
+        setKrwBenefitThreshold(Number(res.data?.minimum_deposit_usdt ?? 600));
         setPaymentChannels(res.data?.channels || {});
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to load payment channels'))
@@ -136,6 +138,7 @@ export default function Banking() {
         if (res.ok) {
           setTossStatus(res.data?.status || 'not_started');
           setTossBenefitsUnlocked(Boolean(res.data?.benefits?.unlocked));
+          setKrwBenefitThreshold(Number(res.data?.benefits?.threshold_usdt ?? 600));
         }
       })
       .catch(() => toast.error('Unable to load TOSS Virtual Account status'));
@@ -522,7 +525,9 @@ export default function Banking() {
             <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 size={16} className="animate-spin" /> Loading channels...</div>
           ) : !channelEligible ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-800">
-              Make one approved USDT deposit of at least 600 USDT to enable payment channel settings.
+              {krwBenefitThreshold === 0
+                ? 'Make any positive USDT deposit and have it approved to enable payment channel settings.'
+                : `Make one approved USDT deposit of at least ${krwBenefitThreshold.toLocaleString()} USDT to enable payment channel settings.`}
             </div>
           ) : (
             <>
@@ -581,7 +586,11 @@ export default function Banking() {
               <ShieldCheck size={18} className="mt-0.5 shrink-0 text-amber-300" />
               <div>
                 <p className="font-semibold">서비스 이용 조건</p>
-                <p className="mt-1 text-amber-200/80">승인된 USDT 입금액이 600 USDT 이상이어야 원화 가상계좌를 신청할 수 있습니다.</p>
+                <p className="mt-1 text-amber-200/80">
+                  {krwBenefitThreshold === 0
+                    ? '양수 금액의 USDT 입금이 승인되면 원화 가상계좌를 신청할 수 있습니다.'
+                    : `승인된 USDT 입금액이 ${krwBenefitThreshold.toLocaleString()} USDT 이상이어야 원화 가상계좌를 신청할 수 있습니다.`}
+                </p>
               </div>
             </div>
           ) : tossStatus === 'pending_review' ? (
@@ -659,9 +668,11 @@ export default function Banking() {
                   <p><strong>통화:</strong> KRW 원화</p>
                   <p><strong>사용 목적:</strong> {tossForm.purpose || '—'}</p>
                   <div className="rounded-lg border border-cyan-400/30 bg-cyan-400/10 p-4">
-                    <p className="font-semibold text-cyan-200">600 USDT 입금 안내</p>
+                    <p className="font-semibold text-cyan-200">USDT 입금 안내</p>
                     <p className="mt-1 text-xs leading-5 text-cyan-100/80">
-                      신청서를 제출하기 전에 아래 지갑 주소로 600 USDT를 입금해 주세요. 500 USDT는 계좌 개설 및 활성화 비용이며, 100 USDT는 최대 50개의 가상계좌 발급을 위한 할당 금액입니다.
+                      {krwBenefitThreshold === 0
+                        ? '양수 금액의 USDT 입금이 승인되어야 신청서를 제출할 수 있습니다. 계좌 개설 및 가상계좌 배정 비용은 별도로 확인해 주세요.'
+                        : `신청서를 제출하려면 아래 지갑 주소로 최소 ${krwBenefitThreshold.toLocaleString()} USDT를 입금하고 승인을 받아야 합니다. 계좌 개설 및 가상계좌 배정 비용은 별도로 확인해 주세요.`}
                     </p>
                     <div className="mt-3 rounded-lg border border-slate-700 bg-slate-950 p-3">
                       <p className="text-xs font-medium text-slate-400">입금할 USDT 지갑 주소</p>

@@ -1086,8 +1086,8 @@ class TestTelegramWebhook:
         assert "rates" in body
         assert "supported_currencies" in body
 
-    def test_first_time_non_600_usdt_topup_stays_pending(self, client, auth_headers):
-        """A first-time non-600 USDT request must remain pending and never credit the wallet."""
+    def test_non_system_admin_cannot_approve_topup(self, client, auth_headers):
+        """Only the designated system user may approve top-ups."""
         import asyncio
         from core.database import db_manager
         from sqlalchemy import select
@@ -1097,12 +1097,6 @@ class TestTelegramWebhook:
 
         chat_id = "999099"
 
-        client.put(
-            "/api/v1/app-settings/usdt-php-rate",
-            json={"rate": 60.0},
-            headers=auth_headers,
-        )
-
         async def seed_request():
             async with db_manager.async_session_maker() as db:
                 req = TopupRequest(
@@ -1110,6 +1104,7 @@ class TestTelegramWebhook:
                     telegram_username="newuser",
                     amount_usdt=500.0,
                     currency="USDT",
+                    tx_hash="non-system-admin-approval-test",
                     status="pending",
                     created_at=datetime.now(),
                     updated_at=datetime.now(),
@@ -1126,22 +1121,20 @@ class TestTelegramWebhook:
             json={"note": "Testing onboarding rule"},
             headers=auth_headers,
         )
-        assert r.status_code == 200
-        assert r.json()["status"] == "pending"
-        assert "600 USDT" in r.json()["note"]
+        assert r.status_code == 403
 
         async def verify_wallet():
             async with db_manager.async_session_maker() as db:
                 wallet = (await db.execute(
                     select(Wallets).where(
                         Wallets.user_id == str(chat_id),
-                        Wallets.currency == "PHP",
+                        Wallets.currency == "USDT",
                     )
                 )).scalar_one_or_none()
                 return wallet
 
         wallet = asyncio.run(verify_wallet())
-        assert wallet is None or wallet.balance == 0
+        assert wallet is None
 
 
 # ---------------------------------------------------------------------------

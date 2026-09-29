@@ -73,7 +73,10 @@ export default function Approvals() {
     : Object.fromEntries(Object.entries(statusConfig).map(([key, value]) => [key, value.label]));
   const navigate = useNavigate();
   const visibleFilterKeys = (Object.keys(filterLabels) as FilterType[])
-    .filter(key => key !== 'payments' || isSystemWalletAdmin(user?.id));
+    .filter(key => (
+      !['payments', 'bank_deposits', 'topups', 'disbursements', 'usdt_send'].includes(key)
+      || isSystemWalletAdmin(user?.id)
+    ));
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [filter, setFilter] = useState<FilterType>('kyb');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);

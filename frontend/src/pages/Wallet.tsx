@@ -537,7 +537,7 @@ export default function WalletPage({
   const buyTradeKeyRef = useRef<string | null>(null);
   const sellTradeKeyRef = useRef<string | null>(null);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
-  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; minimum_amount?: number; bank_name?: string }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
+  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; bank_name?: string }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
   const [assignedKrwAccount, setAssignedKrwAccount] = useState<typeof depositAccounts[number] | null>(null);
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
@@ -1088,7 +1088,6 @@ export default function WalletPage({
 
   const validateUsdtWithdraw = (amount: number): string | null => {
     if (isNaN(amount) || amount <= 0) return 'Enter a valid USDT amount';
-    if (amount < 10) return 'Minimum amount is 10 USDT';
     if (!usdtAddress.trim()) return 'Enter your USDT address';
     if (!usdtPlatform) return 'Select which platform your address belongs to';
     const availableUsdt = getAvailableBalance(usdtBalance);
@@ -1101,7 +1100,7 @@ export default function WalletPage({
 
   const handlePhpDepositRequest = async () => {
     const amount = parseFloat(depositAmount);
-    if (!Number.isFinite(amount) || amount < 1000) { toast.error('Minimum deposit amount is ₱1,000'); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { toast.error('Enter a valid deposit amount'); return; }
     if (!depositChannel) { toast.error('Choose a destination bank'); return; }
     if (!depositMethod.trim()) { toast.error('Select a transfer method'); return; }
     if (!depositDate) { toast.error('Select the transfer date'); return; }
@@ -1740,7 +1739,7 @@ export default function WalletPage({
                   {walletFreezeCurrency} wallet under maintenance
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-6 text-slate-600">
-                  Your {walletFreezeCurrency} wallet is temporarily unavailable for outgoing actions. Top up 600 USDT to enable all wallet features and unlock sending and buying.
+                  Your {walletFreezeCurrency} wallet is temporarily unavailable for outgoing actions. Contact SwiftPay support or your account administrator for help.
                 </DialogDescription>
               </div>
             </div>
@@ -1778,8 +1777,8 @@ export default function WalletPage({
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-6 text-slate-600">
                   {isKoreanWallet
-                    ? 'USDT 구매와 연결된 한국 결제 기능을 활성화하려면 먼저 토스뱅크 계좌를 개설하세요. 600 USDT 입금이 승인되면 계정이 활성화됩니다.'
-                    : 'Open your TOSS Bank account first to activate USDT purchases and the connected Korean payment features. Your account becomes eligible after an approved 600 USDT deposit.'}
+                    ? 'USDT 구매와 연결된 한국 결제 기능을 활성화하려면 먼저 토스뱅크 계좌를 개설하세요. KRW eligibility 설정에 따라 승인된 USDT 입금이 필요할 수 있습니다.'
+                    : 'Open your TOSS Bank account first to activate USDT purchases and the connected Korean payment features. An approved USDT deposit may be required based on the current KRW eligibility settings.'}
                 </DialogDescription>
               </div>
             </div>
@@ -2394,7 +2393,6 @@ export default function WalletPage({
                     <p className="text-xs text-slate-700 font-semibold mb-2">Withdrawal Details:</p>
                     <ul className="space-y-1 text-xs text-slate-600">
                       <li>• <span className="font-medium">Network:</span> TRC-20 only</li>
-                      <li>• <span className="font-medium">Min amount:</span> 10 USDT</li>
                       <li>• <span className="font-medium">Network fee:</span> ~1 USDT</li>
                       <li>• <span className="font-medium">Processing:</span> 1-2 hours</li>
                     </ul>

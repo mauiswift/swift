@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins,
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { client } from '@/lib/api';
 
 const GUIDE_VERSION = '2026-09-motion';
 
@@ -34,9 +35,26 @@ export default function FirstLoginGuide() {
   const [demoPhase, setDemoPhase] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
+  const [krwBenefitThreshold, setKrwBenefitThreshold] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const doNotShowAgainRef = useRef(false);
   const isKorean = language === 'ko';
+  useEffect(() => {
+    client.get('/api/v1/app-settings/krw-benefit-threshold')
+      .then(response => {
+        if (response.ok && Number.isFinite(Number(response.data?.threshold_usdt))) {
+          setKrwBenefitThreshold(Number(response.data.threshold_usdt));
+        }
+      })
+      .catch(error => console.error('Unable to load KRW eligibility threshold', error));
+  }, []);
+  const approvedDepositRequirement = krwBenefitThreshold === null
+    ? (isKorean ? '승인된 USDT 입금 후' : 'After an approved USDT deposit')
+    : krwBenefitThreshold === 0
+      ? (isKorean ? '양수 금액의 USDT 입금이 승인되면' : 'After any positive USDT deposit is approved')
+      : (isKorean
+        ? `승인된 USDT 입금액이 ${krwBenefitThreshold.toLocaleString()} USDT 이상이면`
+        : `After an approved USDT deposit of at least ${krwBenefitThreshold.toLocaleString()} USDT`);
   const ui = isKorean ? {
     liveGuide: '실시간 안내',
     gettingStarted: '설정 체크리스트',
@@ -153,11 +171,11 @@ export default function FirstLoginGuide() {
     {
       icon: WalletCards,
       title: 'KRW 서비스 잠금 해제',
-      description: '첫 600 USDT 입금을 승인받으면 KRW 혜택, 한국 결제 채널, TOSS 가상계좌 신청 기능이 활성화됩니다.',
+      description: `${approvedDepositRequirement} KRW 혜택, 한국 결제 채널, TOSS 가상계좌 신청 기능이 활성화됩니다.`,
       example: (
         <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">예시</p>
-          <p className="mt-1 leading-5">지갑에서 USDT 지갑을 열고 600 USDT 충전을 신청하세요. 승인 후 뱅킹으로 돌아오면 KRW 서비스가 활성화됩니다.</p>
+          <p className="mt-1 leading-5">지갑에서 USDT 충전을 신청하세요. 필요한 입금액이 승인되면 뱅킹으로 돌아와 KRW 서비스를 이용할 수 있습니다.</p>
         </div>
       ),
       action: '지갑 열기',
@@ -168,17 +186,12 @@ export default function FirstLoginGuide() {
     },
     {
       icon: Coins,
-      title: '600 USDT 요건 이해하기',
-      description: '가상계좌 설정 및 활성화에 500 USDT, 최대 50개 가상계좌 발급에 100 USDT가 필요합니다. 계좌당 배정 금액은 2 USDT입니다.',
+      title: '가상계좌 설정 요건 이해하기',
+      description: 'KRW 서비스 자격 요건은 SwiftPay 설정에 따라 달라집니다. TOSS 계좌 개설 및 가상계좌 배정 요금은 별도로 확인하세요.',
       example: (
         <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-semibold">계산 예시</p>
-          <div className="mt-2 grid grid-cols-2 gap-y-1">
-            <span>설정 및 활성화</span><strong className="text-right">500 USDT</strong>
-            <span>가상계좌 배정</span><strong className="text-right">100 USDT</strong>
-            <span className="border-t border-amber-200 pt-1 font-semibold">총 필요 금액</span><strong className="border-t border-amber-200 pt-1 text-right">600 USDT</strong>
-          </div>
-          <p className="mt-2 leading-5">이 내역은 KRW 뱅킹 신청 전에 표시됩니다. 100 USDT로 최대 50개 계좌를 지원하며 계좌당 2 USDT가 배정됩니다.</p>
+          <p className="font-semibold">USDT deposit requirement</p>
+          <p className="mt-2 leading-5">{approvedDepositRequirement}. TOSS account setup and virtual-account allocation costs, if any, are separate from this eligibility threshold.</p>
         </div>
       ),
       action: '뱅킹 열기',
@@ -223,8 +236,8 @@ export default function FirstLoginGuide() {
     {
       icon: WalletCards,
       title: 'Unlock KRW services',
-      description: 'After your first 600 USDT deposit is approved, KRW benefits, Korean payment channels, and TOSS virtual-account applications become available.',
-      example: <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><p className="font-semibold">Example</p><p className="mt-1 leading-5">Open the USDT wallet and request a 600 USDT top-up. After approval, return to Banking to activate KRW services.</p></div>,
+      description: `${approvedDepositRequirement}, KRW benefits, Korean payment channels, and TOSS virtual-account applications become available.`,
+      example: <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><p className="font-semibold">Example</p><p className="mt-1 leading-5">Open the USDT wallet and request a top-up. Once the required amount is approved, return to Banking to use KRW services.</p></div>,
       action: 'Open Wallet',
       href: '/wallet',
       page: 'Wallet → USDT top-up',
@@ -233,9 +246,9 @@ export default function FirstLoginGuide() {
     },
     {
       icon: Coins,
-      title: 'Understand the 600 USDT requirement',
-      description: 'Virtual-account setup and activation requires 500 USDT, plus 100 USDT for up to 50 virtual accounts. Each account is assigned 2 USDT.',
-      example: <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-semibold">Example calculation</p><div className="mt-2 grid grid-cols-2 gap-y-1"><span>Setup and activation</span><strong className="text-right">500 USDT</strong><span>Virtual-account allocation</span><strong className="text-right">100 USDT</strong><span className="border-t border-amber-200 pt-1 font-semibold">Total required</span><strong className="border-t border-amber-200 pt-1 text-right">600 USDT</strong></div><p className="mt-2 leading-5">This breakdown appears before applying for KRW banking. The 100 USDT allocation supports up to 50 accounts at 2 USDT each.</p></div>,
+      title: 'Understand the TOSS account requirements',
+      description: 'The KRW eligibility threshold is configurable. Check with SwiftPay for separate TOSS account setup and virtual-account allocation costs.',
+      example: <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-semibold">USDT deposit requirement</p><p className="mt-2 leading-5">{approvedDepositRequirement}. Any TOSS account setup or virtual-account allocation costs are separate from this eligibility threshold.</p></div>,
       action: 'Open Banking',
       href: '/settings/shop/settlement',
       page: 'Settings → Banking',

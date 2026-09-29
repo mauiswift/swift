@@ -59,10 +59,13 @@ class PrivateApprovalRequest(BaseModel):
 
 def _require_super_admin(user: UserResponse) -> None:
     """Ensure user is a super admin, raise 403 otherwise."""
-    if not (user.permissions and user.permissions.is_super_admin):
+    if (
+        not (user.permissions and user.permissions.is_super_admin)
+        or str(user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+    ):
         raise HTTPException(
             status_code=403,
-            detail="Super admin access required for internal payment operations"
+            detail="Only the designated system user can perform internal payment operations"
         )
 
 

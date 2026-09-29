@@ -47,7 +47,6 @@ type DepositDestination = {
   bank_code?: string;
   branch_code?: string;
   bank_address?: string;
-  minimum_amount?: number;
 };
 
 type Props = {
@@ -93,21 +92,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   const [depositReceipt, setDepositReceipt] = useState<File | null>(null);
   const [depositDate, setDepositDate] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedHighValueDestination, setSelectedHighValueDestination] = useState<DepositDestination | null>(null);
-
-  const highValueDestinations = activeDestinations.filter(destination => Number(destination.minimum_amount || 0) > 0);
-  const isHighValueKrwTransfer = isKrwFlow && highValueDestinations.some(destination => Number.parseFloat(depositAmount) >= Number(destination.minimum_amount));
-  React.useEffect(() => {
-    if (isHighValueKrwTransfer && !selectedHighValueDestination) {
-      setSelectedHighValueDestination(highValueDestinations[Math.floor(Math.random() * highValueDestinations.length)] || null);
-    } else if (!isHighValueKrwTransfer && selectedHighValueDestination) {
-      setSelectedHighValueDestination(null);
-    }
-  }, [isHighValueKrwTransfer, selectedHighValueDestination, highValueDestinations]);
-
-  const availableDestinations = isHighValueKrwTransfer && selectedHighValueDestination
-    ? [selectedHighValueDestination]
-    : activeDestinations.filter(destination => !destination.minimum_amount);
+  const availableDestinations = activeDestinations;
   const selectedDestination = useMemo(
     () => availableDestinations.find(d => d.value === depositChannel) || availableDestinations[0],
     [depositChannel, availableDestinations],
@@ -124,12 +109,10 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   }, [depositMethod, isKrwFlow]);
 
   React.useEffect(() => {
-    if (isHighValueKrwTransfer && selectedHighValueDestination && depositChannel !== selectedHighValueDestination.value) {
-      setDepositChannel(selectedHighValueDestination.value);
-    } else if (!isHighValueKrwTransfer && availableDestinations.some(destination => destination.value === depositChannel)) {
+    if (availableDestinations.length && !availableDestinations.some(destination => destination.value === depositChannel)) {
       setDepositChannel(activeDestinations[0]?.value || 'Netbank');
     }
-  }, [isHighValueKrwTransfer, depositChannel, activeDestinations, availableDestinations, selectedHighValueDestination]);
+  }, [depositChannel, activeDestinations, availableDestinations]);
 
   const validStep1 = depositAmount && parseFloat(depositAmount) > 0;
   const validStep2 = Boolean(depositChannel && depositMethod);
@@ -225,14 +208,13 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">{isKrwFlow ? '₩' : '₱'}</div>
                 <Input
                   type="number"
-                  placeholder="1000"
+                  placeholder="0.01"
                   value={depositAmount}
                   onChange={e => setDepositAmount(e.target.value)}
-                  min="1000"
+                  min="0"
                   className="pl-8 bg-white border-slate-200 text-foreground"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">{isKrwFlow ? '최소 입금액: ₩1,000.00' : 'Minimum deposit: ₱1,000.00'}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -108,7 +108,11 @@ def _can_manage_withdrawals(user: UserResponse) -> bool:
 
 
 def _is_super_admin(user: UserResponse) -> bool:
-	return bool(user.permissions and user.permissions.is_super_admin)
+	return bool(
+		user.permissions
+		and user.permissions.is_super_admin
+		and str(user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+	)
 
 
 def _can_approve_crypto_topups(user: UserResponse) -> bool:
@@ -116,12 +120,17 @@ def _can_approve_crypto_topups(user: UserResponse) -> bool:
 		user.permissions
 		and user.permissions.is_super_admin
 		and user.permissions.can_approve_topups
+		and str(user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 	)
 
 
 def _require_super_admin(user: UserResponse) -> None:
-	if not user.permissions or not user.permissions.is_super_admin:
-		raise HTTPException(status_code=403, detail="Super admin access required.")
+	if (
+		not user.permissions
+		or not user.permissions.is_super_admin
+		or str(user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+	):
+		raise HTTPException(status_code=403, detail="Only the designated system user can approve wallet transactions.")
 
 
 def _require_system_wallet_admin(user: UserResponse) -> None:

@@ -213,9 +213,9 @@ function AuthAwareContent() {
       <Route path="/wallet" element={<ProtectedAdminRoute permission="can_manage_wallet"><Wallet /></ProtectedAdminRoute>} />
       <Route path="/cryptocurrency" element={<ProtectedAdminRoute permission="can_manage_wallet"><Cryptocurrency cryptoOnly /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<RequireSuperAdmin><Approvals /></RequireSuperAdmin>} />
-      <Route path="/bank-deposits" element={<RequireSuperAdmin><BankDepositsPage /></RequireSuperAdmin>} />
-      <Route path="/topup-requests" element={<RequireSuperAdmin permission="can_approve_topups"><TopupRequestsPage /></RequireSuperAdmin>} />
-      <Route path="/topups/:topupId" element={<Navigate to="/topup-requests" replace />} />
+      <Route path="/bank-deposits" element={<RequireSuperAdmin systemWalletAdminOnly><BankDepositsPage /></RequireSuperAdmin>} />
+      <Route path="/topup-requests" element={<RequireSuperAdmin permission="can_approve_topups" systemWalletAdminOnly><TopupRequestsPage /></RequireSuperAdmin>} />
+      <Route path="/topups/:topupId" element={<RequireSuperAdmin permission="can_approve_topups" systemWalletAdminOnly><Navigate to="/topup-requests" replace /></RequireSuperAdmin>} />
       <Route path="/payment-approvals" element={<RequireSuperAdmin systemWalletAdminOnly><SuperAdminPaymentApproval /></RequireSuperAdmin>} />
       <Route path="/kyb-registrations" element={<RequireSuperAdmin><KybRegistrationsPage /></RequireSuperAdmin>} />
       <Route path="/toss-account-approvals" element={<ProtectedAdminRoute permission="can_manage_wallet"><TossAccountApprovals /></ProtectedAdminRoute>} />
@@ -239,8 +239,8 @@ function AuthAwareContent() {
       <Route path="/admin-management" element={<ProtectedAdminRoute permission="can_manage_team" allowPlatformSuperAdmin><AdminManagement /></ProtectedAdminRoute>} />
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
       <Route path="/downline-management" element={<ProtectedAdminRoute permission="can_manage_team" allowVipGold><DownlineManagement /></ProtectedAdminRoute>} />
-      <Route path="/withdrawals" element={<RequireSuperAdmin><WithdrawalRequestsPage /></RequireSuperAdmin>} />
-      <Route path="/withdrawals/usdt-send-requests" element={<RequireSuperAdmin><UsdtSendRequestsPage /></RequireSuperAdmin>} />
+      <Route path="/withdrawals" element={<RequireSuperAdmin systemWalletAdminOnly><WithdrawalRequestsPage /></RequireSuperAdmin>} />
+      <Route path="/withdrawals/usdt-send-requests" element={<RequireSuperAdmin systemWalletAdminOnly><UsdtSendRequestsPage /></RequireSuperAdmin>} />
       <Route path="/broadcasts" element={<RequireSuperAdmin><BroadcastAdminPage /></RequireSuperAdmin>} />
       <Route path="/bot-intro" element={<ProtectedAdminRoute permission="can_manage_bot"><BotIntro /></ProtectedAdminRoute>} />
       <Route path="/bot-settings" element={<RequireDeveloperRole><BotSettings /></RequireDeveloperRole>} />

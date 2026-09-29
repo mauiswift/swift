@@ -35,21 +35,9 @@ export default function CreatePaymentLink() {
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
-    const minimumAmount = currency === 'KRW' ? 1000 : 1;
-    const maximumAmount = currency === 'KRW' ? 100_000_000 : 50_000;
-    const currencyLabel = ({ PHP: '₱', KRW: '₩', USD: '$', EUR: '€' } as Record<string, string>)[currency] || currency;
 
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       setError(isKorean ? '유효한 금액을 입력하세요.' : 'Please enter a valid amount.');
-      return;
-    }
-
-    if (numericAmount < minimumAmount || numericAmount > maximumAmount) {
-      setError(
-        isKorean
-          ? `${currency} 결제 금액은 ${currencyLabel}${minimumAmount.toLocaleString()}~${currencyLabel}${maximumAmount.toLocaleString()}이어야 합니다.`
-          : `${currency} payment links must be between ${currencyLabel}${minimumAmount.toLocaleString()} and ${currencyLabel}${maximumAmount.toLocaleString()}.`,
-      );
       return;
     }
 

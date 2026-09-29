@@ -20,7 +20,6 @@ interface BankOption {
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USDT: '₮', CNY: '¥' };
-const REQUIRED_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USDT: 100, USD: 100, KRW: 0 };
 
 export default function SendSingleDisbursement() {
   const navigate = useNavigate();
@@ -151,16 +150,10 @@ export default function SendSingleDisbursement() {
     const amt = parseFloat(amount);
     if (!firstName.trim() || !lastName.trim()) return toast.error(isKrwFlow ? '이름과 성을 입력해주세요.' : 'First and last names are required');
     if (isNaN(amt) || amt <= 0) return toast.error(isKrwFlow ? '유효한 금액을 입력해주세요.' : 'Enter a valid amount');
-    if (isKrwFlow && amt < 1000) return toast.error('KRW 출금 금액은 ₩1,000 이상이어야 합니다.');
     if (!bankCode) return toast.error(isKrwFlow ? '수취인 은행을 선택해주세요.' : 'Select a recipient bank');
     if (!accountNo.trim()) return toast.error(isKrwFlow ? '계좌번호를 입력해주세요.' : 'Account number is required');
-    const retainedBalance = REQUIRED_RETAINED_BALANCE[collectionCurrency] || 0;
-    if (amt > Math.max(0, balance - retainedBalance)) {
-      return toast.error(
-        isKrwFlow
-          ? `잔액에 ${retainedBalance.toLocaleString()} ${collectionCurrency} 이상이 유지되어야 합니다.`
-          : `Keep at least ${CURRENCY_SYMBOLS[collectionCurrency] || ''}${retainedBalance.toLocaleString()} in your wallet`
-      );
+    if (amt > balance) {
+      return toast.error(isKrwFlow ? '사용 가능한 잔액을 초과했습니다.' : 'Amount exceeds your available balance');
     }
 
     setLoading(true);

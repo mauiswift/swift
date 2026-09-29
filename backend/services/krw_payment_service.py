@@ -73,11 +73,9 @@ class KRWPaymentLinkRequest(BaseModel):
 
     @validator("amount")
     def validate_amount(cls, v: float) -> float:
-        """Validate KRW amount (minimum ₩1,000)."""
-        if v < 1000:
-            raise ValueError("KRW amount must be at least ₩1,000")
-        if v > 100_000_000:  # ~$100k USD equivalent
-            raise ValueError("KRW amount exceeds maximum limit (₩100,000,000)")
+        """Reject non-finite amounts while allowing any positive amount."""
+        if not Decimal(str(v)).is_finite():
+            raise ValueError("KRW amount must be finite")
         return v
 
 
@@ -91,11 +89,9 @@ class KRWDisbursementRequest(BaseModel):
 
     @validator("amount")
     def validate_amount(cls, v: float) -> float:
-        """Validate disbursement amount."""
-        if v < 1000:
-            raise ValueError("Disbursement amount must be at least ₩1,000")
-        if v > 100_000_000:
-            raise ValueError("Disbursement amount exceeds maximum limit (₩100,000,000)")
+        """Reject non-finite amounts while allowing any positive amount."""
+        if not Decimal(str(v)).is_finite():
+            raise ValueError("Disbursement amount must be finite")
         return v
 
 
@@ -142,7 +138,7 @@ KOREAN_BANKS = {
     "034": {"name": "Gwangju Bank", "swift": "GBNKKRSE"},
     "035": {"name": "Jeju Bank", "swift": "IJBKKRSE"},
     "037": {"name": "Jeonbuk Bank", "swift": "JBNKKRSE"},
-    "039": {"name": "Jeongbuk Bank", "swift": "EBKKRSE"},
+    "039": {"name": "Kyongnam Bank", "swift": "KYNAKR22"},
     "040": {"name": "Shinhan", "swift": "SHINKNSE"},
     "050": {"name": "Jeju Bank", "swift": "IJBKKRSE"},
     "071": {"name": "Post Office Bank", "swift": "PBNKKRSE"},

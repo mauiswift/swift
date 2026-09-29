@@ -116,21 +116,13 @@ class TestKRWPaymentLinkRequest:
         assert request.amount == 50000
         assert request.reference_no == "order-123"
     
-    def test_amount_below_minimum(self):
-        """Test that amount below minimum raises error."""
-        with pytest.raises(ValueError):
-            KRWPaymentLinkRequest(
-                amount=500,  # Below minimum ₩1,000
-                reference_no="order-123"
-            )
-    
-    def test_amount_above_maximum(self):
-        """Test that amount above maximum raises error."""
-        with pytest.raises(ValueError):
-            KRWPaymentLinkRequest(
-                amount=200_000_000,  # Above maximum
-                reference_no="order-123"
-            )
+    def test_amount_below_former_minimum_is_allowed(self):
+        request = KRWPaymentLinkRequest(amount=0.01, reference_no="order-123")
+        assert request.amount == 0.01
+
+    def test_amount_above_former_maximum_is_allowed(self):
+        request = KRWPaymentLinkRequest(amount=200_000_000, reference_no="order-123")
+        assert request.amount == 200_000_000
     
     def test_expiry_days_default(self):
         """Test default expiry days."""
@@ -259,20 +251,19 @@ class TestKRWDisbursementRequest:
         )
         assert request.priority == "normal"
     
-    def test_amount_below_minimum(self):
-        """Test that amount below minimum raises error."""
+    def test_amount_below_former_minimum_is_allowed(self):
         bank_info = KRWBankInfo(
             bank_code="004",
             bank_name="KB Kookmin",
             account_number="12345678901",
             account_name="Kim Park"
         )
-        with pytest.raises(ValueError):
-            KRWDisbursementRequest(
-                amount=500,  # Below minimum ₩1,000
-                reference_no="payout-456",
-                bank_info=bank_info
-            )
+        request = KRWDisbursementRequest(
+            amount=0.01,
+            reference_no="payout-456",
+            bank_info=bank_info
+        )
+        assert request.amount == 0.01
 
     @pytest.mark.asyncio
     async def test_krw_disbursement_is_queued_for_admin_approval(self):
@@ -344,7 +335,7 @@ class TestKRWDisbursementRequest:
         )
         db.commit = AsyncMock()
         current_user = Mock(
-            id="super-admin-1",
+            id="7851923260",
             permissions=Mock(is_super_admin=True),
         )
         provider_response = KRWDisbursementResponse(
@@ -366,7 +357,7 @@ class TestKRWDisbursementRequest:
 
         assert response["success"] is True
         assert response["status"] == "transferring"
-        assert disbursement.approved_by == "super-admin-1"
+        assert disbursement.approved_by == "7851923260"
         assert disbursement.xendit_id == "swiftpay-krw-payout-456"
         create_provider_disbursement.assert_awaited_once()
 
@@ -391,7 +382,7 @@ class TestKRWDisbursementRequest:
             scalar_one_or_none=Mock(return_value=disbursement)
         )
         current_user = Mock(
-            id="super-admin-1",
+            id="7851923260",
             permissions=Mock(is_super_admin=True),
         )
         duplicate_response = {
@@ -444,7 +435,7 @@ class TestKRWDisbursementRequest:
         db.execute.return_value = Mock(
             scalar_one_or_none=Mock(return_value=disbursement)
         )
-        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        current_user = Mock(id="7851923260", permissions=Mock(is_super_admin=True))
         provider_response = {
             "success": True,
             "reference_no": disbursement.external_id,
@@ -496,7 +487,7 @@ class TestKRWDisbursementRequest:
         db.execute.return_value = Mock(
             scalar_one_or_none=Mock(return_value=disbursement)
         )
-        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        current_user = Mock(id="7851923260", permissions=Mock(is_super_admin=True))
         provider_response = {
             "success": True,
             "reference_no": disbursement.external_id,
@@ -539,7 +530,7 @@ class TestKRWDisbursementRequest:
         db.execute.return_value = Mock(
             scalar_one_or_none=Mock(return_value=disbursement)
         )
-        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        current_user = Mock(id="7851923260", permissions=Mock(is_super_admin=True))
         provider_response = {
             "success": True,
             "data": {
@@ -588,7 +579,7 @@ class TestKRWDisbursementRequest:
         db.execute.return_value = Mock(
             scalar_one_or_none=Mock(return_value=disbursement)
         )
-        current_user = Mock(id="super-admin-1", permissions=Mock(is_super_admin=True))
+        current_user = Mock(id="7851923260", permissions=Mock(is_super_admin=True))
         accepted_response = {
             "success": True,
             "reference_no": disbursement.external_id,
@@ -639,6 +630,8 @@ class TestKRWPaymentService:
     def test_get_auth_header(self):
         """Test HTTP Basic auth header generation."""
         service = KRWPaymentService()
+        service.access_key = "test_access_key"
+        service.secret_key = "test_secret_key"
         auth_header = service._get_auth_header()
         assert auth_header.startswith("Basic ")
         # Should be Base64 encoded "test_access_key:test_secret_key"

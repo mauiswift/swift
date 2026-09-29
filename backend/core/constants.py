@@ -61,6 +61,8 @@ CONVERSION_FEE_PERCENT_KEY = "conversion_fee_percent"
 WITHDRAWAL_FEES_KEY = "withdrawal_fees"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
 WALLET_SETTINGS_KEY = "wallet_limits"
+KRW_BENEFIT_THRESHOLD_KEY = "krw_benefit_threshold_usdt"
+DEFAULT_KRW_BENEFIT_THRESHOLD_USDT = 600.0
 CHECKOUT_DESIGN_KEY = "checkout_design"
 DEPOSIT_RULES_KEY = "deposit_rules"
 DEPOSIT_ACCOUNTS_KEY = "deposit_accounts"
@@ -93,8 +95,6 @@ DEFAULT_DEPOSIT_RULES = {
     "bank_deposit_currencies": ["PHP", "KRW"],
     "topup_currencies": ["PHP", "USDT", "KRW"],
     "receipt_max_size_mb": 10.0,
-    "first_usdt_topup_amount": 600.0,
-    "first_usdt_topup_rule_enabled": False,
 }
 PAYMENT_CHANNELS = (
     "gcash",
