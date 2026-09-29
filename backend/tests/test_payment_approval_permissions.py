@@ -3,6 +3,7 @@ from fastapi import HTTPException
 
 from routers.payment_approvals import _require_payment_approval_access
 from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+from routers.private_admin_payments import _require_designated_payment_approver
 from routers.topup import _can_approve_requests
 from schemas.auth import UserPermissions, UserResponse
 
@@ -36,6 +37,19 @@ def test_owner_and_other_super_admins_cannot_access_payment_approvals():
 def test_payment_approval_is_rejected_without_permission():
     with pytest.raises(HTTPException) as error:
         _require_payment_approval_access(_user(UserPermissions()))
+
+    assert error.value.status_code == 403
+
+
+def test_private_payment_approval_is_restricted_to_designated_user():
+    _require_designated_payment_approver(
+        _user(UserPermissions(), SYSTEM_WALLET_ADMIN_TELEGRAM_ID)
+    )
+
+    with pytest.raises(HTTPException) as error:
+        _require_designated_payment_approver(
+            _user(UserPermissions(is_super_admin=True, can_credit_wallet=True), "other-admin")
+        )
 
     assert error.value.status_code == 403
 

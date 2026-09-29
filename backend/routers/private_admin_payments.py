@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.bank_deposit_requests import BankDepositRequest
@@ -65,6 +66,14 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
+def _require_designated_payment_approver(user: UserResponse) -> None:
+    if str(user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the designated system user can access payment approvals",
+        )
+
+
 def _require_wallet_permission(user: UserResponse, permission: str) -> None:
     if not user.permissions or not getattr(user.permissions, permission, False):
         raise HTTPException(status_code=403, detail=f"{permission} permission required")
@@ -92,6 +101,7 @@ async def admin_list_pending_payments(
     db: AsyncSession = Depends(get_db),
 ):
     """List pending invoices, payment links, and SwiftPay orders for review."""
+    _require_designated_payment_approver(current_user)
     _require_wallet_permission(current_user, "can_credit_wallet")
 
     result = await db.execute(
@@ -142,6 +152,7 @@ async def admin_mark_payment_paid(
     This endpoint is intentionally hidden from API documentation.
     Super admin only.
     """
+    _require_designated_payment_approver(current_user)
     _require_super_admin(current_user)
 
     txn_svc = TransactionsService(db)

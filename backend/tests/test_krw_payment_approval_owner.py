@@ -178,6 +178,42 @@ async def test_krw_approval_notification_overrides_other_recipient_ids(monkeypat
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("notification_type", "resource_type"),
+    [("payment_received", "payment"), ("payment_link_created", "payment_link")],
+)
+async def test_payment_approval_notifications_target_designated_system_user(
+    monkeypatch,
+    notification_type,
+    resource_type,
+):
+    db = Mock()
+    db.add = Mock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    telegram = Mock()
+    telegram.send_message = AsyncMock()
+    monkeypatch.setattr("services.telegram_service.TelegramService", lambda: telegram)
+
+    notifications = await AdminNotificationService.notify_super_admins(
+        db,
+        notification_type=notification_type,
+        title="PHP payment requires review",
+        message="Payment requires approval",
+        resource_type=resource_type,
+        resource_id="44",
+        metadata={"currency": "PHP"},
+        recipient_ids=["other-admin", "another-admin"],
+    )
+
+    assert [notification.admin_id for notification in notifications] == [
+        KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    ]
+    telegram.send_message.assert_awaited_once()
+    assert telegram.send_message.await_args.kwargs["chat_id"] == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+
+
+@pytest.mark.asyncio
 async def test_designated_telegram_user_can_approve_krw_callback_without_broadcast(monkeypatch):
     from routers import telegram_admin_callbacks
 
@@ -216,6 +252,10 @@ async def test_designated_telegram_user_can_approve_krw_callback_without_broadca
 
     assert result == {"ok": True}
     approval_service.approve_payment_link.assert_awaited_once()
+    assert (
+        approval_service.approve_payment_link.await_args.kwargs["approved_by"]
+        == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    )
     telegram.send_message.assert_awaited_once()
     assert telegram.send_message.await_args.kwargs["chat_id"] == int(
         KRW_PAYMENT_APPROVAL_TELEGRAM_ID
@@ -223,7 +263,65 @@ async def test_designated_telegram_user_can_approve_krw_callback_without_broadca
 
 
 @pytest.mark.asyncio
-async def test_other_super_admin_cannot_approve_krw_callback(monkeypatch):
+async def test_designated_telegram_user_can_approve_non_krw_payment_callback(monkeypatch):
+    from routers import telegram_admin_callbacks
+
+    telegram = Mock()
+    telegram.send_message = AsyncMock()
+    telegram.edit_message_text = AsyncMock()
+    telegram.answer_callback_query = AsyncMock()
+    monkeypatch.setattr(telegram_admin_callbacks, "TelegramService", lambda: telegram)
+
+    transaction = Mock(
+        id=43,
+        currency="PHP",
+        original_currency=None,
+        external_id="php-payment-43",
+    )
+    db = Mock()
+    db.scalar = AsyncMock(return_value=SimpleNamespace(is_super_admin=True, name="Payment admin"))
+    db.get = AsyncMock(return_value=transaction)
+    approval_service = Mock()
+    approval_service.approve_payment_link = AsyncMock(return_value=True)
+    monkeypatch.setattr(
+        telegram_admin_callbacks,
+        "TransactionsService",
+        lambda _db: approval_service,
+    )
+
+    result = await process_approval_callback(
+        {
+            "id": "callback-php",
+            "data": "approve_payment:43",
+            "from": {"id": int(KRW_PAYMENT_APPROVAL_TELEGRAM_ID)},
+            "message": {"message_id": 10, "chat": {"id": int(KRW_PAYMENT_APPROVAL_TELEGRAM_ID)}},
+        },
+        db,
+    )
+
+    assert result == {"ok": True}
+    approval_service.approve_payment_link.assert_awaited_once()
+    assert (
+        approval_service.approve_payment_link.await_args.kwargs["approved_by"]
+        == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    )
+    assert (
+        approval_service.approve_payment_link.await_args.kwargs["force_approval"]
+        is False
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action", "currency"),
+    [
+        ("approve_payment", "PHP"),
+        ("approve_payment", "KRW"),
+        ("reject_payment", "PHP"),
+        ("reject_payment", "KRW"),
+    ],
+)
+async def test_other_super_admin_cannot_approve_payment_callback(monkeypatch, action, currency):
     from routers import telegram_admin_callbacks
 
     telegram = Mock()
@@ -235,7 +333,7 @@ async def test_other_super_admin_cannot_approve_krw_callback(monkeypatch):
 
     transaction = Mock(
         id=42,
-        currency="KRW",
+        currency=currency,
         original_currency=None,
         external_id="krw-payment-42",
     )
@@ -255,7 +353,7 @@ async def test_other_super_admin_cannot_approve_krw_callback(monkeypatch):
     result = await process_approval_callback(
         {
             "id": "callback-2",
-            "data": "approve_payment:42",
+            "data": f"{action}:42",
             "from": {"id": 111},
             "message": {"message_id": 9, "chat": {"id": 111}},
         },
@@ -266,4 +364,27 @@ async def test_other_super_admin_cannot_approve_krw_callback(monkeypatch):
     approval_service.approve_payment_link.assert_not_awaited()
     telegram.send_message.assert_not_awaited()
     telegram.edit_message_text.assert_not_awaited()
+    telegram.answer_callback_query.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_bot_owner_cannot_approve_payment_callback(monkeypatch):
+    from routers import telegram_admin_callbacks
+
+    telegram = Mock()
+    telegram.answer_callback_query = AsyncMock()
+    monkeypatch.setattr(telegram_admin_callbacks, "TelegramService", lambda: telegram)
+    monkeypatch.setattr(telegram_admin_callbacks.settings, "telegram_bot_owner_id", "111")
+
+    result = await process_approval_callback(
+        {
+            "id": "callback-owner",
+            "data": "approve_payment:42",
+            "from": {"id": 111},
+            "message": {"message_id": 9, "chat": {"id": 111}},
+        },
+        Mock(),
+    )
+
+    assert result == {"ok": False}
     telegram.answer_callback_query.assert_awaited_once()
