@@ -12,6 +12,7 @@ export default function FirstLoginGuide() {
   const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const canShowOnboarding = Boolean(user && !user.permissions?.is_super_admin);
   const optOutKey = useMemo(
     () => (user ? `swiftpay:introduction-guide-hidden:${user.id}:${GUIDE_VERSION}` : ''),
     [user],
@@ -21,13 +22,13 @@ export default function FirstLoginGuide() {
     [user],
   );
   const shouldOpenOnboarding = Boolean(
-    user
+    canShowOnboarding
     && optOutKey
     && seenKey
     && localStorage.getItem(optOutKey) !== '1'
     && localStorage.getItem(seenKey) !== '1',
   );
-  const [visible, setVisible] = useState(() => Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
+  const [visible, setVisible] = useState(() => Boolean(canShowOnboarding && optOutKey && localStorage.getItem(optOutKey) !== '1'));
   const [expanded, setExpanded] = useState(() => shouldOpenOnboarding);
   const [step, setStep] = useState(0);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
@@ -40,14 +41,24 @@ export default function FirstLoginGuide() {
   const doNotShowAgainRef = useRef(false);
   const isKorean = language === 'ko';
   useEffect(() => {
+    if (!canShowOnboarding) {
+      setKrwBenefitThreshold(null);
+      return undefined;
+    }
+    let active = true;
     client.get('/api/v1/app-settings/krw-benefit-threshold')
       .then(response => {
-        if (response.ok && Number.isFinite(Number(response.data?.threshold_usdt))) {
+        if (active && response.ok && Number.isFinite(Number(response.data?.threshold_usdt))) {
           setKrwBenefitThreshold(Number(response.data.threshold_usdt));
         }
       })
-      .catch(error => console.error('Unable to load KRW eligibility threshold', error));
-  }, []);
+      .catch(error => {
+        if (active) console.error('Unable to load KRW eligibility threshold', error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [canShowOnboarding, user?.id]);
   const approvedDepositRequirement = krwBenefitThreshold === null
     ? (isKorean ? '승인된 USDT 입금 후' : 'After an approved USDT deposit')
     : krwBenefitThreshold === 0
@@ -104,7 +115,7 @@ export default function FirstLoginGuide() {
   useEffect(() => {
     setStep(0);
     setExpanded(Boolean(
-      user
+      canShowOnboarding
       && optOutKey
       && seenKey
       && localStorage.getItem(optOutKey) !== '1'
@@ -115,8 +126,8 @@ export default function FirstLoginGuide() {
     setDemonstrating(false);
     setDemoPhase(0);
     setCompletedSteps([]);
-    setVisible(Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
-  }, [user, optOutKey, seenKey]);
+    setVisible(Boolean(canShowOnboarding && optOutKey && localStorage.getItem(optOutKey) !== '1'));
+  }, [canShowOnboarding, optOutKey, seenKey]);
 
   useEffect(() => {
     if (!demonstrating) return undefined;
@@ -323,7 +334,7 @@ export default function FirstLoginGuide() {
 
   const onboardingRoutePrefixes = ['/settings', '/pay-by-link', '/wallet', '/dashboard'];
   const guideHome = onboardingRoutePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
-  const shouldShowGuide = Boolean(user && visible && (demonstrating || guideHome));
+  const shouldShowGuide = Boolean(canShowOnboarding && visible && (demonstrating || guideHome));
   const showPanel = shouldShowGuide && (expanded || demonstrating);
   const isWelcomeModal = shouldShowGuide && expanded && !demonstrating;
   const containerClassName = isWelcomeModal

@@ -1,12 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@100..1000&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
-
-@font-face {
-    font-family: 'DM Sans';
-    src: url('https://merchant.live.swiftpay.ph/assets/DMSans-VF-d9KJDlpM.ttf') format("woff2");
-    font-weight: 100 1000;
-    font-stretch: 25% 151%;
-}
 
 @tailwind base;
 @tailwind components;
@@ -825,7 +819,7 @@
       padding: 0.75rem;
     }
 
-    .dashboard-density header {
+    .dashboard-density .dashboard-toolbar {
       padding-left: 0.75rem;
       padding-right: 0.75rem;
     }
@@ -1197,12 +1191,7 @@
   font-size: 14px;
 }
 
-.dashboard-density > .hidden.lg\:flex > div {
-  width: 220px;
-  min-width: 220px;
-}
-
-.dashboard-density header {
+.dashboard-density .dashboard-toolbar {
   height: 60px;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
@@ -1223,7 +1212,7 @@
 }
 
 .dashboard-density main {
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem 1.5rem calc(3rem + env(safe-area-inset-bottom));
 }
 
 .dashboard-density main > div:first-child {
@@ -1239,13 +1228,13 @@
 }
 
 @media (max-width: 1023px) {
-  .dashboard-density header {
+  .dashboard-density .dashboard-toolbar {
     padding-left: 1rem;
     padding-right: 1rem;
   }
 
   .dashboard-density main {
-    padding: 1rem;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
   }
 }
 

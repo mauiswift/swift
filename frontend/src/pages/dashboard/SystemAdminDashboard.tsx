@@ -143,6 +143,9 @@ export default function SystemAdminDashboard() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {section.items.map(item => {
                 const Icon = item.icon;
+                const pendingCount = item.queueKey
+                  ? queueQuery.data?.pending_queues?.[item.queueKey]
+                  : undefined;
                 return (
                   <Link
                     key={item.href}
@@ -159,8 +162,8 @@ export default function SystemAdminDashboard() {
                         <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700" aria-live="polite">
                           {queueQuery.isPending
                             ? tx('Loading…', '불러오는 중…', '加载中…')
-                            : queueQuery.data
-                              ? `${queueQuery.data.pending_queues[item.queueKey]} ${tx('pending', '대기 중', '待处理')}`
+                            : typeof pendingCount === 'number' && Number.isFinite(pendingCount)
+                              ? `${pendingCount} ${tx('pending', '대기 중', '待处理')}`
                               : tx('Unavailable', '확인 불가', '不可用')}
                         </span>
                       )}

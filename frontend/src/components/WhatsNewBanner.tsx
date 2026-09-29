@@ -15,27 +15,27 @@ export default function WhatsNewBanner() {
   };
 
   return (
-    <div className="bg-[#FFF5F1] border border-[#FFDCCB] rounded-2xl p-6 flex items-start gap-6 mb-10 relative shadow-sm">
+    <div className="bg-[#FFF5F1] border border-[#FFDCCB] rounded-2xl p-4 flex items-start gap-3 mb-6 relative shadow-sm sm:gap-6 sm:p-6 sm:mb-10">
       <div className="w-12 h-12 rounded-full bg-white border border-[#FFDCCB] flex items-center justify-center flex-shrink-0 shadow-sm">
         <Info size={22} className="text-[#FF6B00]" />
       </div>
 
-      <div className="flex-1">
-        <h3 className="text-[18px] font-semibold text-slate-900 m-0">What's new in SwiftPay:</h3>
-        <p className="text-[15px] text-slate-600 mt-2 mb-4 leading-relaxed font-medium">
+      <div className="min-w-0 flex-1">
+        <h3 className="m-0 pr-12 text-[18px] font-semibold text-slate-900 sm:pr-0">What's new in SwiftPay:</h3>
+        <p className="mb-4 mt-2 text-sm font-medium leading-relaxed text-slate-600 sm:text-[15px]">
           We've upgraded sign-in for stronger security, and you can now manage team users and set up approval workflows directly in Merchant Portal.
         </p>
-        <div className="flex items-center gap-8">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:gap-8">
           <Link
             to="/settings/team"
-            className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#FF6B00] hover:underline"
+            className="inline-flex whitespace-nowrap items-center gap-1.5 text-[14px] font-semibold text-[#FF6B00] hover:underline"
           >
             Learn More
             <ArrowRight size={16} />
           </Link>
           <button
             onClick={close}
-            className="text-[14px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            className="whitespace-nowrap text-[14px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
           >
             Close
           </button>

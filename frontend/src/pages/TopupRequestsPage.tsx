@@ -57,10 +57,13 @@ export default function TopupRequestsPage() {
   const fetchRate = useCallback(async () => {
     try {
       const { data, ok } = await client.get('/api/v1/app-settings/usdt-php-rate');
-      if (ok && data) {
-        setUsdtPhpRate(data.rate);
+      const rate = Number(data?.rate);
+      if (ok && Number.isFinite(rate) && rate > 0) {
+        setUsdtPhpRate(rate);
         setRateSource(data.source || 'Standard SwiftPay rate');
-        setRateInput(String(data.rate));
+        setRateInput(String(rate));
+      } else if (ok) {
+        setError('The server returned an invalid exchange rate.');
       }
     } catch (e) { console.error(e); }
   }, []);
@@ -69,9 +72,10 @@ export default function TopupRequestsPage() {
     setLiveRateLoading(true); setError('');
     try {
       const { data, ok } = await client.get('/api/v1/app-settings/usdt-php-rate/live');
-      if (ok && data) {
-        setLiveRate(data.rate);
-        setRateInput(data.rate.toFixed(2));
+      const rate = Number(data?.rate);
+      if (ok && Number.isFinite(rate) && rate > 0) {
+        setLiveRate(rate);
+        setRateInput(rate.toFixed(2));
         if (!rateEditMode) setRateEditMode(true);
       } else {
         setError(data?.detail || 'Failed to fetch live rate.');
@@ -98,9 +102,10 @@ export default function TopupRequestsPage() {
     setRateLoading(true); setError('');
     try {
       const { data, ok } = await client.request('/api/v1/app-settings/usdt-php-rate', 'PUT', { rate: parsed });
-      if (ok && data) {
-        setUsdtPhpRate(data.rate);
-        setRateInput(String(data.rate));
+      const savedRate = Number(data?.rate);
+      if (ok && Number.isFinite(savedRate) && savedRate > 0) {
+        setUsdtPhpRate(savedRate);
+        setRateInput(String(savedRate));
         setRateEditMode(false);
         setLiveRate(null);
       } else {
