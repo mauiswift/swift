@@ -288,11 +288,9 @@ class TransactionsService(BaseService[Transactions]):
 
         gross_amount = float(txn.amount or 0.0)
 
-        base_fee_rate = 0.0
-        if not is_customer_payment(txn):
-            base_fee_rate = (
-                await get_collection_fee_details(self.db, str(txn.user_id))
-            ).rate
+        base_fee_rate = (
+            await get_collection_fee_details(self.db, str(txn.user_id))
+        ).rate
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -348,23 +346,12 @@ class TransactionsService(BaseService[Transactions]):
 
         # Allocate service fees to downline uplines
         fee_allocation_service = DownlineFeeAllocationService(self.db)
-        fee_allocation = (
-            {
-                "total_fee": 0.0,
-                "total_fee_rate": 0.0,
-                "system_fee": 0.0,
-                "system_fee_rate": 0.0,
-                "upline_fees": [],
-                "net_amount": gross_amount,
-            }
-            if is_customer_payment(txn)
-            else await fee_allocation_service.calculate_and_allocate_fees(
-                downline_user_id=str(txn.user_id),
-                gross_amount=gross_amount,
-                base_fee_rate=base_fee_rate,
-                currency=settlement_currency,
-                reference_id=reference_id,
-            )
+        fee_allocation = await fee_allocation_service.calculate_and_allocate_fees(
+            downline_user_id=str(txn.user_id),
+            gross_amount=gross_amount,
+            base_fee_rate=base_fee_rate,
+            currency=settlement_currency,
+            reference_id=reference_id,
         )
 
         fee_amount = fee_allocation["total_fee"]

@@ -1,6 +1,8 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from models.admin_users import AdminUser
 from services.downline_fee_allocation import DownlineFeeAllocationService
 
@@ -75,10 +77,47 @@ def test_nested_referral_fees_are_added_for_payment_owner():
     )
 
     assert total_rate == 0.011
-    assert [(item[0], item[2]) for item in commissions] == [
-        ("invite-owner", 1, 0.007),
-        ("super-admin", 2, 0.004),
-    ]
+    assert [item[0] for item in commissions] == ["invite-owner", "super-admin"]
+    assert [item[2] for item in commissions] == pytest.approx([0.007, 0.004])
+
+
+def test_upline_fees_are_capped_at_remaining_amount():
+    class FakeResult:
+        def __init__(self, relationship):
+            self.relationship = relationship
+
+        def scalars(self):
+            return self
+
+        def first(self):
+            return self.relationship
+
+    class FakeDb:
+        def __init__(self):
+            self.relationships = iter(
+                [
+                    SimpleNamespace(
+                        upline_user_id="upline",
+                        downline_user_id="merchant",
+                        level=1,
+                        service_fee_percent=10.0,
+                    ),
+                    None,
+                ]
+            )
+
+        async def execute(self, _query):
+            return FakeResult(next(self.relationships))
+
+    total_rate, commissions = asyncio.run(
+        DownlineFeeAllocationService(FakeDb()).calculate_upline_commissions(
+            downline_user_id="merchant",
+            base_fee_rate=0.99,
+        )
+    )
+
+    assert total_rate == pytest.approx(1.0)
+    assert [item[2] for item in commissions] == pytest.approx([0.01])
 
 
 def test_zero_relationship_fee_does_not_create_fee_or_upline_earning():

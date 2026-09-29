@@ -6,8 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
+from core.constants import COLLECTION_FEE_PERCENT_KEY
 from core.database import Base
 from models.admin_users import AdminUser
+from models.app_settings import AppSettings
 from models.transactions import Transactions
 from models.wallet_transactions import Wallet_transactions
 from models.wallets import Wallets
@@ -483,6 +485,7 @@ async def test_approved_payments_credit_the_shared_organization_wallet_once(monk
             [
                 AdminUser(telegram_id="merchant-a", organization_id="org-a"),
                 AdminUser(telegram_id="merchant-b", organization_id="org-b"),
+                AdminUser(telegram_id="platform-admin", is_super_admin=True),
             ]
         )
         payments = [
@@ -513,8 +516,8 @@ async def test_approved_payments_credit_the_shared_organization_wallet_once(monk
         ).all()
         assert {(wallet.organization_id, wallet.user_id, wallet.balance, wallet.available_balance)
                 for wallet in org_wallets} == {
-            ("org-a", "org:org-a", 250.0, 250.0),
-            ("org-b", "org:org-b", 250.0, 250.0),
+            ("org-a", "org:org-a", 249.0, 249.0),
+            ("org-b", "org:org-b", 249.0, 249.0),
         }
 
         ledger_entries = (
@@ -527,12 +530,114 @@ async def test_approved_payments_credit_the_shared_organization_wallet_once(monk
         assert len(ledger_entries) == 2
         assert {entry.wallet_id for entry in ledger_entries} == {wallet.id for wallet in org_wallets}
         assert all(entry.user_id.startswith("org:") for entry in ledger_entries)
+        platform_wallet = await session.scalar(
+            select(Wallets).where(Wallets.user_id == "platform-admin")
+        )
+        assert platform_wallet is not None
+        assert platform_wallet.balance == 2.0
         assert set(published_organization_ids) == {"org-a", "org-b"}
         assert {
             event["organization_id"]
             for event in payment_events
             if event["event_type"] == "status_change"
         } == {"org-a", "org-b"}
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_customer_payment_credits_merchant_net_of_configured_fees(monkeypatch):
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(TransactionsService, "_publish_wallet_credit", AsyncMock())
+
+    async with async_session() as session:
+        merchant_wallet = Wallets(
+            user_id="org:merchant-org",
+            organization_id="merchant-org",
+            currency="PHP",
+            balance=0.0,
+            available_balance=0.0,
+            pending_balance=0.0,
+        )
+        other_merchant_wallet = Wallets(
+            user_id="org:other-org",
+            organization_id="other-org",
+            currency="PHP",
+            balance=0.0,
+            available_balance=0.0,
+            pending_balance=0.0,
+        )
+        session.add_all(
+            [
+                AdminUser(
+                    telegram_id="merchant-1",
+                    organization_id="merchant-org",
+                    service_fee_percent=0.5,
+                    collection_fee_percent=0.25,
+                ),
+                AdminUser(
+                    telegram_id="merchant-2",
+                    organization_id="other-org",
+                ),
+                AdminUser(
+                    telegram_id="platform-admin",
+                    is_super_admin=True,
+                ),
+                AppSettings(
+                    key=COLLECTION_FEE_PERCENT_KEY,
+                    value="1.5",
+                ),
+                merchant_wallet,
+                other_merchant_wallet,
+                Transactions(
+                    user_id="merchant-1",
+                    transaction_type="payment_link",
+                    amount=1000.0,
+                    currency="PHP",
+                    external_id="customer-payment-with-fee",
+                    status="pending",
+                    approval_status="pending",
+                    paid_at=datetime.now(timezone.utc),
+                ),
+            ]
+        )
+        await session.commit()
+        txn = await session.scalar(
+            select(Transactions).where(
+                Transactions.external_id == "customer-payment-with-fee"
+            )
+        )
+
+        assert txn is not None
+        assert await TransactionsService(session).approve_payment_link(
+            txn,
+            approved_by="approver",
+        )
+
+        await session.refresh(merchant_wallet)
+        await session.refresh(other_merchant_wallet)
+        assert merchant_wallet.balance == 977.5
+        assert merchant_wallet.available_balance == 977.5
+        assert other_merchant_wallet.balance == 0.0
+
+        fee_entry = await session.scalar(
+            select(Wallet_transactions).where(
+                Wallet_transactions.wallet_id == merchant_wallet.id,
+                Wallet_transactions.reference_id == "customer-payment-with-fee-fee",
+            )
+        )
+        assert fee_entry is not None
+        assert fee_entry.amount == -22.5
+
+        platform_wallet = await session.scalar(
+            select(Wallets).where(Wallets.user_id == "platform-admin")
+        )
+        assert platform_wallet is not None
+        assert platform_wallet.balance == 22.5
 
     await engine.dispose()
 

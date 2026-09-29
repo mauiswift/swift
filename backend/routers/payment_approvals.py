@@ -25,6 +25,7 @@ from dependencies.auth import get_current_user
 from models.transactions import Transactions
 from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
+from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
@@ -374,7 +375,7 @@ async def approve_payment_link(
 
     Super admin only.
     - Marks transaction as "paid"
-    - Credits user's wallet with payment amount
+    - Credits the merchant's wallet with the payment amount less configured fees
     - Records approval audit trail
     """
     _require_payment_approval_access(current_user)
@@ -449,6 +450,18 @@ async def approve_payment_link(
         )
         amount = float(txn.amount or 0)
         balance_after = float(wallet.balance or 0)
+        payment_reference = txn.external_id or txn.xendit_id or f"txn-{txn.id}"
+        fee_amount = await db.scalar(
+            select(Wallet_transactions.amount)
+            .where(
+                Wallet_transactions.wallet_id == wallet.id,
+                Wallet_transactions.reference_id == f"{payment_reference}-fee",
+                Wallet_transactions.transaction_type == "fee",
+            )
+            .limit(1)
+        )
+        fee_amount = abs(float(fee_amount or 0))
+        amount_credited = round(max(0.0, amount - fee_amount), 2)
 
         logger.info(
             "✅ Super admin %s approved payment #%s (%.2f %s) → user %s wallet",
@@ -472,7 +485,9 @@ async def approve_payment_link(
             "success": True,
             "transaction_id": txn.id,
             "status": "paid",
-            "amount_credited": amount,
+            "gross_amount": amount,
+            "fee_amount": fee_amount,
+            "amount_credited": amount_credited,
             "currency": txn.currency or "PHP",
             "new_balance": balance_after,
             "message": confirmation.message,

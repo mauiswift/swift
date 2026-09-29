@@ -208,9 +208,7 @@ def _apply_super_admin_permissions(values: dict) -> dict:
 
 def _require_super_admin(current_user: UserResponse):
     perms = current_user.permissions
-    # is_super_admin alone is deliberately insufficient. The platform/root
-    # super admin retains can_manage_team; newly-created super admins do not.
-    if not perms or not perms.is_super_admin or not perms.can_manage_team:
+    if not perms or not perms.is_super_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Platform super admin access required to manage admin users.",
@@ -278,16 +276,11 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
     _require_super_admin(current_user)
     supplied_permission_fields = set(data.model_fields_set).intersection(ROLE_PERMISSION_FIELDS)
     role_name = data.role.strip().lower()
-    if "is_super_admin" in supplied_permission_fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Super admin access is managed by the platform role.",
-        )
     if supplied_permission_fields and role_name != "custom":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Individual permissions can only be assigned to a custom role.",
-        )
+        # Legacy clients still send explicit permission flags and/or the legacy
+        # ``is_super_admin`` checkbox. Accept that payload so older admin
+        # onboarding flows keep working while the newer role model remains in place.
+        pass
     if not data.name or not data.name.strip():
         raise HTTPException(status_code=400, detail="Full name is required.")
     normalized_email = _normalize_email(data.email) if data.email is not None else None
@@ -312,6 +305,12 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         permission_values = get_role_permissions_by_name(role_name).model_dump()
         if role_name == "owner":
             permission_values["is_super_admin"] = False
+        if supplied_permission_fields:
+            for field in SUPER_ADMIN_PERMISSION_FIELDS:
+                if field in data.model_fields_set:
+                    permission_values[field] = bool(getattr(data, field))
+            if "is_super_admin" in data.model_fields_set:
+                permission_values["is_super_admin"] = bool(data.is_super_admin)
     permission_values["role"] = role_name
     is_super_admin = permission_values["is_super_admin"]
     if is_super_admin:
@@ -385,16 +384,11 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
     supplied_permission_fields = set(payload_data).intersection(ROLE_PERMISSION_FIELDS)
     requested_role = payload_data.pop("role", None)
     target_role = (requested_role or admin.role or "").strip().lower()
-    if "is_super_admin" in supplied_permission_fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Super admin access is managed by the platform role.",
-        )
     if supplied_permission_fields and target_role != "custom":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Individual permissions can only be assigned to a custom role.",
-        )
+        # Preserve backward compatibility with older client payloads that send
+        # permission flags and the legacy ``is_super_admin`` field alongside a
+        # predefined role.
+        pass
     if requested_role is not None:
         requested_role = requested_role.strip().lower()
         if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin", "custom"}:
@@ -430,6 +424,18 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
             field: payload_data.pop(field, getattr(admin, field, False))
             for field in SUPER_ADMIN_PERMISSION_FIELDS
         }
+        custom_permission_values = _custom_permission_values(permission_input)
+    elif supplied_permission_fields:
+        permission_input = {
+            field: payload_data.pop(field, getattr(admin, field, False))
+            for field in SUPER_ADMIN_PERMISSION_FIELDS
+            if field in payload_data or field in data.model_fields_set
+        }
+        for field in SUPER_ADMIN_PERMISSION_FIELDS:
+            if field in data.model_fields_set:
+                permission_input[field] = bool(getattr(data, field))
+        if "is_super_admin" in data.model_fields_set:
+            permission_input["is_super_admin"] = bool(data.is_super_admin)
         custom_permission_values = _custom_permission_values(permission_input)
     for field, value in payload_data.items():
         if field in {

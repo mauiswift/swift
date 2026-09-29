@@ -1124,8 +1124,6 @@ def _welcome_zh(name: str = "") -> str:
 
 async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lang: Optional[str] = None, currency: Optional[str] = None):
     """Sends the dashboard panel using the selected language."""
-    from services.wallets import WalletsService
-
     selected_lang = lang or _user_lang.get(str(chat_id))
     if not selected_lang:
         admin = await _get_admin_user_record(db, chat_id)
@@ -1196,7 +1194,10 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 _inline_button(_t(str(chat_id), "📷 QRPH", "📷 QRPH", ko="📷 QRPH", db_lang=selected_lang), callback_data="wizard:/scanqr")
             ],
             [
-                _inline_button(_t(str(chat_id), "🟢 Buy USDT", "🟢 买入 USDT", ko="🟢 USDT 구매", db_lang=selected_lang), callback_data="wizard:/buyusdt"),
+                _inline_button(_t(str(chat_id), "💰 Deposit", "💰 充值", ko="💰 입금", db_lang=selected_lang), callback_data="wizard:/deposit"),
+                _inline_button(_t(str(chat_id), "🟢 Buy USDT", "🟢 买入 USDT", ko="🟢 USDT 구매", db_lang=selected_lang), callback_data="wizard:/buyusdt")
+            ],
+            [
                 _inline_button(_t(str(chat_id), "🔴 Sell USDT", "🔴 卖出 USDT", ko="🔴 USDT 판매", db_lang=selected_lang), callback_data="wizard:/sellusdt")
             ],
         ]
@@ -1348,6 +1349,8 @@ async def _get_user_currency(db: AsyncSession, chat_id: str) -> str:
 
 async def _get_store_collection_currency(db: AsyncSession, chat_id: str) -> str:
     """Resolve the sender's store currency; unlinked bot users default to PHP."""
+    if db is None:
+        return "PHP"
     admin = await _get_admin_user_record(db, str(chat_id))
     if not admin or not admin.organization_id:
         return "PHP"

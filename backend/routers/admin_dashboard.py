@@ -6,7 +6,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from dependencies.auth import get_current_user
 from models.bank_deposit_requests import BankDepositRequest
 from models.disbursements import Disbursements
@@ -40,7 +39,8 @@ def _require_super_admin(current_user: UserResponse) -> None:
 
 
 def _can_review_financial_queues(current_user: UserResponse) -> bool:
-    return str(current_user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+    permissions = current_user.permissions
+    return bool(permissions and permissions.is_super_admin)
 
 
 async def _count_statuses(

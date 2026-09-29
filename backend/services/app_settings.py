@@ -52,7 +52,7 @@ from core.constants import (
     DEFAULT_KRW_BENEFIT_THRESHOLD_USDT,
     public_currency,
 )
-from core.constants import FEES_ENABLED
+from core.constants import COLLECTION_FEES_ENABLED
 from models.app_settings import AppSettings
 from models.bank_deposit_requests import BankDepositRequest
 from models.admin_users import AdminUser
@@ -650,7 +650,7 @@ async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, di
 
 async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
     """Return the effective incoming commission as a decimal rate."""
-    if not FEES_ENABLED:
+    if not COLLECTION_FEES_ENABLED:
         return 0.0
     details = await get_collection_fee_details(db, user_id)
     return details.rate
@@ -664,7 +664,7 @@ async def get_collection_fee_details(
     admin = await get_admin_user(db, user_id) if user_id else None
     is_gold_vip = admin.vip_gold if admin else None
 
-    if not FEES_ENABLED:
+    if not COLLECTION_FEES_ENABLED:
         return CollectionFeeDetails(rate=0.0, is_gold_vip=is_gold_vip)
 
     base_percent = await get_system_collection_fee_percent(db)
@@ -680,7 +680,7 @@ async def get_collection_fee_details(
 
 
 async def get_system_collection_fee_percent(db: AsyncSession) -> float:
-    if not FEES_ENABLED:
+    if not COLLECTION_FEES_ENABLED:
         return 0.0
     value = await _get_setting(db, COLLECTION_FEE_PERCENT_KEY)
     percent = _fee_percent(
@@ -698,7 +698,7 @@ async def set_system_collection_fee_percent(db: AsyncSession, percent: float) ->
 
 
 async def get_vip_gold_collection_fee_percent(db: AsyncSession) -> float:
-    if not FEES_ENABLED:
+    if not COLLECTION_FEES_ENABLED:
         return 0.0
     value = await _get_setting(db, VIP_GOLD_COLLECTION_FEE_PERCENT_KEY)
     return _fee_percent(value, default=DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT)
@@ -713,7 +713,7 @@ async def set_vip_gold_collection_fee_percent(db: AsyncSession, percent: float) 
 
 async def get_additional_collection_fee_percent(db: AsyncSession) -> float:
     """Return the owner-configured fee surcharge in percentage points."""
-    if not FEES_ENABLED:
+    if not COLLECTION_FEES_ENABLED:
         return 0.0
     value = await _get_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY)
     try:

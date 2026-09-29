@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.admin_users import AdminUser
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
-from core.constants import FEES_ENABLED
+from core.constants import COLLECTION_FEES_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class DownlineFeeAllocationService:
         earning rate for downline payments. Relationship-specific fees are
         added separately by ``calculate_upline_commissions``.
         """
-        if not FEES_ENABLED or upline_user is None:
+        if not COLLECTION_FEES_ENABLED or upline_user is None:
             return 0.0
 
         configured = float(getattr(upline_user, "service_fee_percent", 0.0) or 0.0)
@@ -58,7 +58,7 @@ class DownlineFeeAllocationService:
             (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
         """
         base_fee_rate = max(0.0, min(1.0, float(base_fee_rate)))
-        if not FEES_ENABLED:
+        if not COLLECTION_FEES_ENABLED:
             return 0.0, []
 
         upline_commissions: List[Tuple[str, int, float, bool]] = []
@@ -100,9 +100,16 @@ class DownlineFeeAllocationService:
                 0.0,
                 min(100.0, float(relationship.service_fee_percent or 0.0)),
             ) / 100.0
-            if additional_rate > 0:
+            allocated_rate = sum(
+                rate for _, _, rate, _ in upline_commissions
+            )
+            applied_rate = min(
+                additional_rate,
+                max(0.0, 1.0 - base_fee_rate - allocated_rate),
+            )
+            if applied_rate > 0:
                 upline_commissions.append(
-                    (upline_id, relationship_level, additional_rate, False)
+                    (upline_id, relationship_level, applied_rate, False)
                 )
 
             current_user_id = upline_id
@@ -176,7 +183,7 @@ class DownlineFeeAllocationService:
                 "total_fee": float,
             }
         """
-        if not FEES_ENABLED:
+        if not COLLECTION_FEES_ENABLED:
             return {
                 "system_fee": 0.0,
                 "upline_fees": {},
@@ -302,7 +309,7 @@ class DownlineFeeAllocationService:
 
         Returns fee allocation result with breakdown.
         """
-        if not FEES_ENABLED:
+        if not COLLECTION_FEES_ENABLED:
             return {
                 "system_fee": 0.0,
                 "upline_fees": {},

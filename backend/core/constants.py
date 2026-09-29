@@ -35,9 +35,10 @@ ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
 SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 LEDGER_CURRENCIES = ("PHP", "CNY", "KRW", "USD")
-# Customer and platform fee adjustments are disabled. External provider fees
-# may still apply when a payment provider charges them directly.
+# Legacy non-collection fee adjustments remain disabled.
 FEES_ENABLED = False
+# Merchant collection fees are applied to customer payment settlements.
+COLLECTION_FEES_ENABLED = True
 
 
 def normalize_currency(currency: str | None, default: str = "PHP") -> str:
