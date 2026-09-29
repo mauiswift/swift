@@ -78,7 +78,9 @@ async def test_force_approval_credits_krw_payment_from_any_status():
     db = Mock()
     db.commit = AsyncMock()
     service = TransactionsService(db)
-    service.credit_wallet_from_transaction = AsyncMock()
+    wallet = SimpleNamespace(id=1, balance=1250.0, organization_id="merchant-1")
+    service.credit_wallet_from_transaction = AsyncMock(return_value=(wallet, True))
+    service._publish_wallet_credit = AsyncMock()
     txn = SimpleNamespace(
         id=42,
         transaction_type="payment_link",
@@ -99,9 +101,15 @@ async def test_force_approval_credits_krw_payment_from_any_status():
     )
 
     assert approved is True
+    assert not await service.approve_payment_link(
+        txn,
+        approved_by=KRW_PAYMENT_APPROVAL_TELEGRAM_ID,
+        force_approval=True,
+    )
     assert txn.status == "paid"
     assert txn.approval_status == "approved"
     assert txn.approved_by == KRW_PAYMENT_APPROVAL_TELEGRAM_ID
+    service._publish_wallet_credit.assert_awaited_once_with(txn, wallet, 1250.0)
     service.credit_wallet_from_transaction.assert_awaited_once_with(
         txn,
         gateway_label="admin-manual",

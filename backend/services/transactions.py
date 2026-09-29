@@ -260,7 +260,7 @@ class TransactionsService(BaseService[Transactions]):
         txn: Transactions,
         gateway_label: str = "Gateway",
         wallet_note: Optional[str] = None,
-    ) -> Wallets:
+    ) -> tuple[Wallets, bool]:
         """Credit the user's wallet (Maximizing automated T+0/T+1 logic)."""
         from services.wallets import WalletsService
         wallet_service = WalletsService(self.db)
@@ -271,7 +271,11 @@ class TransactionsService(BaseService[Transactions]):
         # Check for duplicate wallet transaction (idempotency)
         existing_wtxn = await self.db.execute(
             select(Wallet_transactions)
-            .where(Wallet_transactions.reference_id == reference_id)
+            .where(
+                Wallet_transactions.wallet_id == wallet.id,
+                Wallet_transactions.transaction_type == "receive",
+                Wallet_transactions.reference_id == reference_id,
+            )
             .limit(1)
         )
         existing_wtxn = existing_wtxn.scalars().first()
@@ -280,7 +284,7 @@ class TransactionsService(BaseService[Transactions]):
                 "Duplicate wallet transaction detected for reference_id %s, skipping crediting",
                 reference_id,
             )
-            return wallet
+            return wallet, False
 
         gross_amount = float(txn.amount or 0.0)
 
@@ -396,22 +400,30 @@ class TransactionsService(BaseService[Transactions]):
             self.db.add(fee_wtxn)
             await self.db.flush()
 
-        try:
-            payment_event_bus.publish({
-                "event_type": "wallet_update",
-                "user_id": txn.user_id,
-                "wallet_id": wallet.id,
-                "balance": wallet.balance,
-                "currency": txn.currency or "PHP",
-                "transaction_type": "receive",
-                "amount": amount,
-                "transaction_id": wtxn.id,
-                "note": "Payment received",
-            })
-        except Exception as e:
-            logger.warning(f"Failed to publish wallet update event: {e}")
+        return wallet, True
 
-        return wallet
+    async def _publish_wallet_credit(
+        self,
+        txn: Transactions,
+        wallet: Wallets,
+        amount: float,
+    ) -> None:
+        """Notify organization members only after the wallet credit is committed."""
+        try:
+            await WalletsService(self.db).publish_wallet_event(
+                str(txn.user_id),
+                wallet,
+                "receive",
+                amount,
+                txn.id,
+                "Payment received",
+            )
+        except Exception:
+            logger.warning(
+                "Wallet credit for payment %s was committed but its notification failed",
+                txn.id,
+                exc_info=True,
+            )
 
     async def calculate_expected_fees(self, user_id: str, gross_amount: float) -> Dict[str, Any]:
         """Calculate expected fees and deductions based on per-user configuration."""
@@ -585,9 +597,12 @@ class TransactionsService(BaseService[Transactions]):
         txn.paid_at = now
         txn.updated_at = now
 
+        wallet_credit = None
         try:
             if not is_disbursement:
-                await self.credit_wallet_from_transaction(txn, gateway_label, approval_note)
+                wallet_credit = await self.credit_wallet_from_transaction(
+                    txn, gateway_label, approval_note
+                )
 
             # Sync status with disbursements table if applicable
             if is_disbursement:
@@ -642,6 +657,13 @@ class TransactionsService(BaseService[Transactions]):
             )
             return False
 
+        if wallet_credit and wallet_credit[1]:
+            await self._publish_wallet_credit(
+                txn,
+                wallet_credit[0],
+                round(float(txn.amount or 0.0), 2),
+            )
+
         if is_new_provider_receipt:
             publish_payment_received(txn, gateway_label)
 
@@ -656,6 +678,7 @@ class TransactionsService(BaseService[Transactions]):
                 "description": transaction_description,
                 "transaction_type": transaction_type,
                 "user_id": transaction_user_id,
+                "organization_id": wallet_credit[0].organization_id if wallet_credit else None,
             })
         except Exception as e:
             logger.warning(f"Failed to publish status change event: {e}")
@@ -680,6 +703,8 @@ class TransactionsService(BaseService[Transactions]):
                 txn.external_id,
             )
             return False
+        if force_approval and txn.approval_status == "approved" and txn.status in {"paid", "completed"}:
+            return False
         if force_approval:
             now = datetime.now(timezone.utc)
             txn.status = "paid"
@@ -687,12 +712,16 @@ class TransactionsService(BaseService[Transactions]):
             txn.approved_by = str(approved_by)
             txn.approved_at = now
             txn.updated_at = now
-            await self.credit_wallet_from_transaction(
+            wallet, newly_credited = await self.credit_wallet_from_transaction(
                 txn,
                 gateway_label="admin-manual",
                 wallet_note=note,
             )
             await self.db.commit()
+            if newly_credited:
+                await self._publish_wallet_credit(
+                    txn, wallet, round(float(txn.amount or 0.0), 2)
+                )
             return True
         approval_pending = txn.approval_status in {None, "pending"}
         if txn.status in {"paid", "completed"}:
@@ -703,12 +732,16 @@ class TransactionsService(BaseService[Transactions]):
             txn.approved_by = str(approved_by)
             txn.approved_at = now
             txn.updated_at = now
-            await self.credit_wallet_from_transaction(
+            wallet, newly_credited = await self.credit_wallet_from_transaction(
                 txn,
                 gateway_label="admin-manual",
                 wallet_note=note,
             )
             await self.db.commit()
+            if newly_credited:
+                await self._publish_wallet_credit(
+                    txn, wallet, round(float(txn.amount or 0.0), 2)
+                )
             return True
         if txn.status == "failed" and txn.approval_status == "approved":
             # A previous manual approval may have failed during wallet settlement.

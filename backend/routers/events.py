@@ -81,7 +81,18 @@ async def get_recent_events(
     filtered_events = []
     for event in all_events:
         event_user_id = event.get("user_id")
-        if is_super or not event_user_id or event_user_id == user_id or event_user_id == tg_user_id:
+        event_organization_id = event.get("organization_id")
+        same_organization = (
+            current_user.organization_id is not None
+            and event_organization_id == current_user.organization_id
+        )
+        if (
+            is_super
+            or same_organization
+            or not event_user_id
+            or event_user_id == user_id
+            or event_user_id == tg_user_id
+        ):
             filtered_events.append(event)
 
     return {

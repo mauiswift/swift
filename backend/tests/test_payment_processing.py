@@ -2,11 +2,15 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from core.database import Base
+from models.admin_users import AdminUser
 from models.transactions import Transactions
+from models.wallet_transactions import Wallet_transactions
+from models.wallets import Wallets
 from services.payment_processing import PaymentProcessor
 from services.transactions import (
     TransactionsService,
@@ -413,12 +417,13 @@ async def test_non_swiftpay_provider_callback_stays_pending_for_admin_approval()
 
 
 @pytest.mark.asyncio
-async def test_admin_approval_service_marks_customer_payment_approved_once():
+async def test_admin_approval_service_marks_customer_payment_approved_once(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(TransactionsService, "_publish_wallet_credit", AsyncMock())
 
     async with async_session() as session:
         txn = Transactions(
@@ -450,12 +455,96 @@ async def test_admin_approval_service_marks_customer_payment_approved_once():
 
 
 @pytest.mark.asyncio
-async def test_admin_approval_accepts_provider_success_statuses():
+async def test_approved_payments_credit_the_shared_organization_wallet_once(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    published_organization_ids = []
+    payment_events = []
+
+    async def record_wallet_event(_service, _user_id, wallet, *_args, **_kwargs):
+        async with async_session() as observer:
+            committed_wallet = await observer.get(Wallets, wallet.id)
+            published_organization_ids.append(committed_wallet.organization_id)
+
+    monkeypatch.setattr(
+        "services.wallets.WalletsService.publish_wallet_event",
+        record_wallet_event,
+    )
+    monkeypatch.setattr(
+        "services.transactions.payment_event_bus.publish",
+        lambda event: payment_events.append(event.copy()),
+    )
+
+    async with async_session() as session:
+        session.add_all(
+            [
+                AdminUser(telegram_id="merchant-a", organization_id="org-a"),
+                AdminUser(telegram_id="merchant-b", organization_id="org-b"),
+            ]
+        )
+        payments = [
+            Transactions(
+                user_id=user_id,
+                transaction_type="payment_link",
+                amount=250.0,
+                currency="PHP",
+                external_id="shared-provider-reference",
+                status="pending",
+                approval_status="pending",
+                paid_at=datetime.now(timezone.utc),
+            )
+            for user_id in ("merchant-a", "merchant-b")
+        ]
+        session.add_all(payments)
+        await session.commit()
+
+        service = TransactionsService(session)
+        for payment in payments:
+            assert await service.approve_payment_link(payment, approved_by="approver")
+            assert not await service.approve_payment_link(payment, approved_by="approver")
+
+        org_wallets = (
+            await session.scalars(
+                select(Wallets).where(Wallets.organization_id.in_(["org-a", "org-b"]))
+            )
+        ).all()
+        assert {(wallet.organization_id, wallet.user_id, wallet.balance, wallet.available_balance)
+                for wallet in org_wallets} == {
+            ("org-a", "org:org-a", 250.0, 250.0),
+            ("org-b", "org:org-b", 250.0, 250.0),
+        }
+
+        ledger_entries = (
+            await session.scalars(
+                select(Wallet_transactions).where(
+                    Wallet_transactions.transaction_type == "receive"
+                )
+            )
+        ).all()
+        assert len(ledger_entries) == 2
+        assert {entry.wallet_id for entry in ledger_entries} == {wallet.id for wallet in org_wallets}
+        assert all(entry.user_id.startswith("org:") for entry in ledger_entries)
+        assert set(published_organization_ids) == {"org-a", "org-b"}
+        assert {
+            event["organization_id"]
+            for event in payment_events
+            if event["event_type"] == "status_change"
+        } == {"org-a", "org-b"}
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_admin_approval_accepts_provider_success_statuses(monkeypatch):
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(TransactionsService, "_publish_wallet_credit", AsyncMock())
 
     async with async_session() as session:
         txn = Transactions(

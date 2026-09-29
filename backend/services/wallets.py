@@ -1008,6 +1008,7 @@ class WalletsService(BaseService[Wallets]):
         from services.event_bus import event_bus
         await event_bus.emit("wallet_update", {
             "user_id": user_id,
+            "organization_id": wallet.organization_id,
             "wallet_id": wallet.id,
             "balance": wallet.balance,
             "currency": wallet.currency or "PHP",
