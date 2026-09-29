@@ -496,7 +496,13 @@ const WalletTransactionHistory = ({ currency, transactions, loading, error, onRe
 };
 
 // ─── Component ───────────────────────────────────────────────────────
-export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolean }) {
+export default function WalletPage({
+  cryptoOnly = false,
+  layout = 'desktop',
+}: {
+  cryptoOnly?: boolean;
+  layout?: 'desktop' | 'mobile';
+}) {
   const [vipGold, setVipGold] = useState(false);
   const { user, platformBranding, loading: authLoading, isSuperAdmin } = useAuth();
   const { language } = useLanguage();
@@ -541,6 +547,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     !cryptoOnly
     && user?.organization_id
   );
+  const hasOrganizationWallet = Boolean(user?.organization_id);
+  const isMobileLayout = layout === 'mobile';
   const primaryWalletBalance = sharedWalletIsPrimary ? organizationWalletBalance : collectionBalance;
   const primaryWalletUnavailable = sharedWalletIsPrimary
     ? organizationWalletLoadError || !organizationWalletBalance
@@ -1303,27 +1311,31 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   return (
     <Layout>
-      <div className="w-full max-w-none mx-auto space-y-4 sm:space-y-8">
+      <div className={`mx-auto w-full space-y-4 sm:space-y-8 ${isMobileLayout ? 'max-w-2xl px-1 pb-20' : 'max-w-none'}`}>
         {/* Header */}
         <div className="space-y-2">
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-5 shadow-sm sm:p-8">
-            <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
-            <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-blue-200/30 blur-2xl" />
-            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className={`relative overflow-hidden border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 shadow-sm ${isMobileLayout ? 'rounded-xl p-4' : 'rounded-2xl p-5 sm:p-8'}`}>
+            {!isMobileLayout && (
+              <>
+                <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
+                <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-blue-200/30 blur-2xl" />
+              </>
+            )}
+            <div className={`relative z-10 flex gap-4 ${isMobileLayout ? 'items-center' : 'flex-col sm:flex-row sm:items-end sm:justify-between'}`}>
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center">
+                <div className={`flex items-center ${isMobileLayout ? 'gap-2' : 'gap-3 mb-2'}`}>
+                  <div className={`flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 ${isMobileLayout ? 'h-9 w-9' : 'h-10 w-10'}`}>
                     <Wallet className="h-6 w-6 text-blue-600" />
                   </div>
-                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">{walletTitle}</h1>
+                  <h1 className={`font-semibold tracking-tight text-foreground ${isMobileLayout ? 'text-xl' : 'text-2xl sm:text-4xl'}`}>{walletTitle}</h1>
                 </div>
-                <p className="text-sm text-slate-600 max-w-2xl font-medium">
-                  {walletSubtitle}
-                </p>
-                <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-500" aria-live="polite">
-                  <span className={`h-2 w-2 rounded-full ${walletEventsConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                  {walletEventsConnected ? 'Instapay' : 'Connecting to live wallet updates…'}
-                </div>
+                {!isMobileLayout && <p className="max-w-2xl text-sm font-medium text-slate-600">{walletSubtitle}</p>}
+                {!isMobileLayout && (
+                  <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-500" aria-live="polite">
+                    <span className={`h-2 w-2 rounded-full ${walletEventsConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    {walletEventsConnected ? 'Instapay' : 'Connecting to live wallet updates…'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1340,7 +1352,168 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             </Button>
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {isMobileLayout && (
+          <>
+            <section aria-label={walletTitle} className="grid gap-3">
+              {!cryptoOnly && (
+                <Card className="overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-white to-blue-50/60 shadow-sm">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">{collectionWalletLabel}</p>
+                        {sharedWalletIsPrimary && (
+                          <p className="mt-1 truncate text-xs text-slate-500">
+                            {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+                          </p>
+                        )}
+                      </div>
+                      <span className="rounded-lg bg-blue-100 p-2 text-blue-700"><Landmark className="h-4 w-4" /></span>
+                    </div>
+                    <p className="text-3xl font-bold tracking-tight text-slate-950">
+                      {loading ? '…' : primaryWalletUnavailable
+                        ? 'Unavailable'
+                        : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'balance'), selectedCollectionCurrency)}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>{isKoreanWallet ? '사용 가능' : 'Available'}</span>
+                      <span className="font-semibold text-emerald-800">
+                        {primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(primaryWalletBalance), selectedCollectionCurrency)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setShowUsdtTopupWizard(false);
+                          setActiveTab('fund');
+                          setWalletAction('deposit');
+                        }}
+                        disabled={!showFiatActionRow || primaryWalletUnavailable}
+                        className="h-11 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        <ArrowDownToLine className="mr-2 h-4 w-4" />{isKoreanWallet ? '입금' : 'Deposit'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowUsdtTopupWizard(false);
+                          setActiveTab('php');
+                          setWalletAction('withdraw');
+                        }}
+                        disabled={!showFiatActionRow || primaryWalletUnavailable}
+                        className="h-11 rounded-xl border-amber-300 text-amber-900 hover:bg-amber-50"
+                      >
+                        <ArrowUpFromLine className="mr-2 h-4 w-4" />{isKoreanWallet ? '출금' : 'Withdraw'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card className="overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50/50 shadow-sm">
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                        {hasOrganizationWallet
+                          ? isKoreanWallet ? '공유 조직 USDT 지갑' : 'Shared organization USDT wallet'
+                          : 'USDT Wallet'}
+                      </p>
+                      {hasOrganizationWallet && (
+                        <p className="mt-1 truncate text-xs text-slate-500">
+                          {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+                        </p>
+                      )}
+                    </div>
+                    <PaymentBrandLogo brand="USDT" size="sm" className="h-8 w-8 shrink-0 border-0 bg-transparent p-0 shadow-none" />
+                  </div>
+                  <p className="text-3xl font-bold tracking-tight text-slate-950">
+                    {loading ? '…' : balanceLoadErrors.includes('usdt') || !usdtBalance
+                      ? 'Unavailable'
+                      : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>{isKoreanWallet ? '사용 가능' : 'Available'}</span>
+                    <span className="font-semibold text-emerald-800">
+                      {balanceLoadErrors.includes('usdt') || !usdtBalance
+                        ? 'Unavailable'
+                        : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))}`}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                    onClick={openBuyUsdt}
+                    disabled={!canTradeUsdtForPhp || !usdtBalance || balanceLoadErrors.includes('usdt')}
+                    className="h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    <TrendingUp className="mr-2 h-4 w-4" />{isKoreanWallet ? '구매' : 'Buy'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
+                      setWalletAction('sell');
+                    }}
+                    disabled={!canTradeUsdtForPhp || !usdtBalance || balanceLoadErrors.includes('usdt')}
+                    className="h-11 rounded-xl border-orange-300 text-orange-900 hover:bg-orange-50"
+                  >
+                    <TrendingUp className="mr-2 h-4 w-4 rotate-180" />{isKoreanWallet ? '판매' : 'Sell'}
+                  </Button>
+                  <Button
+                    type="button"
+                      onClick={() => {
+                        if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
+                        setShowUsdtTopupWizard(false);
+                        setActiveTab('usdt');
+                        setWalletAction('send');
+                      }}
+                      disabled={balanceLoadErrors.includes('usdt') || !usdtBalance}
+                      className="h-11 rounded-xl bg-sky-600 text-white hover:bg-sky-700"
+                    >
+                      <Send className="mr-2 h-4 w-4" />{isKoreanWallet ? '보내기' : 'Send'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowUsdtTopupWizard(true);
+                        setActiveTab('fund');
+                        setWalletAction('receive');
+                      }}
+                      className="h-11 rounded-xl border-blue-300 text-blue-800 hover:bg-blue-50"
+                    >
+                      <ArrowDownToLine className="mr-2 h-4 w-4" />{isKoreanWallet ? '받기' : 'Receive'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+            <section className="space-y-4" aria-label={isKoreanWallet ? '최근 지갑 활동' : 'Recent wallet activity'}>
+              {!cryptoOnly && (
+                <WalletTransactionHistory
+                  currency={selectedCollectionCurrency}
+                  transactions={collectionTransactions}
+                  loading={loading}
+                  error={transactionLoadErrors.includes('collection')}
+                  onRetry={() => void fetchData()}
+                  isKorean={isKoreanWallet}
+                />
+              )}
+              <WalletTransactionHistory
+                currency="USDT"
+                transactions={usdtTransactions}
+                loading={loading}
+                error={transactionLoadErrors.includes('usdt')}
+                onRetry={() => void fetchData()}
+                isKorean={isKoreanWallet}
+              />
+            </section>
+          </>
+        )}
+        {!isMobileLayout && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {!cryptoOnly && (
           /* PHP Balance */
           <div className="space-y-4">
@@ -1497,7 +1670,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                {sharedWalletIsPrimary
+                {hasOrganizationWallet
                   ? isKoreanWallet ? '공유 조직 USDT 지갑' : 'Shared organization USDT wallet'
                   : 'USDT Wallet'}
               </span>
@@ -1505,7 +1678,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" />
               </div>
             </div>
-            {sharedWalletIsPrimary && (
+            {hasOrganizationWallet && (
               <p className="mb-2 truncate text-xs text-slate-500">
                 {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
               </p>
@@ -1606,6 +1779,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           )}
 
         </div>
+        }
 
         {/* Main Tabs */}
         <Dialog open={walletFrozenDialogOpen} onOpenChange={setWalletFrozenDialogOpen}>
@@ -1694,7 +1868,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             }
           }}
         >
-          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-[#f6f8fb] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:rounded-2xl">
+          <DialogContent className={`overflow-y-auto border border-slate-200 bg-[#f6f8fb] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] ${isMobileLayout ? 'fixed bottom-0 left-1/2 top-auto h-auto max-h-[92dvh] w-screen max-w-none -translate-x-1/2 translate-y-0 rounded-b-none rounded-t-3xl' : 'max-h-[90vh] max-w-5xl rounded-2xl sm:rounded-2xl'}`}>
             {walletAction === 'buy' ? (
               <div className="space-y-5 p-5 sm:p-7">
                 <div className="border-b border-slate-200 pb-5">

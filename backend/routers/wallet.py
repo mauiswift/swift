@@ -417,6 +417,8 @@ async def get_organization_balance(
 		"balance": float(wallet.balance or 0.0),
 		"available_balance": float(wallet.available_balance or 0.0),
 		"pending_balance": float(wallet.pending_balance or 0.0),
+		"is_frozen": bool(wallet.is_frozen),
+		"freeze_reason": wallet.freeze_reason,
 	}
 
 
