@@ -174,6 +174,27 @@ def _apply_role_permissions(admin: AdminUser, role_name: str) -> None:
     admin.team_permissions = values
 
 
+def _custom_permission_values(values: dict) -> dict:
+    permissions = {
+        field: bool(values.get(field, False))
+        for field in SUPER_ADMIN_PERMISSION_FIELDS
+    }
+    permissions["is_super_admin"] = False
+    return permissions
+
+
+def _apply_custom_permission_values(admin: AdminUser, values: dict) -> None:
+    platform_org_id, _ = _get_platform_organization()
+    scoped_values = scope_permissions_to_organization(
+        _custom_permission_values(values),
+        admin.organization_id,
+        platform_org_id,
+    )
+    for field in ROLE_PERMISSION_FIELDS:
+        setattr(admin, field, scoped_values[field])
+    admin.team_permissions = scoped_values
+
+
 def _apply_super_admin_permissions(values: dict) -> dict:
     """Preserve the legacy helper for callers outside the role assignment API."""
     if values.get("is_super_admin") is True:
@@ -255,10 +276,17 @@ async def list_admin_users(current_user: UserResponse = Depends(get_current_user
 async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Add an admin user. Only the platform/root super admin can do this."""
     _require_super_admin(current_user)
-    if set(data.model_fields_set).intersection(ROLE_PERMISSION_FIELDS):
+    supplied_permission_fields = set(data.model_fields_set).intersection(ROLE_PERMISSION_FIELDS)
+    role_name = data.role.strip().lower()
+    if "is_super_admin" in supplied_permission_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Individual permission flags are managed by role. Set the role instead.",
+            detail="Super admin access is managed by the platform role.",
+        )
+    if supplied_permission_fields and role_name != "custom":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Individual permissions can only be assigned to a custom role.",
         )
     if not data.name or not data.name.strip():
         raise HTTPException(status_code=400, detail="Full name is required.")
@@ -276,12 +304,14 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         await _ensure_unique_usdt_wallet_address(db, normalized_address)
 
     platform_org_id, platform_org_name = _get_platform_organization()
-    role_name = data.role.strip().lower()
-    if role_name not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin"}:
+    if role_name not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin", "custom"}:
         raise HTTPException(status_code=400, detail="Invalid role.")
-    permission_values = get_role_permissions_by_name(role_name).model_dump()
-    if role_name == "owner":
-        permission_values["is_super_admin"] = False
+    if role_name == "custom":
+        permission_values = _custom_permission_values(data.model_dump())
+    else:
+        permission_values = get_role_permissions_by_name(role_name).model_dump()
+        if role_name == "owner":
+            permission_values["is_super_admin"] = False
     permission_values["role"] = role_name
     is_super_admin = permission_values["is_super_admin"]
     if is_super_admin:
@@ -353,15 +383,21 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
         raise HTTPException(status_code=404, detail="Admin user not found.")
     payload_data = data.model_dump(exclude_none=True)
     supplied_permission_fields = set(payload_data).intersection(ROLE_PERMISSION_FIELDS)
-    if supplied_permission_fields:
+    requested_role = payload_data.pop("role", None)
+    target_role = (requested_role or admin.role or "").strip().lower()
+    if "is_super_admin" in supplied_permission_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Individual permission flags are managed by role. Set the role instead.",
+            detail="Super admin access is managed by the platform role.",
         )
-    requested_role = payload_data.pop("role", None)
+    if supplied_permission_fields and target_role != "custom":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Individual permissions can only be assigned to a custom role.",
+        )
     if requested_role is not None:
         requested_role = requested_role.strip().lower()
-        if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin"}:
+        if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin", "custom"}:
             raise HTTPException(status_code=400, detail="Invalid role.")
         platform_org_id, _ = _get_platform_organization()
         if requested_role == "super_admin" and admin.organization_id != platform_org_id:
@@ -388,6 +424,13 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
     if payload_data.get("is_super_admin") is True:
         platform_org_id, platform_org_name = _get_platform_organization()
         payload_data["organization_id"], payload_data["organization_name"] = platform_org_id, platform_org_name
+    custom_permission_values = None
+    if target_role == "custom":
+        permission_input = {
+            field: payload_data.pop(field, getattr(admin, field, False))
+            for field in SUPER_ADMIN_PERMISSION_FIELDS
+        }
+        custom_permission_values = _custom_permission_values(permission_input)
     for field, value in payload_data.items():
         if field in {
             "service_fee_percent",
@@ -411,6 +454,10 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
                 value = round(value, 2)
         setattr(admin, field, value)
     if requested_role is not None:
+        admin.role = requested_role
+    if custom_permission_values is not None:
+        _apply_custom_permission_values(admin, custom_permission_values)
+    elif requested_role is not None:
         _apply_role_permissions(admin, requested_role)
     await log_action(db, current_user, "update_admin", target_type="admin_user", target_id=admin.telegram_id,
                      details=f"Updated permissions/status for {admin.name or admin.telegram_id}", payload=data.model_dump(exclude_none=True))

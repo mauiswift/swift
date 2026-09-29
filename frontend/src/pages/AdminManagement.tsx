@@ -1333,6 +1333,21 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
 
 const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] = PERMISSION_DEFINITIONS;
 
+const PLATFORM_ONLY_PERMISSION_KEYS = new Set([
+  'can_approve_topups',
+  'can_credit_wallet',
+  'can_debit_wallet',
+  'can_freeze_wallet',
+  'can_unfreeze_wallet',
+]);
+
+const permissionValuesForRole = (role: string) =>
+  Object.fromEntries(
+    PERMISSION_DEFINITIONS.map(({ key }) => [key, ROLE_PERMISSION_PRESETS[role]?.has(key) ?? false]),
+  );
+
+const PERMISSION_GROUPS = [...new Set(PERMISSION_DEFINITIONS.map(({ group }) => group))];
+
 const defaultForm = {
   telegram_id: '',
   telegram_username: '',
@@ -1340,6 +1355,7 @@ const defaultForm = {
   password: '',
   name: '',
   role: 'admin',
+  permissions: permissionValuesForRole('admin'),
 };
 
 const ADMIN_ROLE_OPTIONS = [
@@ -1349,6 +1365,7 @@ const ADMIN_ROLE_OPTIONS = [
   { value: 'operator', label: 'Operator' },
   { value: 'viewer', label: 'Viewer' },
   { value: 'developer', label: 'Developer' },
+  { value: 'custom', label: 'Custom permissions' },
 ] as const;
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
@@ -3480,6 +3497,7 @@ export default function AdminManagement() {
           password: form.password,
           name: form.name.trim(),
           role: form.role,
+          ...(form.role === 'custom' ? form.permissions : {}),
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -3810,23 +3828,74 @@ export default function AdminManagement() {
                         <select
                           id="admin-role"
                           value={form.role}
-                          onChange={event => setForm(current => ({ ...current, role: event.target.value }))}
+                          onChange={event => {
+                            const role = event.target.value;
+                            setForm(current => ({
+                              ...current,
+                              role,
+                              permissions: role === 'custom' ? current.permissions : permissionValuesForRole(role),
+                            }));
+                          }}
                           className="h-11 w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
                         >
                           {ADMIN_ROLE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
-                        <p className="text-xs text-slate-500">Permissions are assigned by role and cannot be edited individually.</p>
-                        <div className="flex flex-wrap gap-2">
-                          {PERMISSION_DEFINITIONS.map(({ key, label, color }) => (
-                            <PermissionBadge
-                              key={key}
-                              active={ROLE_PERMISSION_PRESETS[form.role]?.has(key) ?? false}
-                              label={label}
-                              color={color}
-                              interactive={false}
-                            />
-                          ))}
+                        <p className="text-xs text-slate-500">
+                          {form.role === 'custom'
+                            ? 'Select exactly which organization permissions this administrator receives.'
+                            : 'Choose a role preset, or change any checkbox to create a custom permission set.'}
+                        </p>
+                        <div className="space-y-4">
+                          {PERMISSION_GROUPS.map(group => {
+                            const permissions = PERMISSION_DEFINITIONS.filter(permission => permission.group === group);
+                            return (
+                              <fieldset key={group} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                                <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-600">{group}</legend>
+                                <div className="grid gap-3 pt-2 sm:grid-cols-2">
+                                  {permissions.map(permission => {
+                                    const platformOnly = PLATFORM_ONLY_PERMISSION_KEYS.has(permission.key);
+                                    return (
+                                      <label
+                                        key={permission.key}
+                                        className={`flex items-start gap-3 rounded-lg border p-3 ${
+                                          platformOnly
+                                            ? 'cursor-not-allowed border-slate-200 bg-slate-100 opacity-70'
+                                            : 'cursor-pointer border-slate-200 bg-white hover:border-orange-200'
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={Boolean(form.permissions[permission.key])}
+                                          disabled={platformOnly}
+                                          onChange={event => {
+                                            const checked = event.target.checked;
+                                            setForm(current => ({
+                                              ...current,
+                                              role: 'custom',
+                                              permissions: { ...current.permissions, [permission.key]: checked },
+                                            }));
+                                          }}
+                                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#FF6B00] focus:ring-[#FF6B00]"
+                                        />
+                                        <span className="min-w-0">
+                                          <span className="block text-sm font-semibold text-slate-800">{permission.label}</span>
+                                          <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                            {platformOnly
+                                              ? `${permission.description} Reserved for the platform organization.`
+                                              : permission.description}
+                                          </span>
+                                        </span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </fieldset>
+                            );
+                          })}
                         </div>
+                        <p className="text-xs font-medium text-slate-500">
+                          {Object.values(form.permissions).filter(Boolean).length} permissions selected. Super-admin access is assigned separately.
+                        </p>
                       </div>
                   <div className="flex items-center gap-3 pt-4">
                     <Button

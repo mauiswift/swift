@@ -7,6 +7,7 @@ from models.admin_users import AdminUser
 from models.custom_roles import CustomRole
 from routers import auth as auth_router
 from routers import roles as roles_router
+from routers import admin_users as admin_users_router
 from routers.admin_users import SUPER_ADMIN_PERMISSION_FIELDS, _apply_super_admin_permissions
 from routers.team_invitations import _can_manage_team
 from schemas.auth import UserPermissions, UserResponse
@@ -112,6 +113,36 @@ def test_custom_super_admin_role_cannot_grant_platform_access_to_merchant(monkey
     assert admin.team_permissions["is_super_admin"] is False
     assert admin.can_manage_team is True
     assert auth_router._admin_permissions(admin).is_super_admin is False
+
+
+def test_custom_admin_permissions_are_persisted_and_scoped_to_organization(monkeypatch):
+    monkeypatch.setattr(admin_users_router, "_get_platform_organization", lambda: ("platform", "Platform"))
+    monkeypatch.setattr(auth_service, "_get_platform_organization", lambda: ("platform", "Platform"))
+    admin = AdminUser(
+        telegram_id="merchant-staff",
+        role="custom",
+        organization_id="merchant",
+    )
+
+    admin_users_router._apply_custom_permission_values(
+        admin,
+        {
+            "can_manage_payments": True,
+            "can_manage_team": True,
+            "can_credit_wallet": True,
+            "can_approve_topups": True,
+        },
+    )
+
+    permissions = auth_router._admin_permissions(admin)
+    assert admin.team_permissions["can_manage_payments"] is True
+    assert admin.can_manage_team is True
+    assert admin.can_credit_wallet is False
+    assert admin.team_permissions["can_approve_topups"] is False
+    assert permissions.can_manage_payments is True
+    assert permissions.can_manage_team is True
+    assert permissions.can_credit_wallet is False
+    assert permissions.is_super_admin is False
 
 
 def test_role_management_requires_super_admin_team_permission():

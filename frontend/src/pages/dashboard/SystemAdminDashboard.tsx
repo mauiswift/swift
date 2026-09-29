@@ -97,33 +97,37 @@ export default function SystemAdminDashboard() {
   return (
     <Layout>
       <main className="mx-auto max-w-[1200px] space-y-10">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-6">
-          <div>
+        <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="min-w-0">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">{tx('System administrator', '시스템 관리자', '系统管理员')}</p>
+            <h1 className="text-2xl font-semibold text-slate-950">{tx('Platform operations', '플랫폼 운영', '平台运营')}</h1>
+            <p className="mt-2 text-sm text-slate-600">{tx('Review queues, financial activity, and platform access.', '검토 대기열, 금융 활동 및 플랫폼 접근 권한을 관리하세요.', '管理审核队列、资金活动和平台访问权限。')}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />{tx('Privileged workspace', '관리자 전용 공간', '管理员工作区')}
+            </span>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => void queueQuery.refetch()}
               disabled={queueQuery.isFetching}
+              className="h-10"
             >
               {tx('Refresh queues', '대기열 새로고침', '刷新队列')}
             </Button>
-            <p className="mb-2 text-xs font-semibold uppercase text-blue-700">{tx('System administrator', '시스템 관리자', '系统管理员')}</p>
-          {queueQuery.isError && (
-            <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <span>{tx('Pending queue counts are unavailable.', '대기열 건수를 불러올 수 없습니다.', '暂时无法获取待处理队列数量。')}</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => void queueQuery.refetch()} disabled={queueQuery.isFetching}>
-                {tx('Retry', '다시 시도', '重试')}
-              </Button>
-            </div>
-          )}
-            <h1 className="text-2xl font-semibold text-slate-950">{tx('Platform operations', '플랫폼 운영', '平台运营')}</h1>
-            <p className="mt-2 text-sm text-slate-600">{tx('Review queues, financial activity, and platform access.', '검토 대기열, 금융 활동 및 플랫폼 접근 권한을 관리하세요.', '管理审核队列、资金活动和平台访问权限。')}</p>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-            <span className="h-2 w-2 rounded-full bg-emerald-600" />{tx('Privileged workspace', '관리자 전용 공간', '管理员工作区')}
-          </span>
         </header>
+
+        {queueQuery.isError && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span>{tx('Pending queue counts are unavailable.', '대기열 건수를 불러올 수 없습니다.', '暂时无法获取待处理队列数量。')}</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => void queueQuery.refetch()} disabled={queueQuery.isFetching}>
+              {tx('Retry', '다시 시도', '重试')}
+            </Button>
+          </div>
+        )}
 
         {sections.map(section => (
           <section key={section.id} aria-labelledby={`admin-section-${section.id}`}>
@@ -138,9 +142,9 @@ export default function SystemAdminDashboard() {
                   <Link
                     key={item.href}
                     to={item.href}
-                    className="group flex min-h-[96px] items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                    className="group flex min-h-[112px] items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                   >
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${item.tone}`}>
+                    <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${item.tone}`}>
                       <Icon className="h-5 w-5" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1">
