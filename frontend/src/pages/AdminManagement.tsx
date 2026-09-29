@@ -1414,6 +1414,59 @@ function PermissionBadge({
   );
 }
 
+function PermissionCheckboxGroups({
+  permissions,
+  onChange,
+  disabled = false,
+}: {
+  permissions: Record<string, boolean>;
+  onChange: (key: string, checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      {PERMISSION_GROUPS.map(group => (
+        <fieldset key={group} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-600">{group}</legend>
+          <div className="grid gap-3 pt-2 sm:grid-cols-2">
+            {PERMISSION_DEFINITIONS
+              .filter(permission => permission.group === group)
+              .map(permission => {
+                const platformOnly = PLATFORM_ONLY_PERMISSION_KEYS.has(permission.key);
+                return (
+                  <label
+                    key={permission.key}
+                    className={`flex items-start gap-3 rounded-lg border p-3 ${
+                      platformOnly
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 opacity-70'
+                        : 'cursor-pointer border-slate-200 bg-white hover:border-orange-200'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(permissions[permission.key])}
+                      disabled={disabled || platformOnly}
+                      onChange={event => onChange(permission.key, event.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#FF6B00] focus:ring-[#FF6B00]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-slate-800">{permission.label}</span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-500">
+                        {platformOnly
+                          ? `${permission.description} Reserved for the platform organization.`
+                          : permission.description}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+          </div>
+        </fieldset>
+      ))}
+    </div>
+  );
+}
+
 function AdminSummaryCard({
   label,
   value,
@@ -1463,6 +1516,7 @@ function AdminCard({
   currentUserId,
   onToggleActive,
   onChangeRole,
+  onSavePermissions,
   onDelete,
   onEditBank,
   onEditApiKeys,
@@ -1474,15 +1528,37 @@ function AdminCard({
   currentUserId?: string | number;
   onToggleActive: (a: AdminUser) => void;
   onChangeRole: (a: AdminUser, role: string) => void;
+  onSavePermissions: (a: AdminUser, permissions: Record<string, boolean>) => Promise<boolean>;
   onDelete: (a: AdminUser) => void;
   onEditBank: (a: AdminUser) => void;
   onEditApiKeys: (a: AdminUser) => void;
   onEditPassword: (a: AdminUser) => void;
   onEditFees: (a: AdminUser) => void;
 }) {
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [permissionDraft, setPermissionDraft] = useState<Record<string, boolean>>({});
+  const [permissionsSaving, setPermissionsSaving] = useState(false);
   const permissionCount = PERMISSION_KEYS.filter(({ key }) => Boolean(admin[key])).length;
   const displayName = admin.name || admin.telegram_username || `Merchant ID: ${admin.telegram_id}`;
   const roleLabel = ADMIN_ROLE_OPTIONS.find(option => option.value === admin.role)?.label || admin.role || 'Admin';
+  const canEditPermissions = isSuperAdmin && !admin.is_super_admin
+    && String(admin.telegram_id) !== String(currentUserId);
+
+  const openPermissions = () => {
+    setPermissionDraft(Object.fromEntries(
+      PERMISSION_DEFINITIONS.map(({ key }) => [key, Boolean(admin[key])]),
+    ));
+    setPermissionsOpen(true);
+  };
+
+  const savePermissions = async () => {
+    setPermissionsSaving(true);
+    try {
+      if (await onSavePermissions(admin, permissionDraft)) setPermissionsOpen(false);
+    } finally {
+      setPermissionsSaving(false);
+    }
+  };
 
   return (
     <Card className={`border-slate-200 transition-all duration-300 hover:shadow-sm ${
@@ -1528,6 +1604,18 @@ function AdminCard({
 
           {isSuperAdmin && (
             <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+              {canEditPermissions && (
+                <button
+                  type="button"
+                  onClick={openPermissions}
+                  aria-label={`Edit permissions for ${displayName}`}
+                  title="Edit permissions"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                >
+                  <Settings2 aria-hidden="true" className="h-3.5 w-3.5" />
+                  <span>Permissions</span>
+                </button>
+              )}
               <label className="sr-only" htmlFor={`admin-role-${admin.id}`}>Role for {displayName}</label>
               <select
                 id={`admin-role-${admin.id}`}
@@ -1631,6 +1719,37 @@ function AdminCard({
           )}
         </div>
       </CardContent>
+      <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-slate-200 bg-white p-5 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Edit permissions</DialogTitle>
+            <DialogDescription>
+              Select the organization-level access for {displayName}. Platform administrator access is controlled by the role.
+            </DialogDescription>
+          </DialogHeader>
+          <PermissionCheckboxGroups
+            permissions={permissionDraft}
+            disabled={permissionsSaving}
+            onChange={(key, checked) => setPermissionDraft(current => ({ ...current, [key]: checked }))}
+          />
+          <p className="text-xs font-medium text-slate-500">
+            {Object.values(permissionDraft).filter(Boolean).length} permissions selected.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={permissionsSaving} onClick={() => setPermissionsOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={permissionsSaving}
+              onClick={() => void savePermissions()}
+              className="bg-[#FF6B00] text-white hover:bg-[#E66000]"
+            >
+              {permissionsSaving ? 'Saving...' : 'Save permissions'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -3541,6 +3660,26 @@ export default function AdminManagement() {
     }
   };
 
+  const handleSavePermissions = async (
+    admin: AdminUser,
+    permissions: Record<string, boolean>,
+  ): Promise<boolean> => {
+    if (!isSuperAdmin || admin.is_super_admin || String(admin.telegram_id) === String(user?.id)) return false;
+    try {
+      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'custom', ...permissions }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchAdmins();
+      return true;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save admin permissions');
+      return false;
+    }
+  };
+
   const handleSavedFees = (updated: AdminUser) => {
     setAdmins(current => current.map(admin => admin.id === updated.id ? updated : admin));
   };
@@ -3845,54 +3984,14 @@ export default function AdminManagement() {
                             ? 'Select exactly which organization permissions this administrator receives.'
                             : 'Choose a role preset, or change any checkbox to create a custom permission set.'}
                         </p>
-                        <div className="space-y-4">
-                          {PERMISSION_GROUPS.map(group => {
-                            const permissions = PERMISSION_DEFINITIONS.filter(permission => permission.group === group);
-                            return (
-                              <fieldset key={group} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                                <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-600">{group}</legend>
-                                <div className="grid gap-3 pt-2 sm:grid-cols-2">
-                                  {permissions.map(permission => {
-                                    const platformOnly = PLATFORM_ONLY_PERMISSION_KEYS.has(permission.key);
-                                    return (
-                                      <label
-                                        key={permission.key}
-                                        className={`flex items-start gap-3 rounded-lg border p-3 ${
-                                          platformOnly
-                                            ? 'cursor-not-allowed border-slate-200 bg-slate-100 opacity-70'
-                                            : 'cursor-pointer border-slate-200 bg-white hover:border-orange-200'
-                                        }`}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={Boolean(form.permissions[permission.key])}
-                                          disabled={platformOnly}
-                                          onChange={event => {
-                                            const checked = event.target.checked;
-                                            setForm(current => ({
-                                              ...current,
-                                              role: 'custom',
-                                              permissions: { ...current.permissions, [permission.key]: checked },
-                                            }));
-                                          }}
-                                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#FF6B00] focus:ring-[#FF6B00]"
-                                        />
-                                        <span className="min-w-0">
-                                          <span className="block text-sm font-semibold text-slate-800">{permission.label}</span>
-                                          <span className="mt-1 block text-xs leading-5 text-slate-500">
-                                            {platformOnly
-                                              ? `${permission.description} Reserved for the platform organization.`
-                                              : permission.description}
-                                          </span>
-                                        </span>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              </fieldset>
-                            );
-                          })}
-                        </div>
+                        <PermissionCheckboxGroups
+                          permissions={form.permissions}
+                          onChange={(key, checked) => setForm(current => ({
+                            ...current,
+                            role: 'custom',
+                            permissions: { ...current.permissions, [key]: checked },
+                          }))}
+                        />
                         <p className="text-xs font-medium text-slate-500">
                           {Object.values(form.permissions).filter(Boolean).length} permissions selected. Super-admin access is assigned separately.
                         </p>
@@ -3987,6 +4086,7 @@ export default function AdminManagement() {
                         currentUserId={user?.id}
                         onToggleActive={handleToggleActive}
                         onChangeRole={handleChangeRole}
+                        onSavePermissions={handleSavePermissions}
                         onDelete={handleDelete}
                         onEditBank={setEditingBankAdmin}
                         onEditApiKeys={setEditingApiKeysAdmin}
@@ -4010,6 +4110,7 @@ export default function AdminManagement() {
                               currentUserId={user?.id}
                               onToggleActive={handleToggleActive}
                               onChangeRole={handleChangeRole}
+                              onSavePermissions={handleSavePermissions}
                               onDelete={handleDelete}
                               onEditBank={setEditingBankAdmin}
                               onEditApiKeys={setEditingApiKeysAdmin}
