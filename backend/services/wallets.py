@@ -142,7 +142,7 @@ class WalletsService(BaseService[Wallets]):
         )
         admin_user = admin_res.scalar_one_or_none()
 
-        if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False):
+        if admin_user and admin_user.organization_id:
             org_id = admin_user.organization_id
             return f"org:{org_id}", org_id
 

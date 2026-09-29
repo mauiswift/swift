@@ -673,7 +673,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     try {
       const selectedCurrency = selectedCollectionCurrency;
       const institutionCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
-      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes, organizationWalletRes] = await Promise.allSettled([
+      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes, organizationWalletRes, organizationUsdtWalletRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
@@ -696,6 +696,13 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         user.organization_id && !cryptoOnly
           ? client.apiCall.invoke({
             url: `/api/v1/wallet/organization-balance?currency=${encodeURIComponent(selectedCurrency)}`,
+            method: 'GET',
+            data: {},
+          })
+          : Promise.resolve(null),
+        user.organization_id
+          ? client.apiCall.invoke({
+            url: '/api/v1/wallet/organization-balance?currency=USDT',
             method: 'GET',
             data: {},
           })
@@ -733,6 +740,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       }
 
       const failedBalances: string[] = [];
+      const organizationUsdtData = organizationUsdtWalletRes.status === 'fulfilled'
+        ? organizationUsdtWalletRes.value?.data
+        : null;
+      const usdtData = user.organization_id
+        ? organizationUsdtData?.organization_id === user.organization_id
+          ? organizationUsdtData
+          : null
+        : usdtRes.status === 'fulfilled'
+          ? usdtRes.value?.data
+          : null;
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
         setPhpBalance({
           balance: normalizeNumericValue(phpRes.value.data.balance),
@@ -746,14 +763,14 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         setPhpBalance(null);
         failedBalances.push('php');
       }
-      if (usdtRes.status === 'fulfilled' && usdtRes.value?.data?.balance != null) {
+      if (usdtData?.balance != null) {
         setUsdtBalance({
-          balance: normalizeNumericValue(usdtRes.value.data.balance),
-          available_balance: normalizeNumericValue(usdtRes.value.data.available_balance ?? usdtRes.value.data.balance),
-          pending_balance: normalizeNumericValue(usdtRes.value.data.pending_balance ?? 0),
+          balance: normalizeNumericValue(usdtData.balance),
+          available_balance: normalizeNumericValue(usdtData.available_balance ?? usdtData.balance),
+          pending_balance: normalizeNumericValue(usdtData.pending_balance ?? 0),
           currency: 'USDT',
-          is_frozen: Boolean(usdtRes.value.data.is_frozen),
-          freeze_reason: usdtRes.value.data.freeze_reason ?? null,
+          is_frozen: Boolean(usdtData.is_frozen),
+          freeze_reason: usdtData.freeze_reason ?? null,
         });
       } else {
         setUsdtBalance(null);
@@ -1479,12 +1496,21 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">USDT Wallet</span>
-                <div className="h-10 w-10 rounded-xl bg-[#0f2a5f]/10 flex items-center justify-center p-2">
-                  <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" />
-                </div>
+              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                {sharedWalletIsPrimary
+                  ? isKoreanWallet ? '공유 조직 USDT 지갑' : 'Shared organization USDT wallet'
+                  : 'USDT Wallet'}
+              </span>
+              <div className="h-10 w-10 rounded-xl bg-[#0f2a5f]/10 flex items-center justify-center p-2">
+                <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" />
               </div>
-              <p className="text-3xl font-semibold text-foreground">
+            </div>
+            {sharedWalletIsPrimary && (
+              <p className="mb-2 truncate text-xs text-slate-500">
+                {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+              </p>
+            )}
+            <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : balanceLoadErrors.includes('usdt') || !usdtBalance

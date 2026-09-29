@@ -408,12 +408,12 @@ async def get_organization_balance(
 		raise HTTPException(status_code=404, detail="Organization wallet not found")
 
 	service = WalletsService(db)
-	wallet = await service.get_or_create_wallet(current_user.id, currency)
+	wallet = await service.get_or_create_organization_wallet(organization_id, currency)
 	return {
 		"organization_id": organization_id,
 		"organization_name": current_user.organization_name,
 		"wallet_id": wallet.id,
-		"currency": wallet.currency,
+		"currency": public_currency(wallet.currency),
 		"balance": float(wallet.balance or 0.0),
 		"available_balance": float(wallet.available_balance or 0.0),
 		"pending_balance": float(wallet.pending_balance or 0.0),

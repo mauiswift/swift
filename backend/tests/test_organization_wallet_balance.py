@@ -33,7 +33,7 @@ async def wallet_db():
     ("user_id", "role", "is_super_admin", "expected_wallet_user_id"),
     [
         ("merchant-owner", "owner", False, "merchant-owner"),
-        ("platform-admin", "admin", True, "platform-admin"),
+        ("platform-admin", "admin", True, "org:swiftpay-ph"),
         ("invite-member", "manager", False, "merchant-owner"),
     ],
 )
@@ -100,6 +100,104 @@ async def test_organization_balance_uses_effective_wallet(
     assert result["balance"] == 1250.50
     assert result["available_balance"] == 1100.25
     assert result["pending_balance"] == 150.25
+
+
+@pytest.mark.asyncio
+async def test_organization_usdt_balance_uses_shared_wallet_for_super_admin(wallet_db):
+    wallet_db.add(
+        AdminUser(
+            telegram_id="platform-admin",
+            role="admin",
+            is_super_admin=True,
+            organization_id="swiftpay-ph",
+            organization_name="SwiftPay Philippines",
+        )
+    )
+    wallet_db.add(
+        Wallets(
+            user_id="org:swiftpay-ph",
+            organization_id="swiftpay-ph",
+            currency="USD",
+            balance=300.0,
+            available_balance=275.0,
+            pending_balance=25.0,
+        )
+    )
+    await wallet_db.flush()
+    seeded_wallet = await wallet_db.scalar(
+        select(Wallets).where(
+            Wallets.organization_id == "swiftpay-ph",
+            Wallets.currency == "USD",
+        )
+    )
+    assert seeded_wallet is not None
+
+    result = await get_organization_balance(
+        currency="USDT",
+        current_user=UserResponse(
+            id="platform-admin",
+            email="platform-admin@example.com",
+            organization_id="swiftpay-ph",
+            organization_name="SwiftPay Philippines",
+        ),
+        db=wallet_db,
+    )
+
+    assert result["organization_id"] == "swiftpay-ph"
+    assert result["wallet_id"] == seeded_wallet.id
+    assert result["currency"] == "USDT"
+    assert result["balance"] == 300.0
+    assert result["available_balance"] == 275.0
+    assert result["pending_balance"] == 25.0
+
+    wallet_for_admin = await WalletsService(wallet_db).get_or_create_wallet(
+        "platform-admin",
+        "USDT",
+    )
+    assert wallet_for_admin.id == seeded_wallet.id
+
+
+@pytest.mark.asyncio
+async def test_usdt_wallets_are_isolated_by_organization(wallet_db):
+    wallet_db.add_all(
+        [
+            AdminUser(
+                telegram_id="admin-a",
+                role="admin",
+                is_super_admin=True,
+                organization_id="business-a",
+            ),
+            AdminUser(
+                telegram_id="admin-b",
+                role="admin",
+                is_super_admin=True,
+                organization_id="business-b",
+            ),
+            Wallets(
+                user_id="org:business-a",
+                organization_id="business-a",
+                currency="USD",
+                balance=100,
+            ),
+            Wallets(
+                user_id="org:business-b",
+                organization_id="business-b",
+                currency="USD",
+                balance=250,
+            ),
+        ]
+    )
+    await wallet_db.flush()
+
+    service = WalletsService(wallet_db)
+    wallet_a = await service.get_or_create_wallet("admin-a", "USDT")
+    wallet_b = await service.get_or_create_wallet("admin-b", "USDT")
+
+    assert wallet_a.organization_id == "business-a"
+    assert wallet_a.balance == 100
+    assert wallet_b.organization_id == "business-b"
+    assert wallet_b.balance == 250
+    assert wallet_a.id != wallet_b.id
 
 
 @pytest.mark.asyncio
