@@ -10,9 +10,12 @@ from models.team_invitations import TeamInvitation
 from models.organizations import Organization, OrganizationMembership
 from routers.team_invitations import (
     CompleteInvitationRequest,
+    SendInvitationRequest,
     accept_invitation,
     list_team_members,
     _application_permissions,
+    _resolve_super_admin_org_scope,
+    _get_platform_organization,
 )
 from schemas.auth import UserPermissions, UserResponse
 
@@ -153,3 +156,38 @@ async def test_invited_organization_owner_accepts_as_scoped_owner(team_db):
     )
     assert membership is not None
     assert membership.role == "owner"
+
+
+@pytest.mark.asyncio
+async def test_super_admin_invitation_reuses_existing_organization(team_db):
+    team_db.add_all([
+        Organization(id="business-a", name="Business A"),
+        AdminUser(
+            telegram_id="existing-member",
+            role="owner",
+            organization_id="business-a",
+            organization_name="Business A",
+            is_active=True,
+        ),
+    ])
+    await team_db.flush()
+
+    organization_id, organization_name = await _resolve_super_admin_org_scope(
+        team_db,
+        SendInvitationRequest(email="new-member@example.com", role="admin", organization_name="Business A"),
+        "admin",
+    )
+
+    assert organization_id == "business-a"
+    assert organization_name == "Business A"
+
+
+@pytest.mark.asyncio
+async def test_super_admin_invitation_without_target_defaults_to_platform_org(team_db):
+    organization_id, organization_name = await _resolve_super_admin_org_scope(
+        team_db,
+        SendInvitationRequest(email="platform-member@example.com", role="admin"),
+        "admin",
+    )
+
+    assert (organization_id, organization_name) == _get_platform_organization()

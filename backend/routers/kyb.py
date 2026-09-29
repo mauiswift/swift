@@ -24,6 +24,7 @@ from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
+from models.organizations import Organization, OrganizationMembership
 from models.api_configs import Api_configs
 from models.kyb_registrations import KybRegistration
 from models.team_invitations import TeamInvitation
@@ -489,18 +490,6 @@ async def approve_kyb_registration(
     # Direct registrants own their organization; referral registrations inherit the
     # account tier of the user who created the referral link.
     role_value = referral_role
-    if is_invited_user and referrer and referrer.is_super_admin:
-        role_value = "admin"
-    elif is_invited_user and referrer and not referrer.is_super_admin:
-        role_value = "user"
-        can_manage_team = False
-        can_manage_payments = True
-        can_manage_disbursements = False
-        can_view_reports = True
-        can_manage_wallet = True
-        can_manage_transactions = True
-        can_manage_bot = False
-        can_approve_topups = False
 
     if admin_user:
         admin_user.google_id = kyb.google_id
@@ -557,6 +546,35 @@ async def approve_kyb_registration(
             settlement_currency=settlement_values["settlement_currency"],
         )
         db.add(admin_user)
+
+    if is_invited_user and org_id:
+        organization = await db.scalar(
+            select(Organization).where(Organization.id == org_id)
+        )
+        if organization is None:
+            db.add(Organization(id=org_id, name=org_name or org_id))
+            await db.flush()
+
+        membership = await db.scalar(
+            select(OrganizationMembership).where(
+                OrganizationMembership.organization_id == org_id,
+                OrganizationMembership.user_id == str(admin_user.telegram_id),
+            )
+        )
+        if membership is None:
+            db.add(
+                OrganizationMembership(
+                    organization_id=org_id,
+                    user_id=str(admin_user.telegram_id),
+                    role=role_value,
+                    status="active",
+                    is_primary=True,
+                )
+            )
+        else:
+            membership.role = role_value
+            membership.status = "active"
+            membership.is_primary = True
 
     # Issue dashboard login credentials + SwiftPay Access Keys (TEST/LIVE) so the
     # merchant can log in and start integrating immediately. Shown once, here only.

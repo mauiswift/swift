@@ -2784,12 +2784,14 @@ class TestKybAccessControl:
         from models.kyb_registrations import KybRegistration
         from models.team_invitations import TeamInvitation
         from models.admin_users import AdminUser
+        from models.organizations import Organization, OrganizationMembership
 
         suffix = int(time.time() * 1000)
         invite_email = f"invitee_{suffix}@example.com"
         target_chat_id = f"web-invite-{suffix}"
         org_id = f"org-invite-{suffix}"
         org_name = "Inviter Org Regression"
+        inviter_id = f"org-admin-{suffix}"
 
         async def seed_records():
             async with db_manager.async_session_maker() as db:
@@ -2799,12 +2801,22 @@ class TestKybAccessControl:
                         checkfirst=True,
                     )
                 )
+                db.add(Organization(id=org_id, name=org_name))
+                db.add(AdminUser(
+                    telegram_id=inviter_id,
+                    email=f"inviter_{suffix}@example.com",
+                    role="manager",
+                    organization_id=org_id,
+                    organization_name=org_name,
+                    can_manage_team=True,
+                    is_active=True,
+                ))
                 invitation = TeamInvitation(
                     email=invite_email,
                     invitation_token=f"token-{suffix}",
                     role="editor",
                     status="pending",
-                    invited_by="123456789",
+                    invited_by=inviter_id,
                     organization_id=org_id,
                     organization_name=org_name,
                     permissions={
@@ -2872,16 +2884,27 @@ class TestKybAccessControl:
                 admin = admin_res.scalar_one_or_none()
                 inv_res = await db.execute(select(TeamInvitation).where(TeamInvitation.email == invite_email))
                 invitation = inv_res.scalar_one_or_none()
-                return admin, invitation
+                membership = await db.scalar(
+                    select(OrganizationMembership).where(
+                        OrganizationMembership.organization_id == org_id,
+                        OrganizationMembership.user_id == target_chat_id,
+                    )
+                )
+                return admin, invitation, membership
 
-        admin, invitation = asyncio.run(verify_assignment())
+        admin, invitation, membership = asyncio.run(verify_assignment())
 
         assert admin is not None
         assert admin.organization_id == org_id
         assert admin.organization_name == org_name
+        assert admin.role == "editor"
         assert invitation is not None
         assert invitation.status == "accepted"
         assert invitation.accepted_at is not None
+        assert membership is not None
+        assert membership.role == "editor"
+        assert membership.status == "active"
+        assert membership.is_primary is True
 
     def test_super_admin_can_invite_owner_with_new_organization(self, client, auth_headers):
         """Super admin can set org info and invite an owner in one API call."""

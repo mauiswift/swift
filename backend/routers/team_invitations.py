@@ -573,7 +573,22 @@ async def _resolve_super_admin_org_scope(
         raise HTTPException(status_code=400, detail="organization_name or organization_id is required when inviting owner")
 
     if not (raw_org_name or raw_org_id):
-        return None, None
+        return _get_platform_organization()
+
+    existing_org = None
+    if raw_org_id:
+        existing_org = await db.scalar(
+            select(Organization).where(Organization.id == raw_org_id)
+        )
+    if existing_org is None and raw_org_name:
+        existing_org = await db.scalar(
+            select(Organization)
+            .where(func.lower(Organization.name) == raw_org_name.lower())
+            .order_by(Organization.id.asc())
+            .limit(1)
+        )
+    if existing_org is not None:
+        return existing_org.id, existing_org.name
 
     org_name = raw_org_name or raw_org_id
     org_id_base = _to_org_slug(raw_org_id or raw_org_name)
@@ -825,15 +840,22 @@ async def send_team_invitation(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to invite team members")
 
     role_name = _validate_role_name(request.role)
+    is_super_admin = bool(
+        (admin and admin.is_super_admin)
+        or (current_user.permissions and current_user.permissions.is_super_admin)
+    )
+    org_id = admin.organization_id if admin and admin.organization_id else current_user.organization_id
+    org_name = admin.organization_name if admin and admin.organization_id else current_user.organization_name
+    is_org_admin = not is_super_admin and bool(org_id)
 
     # Organization admins cannot invite super admins
-    if admin and _is_org_admin(admin) and role_name == "super_admin":
+    if is_org_admin and role_name == "super_admin":
         raise HTTPException(status_code=400, detail="Organization admin cannot assign super_admin role")
-    if admin and _is_org_admin(admin) and role_name == "owner":
+    if is_org_admin and role_name == "owner":
         raise HTTPException(status_code=400, detail="Organization admin cannot assign owner role")
 
     # Organization admins must use predefined role templates only (no custom permissions overrides).
-    if admin and _is_org_admin(admin) and request.permissions:
+    if is_org_admin and request.permissions:
         raise HTTPException(status_code=400, detail="Organization admin cannot set custom permissions")
 
     invitation_email = _normalize_invitation_email(request.email)
@@ -860,13 +882,14 @@ async def send_team_invitation(
     # Generate invitation token
     token = secrets.token_urlsafe(32)
 
-    org_id = admin.organization_id if admin and _is_org_admin(admin) else None
-    org_name = admin.organization_name if admin and _is_org_admin(admin) else None
-
     # Super admins can invite to existing org or create a new one (Step 1.1)
-    is_super = bool(admin and admin.is_super_admin)
-    if is_super:
+    if is_super_admin:
         org_id, org_name = await _resolve_super_admin_org_scope(db, request, role_name)
+    elif not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An organization is required to invite team members",
+        )
 
     permissions = _application_permissions(
         role_name,
