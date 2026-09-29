@@ -4,6 +4,7 @@ import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSystemWalletAdmin } from '@/lib/permissions';
 import { toast } from 'sonner';
 import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound, Shield, RefreshCw } from 'lucide-react';
 
@@ -38,6 +39,7 @@ interface DownlineActivity {
 export default function DownlineManagement() {
   const { collectionCurrency } = useCollectionCurrency();
   const { user, isSuperAdmin } = useAuth();
+  const canControlWallets = isSuperAdmin && isSystemWalletAdmin(user?.id);
   const canManageTeam = Boolean(user?.permissions?.can_manage_team);
   const isKrw = collectionCurrency === 'KRW' && !isSuperAdmin;
   const [members, setMembers] = useState<DownlineMember[]>([]);
@@ -89,14 +91,14 @@ export default function DownlineManagement() {
   }, [selectedMember, busyMemberId, activityLoading]);
 
   useEffect(() => {
-    if (!isSuperAdmin || !user?.id) return;
+    if (!canControlWallets || !user?.id) return;
     client.get(`/api/v1/admin/wallets/user/${encodeURIComponent(user.id)}/analytics`)
       .then(response => {
         const wallets = response.data?.wallets || [];
         setOwnWalletFrozen(wallets.some((wallet: { is_frozen?: boolean }) => wallet.is_frozen));
       })
       .catch(() => setOwnWalletFrozen(false));
-  }, [isSuperAdmin, user?.id]);
+  }, [canControlWallets, user?.id]);
 
   const filteredMembers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -171,7 +173,7 @@ export default function DownlineManagement() {
   };
 
   const updateWalletFreeze = async (userId: string, freeze: boolean, member?: DownlineMember) => {
-    if (!isSuperAdmin) return;
+    if (!canControlWallets) return;
     const promptedReason = freeze
       ? window.prompt('Reason for freezing this wallet (optional):')
       : '';
@@ -284,7 +286,7 @@ export default function DownlineManagement() {
             )}
           </div>
         </div>
-        {isSuperAdmin && (
+        {canControlWallets && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -479,7 +481,7 @@ export default function DownlineManagement() {
               </div>
               <p className="mt-2 text-xs text-slate-500">{isKrw ? '이 초대 회원의 결제에만 적용됩니다.' : 'Applied only to payments from this invited member.'}</p>
             </div>
-            {isSuperAdmin && (
+            {canControlWallets && (
               <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>

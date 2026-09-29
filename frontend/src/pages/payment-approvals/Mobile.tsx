@@ -318,8 +318,8 @@ export default function SuperAdminPaymentApprovalMobile() {
         </div>
 
         {reviewPayment && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="mobile-approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-950/50 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="mobile-approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
+            <div className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-white p-5 shadow-2xl">
               <div className="flex items-start justify-between">
                 <div className="flex gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><ShieldCheck size={18} /></div><div><p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t('approval_review_heading')}</p><h2 id="mobile-approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">{t('approval_review_before')}</h2></div></div>
                 <button type="button" aria-label={t('approval_close_review')} onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"><X size={18} /></button>

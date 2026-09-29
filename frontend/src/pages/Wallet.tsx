@@ -345,6 +345,7 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, feeRate =
 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   const type = getTransactionType(txn);
+  if (type === 'wallet_migration') return isKorean ? '조직 지갑 잔액 통합' : 'Organization wallet consolidation';
   if (type === 'admin_credit') return isKorean ? 'USDT 충전' : 'Automated wallet funding';
   if (type === 'admin_debit') return isKorean ? '보안 지갑 조정' : 'Secure wallet adjustment';
   if (type === 'admin_adjustment') return isKorean ? '시스템 지갑 조정' : 'System balance adjustment';
@@ -582,10 +583,10 @@ export default function WalletPage({
   const walletSubtitle = cryptoOnly
     ? tx('Manage your USDT balance, buy and sell cryptocurrency, send funds, and review crypto activity.', 'USDT 잔액을 관리하고, 암호화폐를 사고 팔고, 자금을 보내고, 거래 활동을 확인하세요.')
     : sharedWalletIsPrimary
-      ? tx(`Manage the shared organization wallet for ${selectedCollectionCurrency} and USDT balances, fund the org, submit withdrawals, and review activity.`, '조직 공동 지갑에서 KRW 및 USDT 잔액을 관리하고, 조직 자금을 충전하고, 출금 및 거래 내역을 확인하세요.')
+      ? tx(`Manage the merchant organization's shared ${selectedCollectionCurrency} and USDT wallet, funding, withdrawals, and payment activity.`, '조직 공동 지갑에서 KRW 및 USDT 잔액, 충전, 출금 및 결제 내역을 관리하세요.')
       : tx(`Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`, 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.');
   const collectionWalletLabel = sharedWalletIsPrimary
-    ? tx('Shared organization wallet', '공유 조직 지갑')
+    ? tx('Merchant organization wallet', '가맹점 조직 지갑')
     : tx(`${selectedCollectionCurrency} Wallet`, `${selectedCollectionCurrency} 지갑`);
   const fundWalletTitle = tx('Fund Wallet via bank transfer', '은행 계좌이체로 자금 충전');
   const withdrawTitle = tx('Withdraw to Bank Account', '한국 은행 계좌로 출금');
@@ -1380,6 +1381,14 @@ export default function WalletPage({
                         {primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(primaryWalletBalance), selectedCollectionCurrency)}
                       </span>
                     </div>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>{isKoreanWallet ? '보류 중' : 'Pending'}</span>
+                      <span className="font-semibold text-amber-800">
+                        {primaryWalletUnavailable
+                          ? 'Unavailable'
+                          : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'pending_balance'), selectedCollectionCurrency)}
+                      </span>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         type="button"
@@ -1598,68 +1607,6 @@ export default function WalletPage({
               isKorean={isKoreanWallet}
             />
           </div>
-          )}
-
-          {!cryptoOnly && user?.organization_id && !sharedWalletIsPrimary && (
-            <Card className="card-3d overflow-hidden border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50/50 transition-all hover:shadow-lg">
-              <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-300" />
-              <CardContent className="p-4 sm:p-6">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
-                      {isKoreanWallet ? '공유 조직 지갑' : 'Shared organization wallet'}
-                    </p>
-                    <p className="mt-1 truncate text-xs text-slate-500">
-                      {organizationWalletBalance?.organization_name || user.organization_name || user.organization_id}
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                    <Building2 className="h-5 w-5" aria-hidden="true" />
-                  </div>
-                </div>
-                <p className="text-3xl font-semibold text-foreground">
-                  {loading ? (
-                    <span className="inline-block h-10 w-32 animate-pulse rounded-lg bg-slate-100" />
-                  ) : organizationWalletLoadError || !organizationWalletBalance
-                    ? 'Unavailable'
-                    : formatWalletCurrency(
-                      getWalletBalanceValue(organizationWalletBalance, 'balance'),
-                      organizationWalletBalance.currency,
-                    )}
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
-                      {isKoreanWallet ? '사용 가능' : 'Available'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">
-                      {loading ? '—' : organizationWalletLoadError || !organizationWalletBalance
-                        ? 'Unavailable'
-                        : formatWalletCurrency(
-                          getWalletBalanceValue(organizationWalletBalance, 'available_balance'),
-                          organizationWalletBalance.currency,
-                        )}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-amber-50 px-2.5 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                      {isKoreanWallet ? '보류 중' : 'Pending'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs font-bold text-amber-900">
-                      {loading ? '—' : organizationWalletLoadError || !organizationWalletBalance
-                        ? 'Unavailable'
-                        : formatWalletCurrency(
-                          getWalletBalanceValue(organizationWalletBalance, 'pending_balance'),
-                          organizationWalletBalance.currency,
-                        )}
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  {isKoreanWallet ? '이 조직의 결제 및 정산은 여기에 집계됩니다.' : 'Payments and settlements for this organization are settled here.'}
-                </p>
-              </CardContent>
-            </Card>
           )}
 
           {cryptoOnly && (

@@ -10,6 +10,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
 from models.disbursements import Disbursements
@@ -123,7 +124,13 @@ def _require_super_admin(user: UserResponse) -> None:
 		raise HTTPException(status_code=403, detail="Super admin access required.")
 
 
+def _require_system_wallet_admin(user: UserResponse) -> None:
+	if str(user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID:
+		raise HTTPException(status_code=403, detail="Only the designated system user can control wallets.")
+
+
 def _require_wallet_adjustment_permission(user: UserResponse, amount: float) -> None:
+	_require_system_wallet_admin(user)
 	_require_super_admin(user)
 	permission = "can_credit_wallet" if amount > 0 else "can_debit_wallet"
 	if not getattr(user.permissions, permission, False):
@@ -218,6 +225,7 @@ async def list_all_admin_wallets(
 	db: AsyncSession = Depends(get_db),
 ):
 	"""List all supported wallets for active users. Super admin only."""
+	_require_system_wallet_admin(current_user)
 	_require_super_admin(current_user)
 	return {"items": await _list_all_admin_wallets(db)}
 
@@ -229,6 +237,7 @@ async def adjust_unified_admin_wallet(
 	db: AsyncSession = Depends(get_db),
 ):
 	"""Credit or debit any supported user wallet. Super admin only."""
+	_require_system_wallet_admin(current_user)
 	_require_super_admin(current_user)
 	currency = request.currency.strip().upper()
 	if currency not in PUBLIC_ADMIN_WALLET_CURRENCIES:

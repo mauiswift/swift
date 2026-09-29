@@ -9,6 +9,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
+
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -36,9 +38,18 @@ def _validate_wallet_currency(currency: Optional[str]) -> Optional[str]:
 
 
 def _require_wallet_permission(current_user: UserResponse, permission: str) -> None:
+    _require_system_wallet_admin(current_user)
     permissions = current_user.permissions
     if not permissions or not permissions.is_super_admin or not getattr(permissions, permission, False):
         raise HTTPException(status_code=403, detail=f"{permission} permission required.")
+
+
+def _require_system_wallet_admin(current_user: UserResponse) -> None:
+    if str(current_user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the designated system user can control wallets.",
+        )
 
 
 async def _reject_vip_wallet_control(db: AsyncSession, user_id: str) -> None:
@@ -163,6 +174,7 @@ async def get_wallet_analytics(
     db: AsyncSession = Depends(get_db),
 ):
     """Get detailed analytics for a user's wallet(s). Super admin only."""
+    _require_system_wallet_admin(current_user)
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required.")
@@ -230,6 +242,7 @@ async def reconcile_wallet(
     db: AsyncSession = Depends(get_db),
 ):
     """Reconcile a wallet's balance from transaction history. Super admin only."""
+    _require_system_wallet_admin(current_user)
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required.")
@@ -254,6 +267,7 @@ async def get_reconciliation_summary(
     db: AsyncSession = Depends(get_db),
 ):
     """Super admins can get a quick reconciliation summary across all wallets."""
+    _require_system_wallet_admin(current_user)
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required.")
@@ -273,6 +287,7 @@ async def batch_credit_wallets(
     db: AsyncSession = Depends(get_db),
 ):
     """Batch credit multiple wallets. Super admin only."""
+    _require_system_wallet_admin(current_user)
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required.")
@@ -301,6 +316,7 @@ async def list_frozen_wallets(
     db: AsyncSession = Depends(get_db),
 ):
     """List all frozen wallets. Super admin only."""
+    _require_system_wallet_admin(current_user)
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required.")

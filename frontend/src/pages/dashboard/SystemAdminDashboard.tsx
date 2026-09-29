@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { client } from '@/lib/api';
+import { isSystemWalletAdmin } from '@/lib/permissions';
 
 type QueueKey = 'kyb' | 'kyc' | 'bank_deposits' | 'topups' | 'withdrawals';
 
@@ -44,7 +45,7 @@ interface AdminDashboardSection {
 
 export default function SystemAdminDashboard() {
   const { language } = useLanguage();
-  const { permissions } = useAuth();
+  const { permissions, user } = useAuth();
   const tx = (en: string, ko: string, zh: string) => language === 'ko' ? ko : language === 'zh' ? zh : en;
   const queueQuery = useQuery({
     queryKey: ['system-admin-dashboard-overview'],
@@ -71,8 +72,10 @@ export default function SystemAdminDashboard() {
       title: tx('Financial operations', '금융 운영', '金融运营'),
       description: tx('Review funds moving into and out of the platform', '플랫폼 자금 입출금 검토', '审核平台资金流入和流出'),
       items: [
-        ...(permissions?.can_approve_topups ? [
+        ...(isSystemWalletAdmin(user?.id) ? [
           { label: tx('Payment approvals', '결제 승인', '支付审批'), detail: tx('Review payments awaiting approval', '승인 대기 중인 결제 검토', '审核待批准的付款'), href: '/payment-approvals', icon: CreditCard, tone: 'bg-cyan-50 text-cyan-700' },
+        ] : []),
+        ...(permissions?.can_approve_topups ? [
           { label: tx('Top-up requests', '충전 요청', '充值申请'), detail: tx('Review wallet funding requests', '지갑 충전 요청 검토', '审核钱包充值申请'), href: '/topup-requests', icon: Wallet, tone: 'bg-amber-50 text-amber-700' },
         ] : []),
         { label: tx('Bank deposits', '은행 입금', '银行存款'), detail: tx('Verify incoming bank deposits', '은행 입금 확인', '核实银行入账'), href: '/bank-deposits', icon: Banknote, tone: 'bg-teal-50 text-teal-700', queueKey: 'bank_deposits' },

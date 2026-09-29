@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
 import { client } from '@/lib/api';
-import { PERMISSION_DEFINITIONS } from '@/lib/permissions';
+import { isSystemWalletAdmin, PERMISSION_DEFINITIONS } from '@/lib/permissions';
 import { ROLE_PERMISSION_PRESETS } from '@/lib/adminRolePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -530,10 +530,10 @@ function PlatformSettingsTab({ onError }: { onError: (message: string) => void }
   );
 }
 
-function AdminOperationsTab() {
+function AdminOperationsTab({ canAccessPaymentApprovals }: { canAccessPaymentApprovals: boolean }) {
   const navigate = useNavigate();
   const operations = [
-    ['Payment approvals', '/payment-approvals'],
+    ...(canAccessPaymentApprovals ? [['Payment approvals', '/payment-approvals']] : []),
     ['Bank deposits', '/bank-deposits'],
     ['Top-up requests', '/topup-requests'],
     ['Withdrawals', '/withdrawals'],
@@ -709,10 +709,10 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
       );
     }
 
-    function AdminOperationsTab() {
+    function AdminOperationsTab({ canAccessPaymentApprovals }: { canAccessPaymentApprovals: boolean }) {
       const navigate = useNavigate();
       const operations = [
-        ['Payment approvals', '/payment-approvals', 'Review desktop and mobile payment approvals.'],
+        ...(canAccessPaymentApprovals ? [['Payment approvals', '/payment-approvals', 'Review desktop and mobile payment approvals.']] : []),
         ['Bank deposits', '/bank-deposits', 'Review incoming bank deposit requests.'],
         ['Top-up requests', '/topup-requests', 'Approve or reject wallet top-up requests.'],
         ['Withdrawals', '/withdrawals', 'Review and process withdrawal requests.'],
@@ -3450,7 +3450,7 @@ export default function AdminManagement() {
   const canAccessAdminUsers = isSuperAdmin && canManageTeam;
   const canAccessUserManagement = isSuperAdmin;
   const canAccessCryptoRequests = isSuperAdmin && canApproveTopups;
-  const canAccessWalletControl = isSuperAdmin && canManageWallet;
+  const canAccessWalletControl = isSystemWalletAdmin(user?.id) && isSuperAdmin && canManageWallet;
   const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
   const canAccessTossApprovals = isSuperAdmin && canManageWallet;
   const canAccessPaymentChannels = isSuperAdmin && (canManagePayments || canManageDisbursements);
@@ -4148,7 +4148,7 @@ export default function AdminManagement() {
               <WalletControlTab onError={setError} />
             )}
             {selectedTab === 'operations' && canAccessOperations && (
-              <AdminOperationsTab />
+              <AdminOperationsTab canAccessPaymentApprovals={isSystemWalletAdmin(user?.id)} />
             )}
             {selectedTab === 'toss-approvals' && canAccessTossApprovals && (
               <TossAccountApprovalsPanel />

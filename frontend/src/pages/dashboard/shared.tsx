@@ -8,7 +8,7 @@ import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import React from 'react';
 import { ArrowUpRight, BarChart3, Bot, CheckSquare, CreditCard, Crown, FileCheck2, FileSpreadsheet, Landmark, Link2, RefreshCw, Send, Settings, type LucideIcon } from 'lucide-react';
-import { hasPermission, hasSuperAdminAccess, type PermissionKey } from '@/lib/permissions';
+import { hasPermission, hasSuperAdminAccess, isSystemWalletAdmin, type PermissionKey } from '@/lib/permissions';
 
 export interface DashboardStats {
   days: number;
@@ -331,7 +331,11 @@ export const dashboardActions: DashboardAction[] = [
   { label: 'Finished contracts', description: 'Open completed payment records', href: '/payments', icon: FileCheck2, tone: 'bg-violet-50 text-violet-600', superAdminOnly: true },
 ];
 
-export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], language: string = 'en') {
+export function getDashboardActions(
+  permissions: Parameters<typeof hasPermission>[0],
+  language: string = 'en',
+  userId?: string,
+) {
   const isPlatformSuperAdmin = hasSuperAdminAccess(permissions) && Boolean(permissions?.can_manage_team);
   return dashboardActions
     .filter(action => {
@@ -341,6 +345,7 @@ export function getDashboardActions(permissions: Parameters<typeof hasPermission
           && (!action.permission || hasPermission(permissions, action.permission));
       return hasAccess;
     })
+    .filter(action => action.href !== '/payment-approvals' || isSystemWalletAdmin(userId))
     .map(action => {
       if (language !== 'ko') return action;
       const localized: Record<string, { label: string; description: string }> = {
@@ -572,7 +577,7 @@ export function useDashboardData() {
     user,
     isSuperAdmin,
     permissions,
-    dashboardActions: getDashboardActions(permissions, language),
+    dashboardActions: getDashboardActions(permissions, language, user?.id),
     stats,
     balances,
     loading,

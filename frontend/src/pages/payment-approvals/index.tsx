@@ -11,6 +11,7 @@ export default function SuperAdminPaymentApproval() {
     <ResponsiveRoute
       desktopComponent={Desktop}
       mobileComponent={Mobile}
+      tabletComponent={Mobile}
     />
   );
 }

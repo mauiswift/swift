@@ -15,7 +15,10 @@ depends_on = None
 
 def upgrade() -> None:
     bind = op.get_bind()
-    columns = [column["name"] for column in inspect(bind).get_columns("downline")]
+    inspector = inspect(bind)
+    if not inspector.has_table("downline"):
+        return
+    columns = [column["name"] for column in inspector.get_columns("downline")]
     if "service_fee_percent" not in columns:
         op.add_column(
             "downline",
@@ -25,6 +28,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     bind = op.get_bind()
-    columns = [column["name"] for column in inspect(bind).get_columns("downline")]
+    inspector = inspect(bind)
+    if not inspector.has_table("downline"):
+        return
+    columns = [column["name"] for column in inspector.get_columns("downline")]
     if "service_fee_percent" in columns:
         op.drop_column("downline", "service_fee_percent")

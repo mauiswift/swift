@@ -4,6 +4,8 @@ import { ChevronDown, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } fr
 import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { isSystemWalletAdmin } from '@/lib/permissions';
 
 type TabType = 'pending' | 'history';
 type FilterType = 'all' | 'payments' | 'bank_deposits' | 'topups' | 'disbursements' | 'usdt_send' | 'kyb' | 'kyc' | 'toss_accounts';
@@ -50,6 +52,7 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 
 export default function Approvals() {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const isKorean = language === 'ko';
   const localizedFilterLabels: Record<FilterType, string> = isKorean
@@ -69,6 +72,8 @@ export default function Approvals() {
     ? { pending_review: '검토 대기', in_progress: '진행 중', approved: '승인됨', rejected: '거부됨' }
     : Object.fromEntries(Object.entries(statusConfig).map(([key, value]) => [key, value.label]));
   const navigate = useNavigate();
+  const visibleFilterKeys = (Object.keys(filterLabels) as FilterType[])
+    .filter(key => key !== 'payments' || isSystemWalletAdmin(user?.id));
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [filter, setFilter] = useState<FilterType>('kyb');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -178,7 +183,7 @@ export default function Approvals() {
                 />
                 <div className="absolute top-full mt-2 left-0 w-[240px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl z-20 page-enter">
                   <div className="divide-y divide-slate-50">
-                    {(Object.keys(filterLabels) as FilterType[]).map((key) => (
+                    {visibleFilterKeys.map((key) => (
                       <button
                         key={key}
                         onClick={() => {

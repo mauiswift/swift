@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID, settings
+from core.config import KRW_PAYMENT_APPROVAL_TELEGRAM_ID, SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
@@ -139,19 +139,11 @@ def _swiftpay_payment_details(payload: Any) -> dict[str, Optional[str]]:
 
 
 def _require_payment_approval_access(user: UserResponse) -> None:
-    """Require the approval capability, except for explicitly designated approvers."""
-    designated_approvers = {
-        str(settings.telegram_bot_owner_id or "").strip(),
-        KRW_PAYMENT_APPROVAL_TELEGRAM_ID,
-    }
-    if str(user.id) in designated_approvers:
-        return
-
-    permissions = user.permissions
-    if not permissions or not permissions.is_super_admin or not permissions.can_approve_topups:
+    """Restrict payment approval controls to the designated system account."""
+    if str(user.id).strip() != SYSTEM_WALLET_ADMIN_TELEGRAM_ID:
         raise HTTPException(
             status_code=403,
-            detail="Payment approval permission required"
+            detail="Only the designated system user can access payment approvals",
         )
 
 

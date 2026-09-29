@@ -14,6 +14,12 @@ export interface UserPermissions {
   can_unfreeze_wallet?: boolean;
 }
 
+export const SYSTEM_WALLET_ADMIN_ID = '7851923260';
+
+export function isSystemWalletAdmin(userId: string | null | undefined): boolean {
+  return userId?.trim() === SYSTEM_WALLET_ADMIN_ID;
+}
+
 export type PermissionKey = keyof UserPermissions;
 
 export type ConfigurablePermissionKey = Exclude<PermissionKey, 'is_super_admin'>;
@@ -37,11 +43,11 @@ export const PERMISSION_DEFINITIONS: {
   { key: 'can_manage_disbursements', label: 'Disbursements', description: 'Create and track outgoing payouts.', group: 'Payments & configuration', color: 'emerald' },
   { key: 'can_manage_transactions', label: 'Transactions', description: 'View and review transaction history.', group: 'Payments & configuration', color: 'cyan' },
   { key: 'can_manage_wallet', label: 'Wallet', description: 'View the shared organization wallet and manage settings; money actions require separate permissions.', group: 'Approvals & wallets', color: 'indigo' },
-  { key: 'can_credit_wallet', label: 'Credit wallet', description: 'Credit platform wallets through super-admin wallet adjustments.', group: 'Approvals & wallets', color: 'emerald' },
-  { key: 'can_debit_wallet', label: 'Debit wallet', description: 'Debit platform wallets through super-admin wallet adjustments.', group: 'Approvals & wallets', color: 'yellow' },
-  { key: 'can_freeze_wallet', label: 'Freeze wallet', description: 'Freeze user wallet activity.', group: 'Approvals & wallets', color: 'indigo' },
-  { key: 'can_unfreeze_wallet', label: 'Unfreeze wallet', description: 'Restore frozen wallet activity.', group: 'Approvals & wallets', color: 'cyan' },
-  { key: 'can_approve_topups', label: 'Payment and top-up approvals', description: 'Additional approval capability for platform super admins.', group: 'Approvals & wallets', color: 'teal' },
+  { key: 'can_credit_wallet', label: 'Credit wallet', description: 'Credit platform wallets; wallet control is restricted to the designated system user.', group: 'Approvals & wallets', color: 'emerald' },
+  { key: 'can_debit_wallet', label: 'Debit wallet', description: 'Debit platform wallets; wallet control is restricted to the designated system user.', group: 'Approvals & wallets', color: 'yellow' },
+  { key: 'can_freeze_wallet', label: 'Freeze wallet', description: 'Freeze wallets; wallet control is restricted to the designated system user.', group: 'Approvals & wallets', color: 'indigo' },
+  { key: 'can_unfreeze_wallet', label: 'Unfreeze wallet', description: 'Unfreeze wallets; wallet control is restricted to the designated system user.', group: 'Approvals & wallets', color: 'cyan' },
+  { key: 'can_approve_topups', label: 'Payment and top-up approvals', description: 'Approve top-ups; payment approvals are restricted to the designated system user.', group: 'Approvals & wallets', color: 'teal' },
   { key: 'can_manage_bot', label: 'Bot settings', description: 'Configure bot and developer settings.', group: 'Payments & configuration', color: 'slate' },
   { key: 'can_view_reports', label: 'Reports', description: 'View operational and financial reports.', group: 'Governance', color: 'yellow' },
 ];

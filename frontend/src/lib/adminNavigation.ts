@@ -21,6 +21,7 @@ import {
 import {
   hasDashboardAccess,
   hasPermission,
+  isSystemWalletAdmin,
   type PermissionKey,
   type UserPermissions,
 } from '@/lib/permissions';
@@ -32,6 +33,7 @@ export interface AdminNavItem {
   permission?: PermissionKey;
   superAdminOrPermission?: PermissionKey;
   superAdminOnly?: boolean;
+  systemWalletAdminOnly?: boolean;
   vipGoldOrTeamPermission?: boolean;
 }
 
@@ -57,7 +59,9 @@ function visible(
   permissions: UserPermissions | undefined,
   isSuperAdmin: boolean,
   isVipGold: boolean,
+  userId?: string,
 ): boolean {
+  if (item.systemWalletAdminOnly && !isSystemWalletAdmin(userId)) return false;
   if (item.superAdminOnly && !isSuperAdmin) return false;
   if (item.superAdminOrPermission && !isSuperAdmin && !hasPermission(permissions, item.superAdminOrPermission)) return false;
   if (item.vipGoldOrTeamPermission && !isVipGold && !hasPermission(permissions, 'can_manage_team')) return false;
@@ -69,8 +73,9 @@ function filterItems(
   permissions: UserPermissions | undefined,
   isSuperAdmin: boolean,
   isVipGold: boolean,
+  userId?: string,
 ): AdminNavItem[] {
-  return items.filter(item => visible(item, permissions, isSuperAdmin, isVipGold));
+  return items.filter(item => visible(item, permissions, isSuperAdmin, isVipGold, userId));
 }
 
 export function buildAdminNavigation(
@@ -79,6 +84,7 @@ export function buildAdminNavigation(
   language: string,
   translate: (key: string) => string,
   isVipGold = false,
+  userId?: string,
 ): AdminNavigation {
   const isKorean = language === 'ko';
   const isPlatformSuperAdmin = canAccessSuperAdminControls({ isSuperAdmin });
@@ -94,7 +100,7 @@ export function buildAdminNavigation(
       items: filterItems([
         { label: label('nav_home', 'Home'), icon: Home, path: '/dashboard' },
         { label: label('nav_reports', 'Reports'), icon: BarChart3, path: '/reports', permission: 'can_view_reports' },
-      ], permissions, isPlatformSuperAdmin, isVipGold).filter(item =>
+      ], permissions, isPlatformSuperAdmin, isVipGold, userId).filter(item =>
         item.path !== '/dashboard' || isPlatformSuperAdmin || hasDashboardAccess(permissions)
       ),
     },
@@ -106,13 +112,13 @@ export function buildAdminNavigation(
         { label: label('nav_payments', 'Payments'), icon: CreditCard, path: '/payments', permission: 'can_manage_payments' },
         { label: label('nav_payment_links', 'Payment Links'), icon: Link2, path: '/pay-by-link', permission: 'can_manage_payments' },
         { label: label('nav_disbursements', 'Disbursements'), icon: Send, path: '/disbursements', permission: 'can_manage_disbursements' },
-      ], permissions, isPlatformSuperAdmin, isVipGold),
+      ], permissions, isPlatformSuperAdmin, isVipGold, userId),
     },
     {
       label: sectionLabel('MANAGEMENT', '관리'),
       items: filterItems([
         { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOrPermission: 'can_manage_team' },
-        { label: label('nav_approvals', 'Payment Approvals'), icon: ClipboardCheck, path: '/payment-approvals', superAdminOnly: true, permission: 'can_approve_topups' },
+        { label: label('nav_approvals', 'Payment Approvals'), icon: ClipboardCheck, path: '/payment-approvals', systemWalletAdminOnly: true },
         { label: label('nav_bank_deposits', 'Bank Deposits'), icon: Banknote, path: '/bank-deposits', superAdminOnly: true },
         { label: label('nav_topup_requests', 'Top-up Requests'), icon: ArrowDownToLine, path: '/topup-requests', superAdminOnly: true, permission: 'can_approve_topups' },
         { label: label('nav_withdrawals', 'Withdrawals'), icon: Send, path: '/withdrawals', superAdminOnly: true },
@@ -122,7 +128,7 @@ export function buildAdminNavigation(
         { label: label('nav_kyc_verifications', 'KYC Verifications'), icon: ClipboardCheck, path: '/kyc-verifications', superAdminOnly: true },
         { label: label('nav_broadcasts', 'Broadcasts'), icon: Megaphone, path: '/broadcasts', superAdminOnly: true },
         { label: label('nav_bot_messages', 'Bot Messages'), icon: MessagesSquare, path: '/bot-messages', superAdminOnly: true },
-      ], permissions, isPlatformSuperAdmin, isVipGold),
+      ], permissions, isPlatformSuperAdmin, isVipGold, userId),
     },
   ];
 
@@ -131,7 +137,7 @@ export function buildAdminNavigation(
     { label: label('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
     { label: label('nav_contact_support', 'Support'), icon: MessageCircle, path: '/support' },
     { label: label('nav_bot_settings', 'Bot Settings'), icon: Bot, path: '/bot-settings', permission: 'can_manage_bot' },
-  ], permissions, isPlatformSuperAdmin, isVipGold);
+  ], permissions, isPlatformSuperAdmin, isVipGold, userId);
 
   return {
     sections: sections

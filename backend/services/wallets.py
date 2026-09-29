@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 # Credit/debit type categories for USD balance computation.
 # Conversion rows are real wallet movement, so they must count toward the
 # effective USDT/USD balance immediately after a PHP→USDT conversion.
-_USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "top_up", "conversion_in")
+_USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "top_up", "conversion_in", "wallet_migration")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
 _LEDGER_TRANSACTION_TYPES = (
-    "receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in",
+    "receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in", "wallet_migration",
     "send", "admin_debit", "withdraw", "withdrawal_fee", "payment", "usd_send", "usdt_send", "conversion_out",
 )
 _P2P_CURRENCIES = {"PHP"}

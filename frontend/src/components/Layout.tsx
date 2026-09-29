@@ -101,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
   });
 
   const permissions = user?.permissions;
-  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string, isVipGold);
+  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string, isVipGold, user?.id);
 
   useEffect(() => {
     try {

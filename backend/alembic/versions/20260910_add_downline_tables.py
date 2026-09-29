@@ -31,6 +31,7 @@ def upgrade() -> None:
             sa.Column("level", sa.Integer(), server_default="1", nullable=False),
             sa.Column("total_commissions", sa.Float(), server_default="0", nullable=False),
             sa.Column("pending_commissions", sa.Float(), server_default="0", nullable=False),
+            sa.Column("service_fee_percent", sa.Float(), server_default="0.0", nullable=False),
             sa.Column("status", sa.String(length=32), server_default="active", nullable=False),
             sa.Column("last_activity_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -42,6 +43,13 @@ def upgrade() -> None:
         op.create_index("idx_downline_user_id", "downline", ["downline_user_id"])
         op.create_index("idx_level", "downline", ["level"])
         op.create_index("idx_status", "downline", ["status"])
+    else:
+        columns = {column["name"] for column in inspector.get_columns("downline")}
+        if "service_fee_percent" not in columns:
+            op.add_column(
+                "downline",
+                sa.Column("service_fee_percent", sa.Float(), nullable=False, server_default="0.0"),
+            )
 
     # Create downline_commissions only if it doesn't exist
     if not inspector.has_table("downline_commissions"):

@@ -22,7 +22,7 @@ function DashboardLoadingState({ connected }: { connected: boolean }) {
 
         <div className={`${placeholder} h-10 w-44`} />
 
-        <div className="grid gap-3 sm:hidden">
+        <div className="grid gap-3 md:hidden">
           <div className="h-64 rounded-2xl bg-slate-900 p-5">
             <div className="mb-6 flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-white/10" />
@@ -43,7 +43,7 @@ function DashboardLoadingState({ connected }: { connected: boolean }) {
           <div className="h-16 rounded-2xl bg-slate-100" />
         </div>
 
-        <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4">
+        <div className="hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
             <div key={index} className="h-36 rounded-2xl bg-slate-100 p-5">
               <div className="h-3 w-32 rounded bg-slate-200" />

@@ -4,18 +4,19 @@ import Layout from '@/components/Layout';
 import { ShieldOff } from 'lucide-react';
 import { canAccessSuperAdminControls } from '@/lib/adminNavigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { hasPermission, type PermissionKey } from '@/lib/permissions';
+import { hasPermission, isSystemWalletAdmin, type PermissionKey } from '@/lib/permissions';
 
 interface Props {
   children: React.ReactNode;
   permission?: PermissionKey;
+  systemWalletAdminOnly?: boolean;
 }
 
 /**
  * Route guard: only super admins may pass.
  * Regular admins see a 403 page; unauthenticated users are sent to /login.
  */
-export default function RequireSuperAdmin({ children, permission }: Props) {
+export default function RequireSuperAdmin({ children, permission, systemWalletAdminOnly = false }: Props) {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
 
   if (loading) {
@@ -24,7 +25,11 @@ export default function RequireSuperAdmin({ children, permission }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!canAccessSuperAdminControls({ isSuperAdmin }) || (permission && !hasPermission(user.permissions, permission))) {
+  const isAuthorizedSystemUser = systemWalletAdminOnly && isSystemWalletAdmin(user.id);
+  const accessDenied = systemWalletAdminOnly
+    ? !isAuthorizedSystemUser
+    : !canAccessSuperAdminControls({ isSuperAdmin }) || (permission && !hasPermission(user.permissions, permission));
+  if (accessDenied) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">

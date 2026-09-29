@@ -2,12 +2,13 @@ import pytest
 from fastapi import HTTPException
 
 from routers.payment_approvals import _require_payment_approval_access
+from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
 from routers.topup import _can_approve_requests
 from schemas.auth import UserPermissions, UserResponse
 
 
-def _user(permissions: UserPermissions) -> UserResponse:
-    return UserResponse(id="123", email="approver@example.com", permissions=permissions)
+def _user(permissions: UserPermissions, user_id: str = "123") -> UserResponse:
+    return UserResponse(id=user_id, email="approver@example.com", permissions=permissions)
 
 
 def test_approval_permission_without_super_admin_is_insufficient():
@@ -19,16 +20,14 @@ def test_approval_permission_without_super_admin_is_insufficient():
     assert error.value.status_code == 403
 
 
-def test_super_admin_payment_approval_access_is_preserved():
-    _require_payment_approval_access(
-        _user(UserPermissions(is_super_admin=True, can_approve_topups=True))
-    )
+def test_only_designated_system_user_has_payment_approval_access():
+    _require_payment_approval_access(_user(UserPermissions(), SYSTEM_WALLET_ADMIN_TELEGRAM_ID))
 
 
-def test_super_admin_without_approval_permission_is_rejected():
+def test_owner_and_other_super_admins_cannot_access_payment_approvals():
     with pytest.raises(HTTPException) as error:
         _require_payment_approval_access(
-            _user(UserPermissions(is_super_admin=True, can_approve_topups=False))
+            _user(UserPermissions(is_super_admin=True, can_approve_topups=True), "owner-1")
         )
 
     assert error.value.status_code == 403

@@ -52,4 +52,4 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PYTHONPATH: backend
         run: |
-          alembic upgrade head
+          alembic upgrade heads

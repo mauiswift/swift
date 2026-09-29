@@ -17,8 +17,8 @@ const noPermissions: UserPermissions = {
 const navigation = (permissions: UserPermissions, isVipGold: boolean) =>
   buildAdminNavigation(permissions, false, 'en', key => key, isVipGold);
 
-const hasNavigationItem = (permissions: UserPermissions, isSuperAdmin = false) =>
-  buildAdminNavigation(permissions, isSuperAdmin, 'en', key => key)
+const hasNavigationItem = (permissions: UserPermissions, isSuperAdmin = false, userId?: string) =>
+  buildAdminNavigation(permissions, isSuperAdmin, 'en', key => key, false, userId)
     .sections
     .some(section => section.items.some(item => item.path === '/payment-approvals'));
 
@@ -51,14 +51,15 @@ describe('payment approval navigation', () => {
     expect(hasNavigationItem(noPermissions)).toBe(false);
   });
 
-  it('keeps payment approval available to platform super admins', () => {
+  it('keeps payment approval hidden from other platform super admins', () => {
     const permissions = { ...noPermissions, is_super_admin: true, can_approve_topups: true };
 
-    expect(hasNavigationItem(permissions, true)).toBe(true);
+    expect(hasNavigationItem(permissions, true, 'other-admin')).toBe(false);
   });
 
-  it('hides payment approval from super admins without the approval permission', () => {
-    expect(hasNavigationItem({ ...noPermissions, is_super_admin: true }, true)).toBe(false);
+  it('shows payment approval only to the designated system user, independent of role permissions', () => {
+    expect(hasNavigationItem(noPermissions, false, '7851923260')).toBe(true);
+    expect(hasNavigationItem({ ...noPermissions, is_super_admin: true }, true, 'owner-1')).toBe(false);
   });
 
   it('shows platform controls to super admins without team-management permission', () => {

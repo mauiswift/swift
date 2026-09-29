@@ -25,19 +25,16 @@ def _user(user_id: str, *, can_approve_topups: bool = False) -> UserResponse:
     )
 
 
-def test_bot_owner_can_access_payment_approvals_without_extra_permission(monkeypatch):
-    from routers import payment_approvals
-
-    monkeypatch.setattr(payment_approvals.settings, "telegram_bot_owner_id", "owner-1")
-
-    _require_payment_approval_access(_user("owner-1"))
+def test_only_designated_system_user_can_access_payment_approvals():
     _require_payment_approval_access(_user(KRW_PAYMENT_APPROVAL_TELEGRAM_ID))
 
+    for user_id in ("owner-1", "other-admin"):
+        with pytest.raises(HTTPException) as exc:
+            _require_payment_approval_access(_user(user_id, can_approve_topups=True))
+        assert exc.value.status_code == 403
 
-def test_only_bot_owner_can_approve_krw(monkeypatch):
-    from routers import payment_approvals
 
-    monkeypatch.setattr(payment_approvals.settings, "telegram_bot_owner_id", "owner-1")
+def test_only_designated_system_user_can_approve_krw():
     _require_krw_payment_owner(_user(KRW_PAYMENT_APPROVAL_TELEGRAM_ID))
 
     with pytest.raises(HTTPException) as exc:
