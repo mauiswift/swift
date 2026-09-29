@@ -770,6 +770,7 @@ def _application_permissions(
         "can_unfreeze_wallet",
     }
     requested = requested if isinstance(requested, dict) else {}
+    platform_org_id, _ = _get_platform_organization()
     if role_name == "super_admin":
         if not is_platform_organization:
             raise HTTPException(status_code=400, detail="Super admins must belong to the platform organization")
@@ -779,10 +780,11 @@ def _application_permissions(
 
     if any(key in requested for key in app_keys):
         permissions = {key: bool(requested.get(key)) for key in app_keys}
-        permissions["is_super_admin"] = False
+        permissions["is_super_admin"] = role_name == "owner" and is_platform_organization
         return scope_permissions_to_organization(
-            permissions, None,
-            _get_platform_organization()[0],
+            permissions,
+            platform_org_id if is_platform_organization else None,
+            platform_org_id,
         )
 
     role_map = {
@@ -796,9 +798,11 @@ def _application_permissions(
     }
     if role_name in role_map:
         permissions = get_role_permissions(role_map[role_name]).model_dump()
+        organization_id = platform_org_id if is_platform_organization else None
         return scope_permissions_to_organization(
-            permissions, None,
-            _get_platform_organization()[0],
+            permissions,
+            organization_id,
+            platform_org_id,
         )
     return {key: False for key in app_keys}
 

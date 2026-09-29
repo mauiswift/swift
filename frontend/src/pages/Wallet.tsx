@@ -539,7 +539,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const sharedWalletIsPrimary = Boolean(
     !cryptoOnly
-    && !isSuperAdmin
     && user?.organization_id
   );
   const primaryWalletBalance = sharedWalletIsPrimary ? organizationWalletBalance : collectionBalance;

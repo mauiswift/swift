@@ -82,6 +82,25 @@ def test_organization_owner_role_is_not_platform_super_admin():
     assert admin.can_manage_wallet is True
 
 
+def test_platform_owner_invitation_keeps_platform_permissions():
+    created_permissions = _application_permissions(
+        "owner",
+        is_platform_organization=True,
+    )
+    permissions = _application_permissions(
+        "owner",
+        created_permissions,
+        is_platform_organization=True,
+    )
+
+    assert permissions["is_super_admin"] is True
+    assert permissions["can_approve_topups"] is True
+    assert permissions["can_credit_wallet"] is True
+    assert permissions["can_debit_wallet"] is True
+    assert permissions["can_freeze_wallet"] is True
+    assert permissions["can_unfreeze_wallet"] is True
+
+
 def test_legacy_invited_organization_owner_is_scoped_on_login():
     invited_owner = AdminUser(
         telegram_id="invite-owner",
