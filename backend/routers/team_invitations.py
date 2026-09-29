@@ -28,11 +28,16 @@ from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.downline import DownlineService
-from services.auth import normalize_organization_owner_scope, normalize_organization_role_state
+from services.auth import (
+    _get_platform_organization,
+    normalize_organization_owner_scope,
+    normalize_organization_role_state,
+)
 from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
     PredefinedRoleEnum,
+    scope_permissions_to_organization,
     validate_role_exists,
 )
 from schemas.auth import UserResponse
@@ -556,6 +561,14 @@ async def _resolve_super_admin_org_scope(
     raw_org_name = (request.organization_name or "").strip()
     raw_org_id = (request.organization_id or "").strip()
 
+    if role_name == "super_admin":
+        platform_org_id, platform_org_name = _get_platform_organization()
+        if raw_org_id and raw_org_id != platform_org_id:
+            raise HTTPException(status_code=400, detail="Super admins must belong to the platform organization")
+        if raw_org_name and raw_org_name.casefold() != platform_org_name.casefold():
+            raise HTTPException(status_code=400, detail="Super admins must belong to the platform organization")
+        return platform_org_id, platform_org_name
+
     if role_name == "owner" and not (raw_org_name or raw_org_id):
         raise HTTPException(status_code=400, detail="organization_name or organization_id is required when inviting owner")
 
@@ -734,7 +747,12 @@ PREDEFINED_ROLES = {
 }
 
 
-def _application_permissions(role_name: str, requested: Optional[dict] = None) -> dict[str, bool]:
+def _application_permissions(
+    role_name: str,
+    requested: Optional[dict] = None,
+    *,
+    is_platform_organization: bool = False,
+) -> dict[str, bool]:
     """Return permission keys consumed by the dashboard and API guards."""
     app_keys = {
         "is_super_admin",
@@ -753,15 +771,19 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
     }
     requested = requested if isinstance(requested, dict) else {}
     if role_name == "super_admin":
+        if not is_platform_organization:
+            raise HTTPException(status_code=400, detail="Super admins must belong to the platform organization")
         # The restricted invitation policy is intentional and cannot be
         # expanded through request payload overrides.
         return get_invited_super_admin_permissions().model_dump()
 
     if any(key in requested for key in app_keys):
         permissions = {key: bool(requested.get(key)) for key in app_keys}
-        if role_name == "owner":
-            permissions["is_super_admin"] = False
-        return permissions
+        permissions["is_super_admin"] = False
+        return scope_permissions_to_organization(
+            permissions, None,
+            _get_platform_organization()[0],
+        )
 
     role_map = {
         "owner": PredefinedRoleEnum.OWNER,
@@ -774,9 +796,10 @@ def _application_permissions(role_name: str, requested: Optional[dict] = None) -
     }
     if role_name in role_map:
         permissions = get_role_permissions(role_map[role_name]).model_dump()
-        if role_name == "owner":
-            permissions["is_super_admin"] = False
-        return permissions
+        return scope_permissions_to_organization(
+            permissions, None,
+            _get_platform_organization()[0],
+        )
     return {key: False for key in app_keys}
 
 # ────────────────────────────────────────────────────────────────
@@ -833,9 +856,6 @@ async def send_team_invitation(
     # Generate invitation token
     token = secrets.token_urlsafe(32)
 
-    # Get permissions from predefined role or use custom
-    permissions = _application_permissions(role_name, request.permissions)
-
     org_id = admin.organization_id if admin and _is_org_admin(admin) else None
     org_name = admin.organization_name if admin and _is_org_admin(admin) else None
 
@@ -843,6 +863,12 @@ async def send_team_invitation(
     is_super = bool(admin and admin.is_super_admin)
     if is_super:
         org_id, org_name = await _resolve_super_admin_org_scope(db, request, role_name)
+
+    permissions = _application_permissions(
+        role_name,
+        request.permissions,
+        is_platform_organization=org_id == _get_platform_organization()[0],
+    )
 
     await _ensure_organization(db, org_id, org_name)
 
@@ -1003,7 +1029,11 @@ async def update_invitation(
             )
 
     # Update permissions
-    permissions = _application_permissions(role_name, request.permissions)
+    permissions = _application_permissions(
+        role_name,
+        request.permissions,
+        is_platform_organization=invitation.organization_id == _get_platform_organization()[0],
+    )
 
     invitation.email = invitation_email
     invitation.role = role_name
@@ -1304,7 +1334,11 @@ async def accept_invitation(
     # Invitations accepted by the previous link-only flow can still finish
     # account creation once, as long as no account was created yet.
 
-    permissions = _application_permissions(invitation.role, invitation.permissions)
+    permissions = _application_permissions(
+        invitation.role,
+        invitation.permissions,
+        is_platform_organization=invitation.organization_id == _get_platform_organization()[0],
+    )
     telegram_id = f"invite-{secrets.token_urlsafe(18)}"
     admin_user = AdminUser(
         telegram_id=telegram_id,

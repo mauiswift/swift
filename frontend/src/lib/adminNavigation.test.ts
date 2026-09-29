@@ -52,9 +52,13 @@ describe('payment approval navigation', () => {
   });
 
   it('keeps payment approval available to platform super admins', () => {
-    const permissions = { ...noPermissions, is_super_admin: true };
+    const permissions = { ...noPermissions, is_super_admin: true, can_approve_topups: true };
 
     expect(hasNavigationItem(permissions, true)).toBe(true);
+  });
+
+  it('hides payment approval from super admins without the approval permission', () => {
+    expect(hasNavigationItem({ ...noPermissions, is_super_admin: true }, true)).toBe(false);
   });
 
   it('shows platform controls to super admins without team-management permission', () => {

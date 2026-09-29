@@ -139,17 +139,16 @@ def _swiftpay_payment_details(payload: Any) -> dict[str, Optional[str]]:
 
 
 def _require_payment_approval_access(user: UserResponse) -> None:
-    """Only the platform system administrator may approve payment requests."""
-    if not (
-        str(user.id) in {
-            str(settings.telegram_bot_owner_id or "").strip(),
-            KRW_PAYMENT_APPROVAL_TELEGRAM_ID,
-        }
-        or (
-            user.permissions
-            and user.permissions.is_super_admin
-        )
-    ):
+    """Require the approval capability, except for explicitly designated approvers."""
+    designated_approvers = {
+        str(settings.telegram_bot_owner_id or "").strip(),
+        KRW_PAYMENT_APPROVAL_TELEGRAM_ID,
+    }
+    if str(user.id) in designated_approvers:
+        return
+
+    permissions = user.permissions
+    if not permissions or not permissions.is_super_admin or not permissions.can_approve_topups:
         raise HTTPException(
             status_code=403,
             detail="Payment approval permission required"

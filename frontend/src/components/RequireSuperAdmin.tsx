@@ -4,16 +4,18 @@ import Layout from '@/components/Layout';
 import { ShieldOff } from 'lucide-react';
 import { canAccessSuperAdminControls } from '@/lib/adminNavigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { hasPermission, type PermissionKey } from '@/lib/permissions';
 
 interface Props {
   children: React.ReactNode;
+  permission?: PermissionKey;
 }
 
 /**
  * Route guard: only super admins may pass.
  * Regular admins see a 403 page; unauthenticated users are sent to /login.
  */
-export default function RequireSuperAdmin({ children }: Props) {
+export default function RequireSuperAdmin({ children, permission }: Props) {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
 
   if (loading) {
@@ -22,7 +24,7 @@ export default function RequireSuperAdmin({ children }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!canAccessSuperAdminControls({ isSuperAdmin })) {
+  if (!canAccessSuperAdminControls({ isSuperAdmin }) || (permission && !hasPermission(user.permissions, permission))) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
@@ -31,7 +33,9 @@ export default function RequireSuperAdmin({ children }: Props) {
           </div>
           <h1 className="mb-2 text-2xl font-semibold text-slate-900">Access Restricted</h1>
           <p className="mb-1 max-w-sm text-sm text-slate-600">
-            This page is only accessible to <span className="font-semibold text-amber-600">Super Admins</span>.
+            {isSuperAdmin && permission
+              ? 'Your administrator account does not have permission for this review queue.'
+              : <>This page is only accessible to <span className="font-semibold text-amber-600">Super Admins</span>.</>}
           </p>
           <p className="max-w-sm text-xs text-slate-500">
             Your account has <span className="font-medium text-slate-700">Admin</span> access.

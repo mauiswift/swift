@@ -54,7 +54,8 @@ def test_organization_owner_login_permissions_do_not_grant_platform_super_admin(
     assert permissions.is_super_admin is False
     assert permissions.can_manage_team is True
     assert permissions.can_manage_wallet is True
-    assert permissions.can_credit_wallet is True
+    assert permissions.can_credit_wallet is False
+    assert permissions.can_debit_wallet is False
 
 
 def test_platform_owner_permissions_remain_super_admin(monkeypatch):
@@ -80,7 +81,7 @@ def test_custom_role_assignment_persists_role_and_all_permission_fields(monkeypa
         can_credit_wallet=True,
         can_debit_wallet=True,
     )
-    admin = AdminUser(telegram_id="staff", organization_id="merchant")
+    admin = AdminUser(telegram_id="staff", organization_id="platform")
 
     roles_router._apply_role_permissions(admin, role)
 
@@ -91,7 +92,8 @@ def test_custom_role_assignment_persists_role_and_all_permission_fields(monkeypa
     assert admin.can_credit_wallet is True
     assert admin.can_debit_wallet is True
     assert admin.can_freeze_wallet is False
-    assert auth_router._admin_permissions(admin).can_credit_wallet is True
+    assert auth_router._admin_permissions(admin).can_credit_wallet is False
+    assert auth_router._admin_permissions(admin).can_debit_wallet is False
 
 
 def test_custom_super_admin_role_cannot_grant_platform_access_to_merchant(monkeypatch):

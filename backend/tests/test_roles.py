@@ -98,13 +98,23 @@ class TestRoleDefinitions:
         assert all(owner_perms.values()), \
             f"Owner role should have all permissions enabled"
 
-    def test_admin_lacks_super_admin_only(self):
-        """Admin role should have all permissions except is_super_admin"""
+    def test_admin_lacks_platform_only_permissions(self):
+        """Organization admin has operational access, not platform-only actions."""
         admin_perms = PREDEFINED_ROLES[PredefinedRoleEnum.ADMIN]
         assert not admin_perms["is_super_admin"], \
             "Admin should not be super admin"
-        assert all(v for k, v in admin_perms.items() if k != "is_super_admin"), \
-            "Admin should have all other permissions"
+        assert admin_perms["can_manage_payments"]
+        assert admin_perms["can_manage_disbursements"]
+        assert admin_perms["can_view_reports"]
+        assert admin_perms["can_manage_wallet"]
+        assert admin_perms["can_manage_transactions"]
+        assert admin_perms["can_manage_bot"]
+        assert admin_perms["can_manage_team"]
+        assert not admin_perms["can_approve_topups"]
+        assert not admin_perms["can_credit_wallet"]
+        assert not admin_perms["can_debit_wallet"]
+        assert not admin_perms["can_freeze_wallet"]
+        assert not admin_perms["can_unfreeze_wallet"]
 
     def test_operator_has_limited_permissions(self):
         """Operator should only have payment/disbursement permissions"""
@@ -460,7 +470,7 @@ class TestPermissionMatrix:
         
         # Verify expected counts (based on definitions)
         assert permission_counts["owner"] == 13  # All permissions
-        assert permission_counts["admin"] == 12  # All except super_admin
+        assert permission_counts["admin"] == 7  # Organization operations only
         assert permission_counts["manager"] == 6  # Payments, disbursements, reports, wallet, transactions, team
         assert permission_counts["operator"] == 3  # Limited
         assert permission_counts["viewer"] == 2  # Read-only

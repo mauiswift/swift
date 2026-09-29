@@ -454,8 +454,11 @@ export default function RolesPage() {
                     {/* Permission summary */}
                     <div className="flex flex-wrap gap-1.5 mb-4">
                       {role.name === 'owner' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border bg-blue-500/15 border-blue-500/30 text-blue-400 text-[10px] font-medium">
-                          <Crown className="h-2.5 w-2.5" /> Organization Owner
+                        <span
+                          title="Organization-scoped by default; grants platform super-admin access only when assigned within the platform organization."
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border bg-blue-500/15 border-blue-500/30 text-blue-400 text-[10px] font-medium"
+                        >
+                          <Crown className="h-2.5 w-2.5" /> Owner (scope-aware)
                         </span>
                       ) : role.permissions.is_super_admin && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border bg-amber-500/15 border-amber-500/30 text-amber-400 text-[10px] font-medium">

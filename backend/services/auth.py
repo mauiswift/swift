@@ -8,7 +8,12 @@ from typing import Any, Dict, Optional, Tuple
 from core.auth import create_access_token
 from core.config import settings
 from core.database import db_manager
-from core.roles import PredefinedRoleEnum, get_role_permissions_by_name
+from core.roles import (
+    PLATFORM_ONLY_PERMISSION_KEYS,
+    PredefinedRoleEnum,
+    get_role_permissions_by_name,
+    scope_permissions_to_organization,
+)
 from models.auth import OIDCState, User
 from models.admin_users import AdminUser
 from schemas.auth import UserPermissions
@@ -33,34 +38,44 @@ def get_admin_user_permissions(admin_record: AdminUser) -> UserPermissions:
     builtin_roles = {role.value for role in PredefinedRoleEnum}
     if role_name in builtin_roles | {"editor", "super_admin"}:
         permissions = get_role_permissions_by_name(role_name).model_dump()
-        if role_name == "owner" and not is_platform_owner:
-            permissions["is_super_admin"] = False
+        permissions = scope_permissions_to_organization(
+            permissions, admin_record.organization_id, platform_org_id
+        )
         return UserPermissions(**permissions)
 
     if isinstance(admin_record.team_permissions, dict):
-        return UserPermissions(
-            **{
+        permissions = scope_permissions_to_organization(
+            {
                 field: bool(admin_record.team_permissions.get(field, False))
                 for field in UserPermissions.model_fields
-            }
+            },
+            admin_record.organization_id,
+            platform_org_id,
+        )
+        return UserPermissions(
+            **permissions
         )
 
-    return UserPermissions(
-        is_super_admin=bool(admin_record.is_super_admin)
+    permissions = {
+        "is_super_admin": bool(admin_record.is_super_admin)
         and (role_name != "owner" or is_platform_owner),
-        can_manage_payments=bool(admin_record.can_manage_payments),
-        can_manage_disbursements=bool(admin_record.can_manage_disbursements),
-        can_view_reports=bool(admin_record.can_view_reports),
-        can_manage_wallet=bool(admin_record.can_manage_wallet),
-        can_manage_transactions=bool(admin_record.can_manage_transactions),
-        can_manage_bot=bool(admin_record.can_manage_bot),
-        can_approve_topups=bool(admin_record.can_approve_topups),
-        can_manage_team=bool(admin_record.can_manage_team),
-        can_credit_wallet=bool(admin_record.can_credit_wallet),
-        can_debit_wallet=bool(admin_record.can_debit_wallet),
-        can_freeze_wallet=bool(admin_record.can_freeze_wallet),
-        can_unfreeze_wallet=bool(admin_record.can_unfreeze_wallet),
+        "can_manage_payments": bool(admin_record.can_manage_payments),
+        "can_manage_disbursements": bool(admin_record.can_manage_disbursements),
+        "can_view_reports": bool(admin_record.can_view_reports),
+        "can_manage_wallet": bool(admin_record.can_manage_wallet),
+        "can_manage_transactions": bool(admin_record.can_manage_transactions),
+        "can_manage_bot": bool(admin_record.can_manage_bot),
+        "can_approve_topups": bool(admin_record.can_approve_topups),
+        "can_manage_team": bool(admin_record.can_manage_team),
+        "can_credit_wallet": bool(admin_record.can_credit_wallet),
+        "can_debit_wallet": bool(admin_record.can_debit_wallet),
+        "can_freeze_wallet": bool(admin_record.can_freeze_wallet),
+        "can_unfreeze_wallet": bool(admin_record.can_unfreeze_wallet),
+    }
+    permissions = scope_permissions_to_organization(
+        permissions, admin_record.organization_id, platform_org_id
     )
+    return UserPermissions(**permissions)
 
 
 def normalize_organization_role_state(admin_record: AdminUser) -> bool:
@@ -85,10 +100,18 @@ def normalize_organization_role_state(admin_record: AdminUser) -> bool:
         admin_record.is_super_admin = False
         changed = True
 
+    for permission in PLATFORM_ONLY_PERMISSION_KEYS:
+        if getattr(admin_record, permission, False):
+            setattr(admin_record, permission, False)
+            changed = True
+
     if isinstance(admin_record.team_permissions, dict):
-        team_permissions = dict(admin_record.team_permissions)
-        if team_permissions.get("is_super_admin"):
-            team_permissions["is_super_admin"] = False
+        team_permissions = scope_permissions_to_organization(
+            admin_record.team_permissions,
+            admin_record.organization_id,
+            platform_org_id,
+        )
+        if team_permissions != admin_record.team_permissions:
             changed = True
         if admin_record.role == "owner" and team_permissions.get("can_manage_team") is not True:
             team_permissions["can_manage_team"] = True

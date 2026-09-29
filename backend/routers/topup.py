@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/v1/topup", tags=["topup"])
 
 def _can_approve_requests(user: UserResponse) -> bool:
     permissions = user.permissions
-    return bool(permissions and permissions.is_super_admin)
+    return bool(permissions and permissions.is_super_admin and permissions.can_approve_topups)
 
 
 

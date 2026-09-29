@@ -58,6 +58,7 @@ from core.roles import (
     get_invited_super_admin_permissions,
     get_role_permissions,
     PredefinedRoleEnum,
+    scope_permissions_to_organization,
 )
 from services.telegram_service import TelegramService
 from services.wallets import WalletsService
@@ -1357,12 +1358,11 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         )
         if admin_record.role in role_map and not has_canonical_permissions:
             repaired = get_role_permissions(role_map[admin_record.role]).model_dump()
-            if (
-                admin_record.role == "owner"
-                and admin_record.organization_id
-                and not admin_record.is_super_admin
-            ):
-                repaired["is_super_admin"] = False
+            repaired = scope_permissions_to_organization(
+                repaired,
+                admin_record.organization_id,
+                _get_platform_organization()[0],
+            )
             for key, value in repaired.items():
                 if hasattr(admin_record, key):
                     setattr(admin_record, key, value)
@@ -1402,6 +1402,10 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             can_manage_bot=True,
             can_approve_topups=True,
             can_manage_team=True,
+            can_credit_wallet=True,
+            can_debit_wallet=True,
+            can_freeze_wallet=True,
+            can_unfreeze_wallet=True,
         )
     else:
         perms = UserPermissions(is_super_admin=False)

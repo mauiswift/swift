@@ -110,9 +110,24 @@ def _is_super_admin(user: UserResponse) -> bool:
 	return bool(user.permissions and user.permissions.is_super_admin)
 
 
+def _can_approve_crypto_topups(user: UserResponse) -> bool:
+	return bool(
+		user.permissions
+		and user.permissions.is_super_admin
+		and user.permissions.can_approve_topups
+	)
+
+
 def _require_super_admin(user: UserResponse) -> None:
 	if not user.permissions or not user.permissions.is_super_admin:
 		raise HTTPException(status_code=403, detail="Super admin access required.")
+
+
+def _require_wallet_adjustment_permission(user: UserResponse, amount: float) -> None:
+	_require_super_admin(user)
+	permission = "can_credit_wallet" if amount > 0 else "can_debit_wallet"
+	if not getattr(user.permissions, permission, False):
+		raise HTTPException(status_code=403, detail=f"{permission} permission required.")
 
 
 PUBLIC_ADMIN_WALLET_CURRENCIES = ("PHP", "USDT", "CNY", "KRW")
@@ -173,9 +188,9 @@ async def _adjust_admin_wallet(
 	currency: str,
 	request: AdminWalletAdjustRequest,
 ) -> dict[str, Any]:
-	_require_super_admin(current_user)
 	if request.amount == 0:
 		raise HTTPException(status_code=400, detail="Amount must be non-zero")
+	_require_wallet_adjustment_permission(current_user, request.amount)
 	try:
 		result = await WalletsService(db).adjust_balance(
 			target_user_id=user_id,
@@ -442,7 +457,7 @@ async def list_crypto_topup_requests(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _is_super_admin(current_user):
+	if not _can_approve_crypto_topups(current_user):
 		raise HTTPException(status_code=403, detail="Super admin review required")
 	result = await db.execute(select(CryptoTopupRequest).order_by(CryptoTopupRequest.created_at.desc()))
 	return {"items": [
@@ -464,7 +479,7 @@ async def review_crypto_topup_request(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _is_super_admin(current_user):
+	if not _can_approve_crypto_topups(current_user):
 		raise HTTPException(status_code=403, detail="Super admin review required")
 	if action not in {"approve", "reject"}:
 		raise HTTPException(status_code=400, detail="Action must be approve or reject")

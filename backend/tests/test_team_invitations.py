@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import pytest
 
 from models.kyb_registrations import KybRegistration
 from routers.kyb import _registration_organization
@@ -112,16 +113,56 @@ def test_invited_super_admin_cannot_manage_wallet_or_toss_controls():
     permissions = _application_permissions("super_admin", {
         "can_manage_wallet": True,
         "can_manage_team": True,
-    })
+    }, is_platform_organization=True)
 
     assert permissions["is_super_admin"] is True
     assert permissions["can_manage_payments"] is True
+    assert permissions["can_manage_team"] is False
     assert permissions["can_manage_wallet"] is False
     assert permissions["can_credit_wallet"] is False
     assert permissions["can_debit_wallet"] is False
     assert permissions["can_freeze_wallet"] is False
     assert permissions["can_unfreeze_wallet"] is False
-    assert permissions["can_manage_team"] is False
+
+
+def test_merchant_invitation_cannot_request_platform_only_permissions():
+    permissions = _application_permissions("admin", {
+        "is_super_admin": True,
+        "can_approve_topups": True,
+        "can_credit_wallet": True,
+        "can_debit_wallet": True,
+        "can_freeze_wallet": True,
+        "can_unfreeze_wallet": True,
+        "can_manage_payments": True,
+    })
+
+    assert permissions["is_super_admin"] is False
+    assert permissions["can_manage_payments"] is True
+    for key in (
+        "can_approve_topups",
+        "can_credit_wallet",
+        "can_debit_wallet",
+        "can_freeze_wallet",
+        "can_unfreeze_wallet",
+    ):
+        assert permissions[key] is False
+
+
+def test_super_admin_invitation_cannot_target_merchant_organization():
+    from fastapi import HTTPException
+
+    from routers.team_invitations import SendInvitationRequest, _resolve_super_admin_org_scope
+
+    request = SendInvitationRequest(
+        email="super@example.com",
+        role="super_admin",
+        organization_id="merchant-org",
+    )
+    with pytest.raises(HTTPException) as error:
+        import asyncio
+        asyncio.run(_resolve_super_admin_org_scope(None, request, "super_admin"))
+
+    assert error.value.status_code == 400
 
 
 def test_validate_role_name_accepts_canonical_roles_case_insensitively():

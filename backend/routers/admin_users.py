@@ -25,7 +25,7 @@ from models.auth import User
 from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.auth import _get_platform_organization
-from core.roles import get_role_permissions_by_name
+from core.roles import get_role_permissions_by_name, scope_permissions_to_organization
 from utils.audit import log_action
 
 logger = logging.getLogger(__name__)
@@ -164,9 +164,10 @@ SUPER_ADMIN_PERMISSION_FIELDS = tuple(
 
 def _apply_role_permissions(admin: AdminUser, role_name: str) -> None:
     permissions = get_role_permissions_by_name(role_name)
-    values = permissions.model_dump()
-    if role_name == "owner":
-        values["is_super_admin"] = False
+    platform_org_id, _ = _get_platform_organization()
+    values = scope_permissions_to_organization(
+        permissions.model_dump(), admin.organization_id, platform_org_id
+    )
     admin.role = "operator" if role_name == "editor" else role_name
     for field in ROLE_PERMISSION_FIELDS:
         setattr(admin, field, values[field])
@@ -288,6 +289,10 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
     else:
         organization_id = f"merchant-{telegram_id}"
         organization_name = (data.organization_name or data.name).strip()
+    permission_values = scope_permissions_to_organization(
+        permission_values, organization_id, platform_org_id
+    )
+    is_super_admin = permission_values["is_super_admin"]
 
     admin = AdminUser(
         telegram_id=telegram_id,
@@ -358,6 +363,9 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
         requested_role = requested_role.strip().lower()
         if requested_role not in {"owner", "admin", "manager", "editor", "operator", "viewer", "developer", "super_admin"}:
             raise HTTPException(status_code=400, detail="Invalid role.")
+        platform_org_id, _ = _get_platform_organization()
+        if requested_role == "super_admin" and admin.organization_id != platform_org_id:
+            raise HTTPException(status_code=400, detail="Super admin role can only be assigned within the platform organization.")
         if admin.telegram_id == current_user.id and requested_role != "owner":
             raise HTTPException(status_code=400, detail="Cannot change your own platform role.")
     if "email" in payload_data:

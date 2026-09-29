@@ -17,6 +17,7 @@ from models.custom_roles import CustomRole
 from models.admin_users import AdminUser
 from schemas.auth import UserResponse
 from services.auth import _get_platform_organization
+from core.roles import scope_permissions_to_organization
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +123,9 @@ def _apply_role_permissions(admin: AdminUser, role: CustomRole) -> None:
     """Persist a role assignment consistently for every authentication path."""
     permissions = {field: bool(getattr(role, field)) for field in ROLE_PERMISSION_FIELDS}
     platform_org_id, _ = _get_platform_organization()
-    if admin.organization_id != platform_org_id:
-        permissions["is_super_admin"] = False
+    permissions = scope_permissions_to_organization(
+        permissions, admin.organization_id, platform_org_id
+    )
 
     for field, value in permissions.items():
         setattr(admin, field, value)

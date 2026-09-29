@@ -11,7 +11,13 @@ from sqlalchemy import select
 
 from core.config import settings
 from models.admin_users import AdminUser
-from core.roles import PERMISSION_KEYS, PredefinedRoleEnum, get_role_permissions, PREDEFINED_ROLES
+from core.roles import (
+    PERMISSION_KEYS,
+    PredefinedRoleEnum,
+    get_role_permissions,
+    PREDEFINED_ROLES,
+    scope_permissions_to_organization,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +66,9 @@ class RolesService:
             # Get role permissions
             permission_values = get_role_permissions(role).model_dump()
             platform_org_id = str(getattr(settings, "platform_organization_id", "swiftpay-ph")).strip()
-            if role is PredefinedRoleEnum.OWNER and admin_user.organization_id != platform_org_id:
-                permission_values["is_super_admin"] = False
+            permission_values = scope_permissions_to_organization(
+                permission_values, admin_user.organization_id, platform_org_id
+            )
             
             for permission in PERMISSION_KEYS:
                 setattr(admin_user, permission, permission_values[permission])
@@ -105,8 +112,9 @@ class RolesService:
             # Try to match the admin's permission configuration to a predefined role
             for role, permissions in PREDEFINED_ROLES.items():
                 expected_permissions = dict(permissions)
-                if role is PredefinedRoleEnum.OWNER and admin_user.organization_id != platform_org_id:
-                    expected_permissions["is_super_admin"] = False
+                expected_permissions = scope_permissions_to_organization(
+                    expected_permissions, admin_user.organization_id, platform_org_id
+                )
                 if all(
                     getattr(admin_user, permission, False) is expected_permissions[permission]
                     for permission in PERMISSION_KEYS

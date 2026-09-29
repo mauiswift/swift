@@ -37,7 +37,7 @@ def _validate_wallet_currency(currency: Optional[str]) -> Optional[str]:
 
 def _require_wallet_permission(current_user: UserResponse, permission: str) -> None:
     permissions = current_user.permissions
-    if not permissions or not getattr(permissions, permission, False):
+    if not permissions or not permissions.is_super_admin or not getattr(permissions, permission, False):
         raise HTTPException(status_code=403, detail=f"{permission} permission required.")
 
 

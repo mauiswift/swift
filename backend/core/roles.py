@@ -14,7 +14,7 @@ Standard Roles:
 """
 
 from enum import Enum
-from typing import Dict
+from typing import Dict, Optional
 from pydantic import BaseModel
 
 
@@ -49,6 +49,28 @@ class RolePermissions(BaseModel):
 
 
 PERMISSION_KEYS = tuple(RolePermissions.model_fields)
+PLATFORM_ONLY_PERMISSION_KEYS = (
+    "is_super_admin",
+    "can_approve_topups",
+    "can_credit_wallet",
+    "can_debit_wallet",
+    "can_freeze_wallet",
+    "can_unfreeze_wallet",
+)
+
+
+def scope_permissions_to_organization(
+    permissions: Dict[str, bool],
+    organization_id: Optional[str],
+    platform_organization_id: str,
+) -> Dict[str, bool]:
+    """Strip platform controls from permissions assigned outside the platform organization."""
+    scoped_permissions = dict(permissions)
+    if organization_id != platform_organization_id:
+        for key in PLATFORM_ONLY_PERMISSION_KEYS:
+            if key in scoped_permissions:
+                scoped_permissions[key] = False
+    return scoped_permissions
 
 WALLET_PERMISSION_KEYS = (
     "can_manage_wallet",
@@ -60,7 +82,7 @@ WALLET_PERMISSION_KEYS = (
 
 ROLE_DESCRIPTIONS = {
     PredefinedRoleEnum.OWNER: "Full access to one organization; platform-wide access is reserved for the platform owner",
-    PredefinedRoleEnum.ADMIN: "Manage an organization's day-to-day operations, team, and wallet controls",
+    PredefinedRoleEnum.ADMIN: "Manage organization payments, disbursements, reports, bot settings, and team access",
     PredefinedRoleEnum.MANAGER: "Manage organization operations, reports, wallet settings, and team access",
     PredefinedRoleEnum.OPERATOR: "Process organization payments and disbursements and review transactions",
     PredefinedRoleEnum.VIEWER: "Read organization reports and transaction history without operational controls",
@@ -92,7 +114,7 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
     },
     
     # ==== ADMIN ====
-    # All permissions except super admin (cannot modify platform-level settings)
+    # Organization operations without platform-wide approval or wallet controls
     PredefinedRoleEnum.ADMIN: {
         "is_super_admin": False,
         "can_manage_payments": True,
@@ -101,12 +123,12 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_wallet": True,
         "can_manage_transactions": True,
         "can_manage_bot": True,
-        "can_approve_topups": True,
+        "can_approve_topups": False,
         "can_manage_team": True,
-        "can_credit_wallet": True,
-        "can_debit_wallet": True,
-        "can_freeze_wallet": True,
-        "can_unfreeze_wallet": True,
+        "can_credit_wallet": False,
+        "can_debit_wallet": False,
+        "can_freeze_wallet": False,
+        "can_unfreeze_wallet": False,
     },
     
     # ==== MANAGER ====
