@@ -10,6 +10,14 @@ import { walletApi } from '@/api/wallet';
 import { toast } from 'sonner';
 import { copyTextToClipboard } from '@/lib/clipboard';
 
+type StoreProfileUpdate = {
+  store_name?: string;
+  store_logo_url?: string;
+  permanent_link_slug?: string;
+  store_slug?: string;
+  collection_currency?: string;
+};
+
 export default function StoreProfile() {
   const navigate = useNavigate();
   const { user, isSuperAdmin } = useAuth();
@@ -23,8 +31,11 @@ export default function StoreProfile() {
 
   // Form state
   const [shopName, setShopName] = useState('');
+  const [savedShopName, setSavedShopName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [savedLogoUrl, setSavedLogoUrl] = useState('');
   const [slug, setSlug] = useState('');
+  const [savedSlug, setSavedSlug] = useState('');
   const [storeSlug, setStoreSlug] = useState('3');
   const [collectionCurrency, setCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
   const [savedCollectionCurrency, setSavedCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
@@ -47,8 +58,11 @@ export default function StoreProfile() {
       if (res.data) {
         const nextCurrency = String(res.data.collection_currency || sharedCollectionCurrency || 'PHP').toUpperCase();
         setShopName(res.data.store_name || user?.organization_name || '');
+        setSavedShopName(res.data.store_name || user?.organization_name || '');
         setLogoUrl(res.data.store_logo_url || '');
+        setSavedLogoUrl(res.data.store_logo_url || '');
         setSlug(res.data.permanent_link_slug || '');
+        setSavedSlug(res.data.permanent_link_slug || '');
         setStoreSlug(res.data.store_slug || '3');
         setCollectionCurrency(nextCurrency);
         setSavedCollectionCurrency(nextCurrency);
@@ -75,23 +89,22 @@ export default function StoreProfile() {
       .catch((err) => console.error('Failed to fetch permanent payment links:', err));
   }, []);
 
-  const handleSave = async () => {
+  const saveSettings = async (updates: StoreProfileUpdate, successMessage: string) => {
     if (!canManageProfile) return;
     setSaving(true);
     try {
-      const res = await client.patch('/api/v1/merchant/api-config', {
-        store_name: shopName,
-        store_logo_url: logoUrl,
-        permanent_link_slug: slug,
-        store_slug: storeSlug,
-        collection_currency: collectionCurrency,
-      });
+      const res = await client.patch('/api/v1/merchant/api-config', updates);
       if (res.ok) {
-        const savedCurrency = String(res.data?.collection_currency || collectionCurrency).toUpperCase();
-        setCollectionCurrency(savedCurrency);
-        setSavedCollectionCurrency(savedCurrency);
-        setSharedCollectionCurrency(savedCurrency);
-        toast.success('Store profile updated');
+        if ('store_name' in updates) setSavedShopName(updates.store_name || '');
+        if ('permanent_link_slug' in updates) setSavedSlug(updates.permanent_link_slug || '');
+        if ('store_logo_url' in updates) setSavedLogoUrl(updates.store_logo_url || '');
+        if ('collection_currency' in updates) {
+          const savedCurrency = String(res.data?.collection_currency || updates.collection_currency || 'PHP').toUpperCase();
+          setCollectionCurrency(savedCurrency);
+          setSavedCollectionCurrency(savedCurrency);
+          setSharedCollectionCurrency(savedCurrency);
+        }
+        toast.success(successMessage);
       } else {
         const errorMsg = res.data?.detail || res.data?.message || 'Failed to update store profile';
         toast.error(errorMsg);
@@ -104,6 +117,24 @@ export default function StoreProfile() {
       setSaving(false);
     }
   };
+
+  const handleSave = () => saveSettings({
+    store_name: shopName,
+    store_logo_url: logoUrl,
+    permanent_link_slug: slug,
+    store_slug: storeSlug,
+    collection_currency: collectionCurrency,
+  }, 'Store profile updated');
+
+  const saveStoreSettings = () => saveSettings({
+    store_name: shopName,
+    store_slug: storeSlug,
+    collection_currency: collectionCurrency,
+  }, 'Store settings updated');
+
+  const savePermanentLink = () => saveSettings({ permanent_link_slug: slug }, 'Permanent payment link updated');
+
+  const saveLogoUrl = () => saveSettings({ store_logo_url: logoUrl }, 'Store logo updated');
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canManageProfile) return;
@@ -118,6 +149,7 @@ export default function StoreProfile() {
       const res = await client.post('/api/v1/merchant/api-config/upload-logo', formData);
       if (res.ok && res.data?.logo_url) {
         setLogoUrl(res.data.logo_url);
+        setSavedLogoUrl(res.data.logo_url);
         toast.success('Logo uploaded successfully');
       } else {
         toast.error(res.data?.detail || 'Failed to upload logo');
@@ -221,7 +253,17 @@ export default function StoreProfile() {
                     <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
                 </div>
-
+                <div className="flex justify-end border-t border-slate-100 pt-5">
+                  <button
+                    type="button"
+                    onClick={saveStoreSettings}
+                    disabled={saving || !canManageProfile || (shopName === savedShopName && collectionCurrency === savedCollectionCurrency)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-4 text-sm font-semibold text-white hover:bg-[#E66000] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    Save store settings
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -250,6 +292,17 @@ export default function StoreProfile() {
                       disabled={!canManageProfile}
                       className="min-w-0 flex-1 basis-40 bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                     />
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={savePermanentLink}
+                      disabled={saving || !canManageProfile || slug === savedSlug}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#FF6B00] px-4 text-sm font-semibold text-white hover:bg-[#E66000] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                      Save link
+                    </button>
                   </div>
                 </div>
 
@@ -351,6 +404,15 @@ export default function StoreProfile() {
                   className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
                 <p className="text-[11px] text-slate-400 mt-2">Recommended: Square image, transparent background.</p>
+                <button
+                  type="button"
+                  onClick={saveLogoUrl}
+                  disabled={saving || !canManageProfile || logoUrl === savedLogoUrl}
+                  className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#FF6B00] px-4 text-sm font-semibold text-white hover:bg-[#E66000] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                >
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                  Save logo URL
+                </button>
               </div>
             </div>
           </div>

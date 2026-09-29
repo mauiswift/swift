@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { client } from '@/lib/api';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface ApiConfig {
   test_access_key: string;
@@ -87,34 +88,40 @@ export default function ApiIntegration() {
     fetchConfig();
   }, [fetchConfig]);
 
-  const handleSave = async () => {
-    if (!config) return;
-    const urlFields = EDITABLE_FIELDS.filter((field) => field.endsWith('_url'));
+  const validateFields = (fields: (keyof EditableApiConfig)[]) => {
+    if (!config) return false;
+    const urlFields = fields.filter((field) => field.endsWith('_url'));
     for (const field of urlFields) {
       const value = String(config[field] || '').trim();
       if (value && !isValidUrl(value)) {
         toast.error(`${field.replace(/^(test|live)_/, '').replace(/_/g, ' ')} must be a valid HTTP or HTTPS URL`);
-        return;
+        return false;
       }
     }
     for (const mode of ['test', 'live'] as const) {
+      const statusField = `${mode}_status_page_mode` as keyof EditableApiConfig;
+      if (!fields.includes(statusField)) continue;
       const statusMode = config[`${mode}_status_page_mode` as keyof ApiConfig];
       const externalUrl = String(config[`${mode}_external_status_url` as keyof ApiConfig] || '').trim();
       if (statusMode === 'external' && !externalUrl) {
         toast.error(`${mode === 'test' ? 'Test' : 'Live'} external status page URL is required`);
-        return;
+        return false;
       }
     }
+    return true;
+  };
 
+  const saveFields = async (fields: (keyof EditableApiConfig)[], successMessage: string) => {
+    if (!config || !validateFields(fields)) return;
     setSaving(true);
     try {
-      const payload = EDITABLE_FIELDS.reduce<Partial<EditableApiConfig>>((result, field) => {
+      const payload = fields.reduce<Partial<EditableApiConfig>>((result, field) => {
         result[field] = config[field];
         return result;
       }, {});
       const res = await client.patch('/api/v1/merchant/api-config', payload);
       if (res.ok) {
-        toast.success('Configuration saved successfully');
+        toast.success(successMessage);
       } else {
         toast.error(res.data?.detail || 'Failed to save configuration');
       }
@@ -123,6 +130,13 @@ export default function ApiIntegration() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = () => saveFields(EDITABLE_FIELDS, 'Configuration saved successfully');
+
+  const saveMode = (mode: 'test' | 'live') => {
+    const fields = EDITABLE_FIELDS.filter((field) => field.startsWith(`${mode}_`));
+    return saveFields(fields, `${mode === 'test' ? 'Test' : 'Live'} configuration saved`);
   };
 
   const generateSecret = async (mode: 'test' | 'live') => {
@@ -291,8 +305,24 @@ export default function ApiIntegration() {
               <thead>
                 <tr>
                   <th className="w-[240px]"></th>
-                  <th className="px-6 py-6 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-center">Test mode</th>
-                  <th className="px-6 py-6 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-center">Live mode</th>
+                  <th className="px-6 py-4 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Test mode</span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void saveMode('test')} disabled={saving || !config} className="h-9 gap-1.5">
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                        Save test
+                      </Button>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Live mode</span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void saveMode('live')} disabled={saving || !config} className="h-9 gap-1.5">
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                        Save live
+                      </Button>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
