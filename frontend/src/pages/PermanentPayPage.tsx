@@ -94,19 +94,20 @@ export default function PermanentPayPage() {
   }
 
   const displayCurrency = merchant?.collection_currency || collectionCurrency || 'PHP';
+  const merchantName = merchant?.store_name?.trim() || 'Merchant';
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-sans text-slate-900">
       <header className="border-b border-slate-200 bg-white py-6">
-        <div className="mx-auto flex max-w-xl flex-col items-center px-4 text-center">
+        <div className="mx-auto flex max-w-4xl flex-col items-center px-4 text-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
             {merchant?.store_logo_url ? (
-              <img src={merchant.store_logo_url} alt={merchant.store_name} className="h-full w-full object-contain p-2" />
+              <img src={merchant.store_logo_url} alt={merchantName} className="h-full w-full object-contain p-2" />
             ) : (
               <Store size={24} className="text-slate-200" />
             )}
           </div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchant?.store_name}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchantName}</h1>
           <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
             <ShieldCheck size={14} className="text-emerald-500" />
             Secure payment
@@ -114,31 +115,46 @@ export default function PermanentPayPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-xl justify-center px-4 py-8 sm:py-10">
+      <main className="mx-auto flex max-w-4xl justify-center px-4 py-8 sm:py-10">
         <section className="w-full overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
-          <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
-                  <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
-                  OPEN AMOUNT PAYMENT
+          <div className="grid lg:grid-cols-2">
+            <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8 sm:py-9">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
+                    <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
+                    OPEN AMOUNT PAYMENT
+                  </div>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
+                      <ShieldCheck size={12} />
+                      Secure Platform
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-blue-50">
+                      {displayCurrency}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-[28px]">Enter amount</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-200">
+                    Choose how much you want to pay, then continue to the secure payment selection page.
+                  </p>
                 </div>
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
-                    <ShieldCheck size={12} />
-                    Secure Platform
-                  </span>
-                </div>
-                <h2 className="text-2xl font-semibold tracking-tight text-white">Secure Payment</h2>
-                <p className="mt-2 text-sm leading-relaxed text-slate-200">Enter your amount to continue to secure payment selection.</p>
               </div>
-              <span className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
-                {displayCurrency}
-              </span>
-            </div>
-          </div>
 
-          <form onSubmit={handlePay} className="space-y-6 p-6 sm:p-8">
+              <div className="mt-7 space-y-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-[13px] text-blue-50/90 backdrop-blur-sm">
+                <p className="font-semibold text-white">Payment summary</p>
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-blue-50/80">Merchant</span>
+                  <span className="text-right font-semibold text-white">{merchantName}</span>
+                </div>
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-blue-50/80">Currency</span>
+                  <span className="font-semibold text-white">{displayCurrency}</span>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handlePay} className="space-y-6 p-6 sm:p-8 lg:p-10">
             <div>
               <label htmlFor="permanent-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Enter payment amount
@@ -183,7 +199,7 @@ export default function PermanentPayPage() {
                 className="mt-0.5 h-4 w-4 shrink-0 accent-[#071b3a]"
               />
               <span>
-                I confirm that I have already received the goods or services purchased from DRL TECHS COMPUTER SOFTWARE TRADING, and that I am voluntarily making this payment. I acknowledge that the payment details I provide are accurate and agree to the applicable payment compliance requirements.
+                I confirm that I have already received the goods or services purchased from <span className="font-semibold text-slate-900">{merchantName}</span>, and that I am voluntarily making this payment. I acknowledge that the payment details I provide are accurate and agree to the applicable payment compliance requirements.
               </span>
             </label>
 
@@ -199,7 +215,8 @@ export default function PermanentPayPage() {
                 </span>
               )}
             </button>
-          </form>
+            </form>
+          </div>
         </section>
       </main>
     </div>
