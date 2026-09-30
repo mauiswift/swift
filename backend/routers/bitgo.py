@@ -8,7 +8,13 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.usdt_deposit_addresses import UsdtDepositAddress
 from schemas.auth import UserResponse
-from services.bitgo_service import BitGoConfigurationError, BitGoRequestError, assign_usdt_address
+from services.app_settings import get_usdt_trc20_address
+from services.bitgo_service import (
+    BitGoConfigurationError,
+    BitGoRequestError,
+    assign_usdt_address,
+    get_bitgo_config,
+)
 
 router = APIRouter(prefix="/api/v1/bitgo", tags=["bitgo"])
 
@@ -32,6 +38,20 @@ async def get_my_bitgo_address(
 ):
     """Return the authenticated user's BitGo-managed USDT deposit address."""
     user_id = str(current_user.id)
+    config = await get_bitgo_config(db)
+    if not config["enabled"] or not config["configured"]:
+        # When BitGo is disabled, use the platform-wide USDT TRC20 address for all top-ups.
+        address = await get_usdt_trc20_address(db)
+        return {
+            "id": None,
+            "user_id": user_id,
+            "address": address,
+            "network": "trc20",
+            "derivation_index": None,
+            "active": True,
+            "last_scanned_at": None,
+            "source": "usdt_trc20_address",
+        }
     record = await db.scalar(
         select(UsdtDepositAddress).where(UsdtDepositAddress.user_id == user_id)
     )
