@@ -1133,9 +1133,20 @@ export default function Checkout() {
                 )}
               </div>
             ) : <div className="p-6 sm:p-8">
-              <label htmlFor="open-payment-amount" className="text-sm font-medium text-slate-700">
-                {isKoreanCheckout ? '결제 금액' : 'Payment amount'}
-              </label>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    {isKoreanCheckout ? '금액 입력' : 'Enter amount'}
+                  </p>
+                  <label htmlFor="open-payment-amount" className="mt-1 block text-sm font-medium text-slate-700">
+                    {isKoreanCheckout ? '결제 금액' : 'Payment amount'}
+                  </label>
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                  <ShieldCheck size={14} />
+                  {isKoreanCheckout ? '보안 검토' : 'Security review'}
+                </span>
+              </div>
               <div className={`checkout-amount-input mt-3 flex items-center gap-3 rounded-2xl border bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-100 transition focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-100 ${amountInputInvalid ? 'checkout-amount-input-error border-red-300 ring-red-100' : 'border-slate-200'}`}>
                 <span className="checkout-amount-symbol flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-lg font-bold text-[#0b4b9a]" aria-hidden="true">
                   {amountSymbol}
@@ -1169,6 +1180,16 @@ export default function Checkout() {
                 </span>
                 <span className="font-medium text-slate-400">{isKoreanCheckout ? '최소 0.01' : 'Min 0.01'}</span>
               </div>
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-[12px] font-semibold text-slate-900">
+                  {isKoreanCheckout ? '다음 단계에서 검토 요청이 전송됩니다.' : 'This sends a request for review.'}
+                </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+                  {isKoreanCheckout
+                    ? '관리자가 금액을 확인한 뒤 결제를 진행할 수 있습니다.'
+                    : 'A super admin will review the amount before payment can proceed.'}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={submitOpenAmount}
@@ -1176,7 +1197,7 @@ export default function Checkout() {
                 className="mt-4 w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100"
                 style={{ backgroundColor: checkoutDesign.primary_color }}
               >
-                {isKrw ? '지금 결제' : 'Pay now'}
+                {isKoreanCheckout ? '검토 요청' : 'Request review'}
                 <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
               </button>
             </div>}
