@@ -980,30 +980,76 @@ export default function Checkout() {
     }
   };
 
-  const renderInstitutionButton = (institution: Institution) => (
-    <button
-      key={institution.id}
-      type="button"
-      onClick={() => handleStartCheckout(institution.code)}
-      className="group flex min-h-[132px] flex-col items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-[#FF6B00] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
-      aria-label={`Pay with ${institution.name}`}
-    >
-      <PaymentBrandLogo
-        brand={institution.code || institution.name}
-        logoUrl={institution.logoUrl}
-        size="md"
-        className="border border-slate-100 shadow-sm"
-      />
-      <span className="w-full truncate text-[12px] font-semibold text-slate-900">{institution.name}</span>
-      <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 transition-colors group-hover:text-[#FF6B00]" aria-hidden="true" />
-    </button>
-  );
+  const formatInstitutionLoginMethod = (method?: string) => {
+    const value = String(method || '').trim().toLowerCase();
+    if (!value) return '';
+    if (value.includes('deep')) return checkoutText('Deep link', '딥링크');
+    if (value.includes('qr')) return checkoutText('QR', 'QR');
+    if (value.includes('manual')) return checkoutText('Manual', '수동');
+    if (value.includes('redirect')) return checkoutText('Redirect', '리디렉션');
+    if (value.includes('api')) return checkoutText('API', 'API');
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+  };
+
+  const renderInstitutionButton = (institution: Institution) => {
+    const code = institutionCode(institution);
+    const kind = code === 'QRPH'
+      ? checkoutText('QR', 'QR')
+      : (['MAYA', 'GCASH', 'ALIPAY'].includes(code) ? checkoutText('Wallet', '전자지갑') : checkoutText('Bank', '은행'));
+    const loginLabel = formatInstitutionLoginMethod(institution.loginMethod);
+    const recommended = ['QRPH', 'GCASH', 'MAYA'].includes(code);
+
+    const kindClasses = code === 'QRPH'
+      ? 'border-sky-200 bg-sky-50 text-sky-700'
+      : (['MAYA', 'GCASH', 'ALIPAY'].includes(code) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-700');
+
+    return (
+      <button
+        key={institution.id}
+        type="button"
+        onClick={() => handleStartCheckout(institution.code)}
+        className="group flex min-h-[148px] flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-[#FF6B00] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
+        aria-label={`Pay with ${institution.name}`}
+        title={institution.name}
+      >
+        <div className="flex w-full items-start justify-between gap-2">
+          <PaymentBrandLogo
+            brand={institution.code || institution.name}
+            logoUrl={institution.logoUrl}
+            size="md"
+            className="border border-slate-100 shadow-sm"
+          />
+          <ArrowUpRight className="mt-1 h-4 w-4 text-slate-300 transition-colors group-hover:text-[#FF6B00]" aria-hidden="true" />
+        </div>
+
+        <div className="w-full space-y-2">
+          <span className="block w-full truncate text-[12px] font-semibold text-slate-900">{institution.name}</span>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${kindClasses}`}>
+              {kind}
+            </span>
+            {loginLabel && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                {loginLabel}
+              </span>
+            )}
+            {recommended && (
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                {checkoutText('Recommended', '추천')}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    );
+  };
 
   if (openAmount) {
     const amountBrand = isKrw ? krwBankName : 'Netbank';
     const amountTitle = isKrw
       ? (swiftpayVirtualAccountEnabled ? 'SwiftPay Virtual Account' : '수동 은행 송금')
       : (isKoreanCheckout ? '결제' : 'Payment');
+    const openAmountDisabled = amountInputInvalid || !enteredAmount.trim();
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
         {showSignaturePrompt && requiresDigitalSignature && (
@@ -1102,7 +1148,11 @@ export default function Checkout() {
                   inputMode="decimal"
                   value={enteredAmount}
                   onChange={(event) => setEnteredAmount(event.target.value)}
-                  onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    if (amountInputInvalid || !enteredAmount.trim()) return;
+                    submitOpenAmount();
+                  }}
                   placeholder="0.00"
                   autoFocus
                   className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
@@ -1122,7 +1172,8 @@ export default function Checkout() {
               <button
                 type="button"
                 onClick={submitOpenAmount}
-                className="mt-4 w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                disabled={openAmountDisabled}
+                className="mt-4 w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100"
                 style={{ backgroundColor: checkoutDesign.primary_color }}
               >
                 {isKrw ? '지금 결제' : 'Pay now'}
@@ -1137,7 +1188,7 @@ export default function Checkout() {
 
   const qrCodeUrl = normalizeCheckoutQrValue(txn.qr_code_url);
   const swiftPayQrphUrl = txn.external_id
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.ph'}/checkout/${encodeURIComponent(txn.external_id)}?payment_method=qrph`
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.site'}/checkout/${encodeURIComponent(txn.external_id)}?payment_method=qrph`
     : '';
   const tossQrValue = swiftPayQrphUrl || (qrCodeUrl || '');
 
@@ -1675,7 +1726,7 @@ export default function Checkout() {
                             <p className="text-[11px] text-slate-400">{checkoutText('Scan with a supported app', '지원 앱으로 스캔')}</p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                           {qrphInstitutions.map(renderInstitutionButton)}
                         </div>
                       </div>
@@ -1693,7 +1744,7 @@ export default function Checkout() {
                             <p className="text-[11px] text-slate-400">{checkoutText('Mobile payment apps', '모바일 결제 앱')}</p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                           {digitalWallets.map(renderInstitutionButton)}
                         </div>
                       </div>
@@ -1727,7 +1778,7 @@ export default function Checkout() {
                           )}
                         </div>
                         {filteredBanks.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                             {filteredBanks.map(renderInstitutionButton)}
                           </div>
                         ) : (

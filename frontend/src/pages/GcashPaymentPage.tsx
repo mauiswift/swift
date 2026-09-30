@@ -121,7 +121,7 @@ export default function GcashPaymentPage() {
 
   return (
     <main className={`min-h-screen px-4 py-6 text-slate-900 sm:py-10 ${isAlipay ? 'bg-[#f0f7ff]' : 'bg-[#f5f8fc]'}`}>
-      <div className="mx-auto max-w-[430px]">
+      <div className="mx-auto max-w-[520px]">
         <section className={`overflow-hidden rounded-[24px] border bg-white ${isAlipay ? 'border-[#b9dcff] shadow-[0_18px_50px_rgba(22,119,255,0.18)]' : 'border-slate-200 shadow-[0_18px_50px_rgba(30,64,120,0.12)]'}`}>
           <div className={`flex flex-col items-center px-6 py-7 text-center text-white sm:px-8 ${isAlipay ? 'bg-gradient-to-br from-[#1677ff] via-[#1677ff] to-[#00a0e9]' : 'bg-[#007dff]'}`}>
             <img src={isAlipay ? '/logos/alipay.png' : '/logos/gcash.png'} alt={isAlipay ? 'Alipay' : 'GCash'} className="h-10 w-auto object-contain brightness-0 invert" />
@@ -182,7 +182,9 @@ export default function GcashPaymentPage() {
             )}
           </div>
         </section>
-
+        <p className="mt-5 text-center text-[11px] font-medium text-slate-400">
+          Powered by SwiftPay
+        </p>
       </div>
     </main>
   );
