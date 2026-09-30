@@ -46,6 +46,7 @@ import {
   resolveCheckoutQrPanelMode,
   sanitizeCheckoutDeepLink,
 } from '@/lib/checkoutQr';
+import { openMobileDeepLink } from '@/lib/deeplinks';
 import {
   KRW_BANKS as SUPPORTED_KRW_BANKS,
   DEFAULT_KRW_BANK_NAME,
@@ -375,22 +376,14 @@ export default function Checkout() {
   };
 
   const openTossPaymentApp = () => {
-    const tossDeepLink = txn?.toss_deep_link?.trim() || 'supertoss://toss/pay';
-    let appOpened = false;
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        appOpened = true;
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      }
-    };
-
+    const tossDeepLink = sanitizeCheckoutDeepLink(txn?.toss_deep_link?.trim()) || 'supertoss://toss/pay';
     setQrInstructionApp('toss');
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.location.assign(tossDeepLink);
-    window.setTimeout(() => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (!appOpened) setShowQRPhModal(true);
-    }, 1200);
+    openMobileDeepLink({
+      url: tossDeepLink,
+      androidPackage: 'viva.republica.toss',
+      timeoutMs: 1600,
+      onFallback: () => setShowQRPhModal(true),
+    });
   };
 
   useEffect(() => {
@@ -1146,7 +1139,7 @@ export default function Checkout() {
   const swiftPayQrphUrl = txn.external_id
     ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.ph'}/checkout/${encodeURIComponent(txn.external_id)}?payment_method=qrph`
     : '';
-  const tossQrValue = isKrw ? swiftPayQrphUrl : (qrCodeUrl || '');
+  const tossQrValue = swiftPayQrphUrl || (qrCodeUrl || '');
 
   return (
     <div

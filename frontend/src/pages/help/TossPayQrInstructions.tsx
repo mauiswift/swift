@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { openMobileDeepLink } from '@/lib/deeplinks';
 
 const DEFAULT_QRPH_SAMPLE = '00020101...';
 
@@ -14,7 +15,11 @@ export default function TossPayQrInstructions() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  const initialQr = params.get('qr') || DEFAULT_QRPH_SAMPLE;
+  const externalId = params.get('external_id') || '';
+  const checkoutQrUrl = externalId
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.ph'}/checkout/${encodeURIComponent(externalId)}?payment_method=qrph`
+    : '';
+  const initialQr = params.get('qr') || checkoutQrUrl || DEFAULT_QRPH_SAMPLE;
   const [qrContent, setQrContent] = useState(initialQr);
   const [amount, setAmount] = useState(params.get('amount') || '');
 
@@ -40,10 +45,26 @@ export default function TossPayQrInstructions() {
               with a live QR preview. If you send real TOSS screenshots, I’ll replace the placeholders and make it look 1:1.
             </p>
           </div>
-          <Button type="button" variant="outline" onClick={() => navigate('/settings/shop/settlement')} className="gap-2">
-            <ExternalLink className="h-4 w-4" />
-            Banking settings
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                openMobileDeepLink({
+                  url: 'supertoss://toss/pay',
+                  androidPackage: 'viva.republica.toss',
+                });
+              }}
+              className="gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open Toss app
+            </Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/settings/shop/settlement')} className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Banking settings
+            </Button>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -170,4 +191,3 @@ export default function TossPayQrInstructions() {
     </Layout>
   );
 }
-
