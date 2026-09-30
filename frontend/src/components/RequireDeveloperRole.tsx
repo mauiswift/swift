@@ -29,11 +29,11 @@ export default function RequireDeveloperRole({ children }: Props) {
           <div className="h-16 w-16 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-center mb-5">
             <ShieldOff className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Access Restricted</h1>
-          <p className="text-muted-foreground text-sm max-w-sm mb-1">
-            This page is only accessible to <span className="text-amber-400 font-semibold">Developer or Super Admin</span> roles.
+          <h1 className="mb-2 text-2xl font-semibold text-slate-900">Access Restricted</h1>
+          <p className="mb-1 max-w-sm text-sm text-slate-600">
+            This page is only accessible to <span className="font-semibold text-amber-600">Developer or Super Admin</span> roles.
           </p>
-          <p className="text-muted-foreground text-xs max-w-sm">
+          <p className="max-w-sm text-xs text-slate-500">
             Request <span className="font-medium">API/Webhook management</span> permission from your organization owner.
           </p>
         </div>
