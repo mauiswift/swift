@@ -209,57 +209,70 @@ function RolePermissionMatrix() {
 
       {/* Desktop: compact matrix table */}
       <div className="hidden sm:block">
-        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
-          <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-xs">
-            <thead>
-              <tr className="text-[10px] uppercase tracking-[0.16em] text-slate-300">
-                <th className="sticky left-0 z-10 bg-[#0A0F1E] px-4 py-3">Role</th>
-                <th colSpan={baseColumns.length} className="px-4 py-3 text-slate-300">Dashboard access</th>
-                <th colSpan={platformColumns.length} className="px-4 py-3 text-slate-300">Platform-only / system</th>
-              </tr>
-              <tr className="border-t border-white/10 text-[11px] font-semibold text-slate-200">
-                <th className="sticky left-0 z-10 bg-[#0A0F1E] px-4 py-3" />
-                {baseColumns.map((column) => (
-                  <th key={column.key} className="whitespace-nowrap px-3 py-3 text-center">{column.label}</th>
-                ))}
-                {platformColumns.map((column) => (
-                  <th key={column.key} className="whitespace-nowrap px-3 py-3 text-center">{column.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+        <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="border-b border-white/10 p-4 lg:border-b-0 lg:border-r lg:max-h-[60vh] lg:overflow-y-auto">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Roles</p>
+            <div className="mt-3 space-y-3">
               {roles.map((role) => (
-                <tr key={role.key} className="border-t border-white/10">
-                  <td className="sticky left-0 z-10 bg-[#0A0F1E] px-4 py-3 align-top">
-                    <p className="text-sm font-semibold text-white">{role.title}</p>
-                    <p className="mt-1 max-w-[360px] text-[11px] leading-relaxed text-slate-400">{role.description}</p>
-                  </td>
+                <div key={role.key} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-sm font-semibold text-white">{role.title}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{role.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {role.permissions.length === 0
+                      ? pill('No dashboard permissions')
+                      : role.permissions.map((key) => pill(PERMISSION_LABELS[key] || key))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          <div className="lg:max-h-[60vh] lg:overflow-auto">
+            <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-xs">
+              <thead>
+                <tr className="sticky top-0 z-20 bg-[#0A0F1E] text-[10px] uppercase tracking-[0.16em] text-slate-300">
+                  <th colSpan={baseColumns.length} className="px-4 py-3 text-slate-300">Dashboard access</th>
+                  <th colSpan={platformColumns.length} className="px-4 py-3 text-slate-300">Platform-only / system</th>
+                </tr>
+                <tr className="sticky top-[36px] z-20 bg-[#0A0F1E] text-[11px] font-semibold text-slate-200">
                   {baseColumns.map((column) => (
-                    <td key={column.key} className="px-3 py-3 text-center align-middle">
-                      {roleHas(role, column.key) ? (
-                        <span className="inline-flex items-center justify-center rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-200">
-                          <Check className="h-3.5 w-3.5" aria-label="Allowed" />
-                        </span>
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      )}
-                    </td>
+                    <th key={column.key} className="whitespace-nowrap px-3 py-3 text-center">{column.label}</th>
                   ))}
                   {platformColumns.map((column) => (
-                    <td key={column.key} className="px-3 py-3 text-center align-middle">
-                      {roleHas(role, column.key) ? (
-                        <span className="inline-flex items-center justify-center rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">
-                          <Check className="h-3.5 w-3.5" aria-label="Allowed" />
-                        </span>
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      )}
-                    </td>
+                    <th key={column.key} className="whitespace-nowrap px-3 py-3 text-center">{column.label}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {roles.map((role) => (
+                  <tr key={role.key} className="border-t border-white/10">
+                    {baseColumns.map((column) => (
+                      <td key={column.key} className="px-3 py-3 text-center align-middle">
+                        {roleHas(role, column.key) ? (
+                          <span className="inline-flex items-center justify-center rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-200">
+                            <Check className="h-3.5 w-3.5" aria-label="Allowed" />
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
+                    ))}
+                    {platformColumns.map((column) => (
+                      <td key={column.key} className="px-3 py-3 text-center align-middle">
+                        {roleHas(role, column.key) ? (
+                          <span className="inline-flex items-center justify-center rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">
+                            <Check className="h-3.5 w-3.5" aria-label="Allowed" />
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {rolesWithNotes.length > 0 && (
