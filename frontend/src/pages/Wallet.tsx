@@ -18,6 +18,9 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import CollectionWalletOverview from '@/components/wallet/CollectionWalletOverview';
+import KrwWithdrawalPanel from '@/components/wallet/KrwWithdrawalPanel';
+import UsdtWalletOverview, { BuyUsdtButton } from '@/components/wallet/UsdtWalletOverview';
 import BankLogo from '@/components/BankLogo';
 import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
@@ -28,7 +31,7 @@ const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'))
 import {
   Wallet, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown,
+  CreditCard, Receipt, AlertCircle, Globe, Wallet2, Crown,
   RefreshCw,
 } from 'lucide-react';
 import { getBankDisplayName } from '@/lib/bankBranding';
@@ -202,62 +205,6 @@ const getAvailableBalance = (wallet: WalletBalanceSnapshot | null) => {
     ? available
     : Math.max(0, balance - pending);
 };
-
-interface BuyUsdtButtonProps {
-  loading: boolean;
-  funding: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  label?: string;
-  compact?: boolean;
-}
-
-function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className?: string }) {
-  return busy
-    ? <Loader2 className={`${className} animate-spin`} stroke="#16a34a" strokeWidth={2.5} aria-hidden="true" />
-    : <PaymentBrandLogo brand="USDT" size="sm" className={`h-auto w-auto border-0 bg-transparent p-0 shadow-none ${className}`} />;
-}
-
-function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
-  const busy = loading || funding;
-  const buttonLabel = loading
-    ? 'Processing...'
-    : funding
-      ? 'Processing...'
-      : label || 'Buy USDT';
-
-  if (compact) {
-    return (
-      <button
-        type="button"
-        title="Buy USDT"
-        aria-label="Buy USDT"
-        onClick={onClick}
-        disabled={disabled || busy}
-        className="flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-1 text-slate-900 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <BuyUsdtIcon busy={busy} className="h-5 w-5 shrink-0" />
-        <span className="text-[10px] font-bold leading-none text-slate-900">BUY</span>
-      </button>
-    );
-  }
-
-  return (
-    <Button
-      type="button"
-      title="Buy USDT"
-      aria-label="Buy USDT"
-      onClick={onClick}
-      disabled={disabled || busy}
-      className="w-full rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-    >
-      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
-        <BuyUsdtIcon busy={busy} />
-      </span>
-      <span>{buttonLabel}</span>
-    </Button>
-  );
-}
 
 type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance' | 'pending_balance'>;
 
@@ -608,7 +555,6 @@ export default function WalletPage({
   // PHP Bank Withdraw Request form state
   const [wrAmount, setWrAmount] = useState('');
   const [wrBank, setWrBank] = useState('');
-  const [wrBankName, setWrBankName] = useState('');
   const [wrAccount, setWrAccount] = useState('');
   const [wrName, setWrName] = useState('');
   const [wrPhone, setWrPhone] = useState('');
@@ -634,7 +580,6 @@ export default function WalletPage({
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, selectedCollectionCurrency, 'withdrawal', 'bank_transfer');
-  const showUsdtActionRow = true;
   const frozenWallet = usdtBalance?.is_frozen
     ? usdtBalance
     : collectionBalance?.is_frozen
@@ -1068,7 +1013,6 @@ export default function WalletPage({
     setWalletAction(null);
     setWrAmount('');
     setWrBank('');
-    setWrBankName('');
     setUsdtAmount('');
     setBankOptions([]);
   }, [selectedCollectionCurrency]);
@@ -1356,148 +1300,63 @@ export default function WalletPage({
           <>
             <section aria-label={walletTitle} className="grid gap-3">
               {!cryptoOnly && (
-                <Card className="overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-white to-blue-50/60 shadow-sm">
-                  <CardContent className="space-y-4 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">{collectionWalletLabel}</p>
-                        {sharedWalletIsPrimary && (
-                          <p className="mt-1 truncate text-xs text-slate-500">
-                            {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
-                          </p>
-                        )}
-                      </div>
-                      <span className="rounded-lg bg-blue-100 p-2 text-blue-700"><Landmark className="h-4 w-4" /></span>
-                    </div>
-                    <p className="text-3xl font-bold tracking-tight text-slate-950">
-                      {loading ? '…' : primaryWalletUnavailable
-                        ? 'Unavailable'
-                        : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'balance'), selectedCollectionCurrency)}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>{isKoreanWallet ? '사용 가능' : 'Available'}</span>
-                      <span className="font-semibold text-emerald-800">
-                        {primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(primaryWalletBalance), selectedCollectionCurrency)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>{isKoreanWallet ? '보류 중' : 'Pending'}</span>
-                      <span className="font-semibold text-amber-800">
-                        {primaryWalletUnavailable
-                          ? 'Unavailable'
-                          : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'pending_balance'), selectedCollectionCurrency)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setShowUsdtTopupWizard(false);
-                          setActiveTab('fund');
-                          setWalletAction('deposit');
-                        }}
-                        disabled={!showFiatActionRow || primaryWalletUnavailable}
-                        className="h-11 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
-                      >
-                        <ArrowDownToLine className="mr-2 h-4 w-4" />{isKoreanWallet ? '입금' : 'Deposit'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowUsdtTopupWizard(false);
-                          setActiveTab('php');
-                          setWalletAction('withdraw');
-                        }}
-                        disabled={!showFiatActionRow || primaryWalletUnavailable}
-                        className="h-11 rounded-xl border-amber-300 text-amber-900 hover:bg-amber-50"
-                      >
-                        <ArrowUpFromLine className="mr-2 h-4 w-4" />{isKoreanWallet ? '출금' : 'Withdraw'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <CollectionWalletOverview
+                  mobile
+                  isKorean={isKoreanWallet}
+                  currency={selectedCollectionCurrency}
+                  currencyName={getCurrencyName(selectedCollectionCurrency, language)}
+                  title={collectionWalletLabel}
+                  hasOrganizationWallet={sharedWalletIsPrimary}
+                  organizationName={organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+                  loading={loading}
+                  unavailable={primaryWalletUnavailable}
+                  balance={getWalletBalanceValue(primaryWalletBalance, 'balance')}
+                  availableBalance={getAvailableBalance(primaryWalletBalance)}
+                  pendingBalance={getWalletBalanceValue(primaryWalletBalance, 'pending_balance')}
+                  showActions={showFiatActionRow}
+                  onDeposit={() => {
+                    setShowUsdtTopupWizard(false);
+                    setActiveTab('fund');
+                    setWalletAction('deposit');
+                  }}
+                  onWithdraw={() => {
+                    setShowUsdtTopupWizard(false);
+                    setActiveTab('php');
+                    setWalletAction('withdraw');
+                  }}
+                />
               )}
 
-              <Card className="overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50/50 shadow-sm">
-                <CardContent className="space-y-4 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                        {hasOrganizationWallet
-                          ? isKoreanWallet ? '공유 조직 USDT 지갑' : 'Shared organization USDT wallet'
-                          : 'USDT Wallet'}
-                      </p>
-                      {hasOrganizationWallet && (
-                        <p className="mt-1 truncate text-xs text-slate-500">
-                          {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
-                        </p>
-                      )}
-                    </div>
-                    <PaymentBrandLogo brand="USDT" size="sm" className="h-8 w-8 shrink-0 border-0 bg-transparent p-0 shadow-none" />
-                  </div>
-                  <p className="text-3xl font-bold tracking-tight text-slate-950">
-                    {loading ? '…' : balanceLoadErrors.includes('usdt') || !usdtBalance
-                      ? 'Unavailable'
-                      : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{isKoreanWallet ? '사용 가능' : 'Available'}</span>
-                    <span className="font-semibold text-emerald-800">
-                      {balanceLoadErrors.includes('usdt') || !usdtBalance
-                        ? 'Unavailable'
-                        : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))}`}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                    onClick={openBuyUsdt}
-                    disabled={!canTradeUsdtForPhp || !usdtBalance || balanceLoadErrors.includes('usdt')}
-                    className="h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
-                  >
-                    <TrendingUp className="mr-2 h-4 w-4" />{isKoreanWallet ? '구매' : 'Buy'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
-                      setWalletAction('sell');
-                    }}
-                    disabled={!canTradeUsdtForPhp || !usdtBalance || balanceLoadErrors.includes('usdt')}
-                    className="h-11 rounded-xl border-orange-300 text-orange-900 hover:bg-orange-50"
-                  >
-                    <TrendingUp className="mr-2 h-4 w-4 rotate-180" />{isKoreanWallet ? '판매' : 'Sell'}
-                  </Button>
-                  <Button
-                    type="button"
-                      onClick={() => {
-                        if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
-                        setShowUsdtTopupWizard(false);
-                        setActiveTab('usdt');
-                        setWalletAction('send');
-                      }}
-                      disabled={balanceLoadErrors.includes('usdt') || !usdtBalance}
-                      className="h-11 rounded-xl bg-sky-600 text-white hover:bg-sky-700"
-                    >
-                      <Send className="mr-2 h-4 w-4" />{isKoreanWallet ? '보내기' : 'Send'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setShowUsdtTopupWizard(true);
-                        setActiveTab('fund');
-                        setWalletAction('receive');
-                      }}
-                      className="h-11 rounded-xl border-blue-300 text-blue-800 hover:bg-blue-50"
-                    >
-                      <ArrowDownToLine className="mr-2 h-4 w-4" />{isKoreanWallet ? '받기' : 'Receive'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <UsdtWalletOverview
+                mobile
+                isKorean={isKoreanWallet}
+                hasOrganizationWallet={hasOrganizationWallet}
+                organizationName={organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+                loading={loading}
+                unavailable={balanceLoadErrors.includes('usdt') || !usdtBalance}
+                balance={getWalletBalanceValue(usdtBalance, 'balance')}
+                availableBalance={getWalletBalanceValue(usdtBalance, 'available_balance')}
+                pendingBalance={getWalletBalanceValue(usdtBalance, 'pending_balance')}
+                canTrade={canTradeUsdtForPhp}
+                buyLoading={buyUsdtLoading}
+                fundingLoading={fundingUsdtLoading}
+                onBuy={openBuyUsdt}
+                onSell={() => {
+                  setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
+                  setWalletAction('sell');
+                }}
+                onSend={() => {
+                  if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
+                  setShowUsdtTopupWizard(false);
+                  setActiveTab('usdt');
+                  setWalletAction('send');
+                }}
+                onReceive={() => {
+                  setShowUsdtTopupWizard(true);
+                  setActiveTab('fund');
+                  setWalletAction('receive');
+                }}
+              />
             </section>
             <section className="space-y-4" aria-label={isKoreanWallet ? '최근 지갑 활동' : 'Recent wallet activity'}>
               {!cryptoOnly && (
@@ -1523,80 +1382,33 @@ export default function WalletPage({
         )}
         {!isMobileLayout && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {!cryptoOnly && (
-          /* PHP Balance */
           <div className="space-y-4">
-            <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
-            <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">{collectionWalletLabel}</span>
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700">
-                  <Landmark className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-3xl font-semibold text-foreground">
-                {loading ? (
-                  <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : primaryWalletUnavailable
-                  ? 'Unavailable'
-                  : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'balance'), selectedCollectionCurrency)}
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getAvailableBalance(primaryWalletBalance), selectedCollectionCurrency)}</p>
-                </div>
-                <div className="rounded-lg bg-amber-50 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{primaryWalletUnavailable ? 'Unavailable' : formatWalletCurrency(getWalletBalanceValue(primaryWalletBalance, 'pending_balance'), selectedCollectionCurrency)}</p>
-                </div>
-              </div>
-              {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
-                <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
-                VIP
-              </div>}
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency, language)}</p>
-                {primaryWalletBalance?.pending_balance ? (
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">{isKoreanWallet ? '처리 중' : 'Pending'}: {formatWalletCurrency(primaryWalletBalance.pending_balance, selectedCollectionCurrency)}</span>
-                ) : null}
-              </div>
-              <div className="mt-4 flex items-center gap-2 min-h-[44px]">
-                {showFiatActionRow ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="icon"
-                      title={`Deposit ${selectedCollectionCurrency}`}
-                      aria-label={`Deposit ${selectedCollectionCurrency}`}
-                      onClick={() => {
-                        setShowUsdtTopupWizard(false);
-                        setActiveTab('fund');
-                        setWalletAction('deposit');
-                      }}
-                      className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-[#2563eb] bg-[#3B82F6] text-white shadow-sm shadow-[#3B82F6]/20 transition-all hover:bg-[#2563eb] focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:ring-offset-2"
-                    >
-                      <ArrowDownToLine className="h-4 w-4 text-white" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      title={`Withdraw ${selectedCollectionCurrency}`}
-                      aria-label={`Withdraw ${selectedCollectionCurrency}`}
-                      onClick={() => {
-                        setShowUsdtTopupWizard(false);
-                        setActiveTab('php');
-                        setWalletAction('withdraw');
-                      }}
-                      className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-amber-600 bg-amber-500 text-black shadow-sm shadow-amber-500/20 transition-all hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-                    >
-                      <ArrowUpFromLine className="h-4 w-4 text-black" />
-                    </Button>
-                  </>
-                ) : null}
-              </div>
-            </CardContent>
-            </Card>
+            <CollectionWalletOverview
+              mobile={false}
+              isKorean={isKoreanWallet}
+              currency={selectedCollectionCurrency}
+              currencyName={getCurrencyName(selectedCollectionCurrency, language)}
+              title={collectionWalletLabel}
+              hasOrganizationWallet={sharedWalletIsPrimary}
+              organizationName={organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+              loading={loading}
+              unavailable={primaryWalletUnavailable}
+              vipGold={vipGold}
+              balance={getWalletBalanceValue(primaryWalletBalance, 'balance')}
+              availableBalance={getAvailableBalance(primaryWalletBalance)}
+              pendingBalance={getWalletBalanceValue(primaryWalletBalance, 'pending_balance')}
+              showActions={showFiatActionRow}
+              onDeposit={() => {
+                setShowUsdtTopupWizard(false);
+                setActiveTab('fund');
+                setWalletAction('deposit');
+              }}
+              onWithdraw={() => {
+                setShowUsdtTopupWizard(false);
+                setActiveTab('php');
+                setWalletAction('withdraw');
+              }}
+            />
             <WalletTransactionHistory
               currency={selectedCollectionCurrency}
               transactions={collectionTransactions}
@@ -1609,110 +1421,38 @@ export default function WalletPage({
           )}
 
           {cryptoOnly && (
-          /* USDT Balance */
           <div className="space-y-4">
-            <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
-            <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                {hasOrganizationWallet
-                  ? isKoreanWallet ? '공유 조직 USDT 지갑' : 'Shared organization USDT wallet'
-                  : 'USDT Wallet'}
-              </span>
-              <div className="h-10 w-10 rounded-xl bg-[#0f2a5f]/10 flex items-center justify-center p-2">
-                <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" />
-              </div>
-            </div>
-            {hasOrganizationWallet && (
-              <p className="mb-2 truncate text-xs text-slate-500">
-                {organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
-              </p>
-            )}
-            <p className="text-3xl font-semibold text-foreground">
-                {loading ? (
-                  <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : balanceLoadErrors.includes('usdt') || !usdtBalance
-                  ? 'Unavailable'
-                  : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{balanceLoadErrors.includes('usdt') || !usdtBalance ? 'Unavailable' : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))}`}</p>
-                </div>
-                <div className="rounded-lg bg-amber-50 px-2.5 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{balanceLoadErrors.includes('usdt') || !usdtBalance ? 'Unavailable' : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'pending_balance'))}`}</p>
-                </div>
-              </div>
-              {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
-                <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
-                VIP
-              </div>}
-              <div className="mt-3">
-                <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
-              </div>
-              <div className="mt-4 grid grid-cols-4 gap-2 min-h-[44px]">
-                {showUsdtActionRow ? (
-                  <>
-                    <BuyUsdtButton
-                      compact
-                      loading={buyUsdtLoading}
-                      funding={fundingUsdtLoading}
-                      onClick={openBuyUsdt}
-                      disabled={!canTradeUsdtForPhp}
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      title="Sell USDT"
-                      aria-label="Sell USDT"
-                      onClick={() => {
-                        setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
-                        setWalletAction('sell');
-                      }}
-                      disabled={!canTradeUsdtForPhp}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
-                    >
-                      <PaymentBrandLogo brand="USDT" size="sm" className="h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
-                      <span className="text-[10px] font-bold text-slate-900">SELL</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      title="Send USDT"
-                      aria-label="Send USDT"
-                      onClick={() => {
-                        if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
-                        setShowUsdtTopupWizard(false);
-                        setActiveTab('usdt');
-                        setWalletAction('send');
-                      }}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm shadow-sky-600/20 transition-all hover:bg-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-                    >
-                      <Send className="h-4 w-4 text-white" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      title="Receive USDT"
-                      aria-label="Receive USDT"
-                      data-guide-target="wallet-usdt-receive"
-                      onClick={() => {
-                        setShowUsdtTopupWizard(true);
-                        setActiveTab('fund');
-                        setWalletAction('receive');
-                      }}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                    >
-                      <ArrowDownToLine className="h-4 w-4 text-white" />
-                    </Button>
-                  </>
-                ) : null}
-              </div>
-            </CardContent>
-            </Card>
+            <UsdtWalletOverview
+              mobile={false}
+              isKorean={isKoreanWallet}
+              hasOrganizationWallet={hasOrganizationWallet}
+              organizationName={organizationWalletBalance?.organization_name || user?.organization_name || user?.organization_id}
+              loading={loading}
+              unavailable={balanceLoadErrors.includes('usdt') || !usdtBalance}
+              vipGold={vipGold}
+              balance={getWalletBalanceValue(usdtBalance, 'balance')}
+              availableBalance={getWalletBalanceValue(usdtBalance, 'available_balance')}
+              pendingBalance={getWalletBalanceValue(usdtBalance, 'pending_balance')}
+              canTrade={canTradeUsdtForPhp}
+              buyLoading={buyUsdtLoading}
+              fundingLoading={fundingUsdtLoading}
+              onBuy={openBuyUsdt}
+              onSell={() => {
+                setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
+                setWalletAction('sell');
+              }}
+              onSend={() => {
+                if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
+                setShowUsdtTopupWizard(false);
+                setActiveTab('usdt');
+                setWalletAction('send');
+              }}
+              onReceive={() => {
+                setShowUsdtTopupWizard(true);
+                setActiveTab('fund');
+                setWalletAction('receive');
+              }}
+            />
             <WalletTransactionHistory
               currency="USDT"
               transactions={usdtTransactions}
@@ -2160,6 +1900,28 @@ export default function WalletPage({
 
           {/* ─── PHP WITHDRAW TAB ─── */}
           <TabsContent value="php" className="mt-0 p-4 sm:p-7">
+            {isKrwFlow ? (
+              <KrwWithdrawalPanel
+                isKorean={isKoreanWallet}
+                amount={wrAmount}
+                selectedBank={wrBank}
+                accountNumber={wrAccount}
+                accountName={wrName}
+                note={wrNote}
+                availableBalance={getAvailableBalance(collectionBalance)}
+                banks={bankList}
+                loading={wrLoading}
+                submitLabel={withdrawSubmitLabel}
+                onAmountChange={setWrAmount}
+                onBankChange={code => {
+                  setWrBank(code);
+                }}
+                onAccountNumberChange={setWrAccount}
+                onAccountNameChange={setWrName}
+                onNoteChange={setWrNote}
+                onSubmit={handlePhpWithdrawRequest}
+              />
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
@@ -2171,7 +1933,7 @@ export default function WalletPage({
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${getCurrencySymbol(selectedCollectionCurrency).trim()})`}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{`Amount (${getCurrencySymbol(selectedCollectionCurrency).trim()})`}</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -2183,19 +1945,17 @@ export default function WalletPage({
                       />
                       {collectionBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          {isKrwFlow ? '사용 가능 잔액' : 'Available'}: <span className="text-blue-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</span>
+                          Available: <span className="text-blue-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</span>
                         </div>
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '은행' : 'Bank'}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Bank</Label>
                       <Select value={wrBank} onValueChange={(val) => {
                         setWrBank(val);
-                        const b = bankList.find(x => x.code === val);
-                        if (b) setWrBankName(b.name);
                       }}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 text-foreground focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                          <SelectValue placeholder={isKrwFlow ? '은행을 선택하세요' : 'Select bank…'} />
+                          <SelectValue placeholder="Select bank…" />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-slate-200 max-h-[300px]">
                           {bankList.map(b => (
@@ -2207,7 +1967,7 @@ export default function WalletPage({
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '계좌번호' : 'Account Number'}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Number</Label>
                       <Input
                         placeholder="1234567890"
                         value={wrAccount}
@@ -2216,7 +1976,7 @@ export default function WalletPage({
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '예금주' : 'Account Holder Name'}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Holder Name</Label>
                       <Input
                         placeholder="Juan Dela Cruz"
                         value={wrName}
@@ -2224,20 +1984,18 @@ export default function WalletPage({
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
-                    {!isKrwFlow && (
-                      <div>
-                        <Label className="text-xs font-semibold text-slate-700 block mb-2">Mobile Number</Label>
-                        <Input
-                          placeholder="09XXXXXXXXX or +63 9XX XXX XXXX"
-                          value={wrPhone}
-                          onChange={e => setWrPhone(e.target.value)}
-                          inputMode="tel"
-                          className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Mobile Number</Label>
+                      <Input
+                        placeholder="09XXXXXXXXX or +63 9XX XXX XXXX"
+                        value={wrPhone}
+                        onChange={e => setWrPhone(e.target.value)}
+                        inputMode="tel"
+                        className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
                     <div className="sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '메모 (선택)' : 'Note (optional)'}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Note (optional)</Label>
                       <Input
                         placeholder="Additional instructions for admin..."
                         value={wrNote}
@@ -2249,7 +2007,7 @@ export default function WalletPage({
 
                   <Button
                     onClick={handlePhpWithdrawRequest}
-                    disabled={wrLoading || !wrAmount || !wrBank || !wrAccount || !wrName || (!isKrwFlow && !wrPhone)}
+                    disabled={wrLoading || !wrAmount || !wrBank || !wrAccount || !wrName || !wrPhone}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-black h-10 rounded-lg font-semibold shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     data-wallet-dark-action="true"
                   >
@@ -2271,7 +2029,7 @@ export default function WalletPage({
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {(isKrwFlow ? KRW_BANKS : PH_BANK_CATALOG).map(bank => {
+                    {PH_BANK_CATALOG.map(bank => {
                       return (
                         <div key={bank.code} className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white p-2 hover:bg-slate-50 transition-colors">
                           <BankLogo name={bank.name} code={bank.code} size="sm" />
@@ -2282,15 +2040,16 @@ export default function WalletPage({
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <p className="text-xs text-slate-600">
-                      <span className="font-semibold text-slate-700">{isKrwFlow ? '처리 기간:' : 'Processing time:'}</span> {isKrwFlow ? '영업일 기준 1~3일' : '1-3 business days'}
+                      <span className="font-semibold text-slate-700">Processing time:</span> 1-3 business days
                     </p>
                     <p className="text-xs text-slate-600 mt-2">
-                      <span className="font-semibold text-slate-700">{isKrwFlow ? '통화:' : 'Network:'}</span> {isKrwFlow ? 'KRW만 가능' : 'PHP only'}
+                      <span className="font-semibold text-slate-700">Network:</span> PHP only
                     </p>
                   </div>
                 </CardContent>
               </Card>
             </div>
+            )}
           </TabsContent>
 
           {/* ─── USDT WITHDRAW TAB ─── */}
