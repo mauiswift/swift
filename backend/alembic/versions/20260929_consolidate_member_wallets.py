@@ -1,6 +1,6 @@
 """Consolidate current organization members' personal wallets.
 
-Revision ID: 20260929_consolidate_member_wallets
+Revision ID: 20260929_consolidate_wallets
 Revises: 20260928_wallet_integrity
 
 Personal wallet balances are merged into the member's current organization
@@ -17,7 +17,8 @@ from sqlalchemy import inspect
 from core.constants import normalize_currency
 
 
-revision: str = "20260929_consolidate_member_wallets"
+# Alembic's default `alembic_version.version_num` is VARCHAR(32). Keep revision IDs <= 32 chars.
+revision: str = "20260929_consolidate_wallets"
 down_revision: Union[str, None] = "20260928_wallet_integrity"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
