@@ -231,176 +231,215 @@ export function TossAccountApprovalsPanel() {
     }
   };
 
+  const pendingReviewCount = items.filter((item) => item.status === 'pending_review').length;
+  const activeAccountCount = items.filter((item) => item.status === 'approved' && item.application.virtual_account?.status !== 'suspended').length;
+  const suspendedAccountCount = items.filter((item) => item.application.virtual_account?.status === 'suspended').length;
+  const activePoolCount = pool.filter((account) => account.is_active).length;
+
   return (
     <div className="page-enter">
-        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                <ShieldCheck size={14} className="text-[#FF6B00]" />
-                Super admin review
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
-                <ShieldCheck size={12} />
-                Security Badge
-              </span>
+      <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <ShieldCheck size={14} className="text-[#FF6B00]" />
+              Super admin review
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">TOSS Bank Account Applications</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review business details before opening a TOSS Bank virtual account for the applicant.</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
+              <ShieldCheck size={12} />
+              Security Badge
+            </span>
           </div>
-          <Button variant="outline" onClick={() => void load()} disabled={loading} className="w-full sm:w-auto">
-            <RefreshCw size={14} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />Refresh applications
-          </Button>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">TOSS Bank Account Applications</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review business details before opening a TOSS Bank virtual account for the applicant.</p>
         </div>
+        <Button variant="outline" onClick={() => void load()} disabled={loading} className="w-full sm:w-auto">
+          <RefreshCw size={14} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />Refresh applications
+        </Button>
+      </div>
 
-        <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Pending review</p>
-            <p className="mt-2 text-2xl font-semibold text-orange-950">{items.filter((item) => item.status === 'pending_review').length}</p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
+        <div className="min-w-0 space-y-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Pending review</p>
+              <p className="mt-2 text-2xl font-semibold text-orange-950">{pendingReviewCount}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Active accounts</p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-950">{activeAccountCount}</p>
+            </div>
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-700">Suspended accounts</p>
+              <p className="mt-2 text-2xl font-semibold text-red-950">{suspendedAccountCount}</p>
+            </div>
           </div>
 
-          <section className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">TOSS payment account pool</h2>
-                <p className="mt-1 text-sm text-slate-600">Add active 토스페이 accounts here. Each new KRW payment session randomly uses an active account and avoids the account assigned to the previous session whenever another is available.</p>
+          {error && <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><XCircle size={18} className="mt-0.5 shrink-0" />{error}</div>}
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search applicant, email, ID, or account number" className="pl-9" />
+            </div>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="h-10 rounded-md border border-input bg-background px-3 text-sm text-slate-700">
+              <option value="all">All statuses</option>
+              <option value="pending_review">Pending review</option>
+              <option value="active">Active accounts</option>
+              <option value="suspended">Suspended accounts</option>
+            </select>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {loading ? (
+              <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center text-slate-500">
+                <RefreshCw size={24} className="mb-3 animate-spin text-[#FF6B00]" />
+                <p className="text-sm font-medium">Loading applications...</p>
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700">{pool.filter((account) => account.is_active).length} active</span>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-5">
-              <Input value={poolForm.bank_name} onChange={(event) => setPoolForm({ ...poolForm, bank_name: event.target.value })} placeholder="Bank name" />
-              <Input value={poolForm.account_number} onChange={(event) => setPoolForm({ ...poolForm, account_number: event.target.value })} placeholder="Account number" />
-              <Input value={poolForm.account_holder_name} onChange={(event) => setPoolForm({ ...poolForm, account_holder_name: event.target.value })} placeholder="Account holder name" />
-              <label className={`flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors ${poolForm.is_active ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50'}`}>
-                <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-slate-800">Checkout availability</span>
-                  <span className={`mt-0.5 block text-[10px] ${poolForm.is_active ? 'text-emerald-700' : 'text-slate-500'}`}>{poolForm.is_active ? 'Included in rotation' : 'Excluded from rotation'}</span>
-                </span>
-                <Switch
-                  checked={poolForm.is_active}
-                  onCheckedChange={(isActive) => setPoolForm({ ...poolForm, is_active: isActive })}
-                  aria-label="Include this account in checkout rotation"
-                  className="data-[state=checked]:bg-emerald-600"
-                />
-              </label>
-              <Button onClick={() => void savePoolAccount()}><Building2 size={14} className="mr-2" />{editingPoolId ? 'Save account' : 'Add account'}</Button>
-            </div>
-            {pool.length > 0 && (
-              <div className="mt-4 overflow-hidden rounded-xl border border-blue-100 bg-white">
-                {pool.map((account) => (
-                  <div key={account.id} className="flex flex-col gap-3 border-b border-slate-100 p-3 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${account.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                        <Building2 size={16} />
-                      </span>
-                      <div className="min-w-0 text-sm">
-                        <p className="truncate font-semibold text-slate-800">{normalizeKrwBankName(account.bank_name)} <span className="font-normal text-slate-300">·</span> <span className="font-mono font-medium">{account.account_number}</span></p>
-                        <p className="mt-0.5 truncate text-xs text-slate-500">{account.account_holder_name}</p>
+            ) : filteredItems.length === 0 ? (
+              <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center">
+                <div className="rounded-full bg-emerald-50 p-3 text-emerald-600"><CheckCircle2 size={26} /></div>
+                <p className="mt-4 text-sm font-semibold text-slate-900">{items.length ? 'No matching applications' : 'No TOSS applications'}</p>
+                <p className="mt-1 text-sm text-slate-500">{items.length ? 'Try a different search or status filter.' : 'New applications will appear here when submitted.'}</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {filteredItems.map((item) => (
+                  <article key={item.user_id} className="p-5 transition-colors hover:bg-slate-50/60 sm:p-6">
+                    <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><Building2 size={19} /></div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h2 className="truncate text-base font-semibold text-slate-900">{item.application.legal_name || item.name || item.user_id}</h2>
+                              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.status === 'pending_review' ? 'border-amber-200 bg-amber-50 text-amber-700' : item.application.virtual_account?.status === 'suspended' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{item.status === 'pending_review' ? 'Pending review' : item.application.virtual_account?.status === 'suspended' ? 'Account suspended' : 'Account active'}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">Applicant ID: <span className="font-mono">{item.user_id}</span></p>
+                          </div>
+                        </div>
+                        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                          <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Mail size={13} />Contact</p><p className="mt-1 break-all text-sm text-slate-700">{item.application.contact_email || item.email || 'No email'}</p></div>
+                          <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Send size={13} />Telegram</p><p className="mt-1 text-sm text-slate-700">{item.telegram_username ? `@${item.telegram_username}` : 'Not provided'}</p></div>
+                          <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Building2 size={13} />Business</p><p className="mt-1 text-sm text-slate-700">{item.application.business_type || 'Not provided'} · {item.application.country || '—'}</p></div>
+                          <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><UserRound size={13} />Purpose</p><p className="mt-1 text-sm text-slate-700">{item.application.purpose || 'Not provided'}</p></div>
+                        </div>
+                        <div className="mt-4 grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm sm:grid-cols-3">
+                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Monthly volume</p><p className="mt-1 font-medium text-slate-800">{item.application.monthly_volume || 'Not provided'}</p></div>
+                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Requested currency</p><p className="mt-1 font-medium text-slate-800">{item.application.currencies?.join(', ') || 'KRW'}</p></div>
+                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Review readiness</p><p className="mt-1 font-medium text-emerald-700">Signature and eligibility verified</p></div>
+                        </div>
+                        {item.application.virtual_account && (
+                          <div className="mt-4 grid gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm sm:grid-cols-3">
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Bank</p><p className="mt-1 font-medium text-slate-800">{item.application.virtual_account.bank_name || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Account number</p><p className="mt-1 flex items-center gap-2 font-mono font-medium text-slate-800">{item.application.virtual_account.account_number || '—'}<button type="button" title="Copy account details" aria-label="Copy account details" className="text-blue-600 hover:text-blue-800" onClick={() => void copyAccount(item)}><Copy size={14} /></button></p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Holder</p><p className="mt-1 font-medium text-slate-800">{item.application.virtual_account.account_holder_name || '—'}</p></div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row xl:border-t-0 xl:pt-0">
+                        {item.status === 'pending_review' ? <>
+                          <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => openReview(item, 'reject')}><XCircle size={15} className="mr-2" />Reject</Button>
+                          <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => openReview(item, 'approve')}><CheckCircle2 size={15} className="mr-2" />Approve</Button>
+                        </> : <Button variant="outline" disabled={reviewing !== null} onClick={() => openAccountControl(item)}><Pencil size={15} className="mr-2" />Manage account</Button>}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 sm:justify-end sm:border-0 sm:pt-0">
-                      <label className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${account.is_active ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50'}`}>
-                        <span className="min-w-24">
-                          <span className={`block text-xs font-semibold ${account.is_active ? 'text-emerald-800' : 'text-slate-600'}`}>{account.is_active ? 'Active' : 'Inactive'}</span>
-                          <span className="block text-[10px] text-slate-500">{account.is_active ? 'Used for checkout' : 'Not in rotation'}</span>
-                        </span>
-                        <Switch
-                          checked={account.is_active}
-                          disabled={updatingPoolId !== null}
-                          onCheckedChange={(isActive) => void togglePoolAccount(account, isActive)}
-                          aria-label={`${account.is_active ? 'Disable' : 'Enable'} ${normalizeKrwBankName(account.bank_name)} ${account.account_number} for checkout`}
-                          className="data-[state=checked]:bg-emerald-600"
-                        />
-                      </label>
-                      <Button variant="outline" size="sm" disabled={updatingPoolId !== null} onClick={() => editPoolAccount(account)}><Pencil size={13} className="mr-1" />Edit</Button>
-                    </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
-          </section>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Review type</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Virtual account opening</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Next step</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Approve requests and manage active accounts</p>
           </div>
         </div>
 
-        {error && <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><XCircle size={18} className="mt-0.5 shrink-0" />{error}</div>}
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
-          <div className="relative min-w-0 flex-1">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search applicant, email, ID, or account number" className="pl-9" />
-          </div>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="h-10 rounded-md border border-input bg-background px-3 text-sm text-slate-700">
-            <option value="all">All statuses</option>
-            <option value="pending_review">Pending review</option>
-            <option value="active">Active accounts</option>
-            <option value="suspended">Suspended accounts</option>
-          </select>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          {loading ? (
-            <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center text-slate-500">
-              <RefreshCw size={24} className="mb-3 animate-spin text-[#FF6B00]" />
-              <p className="text-sm font-medium">Loading applications...</p>
+        <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+          <section className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold text-slate-900">TOSS payment account pool</h2>
+                  <p className="mt-1 text-sm text-slate-600">Add active 토스페이 accounts here. Each new KRW payment session randomly uses an active account and avoids the account assigned to the previous session whenever another is available.</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700">{activePoolCount} active</span>
+              </div>
+              {editingPoolId !== null && (
+                <p className="text-xs font-semibold text-blue-700">Editing pool account #{editingPoolId}</p>
+              )}
             </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center">
-              <div className="rounded-full bg-emerald-50 p-3 text-emerald-600"><CheckCircle2 size={26} /></div>
-              <p className="mt-4 text-sm font-semibold text-slate-900">{items.length ? 'No matching applications' : 'No TOSS applications'}</p>
-              <p className="mt-1 text-sm text-slate-500">{items.length ? 'Try a different search or status filter.' : 'New applications will appear here when submitted.'}</p>
+
+            <div className="mt-4 grid gap-3">
+              <Input value={poolForm.bank_name} onChange={(event) => setPoolForm({ ...poolForm, bank_name: event.target.value })} placeholder="Bank name" />
+              <Input value={poolForm.account_number} onChange={(event) => setPoolForm({ ...poolForm, account_number: event.target.value })} placeholder="Account number" />
+              <Input value={poolForm.account_holder_name} onChange={(event) => setPoolForm({ ...poolForm, account_holder_name: event.target.value })} placeholder="Account holder name" />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                <label className={`flex min-h-10 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors ${poolForm.is_active ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-slate-800">Checkout availability</span>
+                    <span className={`mt-0.5 block text-[10px] ${poolForm.is_active ? 'text-emerald-700' : 'text-slate-500'}`}>{poolForm.is_active ? 'Included in rotation' : 'Excluded from rotation'}</span>
+                  </span>
+                  <Switch
+                    checked={poolForm.is_active}
+                    onCheckedChange={(isActive) => setPoolForm({ ...poolForm, is_active: isActive })}
+                    aria-label="Include this account in checkout rotation"
+                    className="data-[state=checked]:bg-emerald-600"
+                  />
+                </label>
+                <div className="flex gap-2 sm:flex-col">
+                  <Button onClick={() => void savePoolAccount()} className="flex-1 sm:flex-none">
+                    <Building2 size={14} className="mr-2" />{editingPoolId ? 'Save account' : 'Add account'}
+                  </Button>
+                  {editingPoolId !== null && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        setEditingPoolId(null);
+                        setPoolForm({ bank_name: 'Toss Bank', account_number: '', account_holder_name: '', is_active: true });
+                      }}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {filteredItems.map((item) => (
-                <article key={item.user_id} className="p-5 transition-colors hover:bg-slate-50/60 sm:p-6">
-                  <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><Building2 size={19} /></div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="truncate text-base font-semibold text-slate-900">{item.application.legal_name || item.name || item.user_id}</h2>
-                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.status === 'pending_review' ? 'border-amber-200 bg-amber-50 text-amber-700' : item.application.virtual_account?.status === 'suspended' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{item.status === 'pending_review' ? 'Pending review' : item.application.virtual_account?.status === 'suspended' ? 'Account suspended' : 'Account active'}</span>
-                          </div>
-                          <p className="mt-1 text-xs text-slate-500">Applicant ID: <span className="font-mono">{item.user_id}</span></p>
+
+            {pool.length > 0 && (
+              <div className="mt-4 overflow-hidden rounded-xl border border-blue-100 bg-white">
+                <div className="max-h-[min(48vh,420px)] overflow-y-auto">
+                  {pool.map((account) => (
+                    <div key={account.id} className="flex flex-col gap-3 border-b border-slate-100 p-3 last:border-0 sm:px-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${account.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                          <Building2 size={16} />
+                        </span>
+                        <div className="min-w-0 text-sm">
+                          <p className="truncate font-semibold text-slate-800">{normalizeKrwBankName(account.bank_name)} <span className="font-normal text-slate-300">·</span> <span className="font-mono font-medium">{account.account_number}</span></p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500">{account.account_holder_name}</p>
                         </div>
                       </div>
-                      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Mail size={13} />Contact</p><p className="mt-1 text-sm text-slate-700 break-all">{item.application.contact_email || item.email || 'No email'}</p></div>
-                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Send size={13} />Telegram</p><p className="mt-1 text-sm text-slate-700">{item.telegram_username ? `@${item.telegram_username}` : 'Not provided'}</p></div>
-                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Building2 size={13} />Business</p><p className="mt-1 text-sm text-slate-700">{item.application.business_type || 'Not provided'} · {item.application.country || '—'}</p></div>
-                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><UserRound size={13} />Purpose</p><p className="mt-1 text-sm text-slate-700">{item.application.purpose || 'Not provided'}</p></div>
+                      <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2">
+                        <label className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${account.is_active ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50'}`}>
+                          <span className="min-w-24">
+                            <span className={`block text-xs font-semibold ${account.is_active ? 'text-emerald-800' : 'text-slate-600'}`}>{account.is_active ? 'Active' : 'Inactive'}</span>
+                            <span className="block text-[10px] text-slate-500">{account.is_active ? 'Used for checkout' : 'Not in rotation'}</span>
+                          </span>
+                          <Switch
+                            checked={account.is_active}
+                            disabled={updatingPoolId !== null}
+                            onCheckedChange={(isActive) => void togglePoolAccount(account, isActive)}
+                            aria-label={`${account.is_active ? 'Disable' : 'Enable'} ${normalizeKrwBankName(account.bank_name)} ${account.account_number} for checkout`}
+                            className="data-[state=checked]:bg-emerald-600"
+                          />
+                        </label>
+                        <Button variant="outline" size="sm" disabled={updatingPoolId !== null} onClick={() => editPoolAccount(account)}><Pencil size={13} className="mr-1" />Edit</Button>
                       </div>
-                      <div className="mt-4 grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm sm:grid-cols-3">
-                        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Monthly volume</p><p className="mt-1 font-medium text-slate-800">{item.application.monthly_volume || 'Not provided'}</p></div>
-                        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Requested currency</p><p className="mt-1 font-medium text-slate-800">{item.application.currencies?.join(', ') || 'KRW'}</p></div>
-                        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Review readiness</p><p className="mt-1 font-medium text-emerald-700">Signature and eligibility verified</p></div>
-                      </div>
-                      {item.application.virtual_account && (
-                        <div className="mt-4 grid gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm sm:grid-cols-3">
-                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Bank</p><p className="mt-1 font-medium text-slate-800">{item.application.virtual_account.bank_name || '—'}</p></div>
-                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Account number</p><p className="mt-1 flex items-center gap-2 font-mono font-medium text-slate-800">{item.application.virtual_account.account_number || '—'}<button type="button" title="Copy account details" aria-label="Copy account details" className="text-blue-600 hover:text-blue-800" onClick={() => void copyAccount(item)}><Copy size={14} /></button></p></div>
-                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Holder</p><p className="mt-1 font-medium text-slate-800">{item.application.virtual_account.account_holder_name || '—'}</p></div>
-                        </div>
-                      )}
                     </div>
-                    <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row xl:border-t-0 xl:pt-0">
-                      {item.status === 'pending_review' ? <>
-                        <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => openReview(item, 'reject')}><XCircle size={15} className="mr-2" />Reject</Button>
-                        <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => openReview(item, 'approve')}><CheckCircle2 size={15} className="mr-2" />Approve</Button>
-                      </> : <Button variant="outline" disabled={reviewing !== null} onClick={() => openAccountControl(item)}><Pencil size={15} className="mr-2" />Manage account</Button>}
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
         <Dialog open={reviewTarget !== null} onOpenChange={(open) => !open && setReviewTarget(null)}>
           <DialogContent>
             <DialogHeader>
