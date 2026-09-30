@@ -9,8 +9,8 @@ import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
 import { getTransactionStatus, isSuccessfulTransaction, type TransactionRecord } from '@/lib/transactions';
 import { toast } from 'sonner';
 
-const COMPANY_NAME = 'DRL TECHS COMPUTER SOFTWARE TRADING';
-const MERCHANT_SIGNATORY = 'Den Russell Camus Leonardo';
+const COMPANY_NAME = 'SwiftPay';
+const MERCHANT_SIGNATORY = 'Authorized Representative';
 
 const SERVICE_PACKAGES = [
   {

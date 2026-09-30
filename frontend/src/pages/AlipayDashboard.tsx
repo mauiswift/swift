@@ -114,7 +114,6 @@ export default function AlipayDashboard() {
         limit: 1,
       });
       // Exchange rates are typically static, use defaults
-      console.log('Exchange rates fallback applied');
     } catch (err) {
       console.warn('Exchange rates fetch note:', err);
     } finally {
