@@ -222,6 +222,24 @@ class TestWalletAdminRoleGuards:
         )
         assert wallet_router._can_approve_crypto_topups(wrong_admin) is False
 
+    def test_wallet_router_withdrawal_management_allows_disbursement_managers(self):
+        from routers import wallet as wallet_router
+        from schemas.auth import UserPermissions, UserResponse
+
+        disbursement_manager = UserResponse(
+            id="finance-admin",
+            email="admin@example.com",
+            permissions=UserPermissions(can_manage_disbursements=True),
+        )
+        assert wallet_router._can_manage_withdrawals(disbursement_manager) is True
+
+        restricted_admin = UserResponse(
+            id="support-admin",
+            email="admin@example.com",
+            permissions=UserPermissions(can_manage_disbursements=False, is_super_admin=False),
+        )
+        assert wallet_router._can_manage_withdrawals(restricted_admin) is False
+
     def test_admin_wallets_router_wallet_permissions_require_system_user_and_super_admin(self):
         from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
         from fastapi import HTTPException

@@ -1275,8 +1275,8 @@ async def list_admin_withdrawals(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _is_super_admin(current_user):
-		raise HTTPException(status_code=403, detail="Super admin review required")
+	if not _can_manage_withdrawals(current_user):
+		raise HTTPException(status_code=403, detail="Withdrawal management access required")
 	query = select(Disbursements).order_by(Disbursements.id.desc())
 	if status:
 		statuses = ["pending", "processing", "transferring"] if status == "pending" else [status]
