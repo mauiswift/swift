@@ -407,6 +407,7 @@ export default function Login() {
           color: #1a1a1a;
           transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
           width: 100%;
+          cursor: pointer;
         }
 
         .ak-google-login > div {
@@ -765,11 +766,19 @@ export default function Login() {
             width: 52px;
             flex: 0 0 52px;
             border-radius: 999px;
+            padding: 0;
+            align-items: center;
+            justify-content: center;
           }
           .ak-telegram-login {
             width: 52px;
             flex: 0 0 52px;
             border-radius: 999px;
+            padding: 0;
+          }
+          .ak-google-login > div {
+            width: 100%;
+            height: 100%;
           }
           .ak-method-label {
             display: none;
