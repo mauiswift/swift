@@ -148,6 +148,19 @@ This repository includes a Render blueprint at [render.yaml](./render.yaml). It 
 
 Render reads `RENDER_EXTERNAL_URL` automatically and the app will derive the backend URL from it when present.
 
+### Google sign-in setup
+The dashboard login page supports Google Sign-In via Google Identity Services.
+
+1. In Google Cloud Console, create an **OAuth 2.0 Client ID** of type **Web application**.
+2. In that client, add your domains under **Authorized JavaScript origins** (examples):
+   - `https://kr.swiftpay.site`
+   - `https://swiftpay.site`
+   - `http://localhost:5173` (dev)
+3. Set the runtime variable `GOOGLE_CLIENT_ID` on the backend service (Render/Railway/VM).
+   - Optional: set `VITE_GOOGLE_CLIENT_ID` at build time if you build the frontend separately.
+4. Verify config:
+   - `GET /api/v1/auth/google-config` should return `{ "configured": true, "client_id": "..." }`.
+
 ### Magpie Checkout cURL example
 Create a Magpie Checkout Session via the backend compatibility route and set the success URL to the frontend page:
 
