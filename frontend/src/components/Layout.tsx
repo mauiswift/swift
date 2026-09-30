@@ -325,7 +325,7 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="dashboard-density app-shell flex w-full overflow-hidden font-sans text-slate-900">
+    <div className="dashboard-density app-shell flex h-[100dvh] min-h-[100dvh] w-full min-w-0 overflow-hidden font-sans text-slate-900">
       <a className="skip-link" href="#dashboard-main">
         {language === 'ko' ? '본문으로 건너뛰기' : 'Skip to main content'}
       </a>
@@ -346,7 +346,7 @@ export default function Layout({ children }: LayoutProps) {
       </Sheet>
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header - Mobile Optimized */}
         <header aria-label={language === 'ko' ? '대시보드 도구 모음' : 'Dashboard toolbar'} className="dashboard-toolbar sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/95 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8 print:hidden">
           {/* Left: Menu button - Touch-friendly 44x44px */}
