@@ -15,11 +15,7 @@ export default function TossPayQrInstructions() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  const externalId = params.get('external_id') || '';
-  const checkoutQrUrl = externalId
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.site'}/checkout/${encodeURIComponent(externalId)}?payment_method=qrph`
-    : '';
-  const initialQr = params.get('qr') || checkoutQrUrl || DEFAULT_QRPH_SAMPLE;
+  const initialQr = params.get('qr') || DEFAULT_QRPH_SAMPLE;
   const [qrContent, setQrContent] = useState(initialQr);
   const [amount, setAmount] = useState(params.get('amount') || '');
 

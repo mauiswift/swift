@@ -90,6 +90,8 @@ interface Institution {
 }
 
 interface SwiftPayCurrencyQuote {
+  quoted_amount: number;
+  quoted_currency: 'KRW' | 'CNY';
   charged_amount: number;
   charged_currency: 'USD' | 'EUR';
   exchange_rate: number;
@@ -511,9 +513,11 @@ export default function Checkout() {
   }, []);
 
   useEffect(() => {
-    const isKrwPending = String(txn?.currency || '').toUpperCase() === 'KRW'
+    const sourceCurrency = String(txn?.currency || '').toUpperCase();
+    const supportsSwiftPayFx = ['KRW', 'CNY'].includes(sourceCurrency);
+    const isPendingCheckout = supportsSwiftPayFx
       && ['pending', 'created'].includes(String(txn?.status || '').toLowerCase());
-    if (!txn?.external_id || !isKrwPending) {
+    if (!txn?.external_id || !isPendingCheckout) {
       setSwiftPayQuotes({});
       return;
     }
@@ -1209,10 +1213,7 @@ export default function Checkout() {
   }
 
   const qrCodeUrl = normalizeCheckoutQrValue(txn.qr_code_url);
-  const swiftPayQrphUrl = txn.external_id
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.site'}/checkout/${encodeURIComponent(txn.external_id)}?payment_method=qrph`
-    : '';
-  const tossQrValue = swiftPayQrphUrl || (qrCodeUrl || '');
+  const tossQrValue = qrCodeUrl || '';
 
   return (
     <div
@@ -1510,7 +1511,7 @@ export default function Checkout() {
                                       1 {currency} = {quote.inverse_rate.toLocaleString(undefined, { maximumFractionDigits: 2 })} KRW
                                     </p>
                                     <p className="mt-0.5 text-[11px] text-slate-500">
-                                      {fmtCurrency(quote.charged_amount, currency)} for {fmtCurrency(Number(txn.amount || 0), 'KRW')}
+                                      {fmtCurrency(quote.charged_amount, currency)} for {fmtCurrency(quote.quoted_amount, quote.quoted_currency)}
                                     </p>
                                   </>
                                 ) : (
@@ -1686,13 +1687,38 @@ export default function Checkout() {
                       </p>
                       <p className="mt-1 text-xs leading-5 text-slate-600">
                         {checkoutText(
-                          'SwiftPay will show the converted foreign-currency amount. Your KRW total remains fixed at the amount above.',
-                          'SwiftPay에 환산된 외화 금액이 표시됩니다. 원화 결제 금액은 위 금액으로 고정됩니다.',
+                          'SwiftPay will show the converted foreign-currency amount. Your CNY total remains fixed at the amount above.',
+                          'SwiftPay에 환산된 외화 금액이 표시됩니다. 위안화 결제 금액은 위 금액으로 고정됩니다.',
                         )}
                       </p>
                       <p className="mt-2 text-xs font-semibold text-indigo-900">
-                        {checkoutText('KRW amount due:', '결제할 원화 금액:')} {fmtCurrency(payableAmount, 'KRW')}
+                        {checkoutText('CNY amount due:', '결제할 위안화 금액:')} {fmtCurrency(payableAmount, 'CNY')}
                       </p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {(['USD', 'EUR'] as const).map(currency => {
+                          const quote = swiftPayQuotes[currency];
+                          return (
+                            <div key={currency} className="rounded-xl border border-indigo-100 bg-white px-3 py-2.5">
+                              <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                                <span>{currency} live rate</span>
+                                <span>{quote ? 'Live' : 'Loading'}</span>
+                              </div>
+                              {quote ? (
+                                <>
+                                  <p className="mt-1 text-sm font-bold text-slate-900">
+                                    1 {currency} = {quote.inverse_rate.toLocaleString(undefined, { maximumFractionDigits: 3 })} {quote.quoted_currency}
+                                  </p>
+                                  <p className="mt-0.5 text-[11px] text-slate-500">
+                                    {fmtCurrency(quote.charged_amount, currency)} for {fmtCurrency(quote.quoted_amount, quote.quoted_currency)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="mt-1 text-sm font-semibold text-slate-400">Fetching live rate...</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         {(['USD', 'EUR'] as const).map(currency => (
                           <button
@@ -2297,14 +2323,16 @@ export default function Checkout() {
             )}
             {(qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl) ? (
               <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
-                {qrInstructionApp === 'toss' ? (
-                  <QRCodeSVG value={tossQrValue} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-                ) : /^https?:\/\//i.test(qrCodeUrl || '') ? (
+                {/^https?:\/\//i.test(qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl || '') ? (
                   <img src={qrCodeUrl || ''} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
                 ) : (
-                  <QRCodeSVG value={qrCodeUrl || ''} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
+                  <QRCodeSVG value={qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl || ''} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
                 )}
               </div>
+            ) : qrInstructionApp === 'toss' ? (
+              <p className="w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-sm text-amber-900">
+                The provider QR is not available for this payment. Close this dialog and select QRPH to generate a payment QR.
+              </p>
             ) : null}
             <div className="w-full bg-slate-50 rounded-lg p-4 space-y-2 text-center text-sm">
               <p className="font-semibold text-slate-900">Merchant: {merchantDisplayName}</p>

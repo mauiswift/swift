@@ -158,8 +158,8 @@ class TestKRWPaymentLinkRequest:
             "data": {
                 "transaction_id": 123,
                 "payment_id": request.reference_no,
-                "payment_url": "https://swiftpay.ph/checkout/order-manual-123",
-                "checkout_url": "https://swiftpay.ph/checkout/order-manual-123",
+                "payment_url": "https://kr.swiftpay.site/checkout/order-manual-123",
+                "checkout_url": "https://kr.swiftpay.site/checkout/order-manual-123",
                 "gateway": "swiftpay_self_hosted",
                 "bank_account": {
                     "bank_name": "Toss Bank",
@@ -181,7 +181,7 @@ class TestKRWPaymentLinkRequest:
             )
 
         assert response.success is True
-        assert response.payment_url == "https://swiftpay.ph/checkout/order-manual-123"
+        assert response.payment_url == "https://kr.swiftpay.site/checkout/order-manual-123"
         assert response.payment_link == response.payment_url
         assert response.gateway == "swiftpay_self_hosted"
         assert response.manual_verification is True

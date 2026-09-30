@@ -230,6 +230,73 @@ def test_swiftpay_multicurrency_checkout_converts_krw_and_creates_order(monkeypa
         assert len(order_calls) == 1
 
 
+def test_swiftpay_multicurrency_checkout_converts_cny_and_creates_order(monkeypatch):
+    from routers import payments as payments_router
+
+    captured = {}
+
+    class FakeSwiftPayService:
+        callback_url = "https://swiftpay.site/api/v1/webhooks/swiftpay"
+
+        def is_configured(self):
+            return True
+
+        async def create_order(self, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "reference_no": kwargs["reference_no"],
+                "data": {"customerRedirectUrl": "https://swiftpay.site/pay/cny-order"},
+            }
+
+    monkeypatch.setattr(payments_router, "SwiftPayService", FakeSwiftPayService)
+    monkeypatch.setattr(
+        payments_router.CurrencyConverter,
+        "convert_live",
+        AsyncMock(return_value=140.0),
+    )
+
+    with TestClient(app) as client:
+        async def seed_transaction():
+            async for session in get_db():
+                txn = await TransactionsService(session).create_transaction(
+                    user_id="demo-user",
+                    transaction_type="payment_link",
+                    amount=1000,
+                    external_id=f"cny-checkout-{uuid.uuid4().hex[:8]}",
+                    description="CNY checkout",
+                    payment_url="/checkout/cny",
+                    status="pending",
+                    currency="CNY",
+                )
+                await session.commit()
+                return txn
+
+        txn = asyncio.run(seed_transaction())
+        quote_response = client.get(
+            f"/api/v1/payments/checkout/{txn.external_id}/swiftpay-currency/quote?currency=EUR"
+        )
+        assert quote_response.status_code == 200, quote_response.text
+        quote = quote_response.json()
+        assert quote["quoted_amount"] == 1000
+        assert quote["quoted_currency"] == "CNY"
+        assert quote["charged_currency"] == "EUR"
+
+        response = client.post(
+            f"/api/v1/payments/checkout/{txn.external_id}/swiftpay-currency",
+            json={"currency": "USD"},
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["quoted_amount"] == 1000
+        assert payload["quoted_currency"] == "CNY"
+        assert payload["charged_amount"] == 140
+        assert payload["charged_currency"] == "USD"
+        assert captured["currency"] == "USD"
+        assert captured["details"]["sourceAmount"] == 1000
+        assert captured["details"]["sourceCurrency"] == "CNY"
+
+
 def test_fixed_payment_link_creates_reusable_payment_attempt():
     with TestClient(app) as client:
         async def seed_transaction():

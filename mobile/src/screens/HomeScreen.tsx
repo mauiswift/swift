@@ -168,7 +168,7 @@ const TransactionItem = ({ transaction }: { transaction: any }) => {
       </View>
 
       <View style={styles.transactionRight}>
-        <Text style={[styles.transactionAmount, { color: colors.text, ...typography.bodyLarge }]}>₱{(Math.abs(transaction.amount) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+        <Text style={[styles.transactionAmount, { color: colors.text, ...typography.bodyLarge }]}>₱{Math.abs(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
       </View>
     </View>
   );

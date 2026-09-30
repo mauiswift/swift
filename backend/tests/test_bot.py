@@ -761,7 +761,7 @@ class TestTelegramWebhook:
         transaction = MagicMock()
         transaction.external_id = "link-test"
         checkout_url_builder = MagicMock(
-            side_effect=lambda reference, currency: f"https://swiftpay.ph/checkout/{reference}"
+            side_effect=lambda reference, currency: f"https://swiftpay.site/checkout/{reference}"
         )
 
         with (
@@ -802,7 +802,7 @@ class TestTelegramWebhook:
         keyboard = tg.send_message.await_args.kwargs["reply_markup"]
         assert keyboard["inline_keyboard"][0][0] == {
             "text": "🔗 Open SwiftPay Checkout",
-            "url": f"https://swiftpay.ph/checkout/{reference}",
+            "url": f"https://swiftpay.site/checkout/{reference}",
         }
 
     def test_payment_link_button_callback_starts_guided_wizard(self, client):
@@ -1804,7 +1804,7 @@ def test_usdt_trade_quote_uses_selected_currency_and_wallet_link():
     with (
         patch.object(telegram_router, "CurrencyService", return_value=service),
         patch.object(telegram_router, "_get_user_currency", new=AsyncMock(return_value="PHP")),
-        patch.object(telegram_router, "_dashboard_url", return_value="https://swiftpay.ph/wallet"),
+        patch.object(telegram_router, "_dashboard_url", return_value="https://swiftpay.site/wallet"),
     ):
         asyncio.run(
             telegram_router._send_usdt_trade_quote(
@@ -1993,8 +1993,8 @@ class TestSwiftPayEndpointCompatibility:
                 "data": {
                     "payment_id": "swiftpay-payment_link",
                     "transaction_id": 3000,
-                    "payment_url": "https://swiftpay.ph/checkout/swiftpay-payment_link",
-                    "checkout_url": "https://swiftpay.ph/checkout/swiftpay-payment_link",
+                    "payment_url": "https://swiftpay.site/checkout/swiftpay-payment_link",
+                    "checkout_url": "https://swiftpay.site/checkout/swiftpay-payment_link",
                     "gateway": "swiftpay_self_hosted",
                 },
             }
@@ -2022,7 +2022,7 @@ class TestSwiftPayEndpointCompatibility:
         assert body["success"] is True
         if expected_type == "payment_link":
             assert body["data"]["gateway"] == "swiftpay_self_hosted"
-            assert body["data"]["payment_url"] == "https://swiftpay.ph/checkout/swiftpay-payment_link"
+            assert body["data"]["payment_url"] == "https://swiftpay.site/checkout/swiftpay-payment_link"
             assert captured["self_hosted_metadata"]["self_hosted_checkout"] is True
             assert "payment_type" not in captured
         else:

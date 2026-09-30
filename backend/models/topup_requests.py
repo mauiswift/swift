@@ -11,6 +11,7 @@ class TopupRequest(Base):
     chat_id = Column(String, nullable=False, index=True)
     telegram_username = Column(String, nullable=True)
     amount_usdt = Column(Float, nullable=False)
+    requested_amount = Column(Float, nullable=True)
     currency = Column(String, default="USDT", nullable=False, server_default="USDT")
     reference_code = Column(String, nullable=True, index=True)
     tx_hash = Column(String(128), nullable=True, unique=True, index=True)

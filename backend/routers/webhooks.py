@@ -17,22 +17,24 @@ from core.config import settings
 from core.database import get_db
 from models.disbursements import Disbursements
 from models.wallet_transactions import Wallet_transactions
-from services.transactions import TransactionsService
+from services.transactions import TransactionsService, is_payment_received
 from services.system_earnings import credit_system_earnings
 from services.swiftpay_service import SwiftPayService
+from services.payment_webhook_validation import payload_value as _payload_value
+from services.payment_webhook_validation import validate_payment_amount as _validate_payment_amount
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 
 
-def _payload_value(payload: dict, *keys: str):
-    """Read provider fields from the top-level or its common data envelope."""
-    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
-    for key in keys:
-        value = payload.get(key) or data.get(key)
-        if value not in (None, ""):
-            return value
-    return ""
+def _set_non_success_status(txn, status: str, payment_id: str = "") -> bool:
+    if is_payment_received(txn):
+        return False
+    txn.status = status
+    if payment_id:
+        txn.xendit_id = payment_id
+    txn.updated_at = datetime.now(timezone.utc)
+    return True
 
 
 @router.post("/swiftpay")
@@ -118,19 +120,27 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         break
             if txn:
                 if internal_status in {"completed", "paid"}:
+                    _validate_payment_amount(payload, txn, "SwiftPay")
                     await txn_service.mark_as_paid(txn, gateway_label="SwiftPay")
                 elif internal_status == "expired":
-                    await txn_service.mark_as_expired(txn)
+                    if is_payment_received(txn):
+                        logger.warning("Ignoring stale SwiftPay expiry for received transaction %s", txn.id)
+                    else:
+                        await txn_service.mark_as_expired(txn)
                 else:
-                    txn.status = internal_status
-                    txn.xendit_id = payment_id or txn.xendit_id
-                    await db.commit()
+                    if _set_non_success_status(txn, internal_status, payment_id):
+                        await db.commit()
+                    else:
+                        logger.warning("Ignoring stale SwiftPay status %s for received transaction %s", internal_status, txn.id)
             logger.info(f"SwiftPay: Updated transaction {reference_no or payment_id} to {internal_status}")
 
             disbursement = await db.scalar(
                 select(Disbursements).where(Disbursements.external_id == str(reference_no)).limit(1)
             ) if reference_no else None
-            if disbursement:
+            if disbursement and not (
+                (disbursement.completed_at or str(disbursement.status or "").lower() in {"completed", "paid"})
+                and internal_status not in {"completed", "paid"}
+            ):
                 disbursement.status = internal_status
                 disbursement.updated_at = datetime.now(timezone.utc)
                 if internal_status == "completed":
@@ -254,13 +264,15 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 if transaction_id:
                     txn.xendit_id = transaction_id
                 if internal_status in {"completed", "paid"}:
+                    _validate_payment_amount(payload, txn, "Magpie")
                     finalized = await txn_service.mark_as_paid(txn, gateway_label="Magpie")
                     if not finalized:
                         logger.error("Magpie: could not finalize transaction %s", txn.id)
                 else:
-                    txn.status = internal_status
-                    txn.updated_at = datetime.now(timezone.utc)
-                    await db.commit()
+                    if _set_non_success_status(txn, internal_status, transaction_id):
+                        await db.commit()
+                    else:
+                        logger.warning("Ignoring stale Magpie status %s for received transaction %s", internal_status, txn.id)
                 logger.info("Magpie: Updated transaction %s to %s", order_id or transaction_id, internal_status)
         
         return {"success": True, "received": True, "order_id": order_id or transaction_id}

@@ -217,7 +217,7 @@ async def get_swiftpay_currency_quote(
     currency: Literal["USD", "EUR"] = Query(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return the live KRW-to-foreign-currency quote without creating an order."""
+    """Return a live KRW/CNY-to-foreign-currency quote without creating an order."""
     result = await db.execute(
         select(Transactions)
         .where(func.lower(Transactions.external_id) == identifier.lower())
@@ -228,12 +228,13 @@ async def get_swiftpay_currency_quote(
         raise HTTPException(status_code=404, detail="Payment not found")
     if str(txn.status or "").lower() not in {"pending", "created"} or txn.paid_at:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
-    if str(txn.currency or "").strip().upper() != "KRW":
-        raise HTTPException(status_code=400, detail="Multicurrency checkout is only available for KRW payments")
+    source_currency = str(txn.currency or "").strip().upper()
+    if source_currency not in {"KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Multicurrency checkout is only available for KRW and CNY payments")
 
-    amount_krw = float(txn.original_amount if txn.original_amount is not None else txn.amount or 0)
+    source_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount or 0)
     try:
-        converted_amount = await CurrencyConverter.convert_live(amount_krw, "KRW", currency)
+        converted_amount = await CurrencyConverter.convert_live(source_amount, source_currency, currency)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if converted_amount <= 0:
@@ -241,12 +242,12 @@ async def get_swiftpay_currency_quote(
 
     return {
         "success": True,
-        "quoted_amount": amount_krw,
-        "quoted_currency": "KRW",
+        "quoted_amount": source_amount,
+        "quoted_currency": source_currency,
         "charged_amount": converted_amount,
         "charged_currency": currency,
         "exchange_rate": converted_amount / amount_krw if amount_krw else None,
-        "inverse_rate": amount_krw / converted_amount,
+        "inverse_rate": source_amount / converted_amount,
     }
 
 
@@ -256,7 +257,7 @@ async def create_swiftpay_currency_checkout(
     payload: SwiftPayCurrencyCheckoutRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a SwiftPay USD/EUR order for a KRW checkout using live FX rates."""
+    """Create a SwiftPay USD/EUR order for a KRW or CNY checkout using live FX rates."""
     result = await db.execute(
         select(Transactions)
         .where(func.lower(Transactions.external_id) == identifier.lower())
@@ -268,10 +269,11 @@ async def create_swiftpay_currency_checkout(
         raise HTTPException(status_code=404, detail="Payment not found")
     if str(txn.status or "").lower() not in {"pending", "created"} or txn.paid_at:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
-    if (txn.currency or "").strip().upper() != "KRW":
-        raise HTTPException(status_code=400, detail="Multicurrency checkout is only available for KRW payments")
+    source_currency = str(txn.currency or "").strip().upper()
+    if source_currency not in {"KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Multicurrency checkout is only available for KRW and CNY payments")
 
-    amount_krw = float(txn.original_amount if txn.original_amount is not None else txn.amount or 0)
+    source_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount or 0)
     reference_id = f"FX-{txn.id}-{payload.currency}"
     existing_result = await db.execute(
         select(Transactions)
@@ -305,8 +307,8 @@ async def create_swiftpay_currency_checkout(
                 "success": True,
                 "external_id": existing_txn.external_id,
                 "redirect_url": existing_txn.payment_url,
-                "quoted_amount": amount_krw,
-                "quoted_currency": "KRW",
+                "quoted_amount": source_amount,
+                "quoted_currency": source_currency,
                 "charged_amount": float(existing_txn.amount),
                 "charged_currency": payload.currency,
             }
@@ -314,8 +316,8 @@ async def create_swiftpay_currency_checkout(
 
     try:
         converted_amount = await CurrencyConverter.convert_live(
-            amount_krw,
-            "KRW",
+            source_amount,
+            source_currency,
             payload.currency,
         )
     except RuntimeError as exc:
@@ -323,7 +325,7 @@ async def create_swiftpay_currency_checkout(
     if converted_amount < 1:
         raise HTTPException(
             status_code=400,
-            detail=f"KRW {amount_krw:,.2f} converts below the SwiftPay minimum of {payload.currency} 1.00",
+            detail=f"{source_currency} {source_amount:,.2f} converts below the SwiftPay minimum of {payload.currency} 1.00",
         )
 
     service = SwiftPayService()
@@ -336,8 +338,8 @@ async def create_swiftpay_currency_checkout(
             "description": txn.description or "SwiftPay payment",
             "customerName": txn.customer_name or "Customer",
             "email": txn.customer_email or "",
-            "sourceAmount": amount_krw,
-            "sourceCurrency": "KRW",
+            "sourceAmount": source_amount,
+            "sourceCurrency": source_currency,
         },
         currency=payload.currency,
         generate_customer_redirect_url=True,
@@ -372,8 +374,8 @@ async def create_swiftpay_currency_checkout(
         transaction_type="invoice",
         amount=converted_amount,
         currency=payload.currency,
-        original_amount=amount_krw,
-        original_currency="KRW",
+        original_amount=source_amount,
+        original_currency=source_currency,
         external_id=provider_reference,
         gateway_id=str(provider_payment_id),
         description=txn.description or "SwiftPay payment",
@@ -388,8 +390,8 @@ async def create_swiftpay_currency_checkout(
         "transaction_id": payment_txn.id,
         "external_id": payment_txn.external_id,
         "redirect_url": payment_txn.payment_url,
-        "quoted_amount": amount_krw,
-        "quoted_currency": "KRW",
+        "quoted_amount": source_amount,
+        "quoted_currency": source_currency,
         "charged_amount": converted_amount,
         "charged_currency": payload.currency,
     }

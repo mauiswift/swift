@@ -96,8 +96,8 @@ async def create_krw_payment_link(
     {
         "success": true,
         "transaction_id": 123,
-        "payment_link": "https://swiftpay.ph/checkout/order-123",
-        "payment_url": "https://swiftpay.ph/checkout/order-123",
+        "payment_link": "https://kr.swiftpay.site/checkout/order-123",
+        "payment_url": "https://kr.swiftpay.site/checkout/order-123",
         "reference_no": "order-123",
         "amount": 50000,
         "currency": "KRW",

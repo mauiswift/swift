@@ -17,6 +17,7 @@ from services.swiftpay_service import SwiftPayService
 from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
 from services.transactions import TransactionsService
+from services.payment_webhook_validation import validate_payment_amount
 from services.url_shortener import URLShortenerService
 from services.checkout_urls import build_checkout_url
 from models.disbursements import Disbursements
@@ -405,8 +406,8 @@ async def create_swiftpay_qr(
         external_id=payload.reference_no.strip(),
         gateway_id=(qr_data.get("paymentId") or qr_data.get("payment_id") or "") if isinstance(qr_data, dict) else "",
         description=f"SwiftPay {currency} QR payment",
-        payment_url=qr_code or qr_content or "",
-        qr_code_url=qr_code or "",
+        payment_url=qr_content or qr_code or "",
+        qr_code_url=qr_content or qr_code or "",
         status="pending",
         idempotency_key=payload.reference_no.strip(),
     )
@@ -626,6 +627,7 @@ async def swiftpay_webhook(
     terminal_failed = payment_status in {"CANCELED", "REJECTED", "EXPIRED"} or (payload.get("x_disbursement_status") in {"CANCELED", "REJECTED", "EXPIRED", "FAILED"})
 
     if terminal_paid:
+        validate_payment_amount(payload, txn, "SwiftPay")
         await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
         logger.info(
             "SwiftPay webhook: transaction %s received provider confirmation and is awaiting super-admin approval",

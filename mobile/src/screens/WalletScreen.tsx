@@ -45,6 +45,19 @@ const api = {
     }
     return response.json();
   },
+  requestWithdrawalOtp: async (token: string | null) => {
+    const response = await fetch(`${API_URL}/auth/transaction-otp`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ purpose: 'withdrawal' }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Unable to send withdrawal OTP');
+    return data;
+  },
   requestTopup: async (token: string | null, data: any) => {
     const response = await fetch(`${API_URL}/topup/swiftpay`, {
       method: 'POST',
@@ -82,7 +95,9 @@ export const WalletScreen = ({ navigation, route }: any) => {
   const [topupAmount, setTopupAmount] = useState('');
 
   const [showPinModal, setShowPinModal] = useState(false);
-  const [pin, setPin] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpReference, setOtpReference] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
   const [pinLoading, setPinLoading] = useState(false);
 
   const [showBankPicker, setShowBankPicker] = useState(false);
@@ -138,21 +153,31 @@ export const WalletScreen = ({ navigation, route }: any) => {
   });
 
   const handleWithdraw = () => {
-    if (!amount || !bankCode || !accountNumber) {
+    if (!amount || !bankCode || !accountNumber || !recipientPhone) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: 'Please fill in all required fields',
+        text1: 'Missing withdrawal details',
+        text2: 'Enter an amount, destination, account number, and Philippine mobile number.',
       });
       return;
     }
-    setPin('');
-    setShowPinModal(true);
+    setPinLoading(true);
+    void api.requestWithdrawalOtp(token)
+      .then((result) => {
+        setOtpReference(result.reference);
+        setOtpCode('');
+        setShowPinModal(true);
+        Toast.show({ type: 'success', text1: 'Verification code sent to your account email' });
+      })
+      .catch((error: any) => {
+        Toast.show({ type: 'error', text1: 'Unable to send verification code', text2: error.message });
+      })
+      .finally(() => setPinLoading(false));
   };
 
   const executeWithdraw = async () => {
-    if (pin.length < 4) {
-      Toast.show({ type: 'error', text1: 'Enter valid PIN' });
+    if (otpCode.length !== 6 || !otpReference) {
+      Toast.show({ type: 'error', text1: 'Enter the 6-digit email code' });
       return;
     }
     setPinLoading(true);
@@ -164,8 +189,10 @@ export const WalletScreen = ({ navigation, route }: any) => {
         bank_name: bankName || bankCode,
         account_number: accountNumber,
         account_name: user?.name || user?.username || '',
+        recipient_phone: recipientPhone,
         note: note || undefined,
-        pin: pin,
+        otp_reference: otpReference,
+        otp_code: otpCode,
       };
 
       await api.withdraw(token, payload);
@@ -179,7 +206,10 @@ export const WalletScreen = ({ navigation, route }: any) => {
       setBankName('');
       setBankCode('');
       setAccountNumber('');
+      setRecipientPhone('');
       setNote('');
+      setOtpReference('');
+      setOtpCode('');
       setShowPinModal(false);
       balanceQuery.refetch();
     } catch (error: any) {
@@ -188,7 +218,7 @@ export const WalletScreen = ({ navigation, route }: any) => {
         text1: 'Error',
         text2: error.message,
       });
-      setPin('');
+      setOtpCode('');
     } finally {
       setPinLoading(false);
     }
@@ -321,6 +351,18 @@ export const WalletScreen = ({ navigation, route }: any) => {
             />
           </View>
 
+          <View style={styles.inputContainer}>
+            <Text style={[styles.label, { color: colors.textSecondary, ...typography.label }]}>Philippine Mobile Number</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, ...typography.body }]}
+              placeholder="09XXXXXXXXX or +639XXXXXXXXX"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="phone-pad"
+              value={recipientPhone}
+              onChangeText={setRecipientPhone}
+            />
+          </View>
+
           <TouchableOpacity
             style={[styles.withdrawButton, { backgroundColor: common.primary }]}
             onPress={handleWithdraw}
@@ -380,7 +422,7 @@ export const WalletScreen = ({ navigation, route }: any) => {
         </View>
       </Modal>
 
-      {/* PIN Modal */}
+      {/* Withdrawal OTP Modal */}
       <Modal
         visible={showPinModal}
         transparent
@@ -395,26 +437,47 @@ export const WalletScreen = ({ navigation, route }: any) => {
                </View>
                <Text style={[styles.modalTitle, { color: colors.text, ...typography.h3 }]}>Confirm Transaction</Text>
                <Text style={[styles.modalSubtitle, { color: colors.textSecondary, textAlign: 'center', ...typography.bodySmall }]}>
-                 Please enter your security PIN to authorize this withdrawal.
+                 Enter the 6-digit code sent to your verified account email.
                </Text>
             </View>
 
             <TextInput
               style={[styles.pinInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="••••"
+              placeholder="000000"
               placeholderTextColor={colors.textSecondary}
               keyboardType="number-pad"
               maxLength={6}
-              secureTextEntry
-              value={pin}
-              onChangeText={setPin}
+              value={otpCode}
+              onChangeText={setOtpCode}
               autoFocus
             />
+
+            <TouchableOpacity
+              onPress={() => {
+                setPinLoading(true);
+                void api.requestWithdrawalOtp(token)
+                  .then((result) => {
+                    setOtpReference(result.reference);
+                    setOtpCode('');
+                    Toast.show({ type: 'success', text1: 'A new code was sent to your email' });
+                  })
+                  .catch((error: any) => Toast.show({ type: 'error', text1: 'Unable to resend code', text2: error.message }))
+                  .finally(() => setPinLoading(false));
+              }}
+              disabled={pinLoading}
+              style={{ alignSelf: 'flex-end', marginTop: 10 }}
+            >
+              <Text style={{ color: common.primary }}>Resend code</Text>
+            </TouchableOpacity>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: colors.surface }]}
-                onPress={() => setShowPinModal(false)}
+                onPress={() => {
+                  setShowPinModal(false);
+                  setOtpCode('');
+                  setOtpReference('');
+                }}
                 disabled={pinLoading}
               >
                 <Text style={[styles.modalBtnText, { color: colors.text, ...typography.button, fontSize: 15 }]}>Cancel</Text>
@@ -422,7 +485,7 @@ export const WalletScreen = ({ navigation, route }: any) => {
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: common.primary }]}
                 onPress={executeWithdraw}
-                disabled={pinLoading || pin.length < 4}
+                disabled={pinLoading || otpCode.length !== 6}
               >
                 {pinLoading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.modalBtnText, { color: '#fff', ...typography.button, fontSize: 15 }]}>Authorize</Text>}
               </TouchableOpacity>

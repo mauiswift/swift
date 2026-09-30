@@ -20,6 +20,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
+from services.transactions import TransactionsService
 from services.app_settings import get_usdt_php_rate, get_usdt_php_rate_details, get_deposit_rules
 from services.swiftpay_service import SwiftPayService
 from services.system_earnings import credit_system_earnings
@@ -49,6 +50,7 @@ class TopupRequestResponse(BaseModel):
     user_name: Optional[str] = None
     telegram_username: Optional[str] = None
     amount_usdt: float
+    requested_amount: Optional[float] = None
     currency: str = "USDT"
     reference_code: Optional[str] = None
     tx_hash: Optional[str] = None
@@ -74,6 +76,14 @@ class SwiftPayTopupRequest(BaseModel):
     amount: float
     currency: str = "PHP"
     institution_code: Optional[str] = None
+
+
+def _php_topup_credit_amount(request: TopupRequest, current_rate: Optional[float] = None) -> float:
+    if request.requested_amount is not None:
+        return round(float(request.requested_amount), 2)
+    if current_rate is None:
+        raise ValueError("A current PHP conversion rate is required for legacy top-up requests")
+    return round(float(request.amount_usdt or 0.0) * current_rate, 2)
 
 
 @router.post("/request-with-receipt", response_model=TopupRequestResponse)
@@ -221,6 +231,7 @@ async def create_topup_request(
         chat_id=str(current_user.id),
         telegram_username=getattr(current_user, "username", current_user.name),
         amount_usdt=amount_usdt,
+        requested_amount=round(data.amount, 2),
         currency=input_currency,
         status="pending",
         note=data.note or "Requested via Mobile App",
@@ -258,6 +269,19 @@ async def initialize_swiftpay_topup(
 
     swiftpay = SwiftPayService()
     reference_no = f"topup-{current_user.id}-{uuid.uuid4().hex[:8]}"
+    txn = await TransactionsService(db).create_transaction(
+        user_id=str(current_user.id),
+        transaction_type="wallet_topup",
+        amount=order_amount,
+        external_id=reference_no,
+        description="SwiftPay wallet top-up",
+        customer_name=current_user.name or "User",
+        payment_url="",
+        status="pending",
+        currency="PHP",
+        payment_method="swiftpay",
+        idempotency_key=reference_no,
+    )
 
     order_result = await swiftpay.create_order(
         amount=order_amount,
@@ -273,19 +297,34 @@ async def initialize_swiftpay_topup(
     )
 
     if not order_result.get("success"):
+        txn.status = "failed"
+        txn.updated_at = datetime.now(timezone.utc)
+        await db.commit()
         raise HTTPException(status_code=400, detail=order_result.get("error", "SwiftPay error"))
 
     data_res = order_result.get("data") or {}
     redirect_url = data_res.get("customerRedirectUrl") or data_res.get("customer_redirect_url") or ""
+    payment_id = data_res.get("paymentId") or data_res.get("payment_id")
+    if not redirect_url:
+        txn.status = "failed"
+        txn.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        raise HTTPException(status_code=502, detail="SwiftPay did not return a checkout URL")
+
+    txn.xendit_id = payment_id
+    txn.payment_url = redirect_url
+    txn.updated_at = datetime.now(timezone.utc)
+    await db.commit()
 
     return {
         "success": True,
         "redirect_url": redirect_url,
         "reference_no": reference_no,
+        "transaction_id": txn.id,
         "input_amount": data.amount,
         "input_currency": input_currency,
         "order_amount": order_amount,
-        "payment_id": data_res.get("paymentId") or data_res.get("payment_id")
+        "payment_id": payment_id,
     }
 
 
@@ -323,10 +362,14 @@ async def approve_topup_request(
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
 
     if request_currency == "PHP":
-        rate = await get_usdt_php_rate(db)
-        credit_amount = round(amount_usdt * rate, 2)
         credit_currency = "PHP"
-        credit_note = f"USDT→PHP topup: ${amount_usdt:.2f} USDT × ₱{rate:.2f} = ₱{credit_amount:,.2f}"
+        if req.requested_amount is not None:
+            credit_amount = _php_topup_credit_amount(req)
+            credit_note = f"PHP topup: ₱{credit_amount:,.2f} (quoted at request time)"
+        else:
+            rate = await get_usdt_php_rate(db)
+            credit_amount = _php_topup_credit_amount(req, rate)
+            credit_note = f"USDT→PHP topup: ${amount_usdt:.2f} USDT × ₱{rate:.2f} = ₱{credit_amount:,.2f}"
     else:
         credit_amount = round(amount_usdt, 2)
         credit_currency = request_currency

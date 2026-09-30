@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from dependencies.webhook_auth import require_telegram_webhook_secret
 from services.telegram_service import TelegramService
 from services.bot_enhancements import BotEnhancements
 
@@ -26,6 +27,7 @@ class BotCallbackUpdate(BaseModel):
 async def handle_bot_quick_actions(
     update: BotCallbackUpdate,
     db: AsyncSession = Depends(get_db),
+    _webhook_auth: None = Depends(require_telegram_webhook_secret),
 ):
     """
     Handle quick action button presses from bot menus.

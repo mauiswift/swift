@@ -1,5 +1,7 @@
 import hashlib
 import hmac
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -7,7 +9,7 @@ from starlette.requests import Request
 
 from core.config import settings
 from dependencies.webhook_auth import require_telegram_webhook_secret
-from routers import messenger, webhooks
+from routers import auth, bot_quick_actions, messenger, webhooks
 
 
 def _request(path: str, body: bytes, headers: dict[str, str] | None = None) -> Request:
@@ -60,6 +62,66 @@ def test_telegram_webhook_requires_secret_header(monkeypatch):
             {"X-Telegram-Bot-Api-Secret-Token": "telegram-test-secret"},
         )
     )
+
+
+def test_legacy_admin_credentials_have_no_production_defaults(monkeypatch):
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "admin_user_email", "")
+    monkeypatch.setattr(settings, "admin_user_password", "")
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+
+    assert auth._legacy_admin_credentials() == ("", "")
+
+
+def test_legacy_admin_credentials_keep_local_development_defaults(monkeypatch):
+    monkeypatch.setattr(settings, "environment", "development")
+    monkeypatch.setattr(settings, "admin_user_email", "")
+    monkeypatch.setattr(settings, "admin_user_password", "")
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+
+    assert auth._legacy_admin_credentials() == ("admin@paybot.local", "admin123")
+
+
+def test_bot_quick_action_route_requires_telegram_webhook_secret():
+    route = next(route for route in bot_quick_actions.router.routes if route.path.endswith("/bot-actions"))
+
+    assert any(
+        dependency.call is require_telegram_webhook_secret
+        for dependency in route.dependant.dependencies
+    )
+
+
+def test_webhook_payment_amount_validation_checks_amount_and_currency():
+    transaction = SimpleNamespace(amount=500.0, currency="PHP")
+    webhooks._validate_payment_amount(
+        {"x_amount": "500.00", "x_currency": "PHP"}, transaction, "SwiftPay"
+    )
+
+    with pytest.raises(HTTPException) as amount_error:
+        webhooks._validate_payment_amount({"amount": "5.00"}, transaction, "Magpie")
+    assert amount_error.value.status_code == 400
+
+    with pytest.raises(HTTPException) as missing_amount_error:
+        webhooks._validate_payment_amount({}, transaction, "SwiftPay")
+    assert missing_amount_error.value.status_code == 400
+
+    with pytest.raises(HTTPException) as currency_error:
+        webhooks._validate_payment_amount({"amount": "500", "currency": "USD"}, transaction, "Magpie")
+    assert currency_error.value.status_code == 400
+
+
+def test_stale_non_success_webhook_does_not_downgrade_received_transaction():
+    transaction = SimpleNamespace(
+        status="paid",
+        paid_at=datetime.now(timezone.utc),
+        approval_status="approved",
+        updated_at=None,
+        xendit_id=None,
+    )
+
+    assert webhooks._set_non_success_status(transaction, "failed", "provider-id") is False
+    assert transaction.status == "paid"
+    assert transaction.xendit_id is None
 
 
 @pytest.mark.asyncio

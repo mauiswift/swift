@@ -116,7 +116,7 @@ export const TransactionsScreen = () => {
         </View>
         <View style={styles.right}>
           <Text style={[styles.amount, { color: isNegative ? common.danger : common.success, ...typography.bodyLarge }]}>
-            {isNegative ? '-' : '+'}₱{Math.abs(item.amount / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {isNegative ? '-' : '+'}₱{Math.abs(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </Text>
           <View style={[
             styles.statusBadge,

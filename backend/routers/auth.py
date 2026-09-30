@@ -84,6 +84,19 @@ router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
 
 
+def _is_production_environment() -> bool:
+    return str(getattr(settings, "environment", "") or "").strip().lower() in {"production", "prod", "live"}
+
+
+def _legacy_admin_credentials() -> tuple[str, str]:
+    email = str(getattr(settings, "admin_user_email", "") or "").strip()
+    password = str(getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", ""))
+    if not _is_production_environment():
+        email = email or "admin@paybot.local"
+        password = password or "admin123"
+    return email, password
+
+
 def _admin_permissions(admin: Optional[AdminUser]) -> UserPermissions:
     """Build login permissions from the persisted permission assignments."""
     if not admin:
@@ -1246,15 +1259,19 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
                 detail="Turnstile verification failed. Please refresh and try again.",
             )
 
-    admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
-    admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
+    admin_email, admin_password = _legacy_admin_credentials()
 
     authenticated_user = None
-    if payload.email == admin_email and payload.password == admin_password:
+    if admin_email and admin_password and payload.email == admin_email and payload.password == admin_password:
         admin_id = getattr(settings, "admin_user_id", "admin")
         authenticated_user = User(id=admin_id, email=admin_email, name="Admin User", role="admin")
 
-    if not authenticated_user and payload.email == "demo@paybot.local" and payload.password == "demo123":
+    if (
+        not authenticated_user
+        and not _is_production_environment()
+        and payload.email == "demo@paybot.local"
+        and payload.password == "demo123"
+    ):
         authenticated_user = User(id="demo_user", email="demo@paybot.local", name="Demo User", role="user")
 
     if not authenticated_user:
@@ -1453,15 +1470,19 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
 @router.post("/terminal-login", response_model=LoginResponse)
 async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Mobile POS terminal login."""
-    admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
-    admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
+    admin_email, admin_password = _legacy_admin_credentials()
 
     authenticated_user = None
-    if payload.email == admin_email and payload.password == admin_password:
+    if admin_email and admin_password and payload.email == admin_email and payload.password == admin_password:
         admin_id = getattr(settings, "admin_user_id", "admin")
         authenticated_user = User(id=admin_id, email=admin_email, name="Admin User", role="admin")
 
-    if not authenticated_user and payload.email == "demo@paybot.local" and payload.password == "demo123":
+    if (
+        not authenticated_user
+        and not _is_production_environment()
+        and payload.email == "demo@paybot.local"
+        and payload.password == "demo123"
+    ):
         authenticated_user = User(id="demo_user", email="demo@paybot.local", name="Demo User", role="user")
 
     if not authenticated_user:
