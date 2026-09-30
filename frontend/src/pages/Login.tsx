@@ -368,12 +368,13 @@ export default function Login() {
 
         .ak-passkey-icon {
           display: inline-flex;
-          width: 28px;
-          height: 28px;
+          width: 40px;
+          height: 40px;
           align-items: center;
           justify-content: center;
           border-radius: 999px;
-          background: #f1f3f6;
+          background: #f8fafc;
+          border: 1px solid var(--border-color);
           color: #1a1a1a;
         }
 
@@ -399,8 +400,8 @@ export default function Login() {
           height: 52px;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 4px 10px;
+          gap: 10px;
+          padding: 6px 12px;
           border: 1px solid var(--border-color);
           border-radius: 10px;
           background: #fff;
@@ -414,16 +415,32 @@ export default function Login() {
           display: flex;
           align-items: center;
           justify-content: center;
+          flex: 0 0 40px;
+          width: 40px;
+          height: 40px;
+          overflow: hidden;
+          border-radius: 999px;
+          transform: scale(0.92);
         }
 
         .ak-telegram-login {
           margin: 0;
         }
 
+        .ak-telegram-login > div:first-child {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 40px;
+          width: 40px;
+          height: 40px;
+        }
+
         .ak-method-label {
           display: inline;
           font-size: 12px;
           font-weight: 700;
+          line-height: 1;
           white-space: nowrap;
         }
 
