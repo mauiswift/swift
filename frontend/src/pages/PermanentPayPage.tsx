@@ -93,8 +93,10 @@ export default function PermanentPayPage() {
     return <LoadingSkeleton variant="page" />;
   }
 
-  const displayCurrency = merchant?.collection_currency || collectionCurrency || 'PHP';
+  const displayCurrency = link.currency || searchParams.get('currency')?.toUpperCase() || merchant?.collection_currency || collectionCurrency || 'PHP';
   const merchantName = merchant?.store_name?.trim() || 'Merchant';
+  const parsedAmount = Number(amount);
+  const amountInvalid = amount.length > 0 && (!Number.isFinite(parsedAmount) || parsedAmount <= 0);
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-sans text-slate-900">
@@ -159,8 +161,8 @@ export default function PermanentPayPage() {
               <label htmlFor="permanent-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Enter payment amount
               </label>
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-slate-200 focus-within:bg-white">
-                <span className="text-2xl font-semibold text-slate-400">{getCurrencySymbol(displayCurrency)}</span>
+              <div className={`mt-3 flex items-center gap-2 rounded-xl border bg-slate-50 px-4 py-3 transition focus-within:bg-white ${amountInvalid ? 'border-red-200' : 'border-slate-200 focus-within:border-slate-200'}`}>
+                <span className={amountInvalid ? 'text-2xl font-semibold text-red-400' : 'text-2xl font-semibold text-slate-400'}>{getCurrencySymbol(displayCurrency)}</span>
                 <input
                   id="permanent-payment-amount"
                   type="number"
@@ -175,7 +177,12 @@ export default function PermanentPayPage() {
                 />
                 <span className="text-sm font-bold text-slate-500">{displayCurrency}</span>
               </div>
-              <p className="mt-2 text-xs leading-relaxed text-slate-500">Customer can enter any amount for this payment.</p>
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                <span className={amountInvalid ? 'font-medium text-red-600' : 'text-slate-500'}>
+                  {amountInvalid ? 'Enter an amount greater than zero.' : 'Customer can enter any amount for this payment.'}
+                </span>
+                <span className="font-medium text-slate-400">Min 0.01</span>
+              </div>
             </div>
             <div>
               <label htmlFor="permanent-payment-note" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -205,12 +212,12 @@ export default function PermanentPayPage() {
 
             <button
               type="submit"
-              disabled={creating || !amount || !acknowledged}
+              disabled={creating || !amount || amountInvalid || !acknowledged}
               className="w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {creating ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (
                 <span className="inline-flex items-center justify-center gap-1">
-                  Pay Now
+                  Continue
                   <ChevronRight className="h-4 w-4" />
                 </span>
               )}
