@@ -1777,9 +1777,9 @@ function FeeSettingsModal({
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="fee-settings-title">
-      <Card className="w-full max-w-2xl border-slate-200 bg-white shadow-2xl">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="fee-settings-title">
+      <Card className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden border-slate-200 bg-white shadow-2xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 shrink-0">
           <div>
             <CardTitle id="fee-settings-title" className="text-slate-900">Fee Settings</CardTitle>
             <p className="mt-1 text-xs text-slate-500">
@@ -1790,7 +1790,7 @@ function FeeSettingsModal({
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6 p-6">
+        <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-6 p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Upline service surcharge (%)</span>
@@ -2934,8 +2934,8 @@ function PasswordChangeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="presentation">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center" role="presentation">
+      <div className="my-auto bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
         <div className="flex items-center justify-between">
           <h2 id="change-password-title" className="text-foreground font-semibold flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-purple-400" />
@@ -3028,8 +3028,8 @@ function BankInfoModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+      <div className="my-auto bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-foreground font-semibold flex items-center gap-2">
             <Tag className="h-4 w-4 text-blue-400" />
@@ -3179,8 +3179,8 @@ function ApiKeysModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+      <div className="my-auto bg-card border border-border rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)]">
         <div className="flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-foreground font-semibold flex items-center gap-2">

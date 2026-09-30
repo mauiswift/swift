@@ -221,8 +221,8 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
     purple: 'bg-purple-500/10 border-purple-500/20 text-purple-300', emerald: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300',
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="relative w-full max-w-md bg-card border border-border/60 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center">
+      <div className="my-auto relative flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl">
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-2"><Bot className="h-5 w-5 text-blue-400" /><span className="text-foreground font-semibold text-sm">Bot Setup Guide</span></div>
           <button type="button" aria-label="Close bot setup guide" title="Close bot setup guide" onClick={onDone} className="text-muted-foreground hover:text-foreground transition-colors"><X className="h-4 w-4" /></button>
@@ -233,7 +233,7 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
           ))}
           <span className="ml-auto text-[11px] text-muted-foreground">{step + 1} of {TUTORIAL_STEPS.length}</span>
         </div>
-        <div className="px-5 pb-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
           <div className={`flex items-center justify-center h-20 w-20 rounded-2xl border mx-auto mb-5 ${colorMap[s.color]}`}>{s.icon}</div>
           <h2 className="text-foreground font-semibold text-lg text-center mb-3">{s.title}</h2>
           <p className="text-muted-foreground text-sm text-center leading-relaxed mb-4">{s.body}</p>

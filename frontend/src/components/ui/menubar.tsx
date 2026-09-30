@@ -72,7 +72,7 @@ const MenubarSubContent = React.forwardRef<
   <MenubarPrimitive.SubContent
     ref={ref}
     className={cn(
-      'motion-popup z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground',
+      'motion-popup z-50 min-w-[8rem] max-w-[calc(100vw-2rem)] max-h-[min(var(--radix-popper-available-height),calc(100dvh-2rem))] overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground',
       className
     )}
     {...props}
@@ -95,7 +95,7 @@ const MenubarContent = React.forwardRef<
         alignOffset={alignOffset}
         sideOffset={sideOffset}
         className={cn(
-          'motion-popup z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
+          'motion-popup z-50 min-w-[12rem] max-w-[calc(100vw-2rem)] max-h-[min(var(--radix-popper-available-height),calc(100dvh-2rem))] overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
           className
         )}
         {...props}

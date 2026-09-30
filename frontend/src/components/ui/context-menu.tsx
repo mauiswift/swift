@@ -44,7 +44,7 @@ const ContextMenuSubContent = React.forwardRef<
   <ContextMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      'motion-popup z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
+      'motion-popup z-50 min-w-[8rem] max-w-[calc(100vw-2rem)] max-h-[min(var(--radix-popper-available-height),calc(100dvh-2rem))] overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
       className
     )}
     {...props}
@@ -60,7 +60,7 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        'motion-popup z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
+        'motion-popup z-50 min-w-[8rem] max-w-[calc(100vw-2rem)] max-h-[min(var(--radix-popper-available-height),calc(100dvh-2rem))] overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
         className
       )}
       {...props}

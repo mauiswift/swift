@@ -381,13 +381,13 @@ export default function SuperAdminPaymentApprovalDesktop() {
                 </tbody>
               </table>
             {reviewPayment && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
-                <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
+                <div className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
                   <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
                     <div className="flex gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><ShieldCheck size={20} /></div><div><p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t('approval_review_heading')}</p><h2 id="approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">{t('approval_review_before')}</h2></div></div>
                     <button type="button" aria-label={t('approval_close_review')} onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"><X size={18} /></button>
                   </div>
-                  <div className="space-y-5 px-6 py-5">
+                  <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
                     <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm">
                       <div><p className="text-xs text-slate-400">{t('approval_store_merchant')}</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || t('approval_unknown')}</p></div>
                       <div><p className="text-xs text-slate-400">{t('approval_customer')}</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || t('approval_unknown')}</p></div>

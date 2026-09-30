@@ -164,7 +164,7 @@ function ScreenshotViewer() {
       {/* Lightbox */}
       {lightbox !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm sm:items-center"
           onClick={() => setLightbox(null)}
         >
           <button
@@ -175,7 +175,7 @@ function ScreenshotViewer() {
             <X className="h-4 w-4" />
           </button>
           <div
-            className="w-full max-w-xs"
+            className="my-auto w-full max-w-xs"
             onClick={(e) => e.stopPropagation()}
           >
             <ScreenshotFrame

@@ -169,8 +169,8 @@ function ScopeTag({ scope }: { scope: string }) {
 
 function ConfirmDelete({ onConfirm, onCancel, label }: { onConfirm: () => void; onCancel: () => void; label: string }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center">
+      <div className="my-auto w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto space-y-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-xl bg-red-500/10"><AlertCircle className="h-5 w-5 text-red-500" /></div>
           <div>
