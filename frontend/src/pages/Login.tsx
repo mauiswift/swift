@@ -115,7 +115,7 @@ export default function Login() {
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         type: 'icon',
         theme: 'outline',
-        size: 'large',
+        size: 'medium',
         shape: 'circle',
       });
     };
@@ -378,17 +378,17 @@ export default function Login() {
         }
 
         .ak-login-methods {
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          align-items: stretch;
+          justify-content: stretch;
           gap: 12px;
           margin-top: 16px;
         }
 
         .ak-login-methods .ak-btn-secondary {
           margin-top: 0;
-          width: auto;
-          flex: 1 1 0;
+          width: 100%;
           min-height: 52px;
         }
 
@@ -399,7 +399,6 @@ export default function Login() {
           height: 52px;
           align-items: center;
           justify-content: center;
-          flex: 1 1 0;
           gap: 8px;
           padding: 4px 10px;
           border: 1px solid var(--border-color);
@@ -407,13 +406,13 @@ export default function Login() {
           background: #fff;
           color: #1a1a1a;
           transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
+          width: 100%;
         }
 
         .ak-google-login > div {
           display: flex;
           align-items: center;
           justify-content: center;
-          filter: grayscale(1);
         }
 
         .ak-telegram-login {
@@ -750,6 +749,7 @@ export default function Login() {
             margin-top: 0;
           }
           .ak-login-methods {
+            display: flex;
             gap: 8px;
             flex-wrap: wrap;
           }
@@ -895,8 +895,8 @@ export default function Login() {
                     <span className="ak-passkey-icon" aria-hidden="true">
                       <Fingerprint size={19} strokeWidth={2} />
                     </span>
-                    <span className="ak-method-label">
-                      {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키로 로그인' : 'Sign in with passkey')}
+                  <span className="ak-method-label">
+                      {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키' : 'Passkey')}
                     </span>
                   </button>
 
