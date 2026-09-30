@@ -531,18 +531,28 @@ export default function Banking() {
             </div>
           ) : (
             <>
-              <div className="mb-5 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
-                <div>
-                  <p className="text-xs font-semibold text-blue-900">Available for KRW</p>
-                  <p className="mt-1 text-xs text-blue-700">Choose one or more payment channels.</p>
-                </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">KRW</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {KOREA_CHANNELS.map((channel) => (
-                  <div key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:border-slate-300">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <PaymentBrandLogo
+               <div className="mb-5 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+                 <div>
+                   <p className="text-xs font-semibold text-blue-900">Available for KRW</p>
+                   <p className="mt-1 text-xs text-blue-700">Choose one or more payment channels.</p>
+                 </div>
+                 <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">KRW</span>
+               </div>
+               <div className="mb-4 flex justify-end">
+                 <Button
+                   type="button"
+                   variant="outline"
+                   className="border-slate-200 text-slate-700"
+                   onClick={() => navigate('/help/toss-pay-qr')}
+                 >
+                   TOSS Pay QR scan guide
+                 </Button>
+               </div>
+               <div className="grid gap-3 sm:grid-cols-2">
+                 {KOREA_CHANNELS.map((channel) => (
+                   <div key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:border-slate-300">
+                     <div className="flex min-w-0 items-center gap-3">
+                       <PaymentBrandLogo
                         brand={channel.id === 'bank_transfer' ? 'Bank Transfer' : channel.label}
                         size="sm"
                         className={`h-9 w-12 rounded-lg border-0 shadow-none ${channel.tone}`}

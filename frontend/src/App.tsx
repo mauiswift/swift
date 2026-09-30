@@ -83,8 +83,9 @@ const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPa
 const TossAccountApprovals = React.lazy(() => import('./pages/TossAccountApprovals'));
 const PaymentContract = React.lazy(() => import('./pages/PaymentContract'));
 const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPage'));
-const SupportPage = React.lazy(() => import('./pages/SupportPage'));
-const MiniApp = React.lazy(() => import('./pages/MiniApp'));
+  const SupportPage = React.lazy(() => import('./pages/SupportPage'));
+  const MiniApp = React.lazy(() => import('./pages/MiniApp'));
+  const TossPayQrInstructions = React.lazy(() => import('./pages/help/TossPayQrInstructions'));
 
 class AppErrorBoundary extends React.Component<
   React.PropsWithChildren,
@@ -235,6 +236,7 @@ function AuthAwareContent() {
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute permission="can_manage_wallet"><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute permission="can_manage_bot"><SettingsApiIntegration /></ProtectedAdminRoute>} />
+      <Route path="/help/toss-pay-qr" element={<RequireAuth><TossPayQrInstructions /></RequireAuth>} />
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
       <Route path="/admin-management" element={<ProtectedAdminRoute permission="can_manage_team" allowPlatformSuperAdmin><AdminManagement /></ProtectedAdminRoute>} />
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
