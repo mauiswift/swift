@@ -13,6 +13,7 @@ export default function CreatePaymentLink() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const t = useTranslation(language);
+  const publicHost = typeof window !== 'undefined' ? window.location.host : 'swiftpay.site';
   const { collectionCurrency, enabledCurrencies } = useCollectionCurrency();
   const isKorean = language === 'ko';
   const availableCurrencies = Array.from(new Set([...enabledCurrencies, 'PHP', 'USD', 'EUR', 'KRW']));
@@ -177,12 +178,12 @@ export default function CreatePaymentLink() {
               ? [
                   { icon: Landmark, title: 'Korean bank transfer', text: 'Manual payment verification' },
                   { icon: ShieldCheck, title: 'Super-admin approval', text: 'Payment is approved after verification' },
-                  { icon: ShieldCheck, title: 'SwiftPay integrated', text: 'Self-hosted checkout on swiftpay.ph' },
+                  { icon: ShieldCheck, title: 'SwiftPay integrated', text: `Self-hosted checkout on ${publicHost}` },
                 ]
               : [
                   { icon: QrCode, title: 'GCash / QRPH', text: 'Fast QR checkout' },
                   { icon: Landmark, title: 'Bank transfer', text: 'Supported PH banks' },
-                  { icon: ShieldCheck, title: 'SwiftPay integrated', text: 'Self-hosted checkout on swiftpay.ph' },
+                  { icon: ShieldCheck, title: 'SwiftPay integrated', text: `Self-hosted checkout on ${publicHost}` },
                 ]
             ).map(({ icon: Icon, title: cardTitle, text }) => (
               <div key={cardTitle} className="rounded-xl border border-slate-200 bg-slate-50 p-3">

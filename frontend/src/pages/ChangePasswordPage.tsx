@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,6 @@ export default function ChangePasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  useEffect(() => {
-    console.log('ChangePasswordPage mounted', { user, loading });
-  }, [user, loading]);
-
   // Show loading state while auth context is initializing
   if (loading) {
     return (
@@ -34,7 +30,6 @@ export default function ChangePasswordPage() {
 
   // Redirect to login if no user after loading
   if (!user) {
-    console.log('No user found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
@@ -55,9 +50,7 @@ export default function ChangePasswordPage() {
 
     try {
       setSubmitting(true);
-      console.log('Attempting to change password');
       await changePassword(newPassword, confirmPassword);
-      console.log('Password changed successfully');
       navigate('/dashboard', { replace: true });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unable to update your password.';

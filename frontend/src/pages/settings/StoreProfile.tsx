@@ -25,6 +25,7 @@ export default function StoreProfile() {
     isSuperAdmin || user?.permissions?.can_manage_payments || user?.permissions?.can_manage_team,
   );
   const { collectionCurrency: sharedCollectionCurrency, enabledCurrencies, setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
+  const publicPayPrefix = typeof window !== 'undefined' ? `${window.location.host}/pay/` : 'swiftpay.site/pay/';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -284,7 +285,7 @@ export default function StoreProfile() {
                 <div>
                   <label className="text-[14px] font-semibold text-slate-900 block mb-3">Store Slug</label>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="shrink-0 text-[14px] font-medium text-slate-400">swiftpay.ph/pay/</span>
+                    <span className="shrink-0 text-[14px] font-medium text-slate-400">{publicPayPrefix}</span>
                     <input
                       value={slug}
                       onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
