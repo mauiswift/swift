@@ -250,6 +250,14 @@ export default function Login() {
           position: relative;
         }
 
+        .ak-grid {
+          display: block;
+        }
+
+        .ak-side {
+          display: none;
+        }
+
         .ak-main {
           width: 100%;
           max-width: 380px;
@@ -530,6 +538,131 @@ export default function Login() {
           color: #64748b;
         }
 
+        @media (min-width: 1024px) {
+          .ak-card {
+            max-width: 980px;
+            padding: 0;
+            overflow: hidden;
+          }
+
+          .ak-grid {
+            display: grid;
+            grid-template-columns: 1fr 460px;
+            align-items: stretch;
+          }
+
+          .ak-side {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 42px 44px;
+            border-right: 1px solid rgba(226, 226, 226, 0.9);
+            background:
+              radial-gradient(circle at 20% 10%, rgba(91, 110, 163, 0.14), transparent 45%),
+              linear-gradient(180deg, rgba(248, 249, 252, 1) 0%, rgba(255, 255, 255, 1) 100%);
+          }
+
+          .ak-side-top {
+            min-width: 0;
+          }
+
+          .ak-side-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            min-width: 0;
+          }
+
+          .ak-side-brand {
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            color: var(--text-100);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .ak-side-title {
+            font-size: 28px;
+            font-weight: 850;
+            color: var(--text-100);
+            letter-spacing: -0.02em;
+            line-height: 1.08;
+            margin: 0;
+            max-width: 360px;
+          }
+
+          .ak-side-sub {
+            margin: 12px 0 0;
+            color: var(--text-200);
+            font-size: 14px;
+            line-height: 1.55;
+            max-width: 360px;
+          }
+
+          .ak-side-list {
+            margin: 22px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 10px;
+            max-width: 360px;
+          }
+
+          .ak-side-list li {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(226, 226, 226, 0.65);
+            color: #334155;
+            font-size: 13px;
+            font-weight: 650;
+          }
+
+          .ak-side-list li::before {
+            content: "";
+            margin-top: 3px;
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: #0b63ff;
+            box-shadow: 0 0 0 3px rgba(11, 99, 255, 0.12);
+            flex: 0 0 auto;
+          }
+
+          .ak-side-support {
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 18px;
+            border-top: 1px solid rgba(226, 226, 226, 0.75);
+            color: #475569;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+          }
+
+          .ak-side-support:hover {
+            color: #0f172a;
+          }
+
+          .ak-main {
+            max-width: none;
+            margin: 0;
+            padding: 42px 44px;
+          }
+
+          .ak-subtitle {
+            margin-top: 16px;
+          }
+        }
+
         .ak-load-spin {
           width: 18px;
           height: 18px;
@@ -681,7 +814,30 @@ export default function Login() {
         )}
         <div className="ak-page-inner">
           <div className="ak-card">
-            <div className="ak-main">
+            <div className="ak-grid">
+              <aside className="ak-side" aria-label={isKorean ? '로그인 안내' : 'Login information'}>
+                <div className="ak-side-top">
+                  <div className="ak-side-logo">
+                    <AuthLogo height={28} logoUrl={platformBranding?.logoUrl} name={platformBranding?.name} />
+                    <span className="ak-side-brand">{platformBranding?.name || 'SwiftPay'}</span>
+                  </div>
+                  <h2 className="ak-side-title">{isKorean ? '안전한 대시보드 액세스' : 'Secure dashboard access'}</h2>
+                  <p className="ak-side-sub">
+                    {isKorean ? '인증된 계정만 로그인할 수 있습니다. 보안 검증이 활성화된 경우 화면의 안내를 따라주세요.' : 'Only verified accounts can sign in. If security validation is enabled, follow the on-screen prompt.'}
+                  </p>
+                  <ul className="ak-side-list" aria-label={isKorean ? '주요 기능' : 'Highlights'}>
+                    <li>{isKorean ? '지갑, 정산, 승인 흐름을 한 곳에서 관리' : 'Manage wallets, settlements, and approvals in one place'}</li>
+                    <li>{isKorean ? 'KRW 가상계좌 신청 검토 및 계정 풀 관리' : 'Review KRW virtual account applications and manage the pool'}</li>
+                    <li>{isKorean ? '감사 추적 가능한 트랜잭션 모니터링' : 'Track transactions with audit-ready visibility'}</li>
+                  </ul>
+                </div>
+                <a className="ak-side-support" href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+                  <span>{isKorean ? '도움이 필요하신가요? 지원팀에 문의하세요' : 'Need help? Contact support'}</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+              </aside>
+
+              <div className="ak-main">
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
               <div className="ak-step">
@@ -817,6 +973,7 @@ export default function Login() {
                 </Link>
               </div>
             )}
+              </div>
             </div>
           </div>
         </div>
