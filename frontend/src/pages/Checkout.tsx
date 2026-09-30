@@ -257,7 +257,8 @@ export default function Checkout() {
   const [showQR, setShowQR] = useState(false);
   const [showQRPhModal, setShowQRPhModal] = useState(false);
   const [qrInstructionApp, setQrInstructionApp] = useState<'toss' | null>(null);
-  const openAmount = searchParams.get('open_amount') === '1';
+  const openAmountParam = searchParams.get('open_amount') === '1';
+  const openAmount = openAmountParam || (txn ? Number(txn.amount || 0) === 0 : false);
   const [enteredAmount, setEnteredAmount] = useState('');
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
   const [openAmountSubmitted, setOpenAmountSubmitted] = useState(false);
@@ -409,7 +410,7 @@ export default function Checkout() {
         }
         setTxn(response.data);
         fetchInstitutions();
-        if (searchParams.get('open_amount') === '1') {
+        if (openAmountParam || Number(response.data.amount || 0) === 0) {
           setEnteredAmount('');
         }
         if (qrphRedirect && response.data.qr_code_url) {
