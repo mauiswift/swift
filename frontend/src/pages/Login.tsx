@@ -24,10 +24,19 @@ declare global {
   }
 }
 
-function SwiftPayLogo({ height = 28 }: { height?: number }) {
+function AuthLogo({
+  height = 28,
+  logoUrl,
+  name,
+}: {
+  height?: number;
+  logoUrl?: string | null;
+  name?: string | null;
+}) {
   return (
     <BrandLogo
-      src="/swiftpay-logo-black.svg"
+      src={logoUrl || '/swiftpay-logo-black.svg'}
+      alt={name || 'SwiftPay'}
       className={height === 48 ? 'h-12' : 'h-7'}
     />
   );
@@ -208,15 +217,24 @@ export default function Login() {
 
         .ak-page {
           min-height: 100vh;
+          min-height: 100dvh;
           background:
             radial-gradient(circle at 50% 0%, rgba(91, 110, 163, 0.12), transparent 38%),
             var(--auth-bg);
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
           padding: clamp(16px, 4vw, 48px);
           font-family: "DM Sans", sans-serif;
+        }
+
+        .ak-page-inner {
+          width: 100%;
+          flex: 1 1 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .ak-card {
@@ -493,7 +511,9 @@ export default function Login() {
         }
 
         .ak-footer {
-          margin-top: 60px;
+          margin-top: 0;
+          padding-top: 24px;
+          padding-bottom: 8px;
           display: flex;
           justify-content: center;
           gap: 40px;
@@ -659,13 +679,14 @@ export default function Login() {
             </section>
           </div>
         )}
-        <div className="ak-card">
-          <div className="ak-main">
+        <div className="ak-page-inner">
+          <div className="ak-card">
+            <div className="ak-main">
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
               <div className="ak-step">
-                <div className="ak-login-logo" aria-label="SwiftPay">
-                  <SwiftPayLogo height={48} />
+                <div className="ak-login-logo" aria-label={platformBranding?.name || 'SwiftPay'}>
+                  <AuthLogo height={48} logoUrl={platformBranding?.logoUrl} name={platformBranding?.name} />
                 </div>
                 <p className="ak-subtitle">
                   {t('login_to_continue').replace('{brand}', platformBranding?.name || 'SwiftPay')}
@@ -747,8 +768,8 @@ export default function Login() {
             {/* ── STEP 2: Password ───────────────────────── */}
             {step === 'password' && (
               <div className="ak-step">
-                <div className="ak-login-logo" aria-label="SwiftPay">
-                  <SwiftPayLogo height={48} />
+                <div className="ak-login-logo" aria-label={platformBranding?.name || 'SwiftPay'}>
+                  <AuthLogo height={48} logoUrl={platformBranding?.logoUrl} name={platformBranding?.name} />
                 </div>
 
                 <div className="ak-identity-row">
@@ -796,6 +817,7 @@ export default function Login() {
                 </Link>
               </div>
             )}
+            </div>
           </div>
         </div>
 
