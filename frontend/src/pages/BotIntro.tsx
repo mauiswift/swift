@@ -6,6 +6,7 @@ import {
   BarChart3,
   Wallet,
   CreditCard,
+  Check,
   FileText,
   Building2,
   PieChart,
@@ -147,6 +148,28 @@ function RolePermissionMatrix() {
     </span>
   );
 
+  const baseColumns: Array<{ key: PermissionKey; label: string }> = [
+    { key: 'can_manage_team', label: 'Team' },
+    { key: 'can_manage_payments', label: 'Payments' },
+    { key: 'can_manage_transactions', label: 'Transactions' },
+    { key: 'can_manage_disbursements', label: 'Disbursements' },
+    { key: 'can_manage_wallet', label: 'Wallet' },
+    { key: 'can_view_reports', label: 'Reports' },
+    { key: 'can_manage_bot', label: 'Bot' },
+  ];
+
+  const platformColumns: Array<{ key: PermissionKey; label: string }> = [
+    { key: 'is_super_admin', label: 'Super admin' },
+    { key: 'can_approve_topups', label: 'Approvals' },
+    { key: 'can_credit_wallet', label: 'Credit' },
+    { key: 'can_debit_wallet', label: 'Debit' },
+    { key: 'can_freeze_wallet', label: 'Freeze' },
+    { key: 'can_unfreeze_wallet', label: 'Unfreeze' },
+  ];
+
+  const roleHas = (role: MatrixRole, permission: PermissionKey) => role.permissions.includes(permission);
+  const rolesWithNotes = roles.filter((role) => (role.notes?.length ?? 0) > 0);
+
   return (
     <div className="mt-6 space-y-4">
       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -156,7 +179,8 @@ function RolePermissionMatrix() {
         </p>
       </div>
 
-      <div className="space-y-3">
+      {/* Mobile: role cards */}
+      <div className="space-y-3 sm:hidden">
         {roles.map((role) => (
           <div key={role.key} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-start justify-between gap-3">
@@ -181,6 +205,78 @@ function RolePermissionMatrix() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Desktop: compact matrix table */}
+      <div className="hidden sm:block">
+        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+          <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-xs">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-[0.16em] text-slate-300">
+                <th className="sticky left-0 z-10 bg-[#0A0F1E] px-4 py-3">Role</th>
+                <th colSpan={baseColumns.length} className="px-4 py-3 text-slate-300">Dashboard access</th>
+                <th colSpan={platformColumns.length} className="px-4 py-3 text-slate-300">Platform-only / system</th>
+              </tr>
+              <tr className="border-t border-white/10 text-[11px] font-semibold text-slate-200">
+                <th className="sticky left-0 z-10 bg-[#0A0F1E] px-4 py-3" />
+                {baseColumns.map((column) => (
+                  <th key={column.key} className="whitespace-nowrap px-3 py-3 text-center">{column.label}</th>
+                ))}
+                {platformColumns.map((column) => (
+                  <th key={column.key} className="whitespace-nowrap px-3 py-3 text-center">{column.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map((role) => (
+                <tr key={role.key} className="border-t border-white/10">
+                  <td className="sticky left-0 z-10 bg-[#0A0F1E] px-4 py-3 align-top">
+                    <p className="text-sm font-semibold text-white">{role.title}</p>
+                    <p className="mt-1 max-w-[360px] text-[11px] leading-relaxed text-slate-400">{role.description}</p>
+                  </td>
+                  {baseColumns.map((column) => (
+                    <td key={column.key} className="px-3 py-3 text-center align-middle">
+                      {roleHas(role, column.key) ? (
+                        <span className="inline-flex items-center justify-center rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-200">
+                          <Check className="h-3.5 w-3.5" aria-label="Allowed" />
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
+                    </td>
+                  ))}
+                  {platformColumns.map((column) => (
+                    <td key={column.key} className="px-3 py-3 text-center align-middle">
+                      {roleHas(role, column.key) ? (
+                        <span className="inline-flex items-center justify-center rounded-full bg-amber-500/15 px-2 py-1 text-amber-200">
+                          <Check className="h-3.5 w-3.5" aria-label="Allowed" />
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {rolesWithNotes.length > 0 && (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Notes</p>
+            <div className="mt-2 grid gap-3 md:grid-cols-2">
+              {rolesWithNotes.map((role) => (
+                <div key={role.key} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-sm font-semibold text-white">{role.title}</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-slate-400">
+                    {role.notes?.map((note) => <li key={note}>{note}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
