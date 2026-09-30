@@ -15,7 +15,7 @@ export const APP_TAGLINE = 'Digital Payment Platform';
 export const APP_DESCRIPTION =
   'Bank-grade financial infrastructure for Philippine merchants. Fast, secure, and reliable payment processing.';
 export const APP_SUBTITLE = 'Admin Dashboard';
-export const COMPANY_NAME = 'Swiftpay Ventures Inc.';
+export const COMPANY_NAME = 'SwiftPay Ventures Inc.';
 export const EXPERT_CONTACT_URL = 'https://t.me/alipayboss';
 
 // ───────────────────────────────────────────────────────────────

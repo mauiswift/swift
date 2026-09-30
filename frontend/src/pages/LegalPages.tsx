@@ -4,7 +4,6 @@ import { ArrowRight, Building2, FileCheck2, Mail, MapPin, Phone, ShieldCheck, Fi
 import MarketingPageShell from '@/components/MarketingPageShell';
 import { COMPANY_NAME, SUPPORT_HANDLE } from '@/lib/brand';
 
-const PROVIDER_NAME = 'Swiftpay Ventures Inc.';
 const SIGNATORY_NAME = 'Authorized Company Signatory';
 const SIGNATORY_TITLE = 'President';
 const SUPPORT_PHONE = '+63 910 335 0434';
@@ -76,7 +75,7 @@ export function ContactPage() {
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">Provider</p>
-              <h2 className="text-2xl font-semibold text-white">{PROVIDER_NAME}</h2>
+              <h2 className="text-2xl font-semibold text-white">{COMPANY_NAME}</h2>
             </div>
           </div>
 
@@ -101,7 +100,7 @@ export function ContactPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#c2410c]">Confidential discussion</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Need an NDA before you contact us?</h2>
               <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600">
-                Review the Swiftpay Ventures Inc. confidentiality agreement before sharing sensitive business, technical, or financial information. For a formal NDA signing request, contact our authorized representative through Telegram.
+                Review the {COMPANY_NAME} confidentiality agreement before sharing sensitive business, technical, or financial information. For a formal NDA signing request, contact our authorized representative through Telegram.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Link to="/nda" className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700">
@@ -134,7 +133,7 @@ export function PrivacyPolicyPage() {
         </div>
 
         <LegalSection title="1. Who we are">
-          <p>{PROVIDER_NAME} operates the SwiftPay merchant platform and payment services. We process personal and business information to deliver payment, compliance, onboarding, and support operations.</p>
+          <p>{COMPANY_NAME} operates the SwiftPay merchant platform and payment services. We process personal and business information to deliver payment, compliance, onboarding, and support operations.</p>
         </LegalSection>
 
         <LegalSection title="2. Information we collect">
@@ -176,7 +175,7 @@ export function TermsOfServicePage() {
         </div>
 
         <LegalSection title="1. Agreement">
-          <p>By creating a merchant account and using the SwiftPay platform, you agree to comply with the terms and conditions of {PROVIDER_NAME}, including applicable laws, transaction rules, and service requirements.</p>
+          <p>By creating a merchant account and using the SwiftPay platform, you agree to comply with the terms and conditions of {COMPANY_NAME}, including applicable laws, transaction rules, and service requirements.</p>
         </LegalSection>
 
         <LegalSection title="2. Authorized use">
@@ -184,7 +183,7 @@ export function TermsOfServicePage() {
         </LegalSection>
 
         <LegalSection title="3. Payment services">
-          <p>{PROVIDER_NAME} enables digital payment acceptance and payouts subject to verification, service availability, and compliance checks. The platform may be suspended or restricted if required by security, regulatory, or fraud safeguards.</p>
+          <p>{COMPANY_NAME} enables digital payment acceptance and payouts subject to verification, service availability, and compliance checks. The platform may be suspended or restricted if required by security, regulatory, or fraud safeguards.</p>
         </LegalSection>
 
         <LegalSection title="4. Liability">
@@ -214,10 +213,10 @@ export function NdaPage() {
         </div>
 
         <LegalSection title="Non-disclosure agreement">
-          <p>This Non-Disclosure Agreement is entered into by and between {PROVIDER_NAME} and the registering merchant or authorized representative who submits an onboarding application through the SwiftPay merchant account registration process.</p>
+          <p>This Non-Disclosure Agreement is entered into by and between {COMPANY_NAME} and the registering merchant or authorized representative who submits an onboarding application through the SwiftPay merchant account registration process.</p>
           <p>The merchant acknowledges that, in connection with onboarding and platform access, the company may disclose non-public information including business strategy, financial data, technical information, transaction analytics, pricing, product plans, security practices, and compliance information.</p>
-          <p>The merchant agrees not to disclose, copy, share, or misuse any confidential information belonging to {PROVIDER_NAME} except as necessary to perform obligations under the merchant relationship and only for lawful business purposes.</p>
-          <p>Confidential information remains protected for as long as it remains non-public and protected under applicable law. The merchant agrees to use reasonable care to protect the confidentiality and integrity of all information received from {PROVIDER_NAME}.</p>
+          <p>The merchant agrees not to disclose, copy, share, or misuse any confidential information belonging to {COMPANY_NAME} except as necessary to perform obligations under the merchant relationship and only for lawful business purposes.</p>
+          <p>Confidential information remains protected for as long as it remains non-public and protected under applicable law. The merchant agrees to use reasonable care to protect the confidentiality and integrity of all information received from {COMPANY_NAME}.</p>
           <p>By completing registration and selecting the acceptance checkbox, the merchant confirms that they have read and agree to this NDA and that the acceptance is binding and effective immediately.</p>
         </LegalSection>
 
@@ -230,7 +229,7 @@ export function NdaPage() {
             </div>
             <div className="text-left md:text-right">
               <p className="text-sm font-medium text-slate-500">For</p>
-              <p className="text-lg font-semibold text-slate-900">{PROVIDER_NAME}</p>
+              <p className="text-lg font-semibold text-slate-900">{COMPANY_NAME}</p>
             </div>
           </div>
         </section>

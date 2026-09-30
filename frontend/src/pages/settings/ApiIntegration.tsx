@@ -428,7 +428,7 @@ export default function ApiIntegration() {
                         onChange={e => setConfig(prev => prev ? { ...prev, test_status_page_mode: e.target.value } : null)}
                         className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13px] text-slate-600 outline-none focus:border-[#FF6B00] appearance-none cursor-pointer"
                       >
-                        <option value="swiftpay">Swiftpay</option>
+                        <option value="swiftpay">SwiftPay</option>
                         <option value="external">External</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
@@ -441,7 +441,7 @@ export default function ApiIntegration() {
                         onChange={e => setConfig(prev => prev ? { ...prev, live_status_page_mode: e.target.value } : null)}
                         className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13px] text-slate-600 outline-none focus:border-[#FF6B00] appearance-none cursor-pointer"
                       >
-                        <option value="swiftpay">Swiftpay</option>
+                        <option value="swiftpay">SwiftPay</option>
                         <option value="external">External</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />

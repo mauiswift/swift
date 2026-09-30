@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { openMobileDeepLink } from '@/lib/deeplinks';
 
-const DEFAULT_QRPH_SAMPLE = '00020101...';
+const DEFAULT_QRPH_SAMPLE = '';
 
 export default function TossPayQrInstructions() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function TossPayQrInstructions() {
 
   const externalId = params.get('external_id') || '';
   const checkoutQrUrl = externalId
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.ph'}/checkout/${encodeURIComponent(externalId)}?payment_method=qrph`
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://swiftpay.site'}/checkout/${encodeURIComponent(externalId)}?payment_method=qrph`
     : '';
   const initialQr = params.get('qr') || checkoutQrUrl || DEFAULT_QRPH_SAMPLE;
   const [qrContent, setQrContent] = useState(initialQr);
@@ -39,10 +39,9 @@ export default function TossPayQrInstructions() {
               <ArrowLeft className="h-4 w-4" />
               Back
             </button>
-            <h1 className="mt-3 text-2xl font-semibold text-slate-900">TOSS Pay — QR Scan Instructions</h1>
+            <h1 className="mt-3 text-2xl font-semibold text-slate-900">Toss Pay — QR Scan Instructions</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Note: I can’t capture real screenshots from the TOSS app in this environment. This page is an in-dashboard guide
-              with a live QR preview. If you send real TOSS screenshots, I’ll replace the placeholders and make it look 1:1.
+              Use this guide to complete a QR payment using Toss. The QR preview below is generated from your SwiftPay QRPH payload, so you can verify what the payer will scan.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -133,10 +132,9 @@ export default function TossPayQrInstructions() {
             </div>
 
             <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-semibold">Screenshots</p>
+              <p className="font-semibold">If the deep link doesn’t open</p>
               <p className="mt-1 text-xs leading-5 text-amber-900/80">
-                Upload real TOSS app screenshots for: (1) Home → Pay, (2) Scan QR screen, (3) Confirm payment screen, (4) Success/receipt.
-                I’ll wire them here and also link from Banking → Toss Pay.
+                Open the Toss app manually, go to <span className="font-semibold">Pay</span>, then tap <span className="font-semibold">Scan QR</span>. If prompted, allow camera permission and scan the QR shown on this page.
               </p>
             </div>
           </div>
@@ -148,7 +146,7 @@ export default function TossPayQrInstructions() {
             <li className="flex gap-3">
               <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">1</span>
               <div>
-                <p className="font-semibold">Open TOSS</p>
+                <p className="font-semibold">Open Toss</p>
                 <p className="text-xs text-slate-500">On the home screen, go to Pay (or Payments).</p>
               </div>
             </li>
@@ -184,7 +182,7 @@ export default function TossPayQrInstructions() {
 
           <div className="mt-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
-            This guide is ready. Send your real TOSS screenshots + your real SwiftPay QRPH payload, and I’ll finalize it as “real screenshot” instructions.
+            Tip: For best results, open this page on the same device as Toss (or show the QR on a second device) so the payer can scan without switching apps.
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { registerSchema } from '@/lib/validation';
 import MarketingPageShell from '@/components/MarketingPageShell';
 import { Turnstile } from '@marsidev/react-turnstile';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
+import { COMPANY_NAME } from '@/lib/brand';
 
 declare global {
   interface Window {
@@ -412,7 +413,7 @@ export default function Register() {
                     className="mt-1 h-5 w-5 rounded border-slate-300 text-[#1a1a1a] focus:ring-[#1a1a1a]"
                   />
                   <label htmlFor="nda_accepted" className="flex-1 text-left text-[15px] leading-7 text-[#1a1a1a]">
-                    I confirm that I have read and agree to the <Link to="/nda" target="_blank" rel="noreferrer" className="font-semibold text-[#c2410c] underline underline-offset-4">NDA and confidentiality agreement</Link> of Swiftpay Ventures Inc. I understand that checking this box is my electronic acceptance of the agreement and that registration cannot be submitted without it.
+                    I confirm that I have read and agree to the <Link to="/nda" target="_blank" rel="noreferrer" className="font-semibold text-[#c2410c] underline underline-offset-4">NDA and confidentiality agreement</Link> of {COMPANY_NAME}. I understand that checking this box is my electronic acceptance of the agreement and that registration cannot be submitted without it.
                   </label>
                 </div>
                 {errors.nda_accepted && (

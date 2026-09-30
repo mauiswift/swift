@@ -43,7 +43,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                <MessageCircle className="h-4 w-4" /> {SUPPORT_HANDLE}
                </a>
                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
-                 Swiftpay Ventures Inc. · 공식 고객 지원 센터
+                 {COMPANY_NAME} · 공식 고객 지원 센터
                </p>
             </div>
           </div>
