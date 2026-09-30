@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fmtCurrency } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isSystemWalletAdmin } from '@/lib/permissions';
 
 interface WithdrawalRequest {
   id: number;
@@ -45,7 +46,8 @@ const fmt_amount = (amt: number, cur: string) => fmtCurrency(amt, normalizeCurre
 export default function WithdrawalRequestsPage() {
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
-  const { isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
+  const canProcessWithdrawals = Boolean(user && isSuperAdmin && isSystemWalletAdmin(user.id));
   const isKrwFlow = collectionCurrency === 'KRW' && !isSuperAdmin;
   const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const statusConfig = getStatusConfig(isKrwFlow);
@@ -185,13 +187,35 @@ export default function WithdrawalRequestsPage() {
               )}
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">{uiText.description}</p>
+            {!canProcessWithdrawals && (
+              <p className="mt-2 inline-flex w-fit items-center rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-xs text-amber-700">
+                View-only: approvals require the designated system super admin account.
+              </p>
+            )}
           </div>
           <div className="flex min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <div className="relative min-w-0 flex-1 sm:w-64 lg:w-80">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tx('Search user, bank, account, address, or request ID', '사용자, 은행, 계좌, 주소 또는 요청 ID 검색')} className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
             </div>
-            {selectedIds.length > 0 && ['pending', 'processing'].includes(filter) && <div className="grid grid-cols-2 gap-2 sm:flex"><button type="button" onClick={() => runBulk('approve')} className="min-h-11 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">{tx('Approve', '승인')} {selectedIds.length}</button><button type="button" onClick={() => runBulk('cancel')} className="min-h-11 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">{tx('Reject', '거절')} {selectedIds.length}</button></div>}
+            {canProcessWithdrawals && selectedIds.length > 0 && ['pending', 'processing'].includes(filter) && (
+              <div className="grid grid-cols-2 gap-2 sm:flex">
+                <button
+                  type="button"
+                  onClick={() => runBulk('approve')}
+                  className="min-h-11 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white"
+                >
+                  {tx('Approve', '승인')} {selectedIds.length}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runBulk('cancel')}
+                  className="min-h-11 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white"
+                >
+                  {tx('Reject', '거절')} {selectedIds.length}
+                </button>
+              </div>
+            )}
           </div>
           <button onClick={fetchRequests}
             className="flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto">
@@ -235,7 +259,7 @@ export default function WithdrawalRequestsPage() {
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:gap-4 sm:p-4">
                     <div className="flex items-center gap-3 sm:contents">
-                      {['pending', 'processing'].includes(req.status) && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="h-5 w-5 self-start rounded border-border sm:mt-3 sm:h-4 sm:w-4" aria-label={`Select request ${req.id}`} />}
+                      {canProcessWithdrawals && ['pending', 'processing'].includes(req.status) && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="h-5 w-5 self-start rounded border-border sm:mt-3 sm:h-4 sm:w-4" aria-label={`Select request ${req.id}`} />}
                       <div className="h-10 w-10 shrink-0 rounded-xl border border-blue-500/20 bg-blue-500/10 flex items-center justify-center">
                         <PaymentBrandLogo brand={brand} size="sm" className="h-9 w-9 border-0 bg-transparent p-0 shadow-none" />
                       </div>
@@ -282,7 +306,7 @@ export default function WithdrawalRequestsPage() {
                         </p>
                       )}
                     </div>
-                    {req.status === 'transferring' && currency === 'PHP' && (
+                    {canProcessWithdrawals && req.status === 'transferring' && currency === 'PHP' && (
                       <button
                         onClick={() => reconcileWithdrawal(req.id)}
                         disabled={actionLoading === req.id}
@@ -292,7 +316,7 @@ export default function WithdrawalRequestsPage() {
                         Refresh status
                       </button>
                     )}
-                    {['pending', 'processing'].includes(req.status) && (
+                    {canProcessWithdrawals && ['pending', 'processing'].includes(req.status) && (
                       <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
                         <button onClick={() => setActiveId(isActive ? null : req.id)}
                           className="min-h-11 w-full rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-slate-400 sm:min-h-9 sm:w-auto">
@@ -303,7 +327,7 @@ export default function WithdrawalRequestsPage() {
                   </div>
 
                   {/* Action panel */}
-                  {isActive && ['pending', 'processing'].includes(req.status) && (
+                  {canProcessWithdrawals && isActive && ['pending', 'processing'].includes(req.status) && (
                     <div className="border-t border-border/40 px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
                         ✅ Approving will process <strong>{fmt_amount(req.amount, req.currency)} {req.currency}</strong> to the user

@@ -34,6 +34,7 @@ export interface AdminNavItem {
   superAdminOrPermission?: PermissionKey;
   superAdminOnly?: boolean;
   systemWalletAdminOnly?: boolean;
+  systemWalletAdminOrPermission?: PermissionKey;
   vipGoldOrTeamPermission?: boolean;
 }
 
@@ -61,6 +62,11 @@ function visible(
   isVipGold: boolean,
   userId?: string,
 ): boolean {
+  if (item.systemWalletAdminOrPermission) {
+    const canAccessViaPermission = hasPermission(permissions, item.systemWalletAdminOrPermission);
+    const canAccessViaSystemAdmin = isSuperAdmin && isSystemWalletAdmin(userId);
+    if (!canAccessViaPermission && !canAccessViaSystemAdmin) return false;
+  }
   if (item.systemWalletAdminOnly && (!isSuperAdmin || !isSystemWalletAdmin(userId))) return false;
   if (item.superAdminOnly && !isSuperAdmin) return false;
   if (item.superAdminOrPermission && !isSuperAdmin && !hasPermission(permissions, item.superAdminOrPermission)) return false;
@@ -121,7 +127,7 @@ export function buildAdminNavigation(
         { label: label('nav_approvals', 'Payment Approvals'), icon: ClipboardCheck, path: '/payment-approvals', systemWalletAdminOnly: true },
         { label: label('nav_bank_deposits', 'Bank Deposits'), icon: Banknote, path: '/bank-deposits', systemWalletAdminOnly: true },
         { label: label('nav_topup_requests', 'Top-up Requests'), icon: ArrowDownToLine, path: '/topup-requests', systemWalletAdminOnly: true, permission: 'can_approve_topups' },
-        { label: label('nav_withdrawals', 'Withdrawals'), icon: Send, path: '/withdrawals', systemWalletAdminOnly: true },
+        { label: label('nav_withdrawals', 'Withdrawals'), icon: Send, path: '/withdrawals', systemWalletAdminOrPermission: 'can_manage_disbursements' },
         { label: label('nav_usdt_requests', 'USDT Send Requests'), icon: Bitcoin, path: '/withdrawals/usdt-send-requests', systemWalletAdminOnly: true },
         { label: label('nav_toss_applications', 'TOSS Bank Applications'), icon: Wallet, path: '/toss-account-approvals', superAdminOnly: true, permission: 'can_manage_wallet' },
         { label: label('nav_kyb_registrations', 'KYB Registrations'), icon: UserCheck, path: '/kyb-registrations', superAdminOnly: true },

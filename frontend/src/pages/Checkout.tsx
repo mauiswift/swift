@@ -2194,6 +2194,41 @@ export default function Checkout() {
                   : checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}
               </p>
             </div>
+            {qrInstructionApp === 'toss' && (
+              <div className="w-full space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
+                  If Toss deeplink doesn’t open
+                </p>
+                <ol className="list-decimal space-y-1 pl-5 text-sm text-amber-900">
+                  <li>Make sure the Toss app is installed and you are logged in.</li>
+                  <li>In Toss, tap Pay → Scan QR, then scan the code below.</li>
+                  <li>If you are inside an in-app browser (Telegram/Facebook/Instagram), open this page in Chrome/Safari.</li>
+                </ol>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={openTossPaymentApp}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[#0064FF] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0458d8]"
+                  >
+                    Try opening Toss again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        toast.success('Payment link copied.');
+                      } catch {
+                        toast.error('Unable to copy link. Please copy from the address bar.');
+                      }
+                    }}
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
+                  >
+                    Copy payment link
+                  </button>
+                </div>
+              </div>
+            )}
             {(qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl) ? (
               <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
                 {qrInstructionApp === 'toss' ? (

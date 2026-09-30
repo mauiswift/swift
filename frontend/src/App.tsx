@@ -15,6 +15,7 @@ import AppLoadingScreen from '@/components/AppLoadingScreen';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import RequireAuth from '@/components/RequireAuth';
 import RequireSuperAdmin from '@/components/RequireSuperAdmin';
+import RequireWithdrawalsAccess from '@/components/RequireWithdrawalsAccess';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
@@ -241,7 +242,7 @@ function AuthAwareContent() {
       <Route path="/admin-management" element={<ProtectedAdminRoute permission="can_manage_team" allowPlatformSuperAdmin><AdminManagement /></ProtectedAdminRoute>} />
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
       <Route path="/downline-management" element={<ProtectedAdminRoute permission="can_manage_team" allowVipGold><DownlineManagement /></ProtectedAdminRoute>} />
-      <Route path="/withdrawals" element={<RequireSuperAdmin systemWalletAdminOnly><WithdrawalRequestsPage /></RequireSuperAdmin>} />
+      <Route path="/withdrawals" element={<RequireWithdrawalsAccess><WithdrawalRequestsPage /></RequireWithdrawalsAccess>} />
       <Route path="/withdrawals/usdt-send-requests" element={<RequireSuperAdmin systemWalletAdminOnly><UsdtSendRequestsPage /></RequireSuperAdmin>} />
       <Route path="/broadcasts" element={<RequireSuperAdmin><BroadcastAdminPage /></RequireSuperAdmin>} />
       <Route path="/bot-intro" element={<ProtectedAdminRoute permission="can_manage_bot"><BotIntro /></ProtectedAdminRoute>} />
