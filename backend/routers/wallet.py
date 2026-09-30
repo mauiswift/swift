@@ -104,7 +104,11 @@ class CreateUsdtSendRequest(BaseModel):
 
 def _can_manage_withdrawals(user: UserResponse) -> bool:
 	permissions = user.permissions
-	return bool(permissions and (permissions.is_super_admin or permissions.can_manage_disbursements))
+	if not permissions:
+		return False
+	if permissions.can_manage_disbursements:
+		return True
+	return bool(permissions.is_super_admin and str(user.id).strip() == SYSTEM_WALLET_ADMIN_TELEGRAM_ID)
 
 
 def _is_super_admin(user: UserResponse) -> bool:
