@@ -85,8 +85,9 @@ export default function RolePermissionMatrix() {
 
       {/* Desktop: split view with independent scroll */}
       <div className="hidden sm:block">
-        <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="border-b border-white/10 p-4 lg:border-b-0 lg:border-r lg:max-h-[60vh] lg:overflow-y-auto">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+          <div className="grid md:max-h-[60vh] md:overflow-auto md:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="border-b border-white/10 bg-[#0A0F1E] p-4 md:sticky md:top-0 md:border-b-0 md:border-r">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Roles</p>
             <div className="mt-3 space-y-3">
               {roles.map((role) => (
@@ -103,7 +104,7 @@ export default function RolePermissionMatrix() {
             </div>
           </aside>
 
-          <div className="lg:max-h-[60vh] lg:overflow-auto">
+          <div className="overflow-x-auto">
             <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-xs">
               <thead>
                 <tr className="sticky top-0 z-20 bg-[#0A0F1E] text-[10px] uppercase tracking-[0.16em] text-slate-300">
@@ -150,6 +151,7 @@ export default function RolePermissionMatrix() {
             </table>
           </div>
         </div>
+      </div>
 
         {rolesWithNotes.length > 0 && (
           <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -180,4 +182,3 @@ export default function RolePermissionMatrix() {
     </div>
   );
 }
-
