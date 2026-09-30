@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { APP_NAME, APP_DESCRIPTION, SUPPORT_HANDLE } from '@/lib/brand';
 import BrandLogo from '@/components/BrandLogo';
+import { PERMISSION_DEFINITIONS, PERMISSION_KEYS, type PermissionKey } from '@/lib/permissions';
+import { ROLE_PERMISSION_PRESETS } from '@/lib/adminRolePermissions';
 
 interface TutorialStep {
   title: string;
@@ -33,6 +35,165 @@ interface TutorialStep {
   route?: string;
   routeLabel?: string;
   tips: string[];
+  content?: React.ReactNode;
+}
+
+type MatrixRole = {
+  key: string;
+  title: string;
+  description: string;
+  permissions: PermissionKey[];
+  notes?: string[];
+};
+
+const PERMISSION_LABELS: Record<PermissionKey, string> = {
+  is_super_admin: 'Super admin',
+  can_manage_payments: 'Payments',
+  can_manage_disbursements: 'Disbursements',
+  can_view_reports: 'Reports',
+  can_manage_wallet: 'Wallet',
+  can_manage_transactions: 'Transactions',
+  can_manage_bot: 'Bot settings',
+  can_approve_topups: 'Approvals / top-ups',
+  can_manage_team: 'Team management',
+  can_credit_wallet: 'Credit wallet',
+  can_debit_wallet: 'Debit wallet',
+  can_freeze_wallet: 'Freeze wallet',
+  can_unfreeze_wallet: 'Unfreeze wallet',
+};
+
+const PERMISSION_ORDER: PermissionKey[] = [
+  'is_super_admin',
+  ...PERMISSION_DEFINITIONS.map(({ key }) => key),
+];
+
+function buildPresetPermissions(role: keyof typeof ROLE_PERMISSION_PRESETS): PermissionKey[] {
+  const preset = ROLE_PERMISSION_PRESETS[role];
+  const permissions = new Set<PermissionKey>();
+  preset?.forEach((entry) => permissions.add(entry as PermissionKey));
+  return PERMISSION_ORDER.filter((key) => key !== 'is_super_admin' && permissions.has(key));
+}
+
+function buildSuperAdminPermissions(): PermissionKey[] {
+  return PERMISSION_ORDER.filter((key) => PERMISSION_KEYS.includes(key));
+}
+
+function RolePermissionMatrix() {
+  const roles: MatrixRole[] = [
+    {
+      key: 'owner',
+      title: 'Owner',
+      description: 'Organization owner permissions (no platform-only approvals).',
+      permissions: buildPresetPermissions('owner'),
+    },
+    {
+      key: 'admin',
+      title: 'Admin',
+      description: 'Full merchant dashboard permissions (no platform-only approvals).',
+      permissions: buildPresetPermissions('admin'),
+    },
+    {
+      key: 'manager',
+      title: 'Manager',
+      description: 'Operations manager: team + payments + disbursements + reports + wallet + transactions.',
+      permissions: buildPresetPermissions('manager'),
+    },
+    {
+      key: 'operator',
+      title: 'Operator',
+      description: 'Payments + disbursements + transactions.',
+      permissions: buildPresetPermissions('operator'),
+    },
+    {
+      key: 'viewer',
+      title: 'Viewer',
+      description: 'Read-only reporting and transaction review.',
+      permissions: buildPresetPermissions('viewer'),
+    },
+    {
+      key: 'developer',
+      title: 'Developer',
+      description: 'Bot settings and developer tools.',
+      permissions: buildPresetPermissions('developer'),
+    },
+    {
+      key: 'super_admin_system',
+      title: 'Super Admin (System)',
+      description: 'Platform super admin using the designated system wallet admin account.',
+      permissions: buildSuperAdminPermissions(),
+      notes: [
+        'Required for platform-only queues like Payment approvals, Bank deposits, and Top-up requests.',
+        'Wallet control actions (credit/debit/freeze/unfreeze) are restricted to the system account.',
+      ],
+    },
+    {
+      key: 'super_admin_non_system',
+      title: 'Super Admin (Non-system)',
+      description: 'Super admin account that is NOT the designated system wallet admin.',
+      permissions: ['is_super_admin'],
+      notes: [
+        'Some pages still require the system super admin user (platform-only restrictions).',
+        'Use the system account for approval queues and wallet-control actions.',
+      ],
+    },
+  ];
+
+  const pill = (label: string) => (
+    <span
+      key={label}
+      className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
+    >
+      {label}
+    </span>
+  );
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Role-permission matrix</p>
+        <p className="mt-1 text-xs text-slate-400">
+          This shows which permissions unlock each dashboard area. Some platform-only actions additionally require the designated system wallet admin account.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {roles.map((role) => (
+          <div key={role.key} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{role.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-300">{role.description}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {role.permissions.length === 0
+                ? pill('No dashboard permissions')
+                : role.permissions.map((key) => pill(PERMISSION_LABELS[key] || key))}
+            </div>
+
+            {role.notes && role.notes.length > 0 && (
+              <ul className="mt-3 list-disc space-y-1 pl-4 text-[11px] text-slate-400">
+                {role.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+        <p className="text-xs font-semibold text-amber-200">Platform-only restrictions (important)</p>
+        <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-amber-100/90">
+          <li>Payment approvals / Top-up requests: requires Super Admin + system wallet admin account.</li>
+          <li>Bank deposits: requires Super Admin + system wallet admin account.</li>
+          <li>Withdrawals: disbursement managers can view; only the system super admin can process approvals.</li>
+          <li>Wallet control actions (credit/debit/freeze/unfreeze): restricted to the system super admin + matching permission.</li>
+        </ul>
+      </div>
+    </div>
+  );
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -138,6 +299,18 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Bot Settings lets you configure Telegram bot behavior.',
       'Super Admins see additional sections: Admin Management, USDT Requests, KYB/KYC.',
     ],
+  },
+  {
+    title: 'Roles & Permissions — Access Matrix',
+    description: 'Review who can access each dashboard area and which actions require the designated system super admin account.',
+    icon: ShieldCheck,
+    iconColor: 'text-amber-300',
+    iconBg: 'bg-amber-500/15 border-amber-500/25',
+    tips: [
+      'Use this matrix when assigning roles to staff.',
+      'Keep platform-only approval queues limited to the system super admin account.',
+    ],
+    content: <RolePermissionMatrix />,
   },
   {
     title: "You're All Set!",
@@ -260,6 +433,8 @@ export default function BotIntro() {
                 </div>
               ))}
             </div>
+
+            {current.content}
 
             {/* Page link */}
             {current.route && (
