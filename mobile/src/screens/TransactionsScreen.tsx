@@ -12,6 +12,8 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from 'react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -34,6 +36,8 @@ const api = {
 
 export const TransactionsScreen = () => {
   const { colors, common, shadows, roundness, typography } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const [token, setToken] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
 
@@ -172,7 +176,10 @@ export const TransactionsScreen = () => {
           data={filteredData}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: tabBarHeight + Math.max(insets.bottom, 0) + 16 },
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -221,7 +228,6 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
-    paddingBottom: 32,
   },
   item: {
     flexDirection: 'row',

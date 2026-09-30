@@ -9,14 +9,11 @@ import {
   ActivityIndicator,
   StatusBar,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Toast from 'react-native-toast-message';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL, API_BASE_URL } from '../config';
 import { useTheme } from '../theme';
@@ -90,82 +87,85 @@ export const LoginScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <View style={[styles.logoIcon, { backgroundColor: common.primary }]}>
-                 <MaterialIcons name="bolt" size={48} color="#fff" />
-              </View>
-              <Text style={[styles.title, { color: colors.text, ...typography.h1, fontSize: 34 }]}>xend</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary, ...typography.bodyLarge, marginTop: -4 }]}>Secure Access</Text>
-            </View>
-
-            <View style={styles.form}>
-              <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <MaterialIcons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text, ...typography.body }]}
-                  placeholder="Business Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  placeholderTextColor={colors.textSecondary}
-                />
-              </View>
-
-              <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <MaterialIcons name="lock-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text, ...typography.body }]}
-                  placeholder="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  placeholderTextColor={colors.textSecondary}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.loginButton, { backgroundColor: common.primary, borderRadius: roundness.lg }]}
-                onPress={handleLogin}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={[styles.loginButtonText, typography.button, { color: '#fff', fontSize: 18 }]}>Sign In</Text>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.divider}>
-                <View style={[styles.line, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.textSecondary, ...typography.label, fontSize: 10 }]}>SECURE ACCESS</Text>
-                <View style={[styles.line, { backgroundColor: colors.border }]} />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.telegramButton, { borderRadius: roundness.lg }]}
-                onPress={() => setShowTelegramLogin(true)}
-                disabled={loading}
-              >
-                <MaterialIcons name="send" size={20} color="#fff" style={{ marginRight: 10 }} />
-                <Text style={[styles.telegramButtonText, typography.body, { color: '#fff', fontSize: 16 }]}>Log in with Telegram</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.footer}>
-               <Text style={[styles.footerText, { color: colors.textSecondary, ...typography.caption, fontSize: 12 }]}>
-                 Protected by xend Security
-               </Text>
-            </View>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={24}
+      >
+        <View style={styles.header}>
+          <View style={[styles.logoIcon, { backgroundColor: common.primary }]}>
+             <MaterialIcons name="bolt" size={48} color="#fff" />
           </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
+          <Text style={[styles.title, { color: colors.text, ...typography.h1, fontSize: 34 }]}>xend</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary, ...typography.bodyLarge, marginTop: -4 }]}>Secure Access</Text>
+        </View>
+
+        <View style={styles.form}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <MaterialIcons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text, ...typography.body }]}
+              placeholder="Business Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholderTextColor={colors.textSecondary}
+              returnKeyType="next"
+            />
+          </View>
+
+          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <MaterialIcons name="lock-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.text, ...typography.body }]}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholderTextColor={colors.textSecondary}
+              returnKeyType="done"
+              onSubmitEditing={() => void handleLogin()}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.loginButton, { backgroundColor: common.primary, borderRadius: roundness.lg }]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={[styles.loginButtonText, typography.button, { color: '#fff', fontSize: 18 }]}>Sign In</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={[styles.line, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary, ...typography.label, fontSize: 10 }]}>SECURE ACCESS</Text>
+            <View style={[styles.line, { backgroundColor: colors.border }]} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.telegramButton, { borderRadius: roundness.lg }]}
+            onPress={() => setShowTelegramLogin(true)}
+            disabled={loading}
+          >
+            <MaterialIcons name="send" size={20} color="#fff" style={{ marginRight: 10 }} />
+            <Text style={[styles.telegramButtonText, typography.body, { color: '#fff', fontSize: 16 }]}>Log in with Telegram</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+           <Text style={[styles.footerText, { color: colors.textSecondary, ...typography.caption, fontSize: 12 }]}>
+             Protected by xend Security
+           </Text>
+        </View>
+      </KeyboardAwareScrollView>
 
       <Modal
         visible={showTelegramLogin}
@@ -194,8 +194,7 @@ export const LoginScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  keyboardView: { flex: 1 },
-  content: { flex: 1, padding: 32, justifyContent: 'center' },
+  scrollContent: { flexGrow: 1, padding: 32, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 48 },
   logoIcon: {
      width: 80,

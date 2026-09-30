@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Alert } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../theme';
@@ -7,6 +9,8 @@ import { useTheme } from '../theme';
 export const SettingsScreen = () => {
   const { logout, user } = useAuth();
   const { colors, common, roundness, typography } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
 
   const SettingItem = ({ icon, label, onPress, color, showArrow = true }: { icon: string, label: string, onPress?: () => void, color?: string, showArrow?: boolean }) => (
     <TouchableOpacity style={[styles.item, { borderBottomColor: colors.border }]} onPress={onPress} activeOpacity={0.6}>
@@ -23,7 +27,13 @@ export const SettingsScreen = () => {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text, ...typography.h2 }]}>설정</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: tabBarHeight + Math.max(insets.bottom, 0) + 24 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.profileCard, { backgroundColor: colors.surface, borderRadius: roundness.lg }]}>
           <View style={[styles.avatar, { backgroundColor: common.primary }]}>
             <Text style={[styles.avatarText, typography.h3, { color: '#fff' }]}>{user?.username?.substring(0, 1).toUpperCase() || 'P'}</Text>

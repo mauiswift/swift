@@ -12,6 +12,8 @@ import {
   Animated,
   Alert,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from 'react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -185,7 +187,9 @@ const NavButton = ({ icon, label, onPress, color }: { icon: string, label: strin
 };
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
-  const { colors, common, isDark, typography, roundness } = useTheme();
+  const { colors, common, typography, roundness } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const [token, setToken] = useState<string | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -284,6 +288,10 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: tabBarHeight + Math.max(insets.bottom, 0) + 16 },
+        ]}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
@@ -342,7 +350,6 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             </View>
           )}
         </View>
-        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -354,6 +361,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 24,
   },
   header: {
     padding: 24,

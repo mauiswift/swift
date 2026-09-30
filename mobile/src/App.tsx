@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import Toast from 'react-native-toast-message';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { HomeScreen } from './screens/HomeScreen';
@@ -73,6 +73,10 @@ const HomeStack = () => {
 // App Stack (Main Navigation)
 const AppStack = () => {
   const { colors, common, typography } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarTopPadding = 8;
+  const tabBarBottomPadding = Math.max(insets.bottom, 10);
+  const tabBarHeight = 48 + tabBarTopPadding + tabBarBottomPadding;
 
   return (
     <Tab.Navigator
@@ -80,13 +84,14 @@ const AppStack = () => {
         headerShown: false,
         tabBarActiveTintColor: common.primary,
         tabBarInactiveTintColor: colors.textSecondary,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          paddingBottom: 10,
-          paddingTop: 10,
-          height: 72,
+          paddingBottom: tabBarBottomPadding,
+          paddingTop: tabBarTopPadding,
+          height: tabBarHeight,
           elevation: 10,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
