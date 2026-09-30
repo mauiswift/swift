@@ -174,6 +174,104 @@ class TestAdminWalletRouter:
         assert "/api/v1/wallet/admin/withdrawals/{disb_id}/approve" in route_paths
 
 
+class TestWalletAdminRoleGuards:
+    """Verify role/permission guards for wallet admin endpoints."""
+
+    def test_wallet_router_super_admin_requires_system_wallet_admin_telegram_id(self):
+        from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+        from routers import wallet as wallet_router
+        from schemas.auth import UserPermissions, UserResponse
+
+        system_user = UserResponse(
+            id=SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True),
+        )
+        assert wallet_router._is_super_admin(system_user) is True
+
+        other_user = UserResponse(
+            id="not-system-user",
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True),
+        )
+        assert wallet_router._is_super_admin(other_user) is False
+
+    def test_wallet_router_crypto_topup_approval_requires_permission_and_system_user(self):
+        from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+        from routers import wallet as wallet_router
+        from schemas.auth import UserPermissions, UserResponse
+
+        allowed = UserResponse(
+            id=SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True, can_approve_topups=True),
+        )
+        assert wallet_router._can_approve_crypto_topups(allowed) is True
+
+        missing_permission = UserResponse(
+            id=SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True, can_approve_topups=False),
+        )
+        assert wallet_router._can_approve_crypto_topups(missing_permission) is False
+
+        wrong_admin = UserResponse(
+            id="not-system-user",
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True, can_approve_topups=True),
+        )
+        assert wallet_router._can_approve_crypto_topups(wrong_admin) is False
+
+    def test_admin_wallets_router_wallet_permissions_require_system_user_and_super_admin(self):
+        from core.config import SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+        from fastapi import HTTPException
+        from routers import admin_wallets as admin_wallets_router
+        from schemas.auth import UserPermissions, UserResponse
+
+        not_system_user = UserResponse(
+            id="not-system-user",
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True, can_freeze_wallet=True),
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            admin_wallets_router._require_wallet_permission(
+                not_system_user,
+                "can_freeze_wallet",
+            )
+        assert exc_info.value.status_code == 403
+
+        system_user_missing_super_admin = UserResponse(
+            id=SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=False, can_freeze_wallet=True),
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            admin_wallets_router._require_wallet_permission(
+                system_user_missing_super_admin,
+                "can_freeze_wallet",
+            )
+        assert exc_info.value.status_code == 403
+
+        system_user_missing_permission = UserResponse(
+            id=SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True, can_freeze_wallet=False),
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            admin_wallets_router._require_wallet_permission(
+                system_user_missing_permission,
+                "can_freeze_wallet",
+            )
+        assert exc_info.value.status_code == 403
+
+        system_user_allowed = UserResponse(
+            id=SYSTEM_WALLET_ADMIN_TELEGRAM_ID,
+            email="admin@example.com",
+            permissions=UserPermissions(is_super_admin=True, can_freeze_wallet=True),
+        )
+        admin_wallets_router._require_wallet_permission(system_user_allowed, "can_freeze_wallet")
+
+
 class TestConfigSMS:
     """Test SMS configuration"""
 
