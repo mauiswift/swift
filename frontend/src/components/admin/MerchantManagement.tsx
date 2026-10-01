@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,9 +69,9 @@ export function MerchantManagement() {
   const fetchMerchants = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await client.get('/api/v1/admin/merchants');
-      if (response.ok && Array.isArray(response.data)) {
-        setMerchants(response.data);
+      const response = await adminApiService.getMerchants(1, 100, searchQuery);
+      if (response.ok) {
+        setMerchants(response.data.merchants || []);
       }
     } catch (err) {
       toast.error('Failed to load merchants');
@@ -79,7 +79,7 @@ export function MerchantManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchMerchants();
@@ -88,7 +88,7 @@ export function MerchantManagement() {
   const handleViewMerchant = async (merchant: Merchant) => {
     try {
       setDetailsLoading(true);
-      const response = await client.get(`/api/v1/admin/merchants/${merchant.id}/details`);
+      const response = await adminApiService.getMerchantDetails(merchant.id);
       if (response.ok) {
         setSelectedMerchant(response.data);
         setShowDetails(true);
