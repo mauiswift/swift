@@ -35,7 +35,7 @@ export default function AdminManagement() {
   const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab') as AdminTab | null;
 
-  const [selectedTab, setSelectedTab] = useState<TabId>('merchants');
+  const [selectedTab, setSelectedTab] = useState<TabId>('dashboard');
   const [error, setError] = useState('');
 
   // Permissions
@@ -48,33 +48,33 @@ export default function AdminManagement() {
   const canViewReports = Boolean(user?.permissions?.can_view_reports);
   const canManageBot = Boolean(user?.permissions?.can_manage_bot);
 
-  // Tab access control
+  // Tab access control - Banking System
+  const canAccessDashboard = isSuperAdmin;
   const canAccessMerchants = isSuperAdmin && canManageTeam;
-  const canAccessUserManagement = isSuperAdmin;
-  const canAccessCryptoRequests = isSystemWalletAdmin(user?.id) && isSuperAdmin && canApproveTopups;
+  const canAccessTransactions = isSuperAdmin && (canManagePayments || canViewReports);
+  const canAccessSettlements = isSuperAdmin && canManageDisbursements;
   const canAccessWalletControl = isSystemWalletAdmin(user?.id) && isSuperAdmin && canManageWallet;
-  const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
-  const canAccessTossApprovals = isSuperAdmin && canManageWallet;
+  const canAccessCryptoApprovals = isSystemWalletAdmin(user?.id) && isSuperAdmin && canApproveTopups;
   const canAccessPaymentChannels = isSuperAdmin && (canManagePayments || canManageDisbursements);
   const canAccessWalletSettings = isSuperAdmin && canManageWallet;
-  const canAccessBitgo = isSuperAdmin && canManageWallet;
-  const canAccessCheckoutDesign = isSuperAdmin && canManagePayments;
+  const canAccessUserManagement = isSuperAdmin;
+  const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
   const canAccessPlatformSettings = isSuperAdmin && (canManagePayments || canManageWallet);
   const canAccessGovernance = isSuperAdmin;
 
   // Build tabs
   const tabs = buildAdminTabs({
+    canAccessDashboard,
     canAccessMerchants,
-    canAccessUserManagement,
-    canAccessCryptoRequests,
+    canAccessTransactions,
+    canAccessSettlements,
     canAccessWalletControl,
-    canAccessOperations,
-    canAccessTossApprovals,
+    canAccessCryptoApprovals,
     canAccessPaymentChannels,
     canAccessWalletSettings,
-    canAccessBitgo,
-    canAccessCheckoutDesign,
+    canAccessUserManagement,
     canAccessPlatformSettings,
+    canAccessOperations,
     canManageTeam,
     canAccessGovernance,
     isSuperAdmin,
@@ -168,31 +168,43 @@ export default function AdminManagement() {
             </div>
           )}
 
-          {/* Merchant Management Tab */}
-          {selectedTab === 'merchants' && canAccessMerchants && (
-            <MerchantManagement />
-          )}
-
-          {/* User Management Tab */}
-          {selectedTab === 'users' && canAccessUserManagement && (
+          {/* Dashboard Tab */}
+          {selectedTab === 'dashboard' && canAccessDashboard && (
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
+                <CardTitle>Banking Dashboard</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">User management features coming soon...</p>
+                <p className="text-slate-600">Dashboard with key metrics, transaction volume, settlement status, and system health coming soon...</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Crypto Requests Tab */}
-          {selectedTab === 'crypto' && canAccessCryptoRequests && (
+          {/* Merchants Tab */}
+          {selectedTab === 'merchants' && canAccessMerchants && (
+            <MerchantManagement />
+          )}
+
+          {/* Transactions Tab */}
+          {selectedTab === 'transactions' && canAccessTransactions && (
             <Card>
               <CardHeader>
-                <CardTitle>Crypto Requests</CardTitle>
+                <CardTitle>Transactions</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Crypto request management coming soon...</p>
+                <p className="text-slate-600">Real-time transaction monitoring, filtering, and management coming soon...</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Settlements Tab */}
+          {selectedTab === 'settlements' && canAccessSettlements && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Settlements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">Settlement batch management, reconciliation, and fund distribution coming soon...</p>
               </CardContent>
             </Card>
           )}
@@ -204,26 +216,21 @@ export default function AdminManagement() {
                 <CardTitle>Wallet Control</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Wallet control features coming soon...</p>
+                <p className="text-slate-600">Wallet credit/debit operations and balance management coming soon...</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Operations Tab */}
-          {selectedTab === 'operations' && canAccessOperations && (
+          {/* Crypto Approvals Tab */}
+          {selectedTab === 'crypto-approvals' && canAccessCryptoApprovals && (
             <Card>
               <CardHeader>
-                <CardTitle>Operational Workflows</CardTitle>
+                <CardTitle>Crypto Approvals</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Operational workflows coming soon...</p>
+                <p className="text-slate-600">Review and approve USDT top-up requests coming soon...</p>
               </CardContent>
             </Card>
-          )}
-
-          {/* TOSS Approvals Tab */}
-          {selectedTab === 'toss-approvals' && canAccessTossApprovals && (
-            <TossAccountApprovalsPanel />
           )}
 
           {/* Payment Channels Tab */}
@@ -233,7 +240,7 @@ export default function AdminManagement() {
                 <CardTitle>Payment Channels</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Payment channel management coming soon...</p>
+                <p className="text-slate-600">Enable/disable payment methods by currency and region coming soon...</p>
               </CardContent>
             </Card>
           )}
@@ -245,43 +252,19 @@ export default function AdminManagement() {
                 <CardTitle>Wallet Settings</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Wallet settings coming soon...</p>
+                <p className="text-slate-600">Wallet configuration and deposit settings coming soon...</p>
               </CardContent>
             </Card>
           )}
 
-          {/* BitGo Tab */}
-          {selectedTab === 'bitgo' && canAccessBitgo && (
+          {/* User Management Tab */}
+          {selectedTab === 'users' && canAccessUserManagement && (
             <Card>
               <CardHeader>
-                <CardTitle>BitGo USDT</CardTitle>
+                <CardTitle>User Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">BitGo configuration coming soon...</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Checkout Design Tab */}
-          {selectedTab === 'checkout-design' && canAccessCheckoutDesign && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Checkout Design</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Checkout design customization coming soon...</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Platform Settings Tab */}
-          {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Platform Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Platform settings coming soon...</p>
+                <p className="text-slate-600">Platform user and role management coming soon...</p>
               </CardContent>
             </Card>
           )}
@@ -303,7 +286,31 @@ export default function AdminManagement() {
                 <CardTitle>Audit Logs</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Audit logs coming soon...</p>
+                <p className="text-slate-600">Audit trail of all platform operations coming soon...</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Platform Settings Tab */}
+          {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Platform Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">System-wide settings and fee configuration coming soon...</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Operations Tab */}
+          {selectedTab === 'operations' && canAccessOperations && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Operations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-600">Operational workflows and maintenance tasks coming soon...</p>
               </CardContent>
             </Card>
           )}

@@ -4,7 +4,9 @@ import {
   CheckCircle,
   FileText,
   Mail,
-  Palette,
+  BarChart3,
+  TrendingUp,
+  DollarSign,
   Power,
   RefreshCw,
   ShieldCheck,
@@ -15,20 +17,20 @@ import {
 } from 'lucide-react';
 
 export type AdminTab =
+  | 'dashboard'
   | 'merchants'
-  | 'users'
-  | 'crypto'
+  | 'transactions'
+  | 'settlements'
   | 'wallet-control'
+  | 'crypto-approvals'
   | 'payment-channels'
   | 'wallet-settings'
-  | 'bitgo'
-  | 'checkout-design'
-  | 'platform-settings'
-  | 'operations'
-  | 'toss-approvals'
+  | 'users'
   | 'team-invitations'
   | 'team-members'
   | 'audit-logs'
+  | 'platform-settings'
+  | 'operations'
   | 'test-data-cleanup';
 
 export interface AdminTabMeta {
@@ -42,17 +44,19 @@ export interface AdminTabMeta {
 }
 
 export interface AdminTabAccess {
+  canAccessDashboard: boolean;
   canAccessMerchants: boolean;
-  canAccessUserManagement: boolean;
-  canAccessCryptoRequests: boolean;
+  canAccessTransactions: boolean;
+  canAccessSettlements: boolean;
   canAccessWalletControl: boolean;
-  canAccessOperations: boolean;
-  canAccessTossApprovals: boolean;
+  canAccessCryptoApprovals: boolean;
   canAccessPaymentChannels: boolean;
   canAccessWalletSettings: boolean;
-  canAccessBitgo: boolean;
-  canAccessCheckoutDesign: boolean;
+  canAccessUserManagement: boolean;
+  canAccessPaymentChannels: boolean;
+  canAccessWalletSettings: boolean;
   canAccessPlatformSettings: boolean;
+  canAccessOperations: boolean;
   canManageTeam: boolean;
   canAccessGovernance: boolean;
   isSuperAdmin: boolean;
@@ -61,141 +65,159 @@ export interface AdminTabAccess {
 export function buildAdminTabs(access: AdminTabAccess, merchantCount: number): AdminTabMeta[] {
   const tabs: AdminTabMeta[] = [];
 
+  // Dashboard - Overview and key metrics
+  if (access.isSuperAdmin) {
+    tabs.push({
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: BarChart3,
+      group: 'Banking Operations',
+      description: 'Overview of key metrics, recent transactions, and system status.',
+    });
+  }
+
+  // ── Merchant Operations ────────────────────────────────────────
   if (access.canAccessMerchants) {
     tabs.push({
       id: 'merchants',
-      label: 'Merchant/Owner Management',
+      label: 'Merchants',
       icon: Users,
       count: merchantCount,
-      group: 'People & access',
-      description: 'Manage merchant accounts, transactions, settlements, and team members.',
+      group: 'Banking Operations',
+      description: 'Manage merchant accounts and owner information.',
     });
   }
-  if (access.canAccessUserManagement) {
+
+  if (access.canAccessTransactions) {
     tabs.push({
-      id: 'users',
-      label: 'User Management',
-      icon: Users,
-      group: 'People & access',
-      description: 'View and manage roles for all registered platform users.',
+      id: 'transactions',
+      label: 'Transactions',
+      icon: TrendingUp,
+      group: 'Banking Operations',
+      description: 'Monitor and manage payment transactions across the platform.',
     });
   }
-  if (access.canAccessCryptoRequests) {
+
+  if (access.canAccessSettlements) {
     tabs.push({
-      id: 'crypto',
-      label: 'Crypto Requests',
-      icon: Bitcoin,
-      group: 'Approvals & wallets',
-      description: 'Review and approve USDT top-up requests from users.',
+      id: 'settlements',
+      label: 'Settlements',
+      icon: DollarSign,
+      group: 'Banking Operations',
+      description: 'Manage settlement batches and reconciliation.',
     });
   }
+
+  // ── Financial Controls ────────────────────────────────────────
   if (access.canAccessWalletControl) {
     tabs.push({
       id: 'wallet-control',
       label: 'Wallet Control',
       icon: Wallet,
-      iconClassName: 'text-blue-400',
-      group: 'Approvals & wallets',
-      description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.',
+      group: 'Financial Control',
+      description: 'Credit or debit wallets and manage account balances.',
     });
   }
-  if (access.canAccessOperations) {
+
+  if (access.canAccessCryptoApprovals) {
     tabs.push({
-      id: 'operations',
-      label: 'Operational workflows',
-      icon: RefreshCw,
-      group: 'Approvals & wallets',
-      description: 'Open payment, deposit, withdrawal, verification, broadcast, and bot operations.',
+      id: 'crypto-approvals',
+      label: 'Crypto Approvals',
+      icon: Bitcoin,
+      group: 'Financial Control',
+      description: 'Review and approve USDT top-up requests.',
     });
   }
-  if (access.canAccessTossApprovals) {
-    tabs.push({
-      id: 'toss-approvals',
-      label: 'TOSS Bank approvals',
-      icon: CheckCircle,
-      group: 'Approvals & wallets',
-      description: 'Review and approve TOSS Bank virtual account applications.',
-    });
-  }
+
+  // ── Payment Configuration ────────────────────────────────────────
   if (access.canAccessPaymentChannels) {
     tabs.push({
       id: 'payment-channels',
       label: 'Payment Channels',
       icon: Power,
-      group: 'Payments & configuration',
-      description: 'Control checkout, withdrawal, and disbursement channels by currency.',
+      group: 'Payment Configuration',
+      description: 'Enable/disable payment methods by currency and region.',
     });
   }
+
   if (access.canAccessWalletSettings) {
     tabs.push({
       id: 'wallet-settings',
       label: 'Wallet Settings',
       icon: WrenchIcon,
-      group: 'Payments & configuration',
-      description: 'Configure accepted deposit currencies and receiving accounts for user wallets.',
+      group: 'Payment Configuration',
+      description: 'Configure wallet deposit currencies and receiving accounts.',
     });
   }
-  if (access.canAccessBitgo) {
+
+  // ── Access & Governance ────────────────────────────────────────
+  if (access.canAccessUserManagement) {
     tabs.push({
-      id: 'bitgo',
-      label: 'BitGo USDT',
-      icon: Bitcoin,
-      group: 'Payments & configuration',
-      description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.',
+      id: 'users',
+      label: 'Users',
+      icon: Users,
+      group: 'Access & Governance',
+      description: 'Manage platform users and their roles.',
     });
   }
-  if (access.canAccessCheckoutDesign) {
-    tabs.push({
-      id: 'checkout-design',
-      label: 'Checkout Design',
-      icon: Palette,
-      group: 'Payments & configuration',
-      description: 'Customize the public checkout appearance.',
-    });
-  }
-  if (access.canAccessPlatformSettings) {
-    tabs.push({
-      id: 'platform-settings',
-      label: 'Platform settings',
-      icon: WrenchIcon,
-      group: 'Payments & configuration',
-      description: 'Manage collection currencies, conversion fees, and database backups.',
-    });
-  }
+
   if (access.canManageTeam) {
     tabs.push(
       {
         id: 'team-invitations',
         label: 'Team Invitations',
         icon: Mail,
-        group: 'Teams',
-        description: 'Manage pending team invites and organization access.',
+        group: 'Access & Governance',
+        description: 'Manage pending team member invitations.',
       },
       {
         id: 'team-members',
         label: 'Team Members',
         icon: Users,
-        group: 'Teams',
-        description: 'Manage existing team members within your organization.',
+        group: 'Access & Governance',
+        description: 'Manage team members and their permissions.',
       },
     );
   }
+
   if (access.canAccessGovernance) {
     tabs.push({
       id: 'audit-logs',
       label: 'Audit Logs',
       icon: FileText,
-      group: 'Governance',
-      description: 'Review administrative activity and export audit history.',
+      group: 'Access & Governance',
+      description: 'Review audit trail of all platform operations.',
     });
   }
+
+  // ── Platform Management ────────────────────────────────────────
+  if (access.canAccessPlatformSettings) {
+    tabs.push({
+      id: 'platform-settings',
+      label: 'Platform Settings',
+      icon: WrenchIcon,
+      group: 'Platform Management',
+      description: 'Configure system-wide settings and fees.',
+    });
+  }
+
+  if (access.canAccessOperations) {
+    tabs.push({
+      id: 'operations',
+      label: 'Operations',
+      icon: RefreshCw,
+      group: 'Platform Management',
+      description: 'Access operational workflows and maintenance tasks.',
+    });
+  }
+
   if (access.isSuperAdmin) {
     tabs.push({
       id: 'test-data-cleanup',
-      label: 'Test data cleanup',
+      label: 'Test Data Cleanup',
       icon: Trash2,
-      group: 'Governance',
-      description: 'Review and permanently clear payment transactions and disbursements for test-mode merchants.',
+      group: 'Platform Management',
+      description: 'Clear test transactions and data.',
     });
   }
 
