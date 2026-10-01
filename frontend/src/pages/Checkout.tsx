@@ -148,6 +148,39 @@ function getCheckoutErrorMessage(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function PaymentQrCode({
+  value,
+  alt,
+  size = 320,
+  imageClassName = 'mx-auto w-full max-w-[320px] rounded-xl object-contain',
+  qrClassName = 'h-auto max-w-full',
+}: {
+  value: string;
+  alt: string;
+  size?: number;
+  imageClassName?: string;
+  qrClassName?: string;
+}) {
+  const qrValue = normalizeCheckoutQrValue(value);
+  if (!qrValue) return null;
+
+  if (/^https?:\/\//i.test(qrValue)) {
+    return <img src={qrValue} alt={alt} className={imageClassName} />;
+  }
+
+  return (
+    <QRCodeSVG
+      value={qrValue}
+      size={size}
+      level="M"
+      includeMargin
+      bgColor="#ffffff"
+      fgColor="#071b3a"
+      className={qrClassName}
+    />
+  );
+}
+
 function SignaturePrompt({
   canvasRef,
   error,
@@ -592,9 +625,10 @@ export default function Checkout() {
       payment_method: statusPaymentMethod,
     })
     : null;
+  const processingCurrencyCode = txn.processing_currency?.trim().toUpperCase() || currencyCode;
   const phpEquivalent = currencyCode === 'PHP'
     ? Number(txn.amount || 0)
-    : txn.processing_currency?.toUpperCase() === 'PHP'
+    : processingCurrencyCode === 'PHP'
       ? Number(txn.processing_amount || 0)
       : null;
   const requiresDigitalSignature = phpEquivalent !== null && phpEquivalent > 100000;
@@ -674,13 +708,13 @@ export default function Checkout() {
   };
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
-  const processingCurrencyCode = txn.processing_currency?.trim().toUpperCase() || currencyCode;
-  const isPhp = currencyCode === 'PHP' && processingCurrencyCode === 'PHP';
+  const isPhp = currencyCode === 'PHP' || processingCurrencyCode === 'PHP';
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const isUsdt = currencyCode === 'USDT';
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
-  const currencyCapabilities = getCurrencyCapabilities(currencyCode);
+  const effectiveDisplayCurrency = isPhp ? 'PHP' : currencyCode;
+  const currencyCapabilities = getCurrencyCapabilities(effectiveDisplayCurrency);
   const supportsMagpieCard = currencyCapabilities.magpieCard;
   const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const checkoutText = (english: string, korean: string) => (
@@ -1342,12 +1376,11 @@ export default function Checkout() {
                   </p>
                   <div className="mt-6 flex flex-col items-center gap-5 rounded-2xl bg-white p-5 text-slate-900 sm:flex-row sm:items-start">
                     {txn.usdt_deposit_address ? (
-                      <QRCodeSVG
+                      <PaymentQrCode
                         value={`tron:${txn.usdt_deposit_address}`}
+                        alt="USDT TRC20 deposit address QR code"
                         size={148}
-                        includeMargin
-                        className="rounded-lg"
-                        aria-label="USDT TRC20 deposit address QR code"
+                        qrClassName="rounded-lg"
                       />
                     ) : (
                       <div className="flex h-[148px] w-[148px] items-center justify-center rounded-lg bg-amber-50 p-4 text-center text-xs font-semibold text-amber-800">
@@ -1476,11 +1509,12 @@ export default function Checkout() {
                           </p>
                         </div>
                         <div className="mx-auto mt-4 flex max-w-xs items-center justify-center rounded-xl border border-slate-100 bg-white p-3">
-                          {/^(https?:)?\/\//i.test(txn.qr_code_url) ? (
-                            <img src={txn.qr_code_url} alt="QRPH payment code" className="w-full rounded-lg object-contain" />
-                          ) : (
-                            <QRCodeSVG value={txn.qr_code_url} size={280} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-                          )}
+                          <PaymentQrCode
+                            value={txn.qr_code_url}
+                            alt="QRPH payment code"
+                            size={280}
+                            imageClassName="w-full rounded-lg object-contain"
+                          />
                         </div>
                       </div>
                     )}
@@ -1602,7 +1636,7 @@ export default function Checkout() {
 
                   <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
                     <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
-                      <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                      <PaymentQrCode value={krwTransferQrValue} alt="KRW bank transfer details QR code" size={188} />
                     </div>
                     <p className="mt-4 text-xs font-bold text-slate-900">QR로 송금 정보 불러오기</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-700">계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.</p>
@@ -1924,11 +1958,7 @@ export default function Checkout() {
                             <p className="text-[22px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
                             {hasQrPayload ? (
                               <div className="flex justify-center">
-                                {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                                  <img src={txn.qr_code_url} alt="GCash QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
-                                ) : (
-                                  <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-                                )}
+                                <PaymentQrCode value={txn.qr_code_url} alt="GCash QRPH payment code" />
                               </div>
                             ) : (
                               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
@@ -1970,11 +2000,7 @@ export default function Checkout() {
                             <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
                             <p className="text-[12px] text-slate-500">{checkoutText('Use your preferred banking app and confirm payment.', '원하는 은행 앱으로 스캔한 뒤 결제를 확인하세요.')}</p>
                             <div className="flex justify-center">
-                              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                                <img src={txn.qr_code_url} alt="QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
-                              ) : (
-                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-                              )}
+                              <PaymentQrCode value={txn.qr_code_url} alt="QRPH payment code" />
                             </div>
                           </div>
                         </div>
@@ -2011,11 +2037,7 @@ export default function Checkout() {
                             <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Pay with Alipay', '알리페이로 결제')}</p>
                             <p className="text-[12px] text-slate-500">{checkoutText('Scan the QR code with Alipay, or open the secure checkout directly.', '알리페이로 QR 코드를 스캔하거나 안전한 결제 페이지를 직접 여세요.')}</p>
                             <div className="flex justify-center">
-                              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                                <img src={txn.qr_code_url} alt="Alipay payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
-                              ) : (
-                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-                              )}
+                              <PaymentQrCode value={txn.qr_code_url} alt="Alipay payment code" />
                             </div>
                             <div className="space-y-2">
                               <button
@@ -2346,11 +2368,11 @@ export default function Checkout() {
             )}
             {(qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl) ? (
               <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
-                {/^https?:\/\//i.test(qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl || '') ? (
-                  <img src={qrCodeUrl || ''} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
-                ) : (
-                  <QRCodeSVG value={qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl || ''} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
-                )}
+                <PaymentQrCode
+                  value={qrInstructionApp === 'toss' ? tossQrValue : qrCodeUrl || ''}
+                  alt="Payment QR code"
+                  imageClassName="w-full max-w-xs rounded-lg object-contain"
+                />
               </div>
             ) : qrInstructionApp === 'toss' ? (
               <p className="w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-sm text-amber-900">
