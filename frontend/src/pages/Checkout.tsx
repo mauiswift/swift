@@ -42,6 +42,7 @@ import {
   type PaymentChannels,
 } from '@/lib/paymentChannels';
 import {
+  buildTossQrDeepLink,
   normalizeCheckoutQrValue,
   resolveCheckoutQrPanelMode,
   sanitizeCheckoutDeepLink,
@@ -379,7 +380,13 @@ export default function Checkout() {
   };
 
   const openTossPaymentApp = () => {
-    const tossDeepLink = sanitizeCheckoutDeepLink(txn?.toss_deep_link?.trim()) || 'supertoss://toss/pay';
+    const tossDeepLink = buildTossQrDeepLink({
+      baseUrl: txn?.toss_deep_link,
+      qrPayload: txn?.qr_code_url,
+      amount: txn?.amount,
+      currency: txn?.currency,
+      settlementCurrency: txn?.processing_currency,
+    });
     setQrInstructionApp('toss');
     openMobileDeepLink({
       url: tossDeepLink,

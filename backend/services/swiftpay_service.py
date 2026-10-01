@@ -739,14 +739,23 @@ class SwiftPayService:
         currency: str = "PHP",
         qr_type: str = "P2P"
     ) -> Dict[str, Any]:
-        """Generate QR PH payment (Step 5)."""
+        """Generate QR PH payment (Step 5).
+
+        QRPH (the underlying EMVCo rail) only settles in PHP, so non-PHP
+        currencies are converted to PHP before submission. The response still
+        reports the original amount/currency alongside the PHP amount that
+        was actually encoded in the QR, so callers (e.g. multicurrency
+        checkout flows) can display both.
+        """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
-        if currency.upper() != "PHP":
-            return {
-                "success": False,
-                "error": "SwiftPay QRPH supports PHP only; it cannot create a KRW Korean bank QR",
-            }
+
+        original_currency = (currency or "PHP").upper()
+        php_amount = amount
+        if original_currency != "PHP":
+            from services.magpie_qr_service import CurrencyConverter
+
+            php_amount = CurrencyConverter.convert(amount, original_currency, "PHP")
 
         url = f"{self.base_url}/api/bootstrap/qrph"
         # Type is a query parameter
@@ -758,8 +767,8 @@ class SwiftPayService:
             payload = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
-                "x_amount": self._format_amount(amount),
-                "x_currency": currency,
+                "x_amount": self._format_amount(php_amount),
+                "x_currency": "PHP",
             }
             payload["signature"] = self._sign_payload(payload)
 
@@ -785,7 +794,15 @@ class SwiftPayService:
                     return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
 
                 data = resp.json() if text else {}
-                return {"success": True, "data": data, "reference_no": current_reference}
+                return {
+                    "success": True,
+                    "data": data,
+                    "reference_no": current_reference,
+                    "amount": php_amount,
+                    "currency": "PHP",
+                    "original_amount": amount,
+                    "original_currency": original_currency,
+                }
             except Exception as exc:
                 logger.exception("SwiftPay generate_qrph exception")
                 return {"success": False, "error": str(exc)}

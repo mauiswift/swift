@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Copy, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { QRCodeSVG } from 'qrcode.react';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import {
@@ -188,7 +189,11 @@ export default function PaymentLinkDetails() {
               <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
                 {link.qrCodeUrl ? (
                   <div className="rounded-2xl border border-amber-200 bg-white p-3 flex items-center justify-center shadow-sm">
-                    <img src={link.qrCodeUrl} alt="KRW transfer QR" className="w-[180px] h-[180px] object-contain" />
+                    {/^https?:\/\//i.test(link.qrCodeUrl) ? (
+                      <img src={link.qrCodeUrl} alt="KRW transfer QR" className="w-[180px] h-[180px] object-contain" />
+                    ) : (
+                      <QRCodeSVG value={link.qrCodeUrl} size={180} level="M" includeMargin bgColor="#ffffff" fgColor="#78350f" />
+                    )}
                   </div>
                 ) : null}
 

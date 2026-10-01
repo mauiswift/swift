@@ -522,18 +522,38 @@ async def test_generate_qrph_retries_duplicate_reference(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_qrph_rejects_non_php_before_provider_call(monkeypatch):
+async def test_generate_qrph_converts_non_php_currency_to_php(monkeypatch):
+    from services.magpie_qr_service import CurrencyConverter
+
     svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            nonlocal captured_payload
+            captured_payload = json
+            return DummyResponse(status_code=200, json_data={"qrCode": "krw-qr"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
     result = await svc.generate_qrph(
         amount=12500,
         reference_no="krw-ref-2",
         currency="KRW",
     )
 
-    assert result == {
-        "success": False,
-        "error": "SwiftPay QRPH supports PHP only; it cannot create a KRW Korean bank QR",
-    }
+    expected_php_amount = CurrencyConverter.convert(12500, "KRW", "PHP")
+
+    assert result["success"] is True
+    assert captured_payload["x_currency"] == "PHP"
+    assert captured_payload["x_amount"] == svc._format_amount(expected_php_amount)
+    assert result["currency"] == "PHP"
+    assert result["amount"] == expected_php_amount
+    assert result["original_amount"] == 12500
+    assert result["original_currency"] == "KRW"
 
 
 @pytest.mark.asyncio

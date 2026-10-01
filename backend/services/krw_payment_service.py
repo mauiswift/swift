@@ -24,6 +24,7 @@ from core.config import settings
 from models.disbursements import Disbursements
 from models.transactions import Transactions
 from services.payment_gateway import PaymentGateway
+from services.swiftpay_service import SwiftPayService
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ class KRWPaymentLinkResponse(BaseModel):
     expires_at: Optional[str] = None
     error: Optional[str] = None
     code: Optional[str] = None
+    qr_code_url: Optional[str] = None
 
 
 class KRWDisbursementResponse(BaseModel):
@@ -223,12 +225,36 @@ class KRWPaymentService:
         expires_at = datetime.now(timezone.utc) + timedelta(days=request.expiry_days)
         transaction.expires_at = expires_at
         transaction.updated_at = datetime.now(timezone.utc)
+
+        # Also surface a Toss-scannable QRPH (converted to PHP under the hood,
+        # since QR Ph only settles in PHP) so KRW payers can pay via Toss.
+        qr_code_url: Optional[str] = None
+        swift = SwiftPayService()
+        if swift.is_configured():
+            qr_result = await swift.generate_qrph(
+                amount=request.amount,
+                reference_no=request.reference_no,
+                currency="KRW",
+                qr_type="P2M",
+            )
+            if qr_result.get("success"):
+                qr_data = qr_result.get("data") or {}
+                qr_code_url = (
+                    qr_data.get("qrCode") or qr_data.get("qr_code")
+                    or qr_data.get("qrCodeUrl") or qr_data.get("qr_code_url")
+                )
+                if qr_code_url:
+                    transaction.qr_code_url = qr_code_url
+            else:
+                logger.warning("KRW payment link Toss QRPH generation failed: %s", qr_result.get("error"))
+
         await db.commit()
 
         return KRWPaymentLinkResponse(
             success=True,
             transaction_id=transaction_id,
             payment_link=payment_url,
+            qr_code_url=qr_code_url,
             payment_url=payment_url,
             gateway=payment_data.get("gateway", "swiftpay_self_hosted"),
             bank_account=payment_data.get("bank_account"),

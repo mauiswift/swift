@@ -170,10 +170,15 @@ class TestKRWPaymentLinkRequest:
             },
         }
 
+        qr_result = {"success": True, "data": {"qrCode": "000201...toss-qr-payload"}}
+
         with patch(
             "services.krw_payment_service.PaymentGateway.create_payment",
             new=AsyncMock(return_value=gateway_result),
-        ) as create_payment:
+        ) as create_payment, patch(
+            "services.krw_payment_service.SwiftPayService.generate_qrph",
+            new=AsyncMock(return_value=qr_result),
+        ) as generate_qrph:
             response = await KRWPaymentService().create_self_hosted_payment_link(
                 request,
                 user_id=str(current_user.id),
@@ -187,8 +192,16 @@ class TestKRWPaymentLinkRequest:
         assert response.manual_verification is True
         assert response.approval_required is True
         assert response.bank_account["bank_name"] == "Toss Bank"
+        assert response.qr_code_url == "000201...toss-qr-payload"
+        assert transaction.qr_code_url == "000201...toss-qr-payload"
         assert transaction.expires_at is not None
         create_payment.assert_awaited_once()
+        generate_qrph.assert_awaited_once_with(
+            amount=request.amount,
+            reference_no=request.reference_no,
+            currency="KRW",
+            qr_type="P2M",
+        )
         assert create_payment.await_args.kwargs["metadata"] == {
             "manual_krw_checkout": True,
             "self_hosted_checkout": True,
