@@ -4,7 +4,8 @@ import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { client } from '@/lib/api';
 import { isSystemWalletAdmin } from '@/lib/permissions';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminSidebar } from '@/components/admin/AdminManagementNavigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 import { MerchantManagement } from '@/components/admin/MerchantManagement';
 import { BankingDashboard } from '@/components/admin/BankingDashboard';
@@ -99,161 +100,119 @@ export default function AdminManagement() {
 
   const selectedTabMeta = tabs.find(tab => tab.id === selectedTab);
 
-  // Build sidebar sections
-  const sections = [
-    {
-      title: 'Banking Operations',
-      color: 'bg-blue-500',
-      icon: '🏦',
-      tabs: tabs.filter(t => ['dashboard', 'merchants', 'transactions', 'settlements'].includes(t.id as string)),
-    },
-    {
-      title: 'Financial Control',
-      color: 'bg-emerald-500',
-      icon: '💰',
-      tabs: tabs.filter(t => ['wallet-control', 'crypto-approvals'].includes(t.id as string)),
-    },
-    {
-      title: 'Payment Configuration',
-      color: 'bg-purple-500',
-      icon: '⚙️',
-      tabs: tabs.filter(t => ['payment-channels', 'wallet-settings'].includes(t.id as string)),
-    },
-    {
-      title: 'Access & Governance',
-      color: 'bg-amber-500',
-      icon: '🔐',
-      tabs: tabs.filter(t => ['users', 'team-invitations', 'team-members', 'audit-logs'].includes(t.id as string)),
-    },
-    {
-      title: 'Platform Management',
-      color: 'bg-red-500',
-      icon: '⚡',
-      tabs: tabs.filter(t => ['platform-settings', 'operations', 'test-data-cleanup'].includes(t.id as string)),
-    },
-  ];
-
   return (
     <Layout>
-      <div className="flex h-screen bg-slate-50">
-        {/* Sidebar */}
+      <div className="space-y-6">
+        {/* Navigation Sidebar */}
         <AdminSidebar
-          sections={sections}
-          selectedTab={selectedTab}
-          onTabSelect={setSelectedTab}
+          tabs={tabs}
+          active={selectedTab}
+          onChange={setSelectedTab}
         />
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 overflow-auto">
-          {/* Header */}
-          <div className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-10">
-            <div className="px-4 py-6 sm:px-6 lg:px-8">
-              <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold text-slate-900">
-                  {selectedTabMeta?.label || 'Administration'}
-                </h1>
-                <p className="mt-2 text-sm text-slate-600">
-                  {selectedTabMeta?.description || 'Manage your banking platform'}
-                </p>
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+          {selectedTabMeta && (
+            <div className="mb-8">
+              <div>
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <span className="font-semibold uppercase tracking-wider text-slate-500">{selectedTabMeta.group}</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="font-semibold text-slate-900">{selectedTabMeta.label}</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Content Area */}
-          <div className="px-4 py-8 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              {error && (
-                <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-700">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                  <span className="flex-1">{error}</span>
-                  <button
-                    type="button"
-                    onClick={() => setError('')}
-                    className="shrink-0 hover:opacity-70"
-                    aria-label="Dismiss error"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
-              {/* Dashboard Tab */}
-              {selectedTab === 'dashboard' && canAccessDashboard && (
-                <BankingDashboard />
-              )}
-
-              {/* Merchants Tab */}
-              {selectedTab === 'merchants' && canAccessMerchants && (
-                <MerchantManagement />
-              )}
-
-              {/* Transactions Tab */}
-              {selectedTab === 'transactions' && canAccessTransactions && (
-                <TransactionsTab />
-              )}
-
-              {/* Settlements Tab */}
-              {selectedTab === 'settlements' && canAccessSettlements && (
-                <SettlementsTab />
-              )}
-
-              {/* Wallet Control Tab */}
-              {selectedTab === 'wallet-control' && canAccessWalletControl && (
-                <WalletControlTab />
-              )}
-
-              {/* Crypto Approvals Tab */}
-              {selectedTab === 'crypto-approvals' && canAccessCryptoApprovals && (
-                <CryptoApprovalsTab />
-              )}
-
-              {/* Payment Channels Tab */}
-              {selectedTab === 'payment-channels' && canAccessPaymentChannels && (
-                <PaymentChannelsTab />
-              )}
-
-              {/* Wallet Settings Tab */}
-              {selectedTab === 'wallet-settings' && canAccessWalletSettings && (
-                <WalletSettingsTab />
-              )}
-
-              {/* User Management Tab */}
-              {selectedTab === 'users' && canAccessUserManagement && (
-                <UsersTab />
-              )}
-
-              {/* Team Invitations Tab */}
-              {selectedTab === 'team-invitations' && canManageTeam && (
-                <TeamInvitationsTab />
-              )}
-
-              {/* Team Members Tab */}
-              {selectedTab === 'team-members' && canManageTeam && (
-                <TeamMembersTab />
-              )}
-
-              {/* Audit Logs Tab */}
-              {selectedTab === 'audit-logs' && canAccessGovernance && (
-                <AuditLogsTab />
-              )}
-
-              {/* Platform Settings Tab */}
-              {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
-                <PlatformSettingsTab />
-              )}
-
-              {/* Operations Tab */}
-              {selectedTab === 'operations' && canAccessOperations && (
-                <OperationsTab />
-              )}
-
-              {/* Test Data Cleanup Tab */}
-              {selectedTab === 'test-data-cleanup' && isSuperAdmin && (
-                <TestDataCleanupTab />
-              )}
+          {error && (
+            <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <span className="flex-1">{error}</span>
+              <button
+                type="button"
+                onClick={() => setError('')}
+                className="shrink-0 hover:opacity-70"
+              >
+                ✕
+              </button>
             </div>
-          </div>
-        </main>
+          )}
+
+          {/* Dashboard Tab */}
+          {selectedTab === 'dashboard' && canAccessDashboard && (
+            <BankingDashboard />
+          )}
+
+          {/* Merchants Tab */}
+          {selectedTab === 'merchants' && canAccessMerchants && (
+            <MerchantManagement />
+          )}
+
+          {/* Transactions Tab */}
+          {selectedTab === 'transactions' && canAccessTransactions && (
+            <TransactionsTab />
+          )}
+
+          {/* Settlements Tab */}
+          {selectedTab === 'settlements' && canAccessSettlements && (
+            <SettlementsTab />
+          )}
+
+          {/* Wallet Control Tab */}
+          {selectedTab === 'wallet-control' && canAccessWalletControl && (
+            <WalletControlTab />
+          )}
+
+          {/* Crypto Approvals Tab */}
+          {selectedTab === 'crypto-approvals' && canAccessCryptoApprovals && (
+            <CryptoApprovalsTab />
+          )}
+
+          {/* Payment Channels Tab */}
+          {selectedTab === 'payment-channels' && canAccessPaymentChannels && (
+            <PaymentChannelsTab />
+          )}
+
+          {/* Wallet Settings Tab */}
+          {selectedTab === 'wallet-settings' && canAccessWalletSettings && (
+            <WalletSettingsTab />
+          )}
+
+          {/* User Management Tab */}
+          {selectedTab === 'users' && canAccessUserManagement && (
+            <UsersTab />
+          )}
+
+          {/* Team Invitations Tab */}
+          {selectedTab === 'team-invitations' && canManageTeam && (
+            <TeamInvitationsTab />
+          )}
+
+          {/* Team Members Tab */}
+          {selectedTab === 'team-members' && canManageTeam && (
+            <TeamMembersTab />
+          )}
+
+          {/* Audit Logs Tab */}
+          {selectedTab === 'audit-logs' && canAccessGovernance && (
+            <AuditLogsTab />
+          )}
+
+          {/* Platform Settings Tab */}
+          {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
+            <PlatformSettingsTab />
+          )}
+
+          {/* Operations Tab */}
+          {selectedTab === 'operations' && canAccessOperations && (
+            <OperationsTab />
+          )}
+
+          {/* Test Data Cleanup Tab */}
+          {selectedTab === 'test-data-cleanup' && isSuperAdmin && (
+            <TestDataCleanupTab />
+          )}
+        </div>
       </div>
     </Layout>
   );
