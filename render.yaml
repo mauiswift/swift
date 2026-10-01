@@ -2,7 +2,7 @@ services:
   - type: web
     name: swiftpay-frontend
     runtime: docker
-    rootDir: frontend
+    rootDir: .
     dockerfilePath: ./frontend/Dockerfile
     plan: starter
     autoDeploy: true
