@@ -21,6 +21,7 @@ import {
   Wallet as WalletIcon,
 } from 'lucide-react';
 import { MerchantManagement } from '@/components/admin/MerchantManagement';
+import { BankingDashboard } from '@/components/admin/BankingDashboard';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
@@ -170,14 +171,7 @@ export default function AdminManagement() {
 
           {/* Dashboard Tab */}
           {selectedTab === 'dashboard' && canAccessDashboard && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Banking Dashboard</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Dashboard with key metrics, transaction volume, settlement status, and system health coming soon...</p>
-              </CardContent>
-            </Card>
+            <BankingDashboard />
           )}
 
           {/* Merchants Tab */}
