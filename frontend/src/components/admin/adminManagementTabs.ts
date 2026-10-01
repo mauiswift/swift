@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export type AdminTab =
-  | 'admins'
+  | 'merchants'
   | 'users'
   | 'crypto'
   | 'wallet-control'
@@ -42,7 +42,7 @@ export interface AdminTabMeta {
 }
 
 export interface AdminTabAccess {
-  canAccessAdminUsers: boolean;
+  canAccessMerchants: boolean;
   canAccessUserManagement: boolean;
   canAccessCryptoRequests: boolean;
   canAccessWalletControl: boolean;
@@ -58,17 +58,17 @@ export interface AdminTabAccess {
   isSuperAdmin: boolean;
 }
 
-export function buildAdminTabs(access: AdminTabAccess, adminCount: number): AdminTabMeta[] {
+export function buildAdminTabs(access: AdminTabAccess, merchantCount: number): AdminTabMeta[] {
   const tabs: AdminTabMeta[] = [];
 
-  if (access.canAccessAdminUsers) {
+  if (access.canAccessMerchants) {
     tabs.push({
-      id: 'admins',
-      label: 'Admin Users',
-      icon: ShieldCheck,
-      count: adminCount,
+      id: 'merchants',
+      label: 'Merchant/Owner Management',
+      icon: Users,
+      count: merchantCount,
       group: 'People & access',
-      description: 'Manage dashboard administrators and their specific permissions.',
+      description: 'Manage merchant accounts, transactions, settlements, and team members.',
     });
   }
   if (access.canAccessUserManagement) {

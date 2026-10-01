@@ -26,6 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
+import { MerchantManagement } from '@/components/admin/MerchantManagement';
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { AdminSidebar } from '@/components/admin/AdminManagementNavigation';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
@@ -73,44 +74,6 @@ import {
 const authenticatedFetch = client.fetch;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-interface AdminUser {
-  id: number;
-  telegram_id: string;
-  telegram_username: string | null;
-  name: string | null;
-  is_active: boolean;
-  is_super_admin: boolean;
-  role: string;
-  can_manage_payments: boolean;
-  can_manage_disbursements: boolean;
-  can_view_reports: boolean;
-  can_manage_wallet: boolean;
-  can_manage_transactions: boolean;
-  can_manage_bot: boolean;
-  can_approve_topups: boolean;
-  can_manage_team: boolean;
-  can_credit_wallet?: boolean;
-  can_debit_wallet?: boolean;
-  can_freeze_wallet?: boolean;
-  can_unfreeze_wallet?: boolean;
-  added_by: string | null;
-  bank_name?: string | null;
-  bank_account_number?: string | null;
-  bank_account_name?: string | null;
-  bank_address?: string | null;
-  usdt_wallet_address?: string | null;
-  settlement_type?: string | null;
-  settlement_currency?: string | null;
-  service_fee_percent?: number;
-  collection_fee_percent?: number;
-  withdrawal_fee_percent?: number;
-  withdrawal_fee_php?: number;
-  withdrawal_fee_krw?: number;
-  withdrawal_fee_usdt?: number;
-  withdrawal_fee_cny?: number;
-  withdrawal_fee_usd?: number;
-}
 
 interface RegisteredUser {
   admin_id?: number;
@@ -1279,8 +1242,6 @@ function WalletSettingsTab({
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] = PERMISSION_DEFINITIONS;
-
 const PLATFORM_ONLY_PERMISSION_KEYS = new Set([
   'can_approve_topups',
   'can_credit_wallet',
@@ -1295,26 +1256,6 @@ const permissionValuesForRole = (role: string) =>
   );
 
 const PERMISSION_GROUPS = [...new Set(PERMISSION_DEFINITIONS.map(({ group }) => group))];
-
-const defaultForm = {
-  telegram_id: '',
-  telegram_username: '',
-  email: '',
-  password: '',
-  name: '',
-  role: 'admin',
-  permissions: permissionValuesForRole('admin'),
-};
-
-const ADMIN_ROLE_OPTIONS = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'operator', label: 'Operator' },
-  { value: 'viewer', label: 'Viewer' },
-  { value: 'developer', label: 'Developer' },
-  { value: 'custom', label: 'Custom permissions' },
-] as const;
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
@@ -1454,385 +1395,6 @@ function AdminSummaryCard({
 function formatDate(dt: string | null): string {
   if (!dt) return '—';
   return new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-// ── Admin Users Tab ───────────────────────────────────────────────────────────
-
-function AdminCard({
-  admin,
-  isSuperAdmin,
-  currentUserId,
-  onToggleActive,
-  onChangeRole,
-  onSavePermissions,
-  onDelete,
-  onEditBank,
-  onEditApiKeys,
-  onEditPassword,
-  onEditFees,
-}: {
-  admin: AdminUser;
-  isSuperAdmin: boolean;
-  currentUserId?: string | number;
-  onToggleActive: (a: AdminUser) => void;
-  onChangeRole: (a: AdminUser, role: string) => void;
-  onSavePermissions: (a: AdminUser, permissions: Record<string, boolean>) => Promise<boolean>;
-  onDelete: (a: AdminUser) => void;
-  onEditBank: (a: AdminUser) => void;
-  onEditApiKeys: (a: AdminUser) => void;
-  onEditPassword: (a: AdminUser) => void;
-  onEditFees: (a: AdminUser) => void;
-}) {
-  const [permissionsOpen, setPermissionsOpen] = useState(false);
-  const [permissionDraft, setPermissionDraft] = useState<Record<string, boolean>>({});
-  const [permissionsSaving, setPermissionsSaving] = useState(false);
-  const permissionCount = PERMISSION_KEYS.filter(({ key }) => Boolean(admin[key])).length;
-  const displayName = admin.name || admin.telegram_username || `Merchant ID: ${admin.telegram_id}`;
-  const roleLabel = ADMIN_ROLE_OPTIONS.find(option => option.value === admin.role)?.label || admin.role || 'Admin';
-  const canEditPermissions = isSuperAdmin && !admin.is_super_admin
-    && String(admin.telegram_id) !== String(currentUserId);
-
-  const openPermissions = () => {
-    setPermissionDraft(Object.fromEntries(
-      PERMISSION_DEFINITIONS.map(({ key }) => [key, Boolean(admin[key])]),
-    ));
-    setPermissionsOpen(true);
-  };
-
-  const savePermissions = async () => {
-    setPermissionsSaving(true);
-    try {
-      if (await onSavePermissions(admin, permissionDraft)) setPermissionsOpen(false);
-    } finally {
-      setPermissionsSaving(false);
-    }
-  };
-
-  return (
-    <Card className={`border-slate-200 transition-all duration-300 hover:shadow-sm ${
-      admin.is_active ? 'bg-white opacity-100' : 'bg-slate-50/50 opacity-75'
-    }`}>
-      <CardContent className="p-4 sm:p-5">
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
-              admin.is_super_admin
-                ? 'border-amber-200 bg-amber-100 text-amber-600'
-                : 'border-blue-200 bg-blue-100 text-blue-600'
-            }`}>
-              {admin.is_super_admin ? <Crown className="h-5 w-5" /> : <User className="h-5 w-5" />}
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="truncate text-sm font-semibold text-slate-900">{displayName}</span>
-                {admin.telegram_username && (
-                  <span className="text-[11px] font-semibold text-blue-500">@{admin.telegram_username}</span>
-                )}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                {admin.is_super_admin && (
-                  <Badge className="h-5 border border-amber-200 bg-amber-100 px-1.5 text-[9px] font-semibold uppercase tracking-widest text-amber-700">
-                    Super
-                  </Badge>
-                )}
-                <Badge className="h-5 border border-slate-200 bg-slate-50 px-1.5 text-[9px] font-semibold uppercase tracking-widest text-slate-600">
-                  {roleLabel}
-                </Badge>
-                <Badge className={`h-5 border px-1.5 text-[9px] font-semibold uppercase tracking-widest ${
-                  admin.is_active
-                    ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
-                    : 'border-slate-200 bg-slate-200 text-slate-600'
-                }`}>
-                  {admin.is_active ? 'Active' : 'Disabled'}
-                </Badge>
-              </div>
-              <p className="mt-1 text-[11px] font-medium text-slate-500">TGID: <span className="font-mono">{admin.telegram_id}</span></p>
-            </div>
-          </div>
-
-          {isSuperAdmin && (
-            <div className="flex flex-wrap items-center gap-1 sm:justify-end">
-              {canEditPermissions && (
-                <button
-                  type="button"
-                  onClick={openPermissions}
-                  aria-label={`Edit permissions for ${displayName}`}
-                  title="Edit permissions"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100"
-                >
-                  <Settings2 aria-hidden="true" className="h-3.5 w-3.5" />
-                  <span>Permissions</span>
-                </button>
-              )}
-              <label className="sr-only" htmlFor={`admin-role-${admin.id}`}>Role for {displayName}</label>
-              <select
-                id={`admin-role-${admin.id}`}
-                value={admin.role || 'admin'}
-                disabled={String(admin.telegram_id) === String(currentUserId)}
-                onChange={event => onChangeRole(admin, event.target.value)}
-                className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {ADMIN_ROLE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <button
-                type="button"
-                onClick={() => onEditPassword(admin)}
-                aria-label={`Change dashboard password for ${displayName}`}
-                title="Change Dashboard Password"
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-purple-50 hover:text-purple-600"
-              >
-                <KeyRound aria-hidden="true" className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onEditBank(admin)}
-                aria-label={`Edit bank information for ${displayName}`}
-                title="Edit Bank Information"
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
-              >
-                <Tag aria-hidden="true" className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onEditApiKeys(admin)}
-                aria-label={`Edit API keys for ${displayName}`}
-                title="Edit API Keys"
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-teal-50 hover:text-teal-600"
-              >
-                <KeyRound aria-hidden="true" className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onEditFees(admin)}
-                aria-label={`Edit fee settings for ${displayName}`}
-                title="Edit Fee Settings"
-                className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[10px] font-semibold text-orange-700 transition hover:bg-orange-100"
-              >
-                <DollarSign aria-hidden="true" className="h-3.5 w-3.5" />
-                <span>Fees</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleActive(admin)}
-                title={admin.is_active ? 'Deactivate' : 'Activate'}
-                aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${displayName}`}
-                className={`rounded-lg p-1.5 transition ${
-                  admin.is_active ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'
-                }`}
-              >
-                {admin.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(admin)}
-                title="Remove administrator"
-                aria-label={`Remove administrator ${displayName}`}
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-              >
-                <Trash2 aria-hidden="true" className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {(['People & access', 'Payments & configuration', 'Approvals & wallets', 'Governance'] as const).map(group => {
-            const permissions = PERMISSION_KEYS.filter(({ key }) => (
-              PERMISSION_DEFINITIONS.find(definition => definition.key === key)?.group === group
-            ));
-            if (!permissions.length) return null;
-            return (
-              <div key={group} className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
-                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">{group}</p>
-                <div className="flex flex-wrap gap-1">
-                  {permissions.map(({ key, label, color }) => (
-                    <PermissionBadge
-                      key={key}
-                      active={admin[key] as boolean}
-                      label={label}
-                      color={color}
-                      interactive={false}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
-          <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-slate-400" />{permissionCount} enabled</span>
-          {admin.settlement_currency && (
-            <span className="inline-flex items-center gap-1"><WalletIcon className="h-3.5 w-3.5 text-slate-400" />Settlement: {admin.settlement_currency}</span>
-          )}
-        </div>
-      </CardContent>
-      <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-slate-200 bg-white p-5 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Edit permissions</DialogTitle>
-            <DialogDescription>
-              Select the organization-level access for {displayName}. Platform administrator access is controlled by the role.
-            </DialogDescription>
-          </DialogHeader>
-          <PermissionCheckboxGroups
-            permissions={permissionDraft}
-            disabled={permissionsSaving}
-            onChange={(key, checked) => setPermissionDraft(current => ({ ...current, [key]: checked }))}
-          />
-          <p className="text-xs font-medium text-slate-500">
-            {Object.values(permissionDraft).filter(Boolean).length} permissions selected.
-          </p>
-          <DialogFooter>
-            <Button type="button" variant="outline" disabled={permissionsSaving} onClick={() => setPermissionsOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={permissionsSaving}
-              onClick={() => void savePermissions()}
-              className="bg-[#FF6B00] text-white hover:bg-[#E66000]"
-            >
-              {permissionsSaving ? 'Saving...' : 'Save permissions'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
-
-function FeeSettingsModal({
-  admin,
-  onClose,
-  onSaved,
-  onError,
-}: {
-  admin: AdminUser;
-  onClose: () => void;
-  onSaved: (updated: AdminUser) => void;
-  onError: (message: string) => void;
-}) {
-  const [baseFee, setBaseFee] = useState(String(admin.service_fee_percent ?? 0));
-  const [collectionFee, setCollectionFee] = useState(String(admin.collection_fee_percent ?? 0));
-  const [withdrawalFeePercent, setWithdrawalFeePercent] = useState(String(admin.withdrawal_fee_percent ?? 0));
-  const [withdrawalFees, setWithdrawalFees] = useState({
-    PHP: String(admin.withdrawal_fee_php ?? 15),
-    KRW: String(admin.withdrawal_fee_krw ?? 1500),
-    USDT: String(admin.withdrawal_fee_usdt ?? 1),
-    CNY: String(admin.withdrawal_fee_cny ?? 10),
-    USD: String(admin.withdrawal_fee_usd ?? 1),
-  });
-  const [saving, setSaving] = useState(false);
-
-  const updateWithdrawalFee = (currency: keyof typeof withdrawalFees, value: string) => {
-    setWithdrawalFees(current => ({ ...current, [currency]: value }));
-  };
-
-  const save = async () => {
-    const collectionValue = Number(collectionFee);
-    const withdrawalPercentValue = Number(withdrawalFeePercent);
-    const baseValue = Number(baseFee);
-    const parsedWithdrawals = Object.fromEntries(
-      Object.entries(withdrawalFees).map(([currency, value]) => [currency, Number(value)]),
-    );
-    const values = [baseValue, collectionValue, withdrawalPercentValue, ...Object.values(parsedWithdrawals)];
-    if (values.some(value => !Number.isFinite(value) || value < 0) || [baseValue, collectionValue, withdrawalPercentValue].some(value => value > 100)) {
-      onError('Percentage fees must be between 0 and 100. Withdrawal fees must be non-negative.');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const response = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_fee_percent: baseValue,
-          collection_fee_percent: collectionValue,
-          withdrawal_fee_percent: withdrawalPercentValue,
-          withdrawal_fee_php: parsedWithdrawals.PHP,
-          withdrawal_fee_krw: parsedWithdrawals.KRW,
-          withdrawal_fee_usdt: parsedWithdrawals.USDT,
-          withdrawal_fee_cny: parsedWithdrawals.CNY,
-          withdrawal_fee_usd: parsedWithdrawals.USD,
-        }),
-      });
-      if (!response.ok) throw new Error(await response.text());
-      onSaved(await response.json());
-      onClose();
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to save fee settings');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const withdrawalFields = [
-    ['PHP', 'PHP fee'],
-    ['KRW', 'KRW fee'],
-    ['USDT', 'USDT fee'],
-    ['CNY', 'CNY fee'],
-    ['USD', 'USD fee'],
-  ] as const;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="fee-settings-title">
-      <Card className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden border-slate-200 bg-white shadow-2xl">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 shrink-0">
-          <div>
-            <CardTitle id="fee-settings-title" className="text-slate-900">Fee Settings</CardTitle>
-            <p className="mt-1 text-xs text-slate-500">
-              {admin.name || admin.telegram_username || admin.telegram_id}
-            </p>
-          </div>
-          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close fee settings">
-            <X className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-6 p-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Upline service surcharge (%)</span>
-              <input type="number" min="0" max="100" step="0.01" value={baseFee} onChange={event => setBaseFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-              <span className="block text-xs text-slate-400">Applied to eligible payments from this user’s downline. Set 0% to disable the surcharge.</span>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection fee (%)</span>
-              <input type="number" min="0" max="100" step="0.01" value={collectionFee} onChange={event => setCollectionFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Withdrawal fee (%)</span>
-              <input type="number" min="0" max="100" step="0.01" value={withdrawalFeePercent} onChange={event => setWithdrawalFeePercent(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-            </label>
-          </div>
-          <div>
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Fixed withdrawal fees</h3>
-            <p className="mb-3 text-xs text-slate-400">These are fixed amounts in the withdrawal currency, not percentages.</p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {withdrawalFields.map(([currency, label]) => (
-                <label key={currency} className="space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">{label}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={withdrawalFees[currency]}
-                    onChange={event => updateWithdrawalFee(currency, event.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="button" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save fee settings'}</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }
 
 // ── User Management Tab ───────────────────────────────────────────────────────
@@ -3379,7 +2941,7 @@ export default function AdminManagement() {
   const { isSuperAdmin, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const activeTab = (requestedTab === 'tatum' ? 'bitgo' : requestedTab || 'admins') as AdminTab;
+  const activeTab = (requestedTab === 'tatum' ? 'bitgo' : requestedTab || 'merchants') as AdminTab;
 
   const setActiveTab = (tab: string) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -3395,7 +2957,7 @@ export default function AdminManagement() {
   const canManageBot = Boolean(user?.permissions?.can_manage_bot);
   const canApproveTopups = isSystemWalletAdmin(user?.id) && Boolean(user?.permissions?.can_approve_topups);
   const canManageTeam = Boolean(user?.permissions?.can_manage_team);
-  const canAccessAdminUsers = isSuperAdmin && canManageTeam;
+  const canAccessMerchants = isSuperAdmin && canManageTeam;
   const canAccessUserManagement = isSuperAdmin;
   const canAccessCryptoRequests = isSystemWalletAdmin(user?.id) && isSuperAdmin && canApproveTopups;
   const canAccessWalletControl = isSystemWalletAdmin(user?.id) && isSuperAdmin && canManageWallet;
@@ -3409,14 +2971,6 @@ export default function AdminManagement() {
   const canAccessApprovalsAndWallets = canAccessCryptoRequests || canAccessWalletControl || canAccessOperations || canAccessTossApprovals;
   const canAccessPaymentsAndConfiguration = canAccessPaymentChannels || canAccessWalletSettings || canAccessBitgo || canAccessCheckoutDesign || canAccessPlatformSettings;
   const canAccessGovernance = isSuperAdmin;
-  const [admins, setAdmins] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [adminSearch, setAdminSearch] = useState('');
-  const [adminFilter, setAdminFilter] = useState<'all' | 'active' | 'inactive' | 'super'>('all');
-  const [form, setForm] = useState(defaultForm);
-  const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const [maintenanceUpdating, setMaintenanceUpdating] = useState(false);
@@ -3426,28 +2980,7 @@ export default function AdminManagement() {
   const [vipGoldFeePercent, setVipGoldFeePercent] = useState('0.4');
   const [feeLoading, setFeeLoading] = useState(true);
   const [feeSaving, setFeeSaving] = useState(false);
-
-  const [editingBankAdmin, setEditingBankAdmin] = useState<AdminUser | null>(null);
-  const [editingApiKeysAdmin, setEditingApiKeysAdmin] = useState<AdminUser | null>(null);
-  const [editingPasswordAdmin, setEditingPasswordAdmin] = useState<AdminUser | null>(null);
-  const [editingFeesAdmin, setEditingFeesAdmin] = useState<AdminUser | null>(null);
-
-  const fetchAdmins = useCallback(async () => {
-    if (!canAccessAdminUsers) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const res = await authenticatedFetch('/api/v1/admin-users');
-      if (!res.ok) throw new Error(await res.text());
-      setAdmins(await res.json());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load admins');
-    } finally {
-      setLoading(false);
-    }
-  }, [canAccessAdminUsers]);
+  const [error, setError] = useState('');
 
   const fetchMaintenanceMode = useCallback(async () => {
     try {
@@ -3500,202 +3033,13 @@ export default function AdminManagement() {
   };
 
   useEffect(() => {
-    if (canAccessAdminUsers) {
-      void fetchAdmins();
-    }
     fetchMaintenanceMode();
     if (isSuperAdmin) void fetchCollectionFee();
-    const id = canAccessAdminUsers ? setInterval(() => void fetchAdmins(), 30000) : undefined;
-    return () => {
-      if (id !== undefined) clearInterval(id);
-    };
-  }, [canAccessAdminUsers, fetchAdmins, fetchMaintenanceMode, fetchCollectionFee, isSuperAdmin]);
+  }, [fetchMaintenanceMode, fetchCollectionFee, isSuperAdmin]);
 
-  const handleSaveCollectionFee = async () => {
-    const value = Number(additionalFeePercent);
-    const systemValue = Number(systemFeePercent);
-    const vipValue = Number(vipGoldFeePercent);
-    if (!Number.isFinite(value) || value < 0 || value > 100) {
-      setError('Additional collection fee must be between 0 and 100 percent.');
-      return;
-    }
-    if (!Number.isFinite(systemValue) || systemValue < 0 || systemValue > 100) {
-      setError('System collection fee must be between 0 and 100 percent.');
-      return;
-    }
-    if (!Number.isFinite(vipValue) || vipValue < 0 || vipValue > 100) {
-      setError('VIP Gold collection fee must be between 0 and 100 percent.');
-      return;
-    }
-    setFeeSaving(true);
-    try {
-      const res = await authenticatedFetch('/api/v1/app-settings/collection-fee', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_fee_percent: systemValue, additional_fee_percent: value, vip_gold_fee_percent: vipValue }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setSystemFeePercent(String(data.system_fee_percent));
-      setAdditionalFeePercent(String(data.additional_fee_percent));
-      setTotalFeePercent(String(data.total_fee_percent));
-      setVipGoldFeePercent(String(data.vip_gold_fee_percent));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to save collection fee');
-    } finally {
-      setFeeSaving(false);
-    }
-  };
-
-  const handleAdd = async () => {
-    if (!form.email.trim() || !form.password.trim() || !form.name.trim()) {
-      setError('Email, password, and full name are required.');
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await authenticatedFetch('/api/v1/admin-users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegram_id: form.telegram_id || undefined,
-          telegram_username: form.telegram_username || undefined,
-          email: form.email.trim(),
-          password: form.password,
-          name: form.name.trim(),
-          role: form.role,
-          ...(form.role === 'custom' ? form.permissions : {}),
-        }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      setForm(defaultForm);
-      setShowAdd(false);
-      await fetchAdmins();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to add admin');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleToggleActive = async (admin: AdminUser) => {
-    if (!isSuperAdmin) return;
-    try {
-      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !admin.is_active }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchAdmins();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to update admin');
-    }
-  };
-
-  const handleChangeRole = async (admin: AdminUser, role: string) => {
-    if (!isSuperAdmin) return;
-    try {
-      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchAdmins();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to update admin role');
-    }
-  };
-
-  const handleSavePermissions = async (
-    admin: AdminUser,
-    permissions: Record<string, boolean>,
-  ): Promise<boolean> => {
-    if (!isSuperAdmin || admin.is_super_admin || String(admin.telegram_id) === String(user?.id)) return false;
-    try {
-      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'custom', ...permissions }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchAdmins();
-      return true;
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to save admin permissions');
-      return false;
-    }
-  };
-
-  const handleSavedFees = (updated: AdminUser) => {
-    setAdmins(current => current.map(admin => admin.id === updated.id ? updated : admin));
-  };
-
-  const handleDelete = async (admin: AdminUser) => {
-    if (!isSuperAdmin) return;
-    if (!confirm(`Deactivate @${admin.telegram_username || admin.telegram_id}? Their wallet and history will be preserved.`)) return;
-    try {
-      const res = await authenticatedFetch(`/api/v1/admin-users/${admin.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchAdmins();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to delete admin');
-    }
-  };
-
-  const handleSaveBank = async (data: Partial<AdminUser>) => {
-    if (!editingBankAdmin) return;
-    try {
-      const res = await authenticatedFetch(`/api/v1/admin-users/${editingBankAdmin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchAdmins();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to save bank information');
-      throw e;
-    }
-  };
-
-  const handleSavePassword = async (password: string) => {
-    if (!editingPasswordAdmin) return;
-    const res = await authenticatedFetch(`/api/v1/admin-users/${editingPasswordAdmin.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.detail || 'Failed to update password.');
-    }
-    await fetchAdmins();
-  };
-
-  const activeAdmins = admins.filter((a) => a.is_active);
-  const inactiveAdmins = admins.filter((a) => !a.is_active);
-  const superAdminCount = admins.filter((a) => a.is_super_admin).length;
-  const normalizedAdminSearch = adminSearch.trim().toLowerCase();
-  const filteredAdmins = admins.filter((admin) => {
-    const matchesSearch = !normalizedAdminSearch || [
-      admin.name,
-      admin.telegram_username,
-      admin.telegram_id,
-      admin.bank_name,
-    ].some(value => String(value || '').toLowerCase().includes(normalizedAdminSearch));
-    const matchesFilter = adminFilter === 'all'
-      || (adminFilter === 'active' && admin.is_active)
-      || (adminFilter === 'inactive' && !admin.is_active)
-      || (adminFilter === 'super' && admin.is_super_admin);
-    return matchesSearch && matchesFilter;
-  });
-  const filteredActiveAdmins = filteredAdmins.filter((admin) => admin.is_active);
-  const filteredInactiveAdmins = filteredAdmins.filter((admin) => !admin.is_active);
 
   const tabs = buildAdminTabs({
-    canAccessAdminUsers,
+    canAccessMerchants,
     canAccessUserManagement,
     canAccessCryptoRequests,
     canAccessWalletControl,
@@ -3709,8 +3053,8 @@ export default function AdminManagement() {
     canManageTeam,
     canAccessGovernance,
     isSuperAdmin,
-  }, admins.length);
-  const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'admins';
+  }, 0);
+  const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'merchants';
   const selectedTabMeta = tabs.find(tab => tab.id === selectedTab);
 
   return (
@@ -3730,17 +3074,12 @@ export default function AdminManagement() {
               <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Admin Management</h1>
             </div>
 
-            {selectedTab === 'admins' && canAccessAdminUsers && (
+            {selectedTab === 'merchants' && canAccessMerchants && (
               <Button
-                onClick={() => setShowAdd(!showAdd)}
-                className={`gap-2 h-10 whitespace-nowrap rounded-xl text-sm font-semibold transition-all ${
-                  showAdd
-                    ? 'bg-slate-200 text-slate-900 hover:bg-slate-300'
-                    : 'bg-[#FF6B00] text-white hover:bg-[#E66000] shadow-lg shadow-orange-900/20'
-                }`}
+                className={`gap-2 h-10 whitespace-nowrap rounded-xl text-sm font-semibold transition-all bg-[#FF6B00] text-white hover:bg-[#E66000] shadow-lg shadow-orange-900/20`}
               >
-                {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                {showAdd ? 'Cancel' : 'Add Admin'}
+                <Plus className="h-4 w-4" />
+                Add Merchant
               </Button>
             )}
           </div>
@@ -3763,7 +3102,6 @@ export default function AdminManagement() {
             active={selectedTab}
             onChange={(id) => {
               setActiveTab(id);
-              setShowAdd(false);
               setError('');
             }}
           />
@@ -3781,297 +3119,8 @@ export default function AdminManagement() {
               </div>
             )}
 
-            {canAccessAdminUsers && selectedTab === 'admins' && (
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <AdminSummaryCard
-                  label="Admins"
-                  value={admins.length}
-                  description="Total"
-                  icon={<Users className="h-5 w-5" />}
-                  tone="orange"
-                />
-                <AdminSummaryCard
-                  label="Active"
-                  value={activeAdmins.length}
-                  description={`${inactiveAdmins.length} inactive`}
-                  icon={<Power className="h-5 w-5" />}
-                  tone="emerald"
-                />
-                <AdminSummaryCard
-                  label="Super"
-                  value={superAdminCount}
-                  description="Full access"
-                  icon={<Crown className="h-5 w-5" />}
-                  tone="indigo"
-                />
-                <AdminSummaryCard
-                  label="Status"
-                  value={maintenanceMode ? 'Paused' : 'Live'}
-                  description={maintenanceMode ? 'Maintenance' : 'Operational'}
-                  icon={<ShieldCheck className="h-5 w-5" />}
-                  tone={maintenanceMode ? 'slate' : 'emerald'}
-                />
-              </div>
-            )}
-
-            {canAccessPlatformSettings && (
-              <Card className="border border-slate-200 bg-white shadow-sm">
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${maintenanceMode ? 'border-amber-200 bg-amber-100 text-amber-600' : 'border-slate-200 bg-slate-100 text-slate-500'}`}>
-                        <WrenchIcon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">Maintenance mode</p>
-                        <p className="text-xs text-slate-500">{maintenanceMode ? 'Platform is paused for admins only.' : 'Public access is enabled.'}</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={handleToggleMaintenance}
-                      disabled={maintenanceLoading || maintenanceUpdating}
-                      className={`h-9 rounded-lg px-3 text-xs font-semibold ${maintenanceMode ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
-                    >
-                      {maintenanceUpdating ? 'Updating...' : maintenanceMode ? 'Resume' : 'Enable'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ── Admin Users Tab ── */}
-            {selectedTab === 'admins' && canAccessAdminUsers && (
-              <div className="space-y-6">
-                {/* Add Admin Form */}
-                {showAdd && canAccessAdminUsers && (
-                  <Card className="bg-white border-slate-200 shadow-xl shadow-slate-200/50 animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
-                    <CardHeader className="pb-4 pt-6 px-6 border-b border-slate-50 bg-slate-50/50">
-                      <CardTitle className="text-slate-900 text-[15px] font-semibold flex items-center gap-2 uppercase tracking-tight">
-                        <UserPlus className="h-5 w-5 text-[#FF6B00]" />
-                        Create New Administrator
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
-                        <div className="space-y-1.5">
-                          <label htmlFor="admin-telegram-id" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-slate-300">(optional)</span></label>
-                          <input
-                            id="admin-telegram-id"
-                            type="text"
-                            placeholder="e.g. 123456789"
-                            value={form.telegram_id}
-                            onChange={e => setForm(f => ({ ...f, telegram_id: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label htmlFor="admin-telegram-username" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram Username</label>
-                          <input
-                            id="admin-telegram-username"
-                            type="text"
-                            placeholder="@username"
-                            value={form.telegram_username}
-                            onChange={e => setForm(f => ({ ...f, telegram_username: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label htmlFor="admin-email" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Email</label>
-                          <input
-                            id="admin-email"
-                            type="email"
-                            placeholder="admin@example.com"
-                            value={form.email}
-                            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label htmlFor="admin-password" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Password <span className="text-red-500">*</span></label>
-                          <input
-                            id="admin-password"
-                            type="password"
-                            placeholder="Initial password"
-                            value={form.password}
-                            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-300 transition-all focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label htmlFor="admin-full-name" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Full Name <span className="text-red-500">*</span></label>
-                          <input
-                            id="admin-full-name"
-                            type="text"
-                            placeholder="Full name"
-                            value={form.name}
-                            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <label htmlFor="admin-role" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Role</label>
-                        <select
-                          id="admin-role"
-                          value={form.role}
-                          onChange={event => {
-                            const role = event.target.value;
-                            setForm(current => ({
-                              ...current,
-                              role,
-                              permissions: role === 'custom' ? current.permissions : permissionValuesForRole(role),
-                            }));
-                          }}
-                          className="h-11 w-full max-w-sm rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
-                        >
-                          {ADMIN_ROLE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
-                        <p className="text-xs text-slate-500">
-                          {form.role === 'custom'
-                            ? 'Select exactly which organization permissions this administrator receives.'
-                            : 'Choose a role preset, or change any checkbox to create a custom permission set.'}
-                        </p>
-                        <PermissionCheckboxGroups
-                          permissions={form.permissions}
-                          onChange={(key, checked) => setForm(current => ({
-                            ...current,
-                            role: 'custom',
-                            permissions: { ...current.permissions, [key]: checked },
-                          }))}
-                        />
-                        <p className="text-xs font-medium text-slate-500">
-                          {Object.values(form.permissions).filter(Boolean).length} permissions selected. Super-admin access is assigned separately.
-                        </p>
-                      </div>
-                  <div className="flex items-center gap-3 pt-4">
-                    <Button
-                      type="button"
-                      onClick={handleAdd}
-                      disabled={saving || !form.email.trim() || !form.password.trim() || !form.name.trim()}
-                      className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
-                    >
-                      {saving ? 'Creating...' : 'Create Admin'}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      onClick={() => { setShowAdd(false); setForm(defaultForm); }}
-                      className="text-slate-400 hover:text-slate-900 font-semibold px-6 h-11 rounded-xl transition-all"
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="border border-slate-200 bg-white shadow-sm">
-              <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={adminSearch}
-                    onChange={event => setAdminSearch(event.target.value)}
-                    placeholder="Search by name, Telegram ID, username, or bank"
-                    aria-label="Search administrator accounts"
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-[#FF6B00]/5"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {([
-                    ['all', `All ${admins.length}`],
-                    ['active', `Active ${activeAdmins.length}`],
-                    ['inactive', `Inactive ${inactiveAdmins.length}`],
-                    ['super', `Super ${admins.filter(admin => admin.is_super_admin).length}`],
-                  ] as const).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setAdminFilter(value)}
-                      aria-pressed={adminFilter === value}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                        adminFilter === value
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <Button type="button" variant="outline" size="icon" onClick={() => fetchAdmins()} disabled={loading} aria-label="Refresh administrators" title="Refresh administrators">
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-              {/* Admins List */}
-              {loading ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="motion-skeleton h-32 rounded-2xl bg-white border border-slate-200" />
-                    ))}
-                  </div>
-                ) : filteredAdmins.length === 0 ? (
-                  <Card className="bg-white border-slate-200 py-20">
-                    <CardContent className="flex flex-col items-center justify-center text-center">
-                      <div className="h-20 w-20 rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-6">
-                        <ShieldCheck className="h-10 w-10 text-slate-300" />
-                      </div>
-                      <p className="text-slate-900 font-semibold text-lg tracking-tight">{admins.length === 0 ? 'No Administrators Configured' : 'No Administrators Found'}</p>
-                      <p className="text-slate-500 text-sm mt-2 max-w-xs font-medium">{admins.length === 0 ? 'Add your first administrator to grant access to the management dashboard.' : 'Try a different search term or filter.'}</p>
-                      {admins.length === 0 && <Button onClick={() => setShowAdd(true)} variant="outline" className="mt-8 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50">Add your first admin</Button>}
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredActiveAdmins.map(admin => (
-                      <AdminCard
-                        key={admin.id}
-                        admin={admin}
-                        isSuperAdmin={isSuperAdmin}
-                        currentUserId={user?.id}
-                        onToggleActive={handleToggleActive}
-                        onChangeRole={handleChangeRole}
-                        onSavePermissions={handleSavePermissions}
-                        onDelete={handleDelete}
-                        onEditBank={setEditingBankAdmin}
-                        onEditApiKeys={setEditingApiKeysAdmin}
-                        onEditPassword={setEditingPasswordAdmin}
-                        onEditFees={setEditingFeesAdmin}
-                      />
-                    ))}
-
-                    {filteredInactiveAdmins.length > 0 && (
-                      <div className="pt-6 space-y-4">
-                        <div className="flex items-center gap-4 px-2">
-                          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-[0.2em] whitespace-nowrap">Inactive Accounts</span>
-                          <div className="h-px flex-1 bg-slate-100" />
-                        </div>
-                        <div className="grid grid-cols-1 gap-4">
-                          {filteredInactiveAdmins.map(admin => (
-                            <AdminCard
-                              key={admin.id}
-                              admin={admin}
-                              isSuperAdmin={isSuperAdmin}
-                              currentUserId={user?.id}
-                              onToggleActive={handleToggleActive}
-                              onChangeRole={handleChangeRole}
-                              onSavePermissions={handleSavePermissions}
-                              onDelete={handleDelete}
-                              onEditBank={setEditingBankAdmin}
-                              onEditApiKeys={setEditingApiKeysAdmin}
-                              onEditPassword={setEditingPasswordAdmin}
-                              onEditFees={setEditingFeesAdmin}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+            {canAccessMerchants && selectedTab === 'merchants' && (
+              <MerchantManagement />
             )}
 
             {/* ── User Management Tab ── */}
@@ -4129,38 +3178,6 @@ export default function AdminManagement() {
           </div>
         </div>
       </div>
-
-      {editingBankAdmin && (
-        <BankInfoModal
-          admin={editingBankAdmin}
-          onClose={() => setEditingBankAdmin(null)}
-          onSave={handleSaveBank}
-        />
-      )}
-
-      {editingApiKeysAdmin && (
-        <ApiKeysModal
-          admin={editingApiKeysAdmin}
-          onClose={() => setEditingApiKeysAdmin(null)}
-        />
-      )}
-
-      {editingPasswordAdmin && (
-        <PasswordChangeModal
-          admin={editingPasswordAdmin}
-          onClose={() => setEditingPasswordAdmin(null)}
-          onSave={handleSavePassword}
-        />
-      )}
-
-      {editingFeesAdmin && (
-        <FeeSettingsModal
-          admin={editingFeesAdmin}
-          onClose={() => setEditingFeesAdmin(null)}
-          onSaved={handleSavedFees}
-          onError={setError}
-        />
-      )}
     </Layout>
   );
 }
