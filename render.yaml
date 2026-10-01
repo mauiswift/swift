@@ -1,10 +1,9 @@
 services:
   - type: web
     name: swiftpay-frontend
-    runtime: node
+    runtime: docker
     rootDir: frontend
-    buildCommand: corepack enable && pnpm install && pnpm run build
-    startCommand: pnpm run preview
+    dockerfilePath: ./frontend/Dockerfile
     plan: starter
     autoDeploy: true
     envVars:
