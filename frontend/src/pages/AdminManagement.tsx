@@ -24,6 +24,14 @@ import { MerchantManagement } from '@/components/admin/MerchantManagement';
 import { BankingDashboard } from '@/components/admin/BankingDashboard';
 import { TransactionsTab } from '@/components/admin/TransactionsTab';
 import { SettlementsTab } from '@/components/admin/SettlementsTab';
+import { WalletControlTab } from '@/components/admin/WalletControlTab';
+import { CryptoApprovalsTab } from '@/components/admin/CryptoApprovalsTab';
+import { PaymentChannelsTab } from '@/components/admin/PaymentChannelsTab';
+import { WalletSettingsTab } from '@/components/admin/WalletSettingsTab';
+import { UsersTab } from '@/components/admin/UsersTab';
+import { PlatformSettingsTab } from '@/components/admin/PlatformSettingsTab';
+import { OperationsTab } from '@/components/admin/OperationsTab';
+import { AuditLogsTab } from '@/components/admin/AuditLogsTab';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
@@ -193,62 +201,27 @@ export default function AdminManagement() {
 
           {/* Wallet Control Tab */}
           {selectedTab === 'wallet-control' && canAccessWalletControl && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Wallet Control</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Wallet credit/debit operations and balance management coming soon...</p>
-              </CardContent>
-            </Card>
+            <WalletControlTab />
           )}
 
           {/* Crypto Approvals Tab */}
           {selectedTab === 'crypto-approvals' && canAccessCryptoApprovals && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Crypto Approvals</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Review and approve USDT top-up requests coming soon...</p>
-              </CardContent>
-            </Card>
+            <CryptoApprovalsTab />
           )}
 
           {/* Payment Channels Tab */}
           {selectedTab === 'payment-channels' && canAccessPaymentChannels && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Channels</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Enable/disable payment methods by currency and region coming soon...</p>
-              </CardContent>
-            </Card>
+            <PaymentChannelsTab />
           )}
 
           {/* Wallet Settings Tab */}
           {selectedTab === 'wallet-settings' && canAccessWalletSettings && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Wallet Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Wallet configuration and deposit settings coming soon...</p>
-              </CardContent>
-            </Card>
+            <WalletSettingsTab />
           )}
 
           {/* User Management Tab */}
           {selectedTab === 'users' && canAccessUserManagement && (
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Platform user and role management coming soon...</p>
-              </CardContent>
-            </Card>
+            <UsersTab />
           )}
 
           {/* Team Invitations Tab */}
@@ -263,38 +236,17 @@ export default function AdminManagement() {
 
           {/* Audit Logs Tab */}
           {selectedTab === 'audit-logs' && canAccessGovernance && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Audit Logs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Audit trail of all platform operations coming soon...</p>
-              </CardContent>
-            </Card>
+            <AuditLogsTab />
           )}
 
           {/* Platform Settings Tab */}
           {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Platform Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">System-wide settings and fee configuration coming soon...</p>
-              </CardContent>
-            </Card>
+            <PlatformSettingsTab />
           )}
 
           {/* Operations Tab */}
           {selectedTab === 'operations' && canAccessOperations && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Operations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Operational workflows and maintenance tasks coming soon...</p>
-              </CardContent>
-            </Card>
+            <OperationsTab />
           )}
 
           {/* Test Data Cleanup Tab */}
