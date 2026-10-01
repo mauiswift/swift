@@ -36,7 +36,7 @@ export default function AdminManagement() {
   const [error, setError] = useState('');
 
   // Permissions
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'Owner';
   const canManageTeam = Boolean(user?.permissions?.can_manage_team);
   const canManagePayments = Boolean(user?.permissions?.can_manage_payments);
   const canManageWallet = Boolean(user?.permissions?.can_manage_wallet);
