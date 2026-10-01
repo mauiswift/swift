@@ -760,6 +760,246 @@ export function TeamInvitationsTab() {
   );
 }
 
+// ── Member Permission Editor Dialog ──────────────────────────────────────────
+
+interface MemberPermissionEditorProps {
+  isOpen: boolean;
+  member: TeamMember | null;
+  selectedPermissions: Record<string, boolean>;
+  setSelectedPermissions: (value: Record<string, boolean>) => void;
+  permissionSearch: string;
+  setPermissionSearch: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+function MemberPermissionEditor({
+  isOpen,
+  member,
+  selectedPermissions,
+  setSelectedPermissions,
+  permissionSearch,
+  setPermissionSearch,
+  onSave,
+  onCancel,
+  isLoading,
+}: MemberPermissionEditorProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const permissionGroups: Record<string, string[]> = {
+    'View Payments': ['can_view_transaction_details'],
+    'Manage Links': ['can_create_transfers', 'can_add_edit_customers', 'can_see_api_keys'],
+    'Manage Pages': ['can_edit_business_settings', 'can_add_edit_delete_cards_promotion'],
+    'Refund & Contest dispute': ['can_refund_cards_charges'],
+    'Export': ['can_download_csv_report'],
+    'Develop': ['can_resend_callbacks', 'can_change_callback_urls'],
+    'Manage Users': ['can_add_delete_user', 'can_edit_user_access'],
+    'View Wallet': ['can_withdraw_funds'],
+    'Manage Wallet Transactions': ['can_credit_wallet', 'can_debit_wallet'],
+    'View child accounts': [],
+    'Manage child accounts': ['can_edit_user_access'],
+    'Manage child payouts': ['can_withdraw_funds'],
+    'Manage loan offers': [],
+    'Manage loans': [],
+    'Manage Invoices': ['can_generate_invoice'],
+    'Manage Approvals': ['can_approve_batch_disbursements'],
+    'Manage Approvals Settings': [],
+    'Manage Transfers Settings': [],
+    'Manage Invoices Settings': [],
+    'Manage Expenses Settings': [],
+    'Manage Storefront': ['can_edit_business_settings'],
+    'Manage Order & Pay': [],
+    'Manage Products': ['can_edit_business_settings'],
+  };
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  };
+
+  const toggleGroupPermissions = (groupName: string) => {
+    const perms = permissionGroups[groupName] || [];
+    if (perms.length === 0) return;
+
+    const allGroupSelected = perms.every(p => selectedPermissions[p]);
+
+    const updated = { ...selectedPermissions };
+    perms.forEach(p => {
+      updated[p] = !allGroupSelected;
+    });
+    setSelectedPermissions(updated);
+  };
+
+  const togglePermission = (permissionKey: string) => {
+    setSelectedPermissions({
+      ...selectedPermissions,
+      [permissionKey]: !selectedPermissions[permissionKey]
+    });
+  };
+
+  const selectAllPermissions = () => {
+    const allPerms: Record<string, boolean> = {};
+    Object.values(permissionGroups).forEach(perms => {
+      perms.forEach(p => {
+        allPerms[p] = true;
+      });
+    });
+    setSelectedPermissions(allPerms);
+  };
+
+  if (!isOpen || !member) return null;
+
+  const filteredGroups = Object.entries(permissionGroups).filter(([groupName]) =>
+    groupName.toLowerCase().includes(permissionSearch.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" role="presentation">
+      <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="edit-permissions-title">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 id="edit-permissions-title" className="text-lg font-semibold text-slate-900">Edit member permissions</h2>
+            <p className="text-xs text-slate-500 mt-1">{member.email || member.name || `@${member.telegram_id}`}</p>
+          </div>
+          <button
+            onClick={onCancel}
+            className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Permissions Section */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium text-slate-700">Permissions</Label>
+              <button
+                onClick={selectAllPermissions}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                Select all
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                type="search"
+                placeholder="Search permissions..."
+                value={permissionSearch}
+                onChange={(e) => setPermissionSearch(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+
+            {/* Permissions List */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-96 overflow-y-auto">
+              {filteredGroups.length === 0 ? (
+                <div className="p-4 text-center text-sm text-slate-500">
+                  No permissions found
+                </div>
+              ) : (
+                filteredGroups.map(([groupName, perms]) => {
+                  const isExpanded = expandedGroups[groupName];
+                  const groupSelectedCount = perms.filter(p => selectedPermissions[p]).length;
+                  const allGroupSelected = groupSelectedCount === perms.length && perms.length > 0;
+                  const hasNoPermissions = perms.length === 0;
+
+                  return (
+                    <div key={groupName} className="border-b border-slate-100 last:border-b-0">
+                      <button
+                        onClick={() => {
+                          if (!hasNoPermissions) toggleGroupPermissions(groupName);
+                          toggleGroup(groupName);
+                        }}
+                        className="w-full flex items-center gap-3 p-3.5 hover:bg-slate-50 transition-colors"
+                      >
+                        {!hasNoPermissions && (
+                          <input
+                            type="checkbox"
+                            checked={allGroupSelected}
+                            onChange={() => toggleGroupPermissions(groupName)}
+                            className="h-5 w-5 rounded-md border border-slate-300 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                        {hasNoPermissions && <div className="h-5 w-5" />}
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-slate-900">{groupName}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {perms.length > 0 && <span className="text-xs text-slate-500">{groupSelectedCount} capabilities</span>}
+                          {perms.length > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleGroup(groupName);
+                              }}
+                              className="p-1 hover:bg-slate-200 rounded transition-colors text-sm"
+                            >
+                              {isExpanded ? '^' : 'v'}
+                            </button>
+                          )}
+                        </div>
+                      </button>
+
+                      {isExpanded && perms.length > 0 && (
+                        <div className="bg-slate-50 border-t border-slate-100 p-3 space-y-2">
+                          {perms.map(permKey => (
+                            <label key={permKey} className="flex items-center gap-2.5 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={selectedPermissions[permKey] || false}
+                                onChange={() => togglePermission(permKey)}
+                                className="h-4 w-4 rounded border border-slate-300 cursor-pointer"
+                              />
+                              <span className="text-xs text-slate-600 group-hover:text-slate-900">
+                                {PERMISSION_LABELS[permKey] || permKey}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={onSave}
+              disabled={isLoading}
+              className="flex-[1.35] h-11 gap-2"
+            >
+              {isLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />Saving...</>
+              ) : (
+                <>Save Changes</>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1 h-11"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Team Members Tab ──────────────────────────────────────────────────────────
 
 export function TeamMembersTab() {
@@ -770,6 +1010,10 @@ export function TeamMembersTab() {
   const [loading, setLoading] = useState(false);
   const [orgWallet, setOrgWallet] = useState<OrganizationWalletBalance | null>(null);
   const [query, setQuery] = useState('');
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [editPermissions, setEditPermissions] = useState<Record<string, boolean>>({});
+  const [editPermissionSearch, setEditPermissionSearch] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -807,23 +1051,54 @@ export function TeamMembersTab() {
     ].some((value) => value?.toLowerCase().includes(normalizedQuery)));
   }, [members, query]);
 
-  const handleSuperAdminToggle = async (member: TeamMember) => {
-    if (!isSuperAdmin || String(member.telegram_id) === String(user?.id)) return;
-    const grant = member.role !== 'super_admin';
+  const handleEditPermissions = (member: TeamMember) => {
+    setEditingMember(member);
+    setEditPermissions({ ...member.permissions });
+    setEditPermissionSearch('');
+  };
+
+  const handleSavePermissions = async () => {
+    if (!editingMember) return;
+    setEditLoading(true);
     try {
-      await apiFetch(`/api/v1/admin-users/${member.id}`, {
+      const selectedPerms = Object.entries(editPermissions)
+        .filter(([, enabled]) => enabled)
+        .map(([perm]) => perm);
+
+      await apiFetch(`/api/v1/team/members/${editingMember.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ is_super_admin: grant }),
+        body: JSON.stringify({ permissions: selectedPerms }),
       });
-      toast.success(grant ? 'Super admin access granted' : 'Super admin access removed');
+      toast.success('Member permissions updated');
+      setEditingMember(null);
+      setEditPermissions({});
       await fetchMembers();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update super admin access');
+      toast.error(err.message || 'Failed to update member permissions');
+    } finally {
+      setEditLoading(false);
     }
   };
 
   return (
-    <Card className="bg-white border border-slate-200">
+    <>
+      <MemberPermissionEditor
+        isOpen={!!editingMember}
+        member={editingMember}
+        selectedPermissions={editPermissions}
+        setSelectedPermissions={setEditPermissions}
+        permissionSearch={editPermissionSearch}
+        setPermissionSearch={setEditPermissionSearch}
+        onSave={handleSavePermissions}
+        onCancel={() => {
+          setEditingMember(null);
+          setEditPermissions({});
+          setEditPermissionSearch('');
+        }}
+        isLoading={editLoading}
+      />
+
+      <Card className="bg-white border border-slate-200">
       <CardHeader className="gap-4 border-b border-slate-100 pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -932,7 +1207,6 @@ export function TeamMembersTab() {
                       {member.email && <p className="mt-0.5 break-all text-xs text-slate-500">{member.email}</p>}
                       <p className="mt-0.5 break-all text-[11px] text-slate-400">@{member.telegram_id}</p>
                     </div>
-                    <RoleBadge role={member.role} />
                   </div>
                   </div>
                 </div>
@@ -963,18 +1237,16 @@ export function TeamMembersTab() {
                   )}
                 </div>
                 <div className="mt-4 flex min-h-9 items-center justify-end">
-                  {isSuperAdmin && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={String(member.telegram_id) === String(user?.id)}
-                      onClick={() => handleSuperAdminToggle(member)}
-                      className="w-fit text-xs"
-                    >
-                      {member.role === 'super_admin' ? 'Remove Super Admin' : 'Make Super Admin'}
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEditPermissions(member)}
+                    className="w-fit text-xs gap-1.5"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    Edit Permissions
+                  </Button>
                 </div>
               </article>
             ))}
@@ -983,5 +1255,6 @@ export function TeamMembersTab() {
         )}
       </CardContent>
     </Card>
+    </>
   );
 }
