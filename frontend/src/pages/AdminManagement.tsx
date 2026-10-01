@@ -23,6 +23,7 @@ import {
 import { MerchantManagement } from '@/components/admin/MerchantManagement';
 import { BankingDashboard } from '@/components/admin/BankingDashboard';
 import { TransactionsTab } from '@/components/admin/TransactionsTab';
+import { SettlementsTab } from '@/components/admin/SettlementsTab';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
@@ -187,14 +188,7 @@ export default function AdminManagement() {
 
           {/* Settlements Tab */}
           {selectedTab === 'settlements' && canAccessSettlements && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Settlements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Settlement batch management, reconciliation, and fund distribution coming soon...</p>
-              </CardContent>
-            </Card>
+            <SettlementsTab />
           )}
 
           {/* Wallet Control Tab */}
