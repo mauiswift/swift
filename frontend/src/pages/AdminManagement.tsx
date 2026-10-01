@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { MerchantManagement } from '@/components/admin/MerchantManagement';
 import { BankingDashboard } from '@/components/admin/BankingDashboard';
+import { TransactionsTab } from '@/components/admin/TransactionsTab';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
@@ -181,14 +182,7 @@ export default function AdminManagement() {
 
           {/* Transactions Tab */}
           {selectedTab === 'transactions' && canAccessTransactions && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Transactions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">Real-time transaction monitoring, filtering, and management coming soon...</p>
-              </CardContent>
-            </Card>
+            <TransactionsTab />
           )}
 
           {/* Settlements Tab */}
