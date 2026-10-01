@@ -3,31 +3,34 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Install pnpm
+RUN npm install -g pnpm@8
 
-# Install dependencies with npm
-RUN npm install
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build frontend
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM node:20-slim
 
 WORKDIR /app
 
-# Install serve globally
+# Install serve
 RUN npm install -g serve
 
-# Copy dist folder from builder
+# Copy dist from builder
 COPY --from=builder /app/dist ./dist
 
-# Expose port
+# Port
 EXPOSE 3000
 
-# Start server
+# Start
 CMD ["serve", "-s", "dist", "-l", "3000"]
