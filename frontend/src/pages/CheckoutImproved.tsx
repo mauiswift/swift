@@ -42,6 +42,7 @@ import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency, getCurrencyName } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 
@@ -264,11 +265,15 @@ const PaymentMethodCategory: React.FC<{
             `}
           >
             <div className="h-12 w-16 flex items-center justify-center">
-              <PaymentBrandLogo
-                brand={method.code || method.name}
-                logoUrl={method.logoUrl}
-                size="md"
-              />
+              {group.title.toLowerCase().includes('bank') ? (
+                <BankLogo name={method.name} code={method.code} size="md" />
+              ) : (
+                <PaymentBrandLogo
+                  brand={method.code || method.name}
+                  logoUrl={method.logoUrl}
+                  size="md"
+                />
+              )}
             </div>
             <span className="text-xs font-semibold text-slate-900 text-center line-clamp-2">
               {method.name}

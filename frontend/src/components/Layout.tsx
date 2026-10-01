@@ -256,7 +256,10 @@ export default function Layout({ children }: LayoutProps) {
       )}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-2 pb-2 pt-3 sm:px-3 sm:pb-2 sm:pt-4">
+        <div className={cn(
+          "relative flex items-center justify-between px-2 pb-2 pt-3 sm:px-3 sm:pb-2 sm:pt-4",
+          collapsed && "lg:min-h-[4.5rem]"
+        )}>
           <PlatformLogo className="px-1 sm:px-1.5" name={platformBranding?.name} logoUrl={platformBranding?.logoUrl} collapsed={collapsed} />
           {onClose && (
             <IconButton label="Close navigation" onClick={onClose} variant="ghost" className="h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white lg:hidden">
@@ -268,7 +271,10 @@ export default function Layout({ children }: LayoutProps) {
               label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setSidebarCollapsed(!collapsed)}
               variant="ghost"
-              className="hidden h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white lg:flex"
+              className={cn(
+                "hidden h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white lg:flex",
+                collapsed && "absolute right-1 top-3 z-10"
+              )}
               aria-pressed={collapsed}
             >
               {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}

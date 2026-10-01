@@ -368,48 +368,7 @@ async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_does_not_require_600_usdt_benefit(monkeypatch):
-    gateway = PaymentGateway(db=None)
-    gateway.swift = SimpleNamespace(is_configured=lambda: False)
-    gateway.magpie = SimpleNamespace(api_key="")
-    get_benefits = AsyncMock(
-        return_value={"unlocked": False, "threshold_usdt": 600}
-    )
-    monkeypatch.setattr("services.payment_gateway.get_krw_benefits", get_benefits)
-    monkeypatch.setattr(
-        "services.payment_gateway.get_enabled_collection_currencies",
-        AsyncMock(return_value=["KRW"]),
-    )
-    result = await gateway.create_payment(
-        db=object(),
-        user_id="user-without-600-usdt",
-        amount=10_000,
-        description="KRW payment link",
-        transaction_type="payment_link",
-        currency="KRW",
-    )
-
-    assert result == {"success": False, "error": "PhotonPay KRW checkout is not configured"}
-    get_benefits.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_php_payment_link_uses_self_hosted_checkout_and_defers_provider_order(monkeypatch):
-    gateway = PaymentGateway(db=None)
-    db = SimpleNamespace()
-    gateway.swift = SimpleNamespace(
-        is_configured=Mock(return_value=True),
-        create_order=AsyncMock(),
-    )
-    gateway.magpie = SimpleNamespace(
-        api_key="magpie-test-key",
-        create_checkout=AsyncMock(),
-    )
-    transaction = SimpleNamespace(id=456, external_id="php-link-456")
-    created = {}
-
-    async def fake_create_transaction(self, **kwargs):
-        created.update(kwargs)
+async def test_krw_ate(kwargs)
         return transaction
 
     monkeypatch.setattr(

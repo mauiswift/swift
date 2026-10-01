@@ -30,6 +30,7 @@ import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BankLogo from '@/components/BankLogo';
 import { getTransactionPaymentMethodBrand } from '@/lib/paymentMethodBranding';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import {
@@ -379,7 +380,12 @@ export default function Checkout() {
     }
   };
 
-  const openTossPaymentApp = () => {
+  const openTossPaymentApp = async () => {
+    if (!txn?.qr_code_url) {
+      setQrInstructionApp('toss');
+      await handleStartCheckout('QRPH');
+      return;
+    }
     const tossDeepLink = buildTossQrDeepLink({
       baseUrl: txn?.toss_deep_link,
       qrPayload: txn?.qr_code_url,
@@ -767,7 +773,7 @@ export default function Checkout() {
     const url = checkoutUrl;
     if (!url) { toast.error('No checkout URL available'); return; }
 
-    if (isKrw && !isPhp && institutionCode) {
+    if (isKrw && !isPhp && institutionCode && selectedInstitutionCode !== 'QRPH') {
       const normalizedInstitution = institutionCode.trim().toUpperCase();
       if (normalizedInstitution === 'ALIPAY') {
         return;
@@ -797,7 +803,7 @@ export default function Checkout() {
       return;
     }
 
-    if (isPhp && institutionCode) {
+    if ((isPhp || (isKrw && selectedInstitutionCode === 'QRPH')) && institutionCode) {
       try {
         const checkoutIdentifier = checkoutExternalId || String(txn.id);
         const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
@@ -1005,9 +1011,10 @@ export default function Checkout() {
 
   const renderInstitutionButton = (institution: Institution) => {
     const code = institutionCode(institution);
+    const isBankInstitution = !['QRPH', 'MAYA', 'GCASH', 'ALIPAY'].includes(code);
     const kind = code === 'QRPH'
       ? checkoutText('QR', 'QR')
-      : (['MAYA', 'GCASH', 'ALIPAY'].includes(code) ? checkoutText('Wallet', '전자지갑') : checkoutText('Bank', '은행'));
+      : (isBankInstitution ? checkoutText('Bank', '은행') : checkoutText('Wallet', '전자지갑'));
     const loginLabel = formatInstitutionLoginMethod(institution.loginMethod);
     const recommended = ['QRPH', 'GCASH', 'MAYA'].includes(code);
 
@@ -1025,12 +1032,21 @@ export default function Checkout() {
         title={institution.name}
       >
         <div className="flex w-full items-start justify-between gap-2">
-          <PaymentBrandLogo
-            brand={institution.code || institution.name}
-            logoUrl={institution.logoUrl}
-            size="md"
-            className="border border-slate-100 shadow-sm"
-          />
+          {isBankInstitution ? (
+            <BankLogo
+              name={institution.name}
+              code={institution.code}
+              size="md"
+              className="border border-slate-100 shadow-sm"
+            />
+          ) : (
+            <PaymentBrandLogo
+              brand={institution.code || institution.name}
+              logoUrl={institution.logoUrl}
+              size="md"
+              className="border border-slate-100 shadow-sm"
+            />
+          )}
           <ArrowUpRight className="mt-1 h-4 w-4 text-slate-300 transition-colors group-hover:text-[#FF6B00]" aria-hidden="true" />
         </div>
 

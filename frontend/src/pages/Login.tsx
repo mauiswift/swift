@@ -379,24 +379,26 @@ export default function Login() {
         }
 
         .ak-login-methods {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          align-items: stretch;
-          justify-content: stretch;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
           gap: 12px;
           margin-top: 16px;
+          width: 100%;
         }
 
         .ak-login-methods .ak-btn-secondary {
           margin-top: 0;
-          width: 100%;
+          width: 112px;
           min-height: 52px;
         }
 
         .ak-google-login,
         .ak-telegram-login {
           display: flex;
-          min-width: 0;
+          flex: 0 0 112px;
+          width: 112px;
           height: 52px;
           align-items: center;
           justify-content: center;
@@ -407,7 +409,6 @@ export default function Login() {
           background: #fff;
           color: #1a1a1a;
           transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
-          width: 100%;
           cursor: pointer;
         }
 
@@ -768,8 +769,9 @@ export default function Login() {
           }
           .ak-login-methods {
             display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 8px;
-            flex-wrap: wrap;
           }
           .ak-login-methods .ak-btn-secondary {
             width: 52px;

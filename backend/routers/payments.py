@@ -1710,20 +1710,22 @@ async def select_checkout_institution(
 
     # Fixed payment links are reusable templates. Each checkout gets its own
     # transaction so approval and wallet crediting remain independent.
-    if txn.transaction_type == "payment_link" and not _is_reusable_open_amount_link(txn) and not _is_reusable_payment_attempt(txn):
+    if (txn.transaction_type == "payment_link" and not _is_reusable_open_amount_link(txn) and not _is_reusable_payment_attempt(txn)):
         txn = await _create_reusable_payment_attempt(db, txn)
 
-    if (txn.currency or "").upper() != "PHP":
-        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments")
+    transaction_currency = (txn.currency or "PHP").upper()
     amount_php = float(txn.amount or 0)
-    if amount_php < SWIFTPAY_MIN_PHP_AMOUNT:
+    institution_code = payload.institution_code.strip().upper()
+    is_multicurrency_qrph = transaction_currency != "PHP" and institution_code == "QRPH"
+    if transaction_currency != "PHP" and not is_multicurrency_qrph:
+        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments, except QRPH multicurrency checkout")
+    if transaction_currency == "PHP" and amount_php < SWIFTPAY_MIN_PHP_AMOUNT:
         raise HTTPException(
             status_code=400,
             detail="PHP institution checkout requires an amount of at least PHP 1.",
         )
-    institution_code = payload.institution_code.strip().upper()
     channels = await get_payment_channels(db)
-    if not php_checkout_institution_is_enabled(institution_code, channels):
+    if not php_checkout_institution_is_enabled("QRPH" if is_multicurrency_qrph else institution_code, channels):
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
     service = SwiftPayService()
     if not service.is_configured():
@@ -1767,7 +1769,7 @@ async def select_checkout_institution(
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
-            currency="PHP",
+            currency=transaction_currency,
             qr_type="P2M",
         )
         if not qr_result.get("success"):
