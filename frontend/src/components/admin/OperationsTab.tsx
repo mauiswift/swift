@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Play, RefreshCw, Database, Loader2 } from 'lucide-react';
@@ -34,8 +35,21 @@ export function OperationsTab() {
   const handleRun = async (opId: string) => {
     try {
       setProcessing(true);
-      // TODO: Call API to run operation
+      let response;
+      if (opId === 'settle') {
+        response = await adminApiService.runSettlementBatch();
+      } else if (opId === 'reconcile') {
+        response = await adminApiService.reconcileBalances();
+      } else if (opId === 'cleanup') {
+        response = await adminApiService.runDatabaseCleanup();
+      }
+
+      if (!response || !response.ok) {
+        throw new Error(response?.data?.message || 'Operation failed');
+      }
       toast.success(`Operation started: ${operations.find((op) => op.id === opId)?.name}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Operation failed');
     } finally {
       setProcessing(false);
     }

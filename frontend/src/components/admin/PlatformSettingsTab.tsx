@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +21,21 @@ export function PlatformSettingsTab() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      // TODO: Call API to save settings
+      const response = await adminApiService.updatePlatformSettings({
+        collectionCurrencies: settings.collectionCurrencies.split(',').map((c) => c.trim()),
+        systemFeePercent: parseFloat(settings.systemFeePercent),
+        additionalFeePercent: parseFloat(settings.additionalFeePercent),
+        totalFeePercent: parseFloat(settings.totalFeePercent),
+        vipGoldFeePercent: parseFloat(settings.vipGoldFeePercent),
+        maintenanceMode: settings.maintenanceMode,
+      });
+
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to save settings');
+      }
       toast.success('Platform settings saved');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setSaving(false);
     }

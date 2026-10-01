@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,8 +88,16 @@ export function AuditLogsTab() {
       log.resource.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleExport = () => {
-    toast.success('Audit logs exported to CSV');
+  const handleExport = async () => {
+    try {
+      const response = await adminApiService.exportAuditLogs();
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to export logs');
+      }
+      toast.success('Audit logs exported to CSV');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export logs');
+    }
   };
 
   const getActionColor = (action: string) => {

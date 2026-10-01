@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   BarChart,
@@ -110,70 +110,13 @@ export function BankingDashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // TODO: Replace with actual API calls
-        // const response = await client.get('/api/v1/admin/dashboard');
+        const response = await adminApiService.getDashboard();
 
-        // Mock data for now
-        const mockData: DashboardData = {
-          metrics: {
-            totalTransactions: 1247,
-            totalVolume: 2450000,
-            activeTransactions: 23,
-            activeMerchants: 156,
-            pendingSettlements: 5,
-            successRate: 98.7,
-          },
-          transactionTrend: [
-            { date: 'Mon', count: 145, volume: 285000 },
-            { date: 'Tue', count: 178, volume: 342000 },
-            { date: 'Wed', count: 192, volume: 385000 },
-            { date: 'Thu', count: 156, volume: 298000 },
-            { date: 'Fri', count: 203, volume: 410000 },
-            { date: 'Sat', count: 189, volume: 365000 },
-            { date: 'Sun', count: 184, volume: 365000 },
-          ],
-          transactionStatus: [
-            { status: 'Completed', count: 1231 },
-            { status: 'Pending', count: 12 },
-            { status: 'Failed', count: 4 },
-          ],
-          recentActivity: [
-            {
-              id: '1',
-              type: 'transaction',
-              title: 'Large Transaction',
-              description: 'Merchant ABC processed PHP 500,000 payment',
-              timestamp: '2 minutes ago',
-              status: 'success',
-            },
-            {
-              id: '2',
-              type: 'settlement',
-              title: 'Settlement Batch',
-              description: 'Daily settlement batch initiated (12 merchants)',
-              timestamp: '15 minutes ago',
-              status: 'pending',
-            },
-            {
-              id: '3',
-              type: 'user_action',
-              title: 'Team Member Added',
-              description: 'New team member john@example.com invited',
-              timestamp: '1 hour ago',
-              status: 'success',
-            },
-            {
-              id: '4',
-              type: 'alert',
-              title: 'Failed Transaction',
-              description: 'Merchant XYZ - Payment processing failed (retry in progress)',
-              timestamp: '3 hours ago',
-              status: 'warning',
-            },
-          ],
-        };
+        if (!response.ok) {
+          throw new Error(response.data?.message || 'Failed to load dashboard');
+        }
 
-        setData(mockData);
+        setData(response.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard');
       } finally {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,35 +25,26 @@ interface User {
 
 export function UsersTab() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [users] = useState<User[]>([
-    {
-      id: '1',
-      email: 'admin@swift.com',
-      name: 'John Admin',
-      role: 'Super Admin',
-      status: 'active',
-      lastLogin: '2026-10-02T16:45:00Z',
-      createdAt: '2025-01-15T10:00:00Z',
-    },
-    {
-      id: '2',
-      email: 'finance@swift.com',
-      name: 'Jane Finance',
-      role: 'Finance Officer',
-      status: 'active',
-      lastLogin: '2026-10-02T14:20:00Z',
-      createdAt: '2025-06-20T14:30:00Z',
-    },
-    {
-      id: '3',
-      email: 'ops@swift.com',
-      name: 'Bob Operations',
-      role: 'Operations',
-      status: 'active',
-      lastLogin: '2026-10-02T10:15:00Z',
-      createdAt: '2025-08-10T09:00:00Z',
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await adminApiService.getPlatformUsers(1, 100, searchQuery);
+        if (response.ok) {
+          setUsers(response.data.users || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [searchQuery]);
 
   const filteredUsers = users.filter(
     (user) =>

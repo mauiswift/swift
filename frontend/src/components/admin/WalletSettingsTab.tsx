@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +21,21 @@ export function WalletSettingsTab() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      // TODO: Call API to save settings
+      const response = await adminApiService.updateWalletSettings({
+        depositCurrencies: settings.depositCurrencies.split(',').map((c) => c.trim()),
+        maxDepositAmount: parseFloat(settings.maxDepositAmount),
+        minDepositAmount: parseFloat(settings.minDepositAmount),
+        depositFeePercent: parseFloat(settings.depositFeePercent),
+        withdrawalFeePercent: parseFloat(settings.withdrawalFeePercent),
+        settlementFeePercent: parseFloat(settings.settlementFeePercent),
+      });
+
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to save settings');
+      }
       toast.success('Wallet settings saved successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setSaving(false);
     }

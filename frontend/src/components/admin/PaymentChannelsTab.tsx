@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertCircle, Power } from 'lucide-react';
@@ -18,77 +19,46 @@ interface PaymentChannel {
 }
 
 export function PaymentChannelsTab() {
-  const [channels, setChannels] = useState<PaymentChannel[]>([
-    {
-      id: 'bdo',
-      name: 'BDO Bank Transfer',
-      currency: 'PHP',
-      type: 'bank',
-      enabled: true,
-      processingFeePercent: 2.5,
-      minAmount: 100,
-      maxAmount: 500000,
-      countries: ['PH'],
-      lastUpdated: '2026-10-02T10:00:00Z',
-    },
-    {
-      id: 'metrobank',
-      name: 'Metrobank Transfer',
-      currency: 'PHP',
-      type: 'bank',
-      enabled: true,
-      processingFeePercent: 2.5,
-      minAmount: 100,
-      maxAmount: 500000,
-      countries: ['PH'],
-      lastUpdated: '2026-10-02T10:00:00Z',
-    },
-    {
-      id: 'usdt',
-      name: 'USDT (ERC-20)',
-      currency: 'USDT',
-      type: 'crypto',
-      enabled: true,
-      processingFeePercent: 1.0,
-      minAmount: 10,
-      maxAmount: 100000,
-      countries: ['Global'],
-      lastUpdated: '2026-10-02T10:00:00Z',
-    },
-    {
-      id: 'cc',
-      name: 'Credit Card',
-      currency: 'PHP',
-      type: 'digital',
-      enabled: false,
-      processingFeePercent: 3.5,
-      minAmount: 100,
-      maxAmount: 100000,
-      countries: ['PH', 'Global'],
-      lastUpdated: '2026-10-01T15:30:00Z',
-    },
-    {
-      id: 'gcash',
-      name: 'GCash',
-      currency: 'PHP',
-      type: 'digital',
-      enabled: true,
-      processingFeePercent: 2.0,
-      minAmount: 100,
-      maxAmount: 50000,
-      countries: ['PH'],
-      lastUpdated: '2026-10-02T10:00:00Z',
-    },
-  ]);
+  const [channels, setChannels] = useState<PaymentChannel[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleToggle = (id: string) => {
-    setChannels(
-      channels.map((ch) =>
-        ch.id === id ? { ...ch, enabled: !ch.enabled } : ch
-      )
-    );
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        setLoading(true);
+        const response = await adminApiService.getPaymentChannels();
+        if (response.ok) {
+          setChannels(response.data.channels || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch channels:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChannels();
+  }, []);
+
+  const handleToggle = async (id: string) => {
     const channel = channels.find((ch) => ch.id === id);
-    toast.success(`${channel?.name} ${channel?.enabled ? 'disabled' : 'enabled'}`);
+    if (!channel) return;
+
+    try {
+      const response = await adminApiService.updatePaymentChannel(id, !channel.enabled);
+      if (response.ok) {
+        setChannels(
+          channels.map((ch) =>
+            ch.id === id ? { ...ch, enabled: !ch.enabled } : ch
+          )
+        );
+        toast.success(`${channel.name} ${!channel.enabled ? 'enabled' : 'disabled'}`);
+      } else {
+        toast.error('Failed to update channel');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to toggle channel');
+    }
   };
 
   const typeColors = {

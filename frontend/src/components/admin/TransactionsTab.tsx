@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,94 +101,18 @@ export function TransactionsTab() {
     try {
       setLoading(true);
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await client.get('/api/v1/admin/transactions', {
-      //   params: {
-      //     page,
-      //     limit: ITEMS_PER_PAGE,
-      //     status: statusFilter === 'all' ? undefined : statusFilter,
-      //     type: typeFilter === 'all' ? undefined : typeFilter,
-      //     search: searchQuery,
-      //   },
-      // });
+      const response = await adminApiService.getTransactions(page, ITEMS_PER_PAGE, {
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        type: typeFilter === 'all' ? undefined : typeFilter,
+        search: searchQuery,
+      });
 
-      // Mock data for now
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          transactionId: 'TXN-20261001-001',
-          merchant: { id: 1, name: 'ABC Electronics', email: 'admin@abc.com' },
-          amount: 45000,
-          currency: 'PHP',
-          status: 'completed',
-          type: 'payment',
-          paymentMethod: 'BDO Bank Transfer',
-          createdAt: '2026-10-01T14:30:00Z',
-          updatedAt: '2026-10-01T14:35:00Z',
-          reference: 'ORDER-12345',
-          description: 'Payment for Order #12345',
-        },
-        {
-          id: '2',
-          transactionId: 'TXN-20261001-002',
-          merchant: { id: 2, name: 'Tech Store Korea', email: 'info@techstore.kr' },
-          amount: 125000,
-          currency: 'KRW',
-          status: 'pending',
-          type: 'payment',
-          paymentMethod: 'Credit Card',
-          createdAt: '2026-10-01T15:20:00Z',
-          updatedAt: '2026-10-01T15:20:00Z',
-          reference: 'ORDER-12346',
-          description: 'Payment for Order #12346',
-        },
-        {
-          id: '3',
-          transactionId: 'TXN-20261001-003',
-          merchant: { id: 3, name: 'Fashion Hub', email: 'support@fashionhub.ph' },
-          amount: 75000,
-          currency: 'PHP',
-          status: 'failed',
-          type: 'payment',
-          paymentMethod: 'Metrobank Transfer',
-          createdAt: '2026-10-01T13:15:00Z',
-          updatedAt: '2026-10-01T13:20:00Z',
-          reference: 'ORDER-12344',
-          description: 'Payment for Order #12344',
-          error: 'Insufficient funds in merchant account',
-        },
-        {
-          id: '4',
-          transactionId: 'TXN-20261001-004',
-          merchant: { id: 1, name: 'ABC Electronics', email: 'admin@abc.com' },
-          amount: 500000,
-          currency: 'PHP',
-          status: 'completed',
-          type: 'settlement',
-          paymentMethod: 'Bank Settlement',
-          createdAt: '2026-10-01T12:00:00Z',
-          updatedAt: '2026-10-01T12:05:00Z',
-          reference: 'SETTLEMENT-001',
-          description: 'Daily settlement batch',
-        },
-        {
-          id: '5',
-          transactionId: 'TXN-20261001-005',
-          merchant: { id: 4, name: 'Online Mart', email: 'contact@onlinemart.com' },
-          amount: 200000,
-          currency: 'USDT',
-          status: 'processing',
-          type: 'deposit',
-          paymentMethod: 'Crypto Transfer',
-          createdAt: '2026-10-01T10:45:00Z',
-          updatedAt: '2026-10-01T10:50:00Z',
-          reference: 'USDT-DEP-001',
-          description: 'USDT top-up deposit',
-        },
-      ];
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to load transactions');
+      }
 
-      setTransactions(mockTransactions);
-      setTotal(mockTransactions.length);
+      setTransactions(response.data.transactions || []);
+      setTotal(response.data.total || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
       toast.error('Failed to load transactions');
@@ -203,21 +127,27 @@ export function TransactionsTab() {
 
   const handleRetry = async (transaction: Transaction) => {
     try {
-      // TODO: Call API to retry transaction
+      const response = await adminApiService.retryTransaction(transaction.transactionId);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to retry transaction');
+      }
       toast.success(`Retry initiated for ${transaction.transactionId}`);
       await fetchTransactions();
     } catch (err) {
-      toast.error('Failed to retry transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to retry transaction');
     }
   };
 
   const handleCancel = async (transaction: Transaction) => {
     try {
-      // TODO: Call API to cancel transaction
+      const response = await adminApiService.cancelTransaction(transaction.transactionId);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to cancel transaction');
+      }
       toast.success(`Transaction ${transaction.transactionId} cancelled`);
       await fetchTransactions();
     } catch (err) {
-      toast.error('Failed to cancel transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to cancel transaction');
     }
   };
 

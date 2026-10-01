@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -106,124 +106,16 @@ export function SettlementsTab() {
     try {
       setLoading(true);
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await client.get('/api/v1/admin/settlements', {
-      //   params: {
-      //     status: statusFilter === 'all' ? undefined : statusFilter,
-      //     search: searchQuery,
-      //   },
-      // });
+      const response = await adminApiService.getSettlements(1, 20, {
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        search: searchQuery,
+      });
 
-      // Mock data for now
-      const mockBatches: SettlementBatch[] = [
-        {
-          id: '1',
-          batchId: 'SETTLE-20261001-001',
-          status: 'completed',
-          period: 'Daily',
-          startDate: '2026-09-30T00:00:00Z',
-          endDate: '2026-09-30T23:59:59Z',
-          merchantCount: 45,
-          transactionCount: 342,
-          totalAmount: 2450000,
-          totalFees: 12250,
-          netAmount: 2437750,
-          currency: 'PHP',
-          createdAt: '2026-10-01T00:30:00Z',
-          completedAt: '2026-10-01T01:15:00Z',
-          merchants: [
-            { id: 1, name: 'ABC Electronics', amount: 450000, status: 'completed' },
-            { id: 2, name: 'Tech Store', amount: 325000, status: 'completed' },
-            { id: 3, name: 'Fashion Hub', amount: 215000, status: 'completed' },
-          ],
-        },
-        {
-          id: '2',
-          batchId: 'SETTLE-20261001-002',
-          status: 'processing',
-          period: 'Daily',
-          startDate: '2026-10-01T00:00:00Z',
-          endDate: '2026-10-01T23:59:59Z',
-          merchantCount: 48,
-          transactionCount: 387,
-          totalAmount: 3125000,
-          totalFees: 15625,
-          netAmount: 3109375,
-          currency: 'PHP',
-          createdAt: '2026-10-02T00:15:00Z',
-          processedAt: '2026-10-02T00:35:00Z',
-          merchants: [
-            { id: 1, name: 'ABC Electronics', amount: 525000, status: 'completed' },
-            { id: 4, name: 'Online Mart', amount: 625000, status: 'processing' },
-            { id: 5, name: 'Digital Store', amount: 425000, status: 'completed' },
-          ],
-        },
-        {
-          id: '3',
-          batchId: 'SETTLE-20260930-001',
-          status: 'partial',
-          period: 'Daily',
-          startDate: '2026-09-29T00:00:00Z',
-          endDate: '2026-09-29T23:59:59Z',
-          merchantCount: 42,
-          transactionCount: 298,
-          totalAmount: 1875000,
-          totalFees: 9375,
-          netAmount: 1865625,
-          currency: 'PHP',
-          createdAt: '2026-09-30T00:20:00Z',
-          completedAt: '2026-09-30T02:45:00Z',
-          error: 'Failed to process settlement for 2 merchants (network timeout)',
-          merchants: [
-            { id: 1, name: 'ABC Electronics', amount: 350000, status: 'completed' },
-            { id: 2, name: 'Tech Store', amount: 325000, status: 'failed' },
-            { id: 6, name: 'Beauty Plus', amount: 275000, status: 'completed' },
-          ],
-        },
-        {
-          id: '4',
-          batchId: 'SETTLE-20260928-002',
-          status: 'failed',
-          period: 'Daily',
-          startDate: '2026-09-28T00:00:00Z',
-          endDate: '2026-09-28T23:59:59Z',
-          merchantCount: 40,
-          transactionCount: 256,
-          totalAmount: 1650000,
-          totalFees: 8250,
-          netAmount: 1641750,
-          currency: 'PHP',
-          createdAt: '2026-09-29T00:15:00Z',
-          error: 'Database connection error - settlement batch rolled back',
-          merchants: [
-            { id: 1, name: 'ABC Electronics', amount: 400000, status: 'failed' },
-            { id: 7, name: 'Sports World', amount: 350000, status: 'failed' },
-            { id: 8, name: 'Electronics Plus', amount: 300000, status: 'failed' },
-          ],
-        },
-        {
-          id: '5',
-          batchId: 'SETTLE-20261002-PENDING',
-          status: 'pending',
-          period: 'Daily',
-          startDate: '2026-10-02T00:00:00Z',
-          endDate: '2026-10-02T23:59:59Z',
-          merchantCount: 52,
-          transactionCount: 421,
-          totalAmount: 3450000,
-          totalFees: 17250,
-          netAmount: 3432750,
-          currency: 'PHP',
-          createdAt: '2026-10-03T00:05:00Z',
-          merchants: [
-            { id: 1, name: 'ABC Electronics', amount: 575000, status: 'pending' },
-            { id: 2, name: 'Tech Store', amount: 475000, status: 'pending' },
-            { id: 4, name: 'Online Mart', amount: 725000, status: 'pending' },
-          ],
-        },
-      ];
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to load settlements');
+      }
 
-      setBatches(mockBatches);
+      setBatches(response.data.batches || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settlements');
       toast.error('Failed to load settlements');
@@ -238,27 +130,40 @@ export function SettlementsTab() {
 
   const handleProcessBatch = async (batch: SettlementBatch) => {
     try {
-      // TODO: Call API to process settlement batch
+      const response = await adminApiService.processSettlementBatch(batch.batchId);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to process batch');
+      }
       toast.success(`Settlement batch ${batch.batchId} processing initiated`);
       await fetchSettlements();
     } catch (err) {
-      toast.error('Failed to process settlement batch');
+      toast.error(err instanceof Error ? err.message : 'Failed to process settlement batch');
     }
   };
 
   const handleRetryBatch = async (batch: SettlementBatch) => {
     try {
-      // TODO: Call API to retry settlement batch
+      const response = await adminApiService.retrySettlementBatch(batch.batchId);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to retry batch');
+      }
       toast.success(`Settlement batch ${batch.batchId} retry initiated`);
       await fetchSettlements();
     } catch (err) {
-      toast.error('Failed to retry settlement batch');
+      toast.error(err instanceof Error ? err.message : 'Failed to retry settlement batch');
     }
   };
 
-  const handleExportBatch = (batch: SettlementBatch) => {
-    // TODO: Export batch to CSV/PDF
-    toast.success(`Settlement batch ${batch.batchId} export started`);
+  const handleExportBatch = async (batch: SettlementBatch) => {
+    try {
+      const response = await adminApiService.exportSettlement(batch.batchId);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to export batch');
+      }
+      toast.success(`Settlement batch ${batch.batchId} export started`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export settlement batch');
+    }
   };
 
   const filteredBatches = batches.filter((batch) => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,69 +66,16 @@ export function WalletControlTab() {
     try {
       setLoading(true);
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await client.get('/api/v1/admin/wallets');
+      const response = await adminApiService.getWallets(1, 20, {
+        currency: currencyFilter === 'all' ? undefined : currencyFilter,
+        search: searchQuery,
+      });
 
-      // Mock data
-      const mockWallets: Wallet[] = [
-        {
-          id: 1,
-          merchantId: 1,
-          merchantName: 'ABC Electronics',
-          currency: 'PHP',
-          balance: 450000,
-          availableBalance: 440000,
-          pendingBalance: 10000,
-          isFrozen: false,
-          lastUpdated: '2026-10-02T15:30:00Z',
-        },
-        {
-          id: 2,
-          merchantId: 2,
-          merchantName: 'Tech Store Korea',
-          currency: 'KRW',
-          balance: 1250000,
-          availableBalance: 1250000,
-          pendingBalance: 0,
-          isFrozen: false,
-          lastUpdated: '2026-10-02T14:15:00Z',
-        },
-        {
-          id: 3,
-          merchantId: 3,
-          merchantName: 'Fashion Hub',
-          currency: 'PHP',
-          balance: 125000,
-          availableBalance: 125000,
-          pendingBalance: 0,
-          isFrozen: true,
-          lastUpdated: '2026-10-02T10:00:00Z',
-        },
-        {
-          id: 4,
-          merchantId: 4,
-          merchantName: 'Online Mart',
-          currency: 'USDT',
-          balance: 25000,
-          availableBalance: 24500,
-          pendingBalance: 500,
-          isFrozen: false,
-          lastUpdated: '2026-10-02T16:45:00Z',
-        },
-        {
-          id: 5,
-          merchantId: 5,
-          merchantName: 'Digital Store',
-          currency: 'PHP',
-          balance: 750000,
-          availableBalance: 750000,
-          pendingBalance: 0,
-          isFrozen: false,
-          lastUpdated: '2026-10-02T12:20:00Z',
-        },
-      ];
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to load wallets');
+      }
 
-      setWallets(mockWallets);
+      setWallets(response.data.wallets || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load wallets');
       toast.error('Failed to load wallets');
@@ -149,12 +96,14 @@ export function WalletControlTab() {
 
     try {
       setAdjusting(true);
-      // TODO: Call API to adjust wallet
-      // await client.post(`/api/v1/admin/wallets/${selectedWallet.id}/adjust`, {
-      //   type: adjustmentType,
-      //   amount: parseFloat(adjustmentAmount),
-      //   reason: adjustmentReason,
-      // });
+      const amount = parseFloat(adjustmentAmount);
+      const response = adjustmentType === 'credit'
+        ? await adminApiService.creditWallet(selectedWallet.id, amount, adjustmentReason)
+        : await adminApiService.debitWallet(selectedWallet.id, amount, adjustmentReason);
+
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to adjust wallet');
+      }
 
       toast.success(
         `Wallet ${adjustmentType}ed with ${adjustmentAmount} ${selectedWallet.currency}`
@@ -164,7 +113,7 @@ export function WalletControlTab() {
       setAdjustmentReason('');
       await fetchWallets();
     } catch (err) {
-      toast.error('Failed to adjust wallet');
+      toast.error(err instanceof Error ? err.message : 'Failed to adjust wallet');
     } finally {
       setAdjusting(false);
     }
@@ -172,11 +121,14 @@ export function WalletControlTab() {
 
   const handleToggleFreeze = async (wallet: Wallet) => {
     try {
-      // TODO: Call API to toggle freeze
+      const response = await adminApiService.toggleWalletFreeze(wallet.id, !wallet.isFrozen);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to toggle freeze');
+      }
       toast.success(`Wallet ${wallet.isFrozen ? 'unfrozen' : 'frozen'}`);
       await fetchWallets();
     } catch (err) {
-      toast.error('Failed to toggle wallet freeze');
+      toast.error(err instanceof Error ? err.message : 'Failed to toggle wallet freeze');
     }
   };
 

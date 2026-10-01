@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { adminApiService } from '@/lib/admin-api-service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,72 +62,16 @@ export function CryptoApprovalsTab() {
     try {
       setLoading(true);
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await client.get('/api/v1/admin/crypto-requests');
+      const response = await adminApiService.getCryptoRequests(1, 20, {
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        search: searchQuery,
+      });
 
-      // Mock data
-      const mockRequests: CryptoRequest[] = [
-        {
-          id: 1,
-          requestId: 'CRYPTO-20261002-001',
-          merchantId: 4,
-          merchantName: 'Online Mart',
-          amount: 100,
-          status: 'pending',
-          network: 'Ethereum',
-          createdAt: '2026-10-02T10:30:00Z',
-          notes: 'Top-up for operations',
-        },
-        {
-          id: 2,
-          requestId: 'CRYPTO-20261002-002',
-          merchantId: 1,
-          merchantName: 'ABC Electronics',
-          amount: 250,
-          status: 'pending',
-          network: 'Ethereum',
-          createdAt: '2026-10-02T11:15:00Z',
-          notes: 'Regular top-up',
-        },
-        {
-          id: 3,
-          requestId: 'CRYPTO-20261001-001',
-          merchantId: 5,
-          merchantName: 'Digital Store',
-          amount: 500,
-          status: 'approved',
-          network: 'Ethereum',
-          txHash: '0x1234567890abcdef',
-          createdAt: '2026-10-01T14:20:00Z',
-          approvedAt: '2026-10-01T14:35:00Z',
-        },
-        {
-          id: 4,
-          requestId: 'CRYPTO-20261001-002',
-          merchantId: 2,
-          merchantName: 'Tech Store',
-          amount: 1000,
-          status: 'completed',
-          network: 'Ethereum',
-          txHash: '0xfedcba0987654321',
-          createdAt: '2026-10-01T09:10:00Z',
-          approvedAt: '2026-10-01T09:25:00Z',
-          completedAt: '2026-10-01T09:45:00Z',
-        },
-        {
-          id: 5,
-          requestId: 'CRYPTO-20260930-001',
-          merchantId: 6,
-          merchantName: 'Beauty Plus',
-          amount: 200,
-          status: 'rejected',
-          network: 'Ethereum',
-          createdAt: '2026-09-30T16:40:00Z',
-          rejectionReason: 'Insufficient KYC documentation',
-        },
-      ];
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to load crypto requests');
+      }
 
-      setRequests(mockRequests);
+      setRequests(response.data.requests || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load crypto requests');
       toast.error('Failed to load crypto requests');
@@ -145,17 +89,17 @@ export function CryptoApprovalsTab() {
 
     try {
       setProcessing(true);
-      // TODO: Call API to approve request
-      // await client.post(`/api/v1/admin/crypto-requests/${selectedRequest.id}/approve`, {
-      //   notes: approvalNotes,
-      // });
+      const response = await adminApiService.approveCryptoRequest(selectedRequest.id, approvalNotes);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to approve request');
+      }
 
       toast.success(`Crypto request ${selectedRequest.requestId} approved`);
       setShowApprovalDialog(false);
       setApprovalNotes('');
       await fetchRequests();
     } catch (err) {
-      toast.error('Failed to approve request');
+      toast.error(err instanceof Error ? err.message : 'Failed to approve request');
     } finally {
       setProcessing(false);
     }
@@ -166,16 +110,16 @@ export function CryptoApprovalsTab() {
 
     try {
       setProcessing(true);
-      // TODO: Call API to reject request
-      // await client.post(`/api/v1/admin/crypto-requests/${selectedRequest.id}/reject`, {
-      //   reason,
-      // });
+      const response = await adminApiService.rejectCryptoRequest(selectedRequest.id, reason);
+      if (!response.ok) {
+        throw new Error(response.data?.message || 'Failed to reject request');
+      }
 
       toast.success(`Crypto request ${selectedRequest.requestId} rejected`);
       setShowDetails(false);
       await fetchRequests();
     } catch (err) {
-      toast.error('Failed to reject request');
+      toast.error(err instanceof Error ? err.message : 'Failed to reject request');
     } finally {
       setProcessing(false);
     }
