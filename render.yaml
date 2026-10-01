@@ -3,8 +3,8 @@ services:
     name: swiftpay-frontend
     runtime: node
     rootDir: frontend
-    buildCommand: npm install && npm run build
-    startCommand: npm run preview
+    buildCommand: npm install -g pnpm@8 && pnpm install && pnpm run build
+    startCommand: pnpm run preview
     plan: starter
     autoDeploy: true
     envVars:
