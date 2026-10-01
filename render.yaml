@@ -1,12 +1,12 @@
 services:
   - type: web
     name: swiftpay-frontend
-    runtime: docker
-    rootDir: .
-    dockerfilePath: ./frontend/Dockerfile
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview
     plan: starter
     autoDeploy: true
-    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
