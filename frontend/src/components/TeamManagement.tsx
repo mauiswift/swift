@@ -230,6 +230,260 @@ function RevokeConfirmDialog({
   );
 }
 
+// ── Invite Form Dialog ────────────────────────────────────────────────────────
+
+interface InviteFormDialogProps {
+  isOpen: boolean;
+  email: string;
+  setEmail: (value: string) => void;
+  selectedPermissions: Record<string, boolean>;
+  setSelectedPermissions: (value: Record<string, boolean>) => void;
+  permissionSearch: string;
+  setPermissionSearch: (value: string) => void;
+  onSend: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+function InviteFormDialog({
+  isOpen,
+  email,
+  setEmail,
+  selectedPermissions,
+  setSelectedPermissions,
+  permissionSearch,
+  setPermissionSearch,
+  onSend,
+  onCancel,
+  isLoading,
+}: InviteFormDialogProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const permissionGroups: Record<string, string[]> = {
+    'View Payments': ['can_view_transaction_details'],
+    'Manage Links': ['can_create_transfers', 'can_add_edit_customers', 'can_see_api_keys'],
+    'Manage Pages': ['can_edit_business_settings', 'can_add_edit_delete_cards_promotion'],
+    'Refund & Contest dispute': ['can_refund_cards_charges'],
+    'Export': ['can_download_csv_report'],
+    'Develop': ['can_resend_callbacks', 'can_change_callback_urls'],
+    'Manage Users': ['can_add_delete_user', 'can_edit_user_access'],
+    'View Wallet': ['can_withdraw_funds'],
+    'Manage Wallet Transactions': ['can_credit_wallet', 'can_debit_wallet'],
+    'View child accounts': [],
+    'Manage child accounts': ['can_edit_user_access'],
+    'Manage child payouts': ['can_withdraw_funds'],
+    'Manage loan offers': [],
+    'Manage loans': [],
+    'Manage Invoices': ['can_generate_invoice'],
+    'Manage Approvals': ['can_approve_batch_disbursements'],
+    'Manage Approvals Settings': [],
+    'Manage Transfers Settings': [],
+    'Manage Invoices Settings': [],
+    'Manage Expenses Settings': [],
+    'Manage Storefront': ['can_edit_business_settings'],
+    'Manage Order & Pay': [],
+    'Manage Products': ['can_edit_business_settings'],
+  };
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  };
+
+  const toggleGroupPermissions = (groupName: string) => {
+    const perms = permissionGroups[groupName] || [];
+    if (perms.length === 0) return;
+
+    const allGroupSelected = perms.every(p => selectedPermissions[p]);
+
+    const updated = { ...selectedPermissions };
+    perms.forEach(p => {
+      updated[p] = !allGroupSelected;
+    });
+    setSelectedPermissions(updated);
+  };
+
+  const togglePermission = (permissionKey: string) => {
+    setSelectedPermissions({
+      ...selectedPermissions,
+      [permissionKey]: !selectedPermissions[permissionKey]
+    });
+  };
+
+  const selectAllPermissions = () => {
+    const allPerms: Record<string, boolean> = {};
+    Object.values(permissionGroups).forEach(perms => {
+      perms.forEach(p => {
+        allPerms[p] = true;
+      });
+    });
+    setSelectedPermissions(allPerms);
+  };
+
+  if (!isOpen) return null;
+
+  const filteredGroups = Object.entries(permissionGroups).filter(([groupName]) =>
+    groupName.toLowerCase().includes(permissionSearch.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" role="presentation">
+      <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="invite-dialog-title">
+        <div className="flex items-center justify-between mb-6">
+          <h2 id="invite-dialog-title" className="text-lg font-semibold text-slate-900">Invite a new team member</h2>
+          <button
+            onClick={onCancel}
+            className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-5">
+          {/* Email Input */}
+          <div>
+            <Label htmlFor="invite-email" className="text-sm font-medium text-slate-700">Email address</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1.5 h-10"
+            />
+          </div>
+
+          {/* Permissions Section */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                Permissions <span className="text-slate-400 text-xs">(i)</span>
+              </Label>
+              <button
+                onClick={selectAllPermissions}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                Select all
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                type="search"
+                placeholder="Search permissions, e.g. refund, export, invoices"
+                value={permissionSearch}
+                onChange={(e) => setPermissionSearch(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+
+            {/* Permissions List */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-96 overflow-y-auto">
+              {filteredGroups.length === 0 ? (
+                <div className="p-4 text-center text-sm text-slate-500">
+                  No permissions found
+                </div>
+              ) : (
+                filteredGroups.map(([groupName, perms]) => {
+                  const isExpanded = expandedGroups[groupName];
+                  const groupSelectedCount = perms.filter(p => selectedPermissions[p]).length;
+                  const allGroupSelected = groupSelectedCount === perms.length && perms.length > 0;
+                  const hasNoPermissions = perms.length === 0;
+
+                  return (
+                    <div key={groupName} className="border-b border-slate-100 last:border-b-0">
+                      <button
+                        onClick={() => {
+                          if (!hasNoPermissions) toggleGroupPermissions(groupName);
+                          toggleGroup(groupName);
+                        }}
+                        className="w-full flex items-center gap-3 p-3.5 hover:bg-slate-50 transition-colors"
+                      >
+                        {!hasNoPermissions && (
+                          <input
+                            type="checkbox"
+                            checked={allGroupSelected}
+                            onChange={() => toggleGroupPermissions(groupName)}
+                            className="h-5 w-5 rounded-md border border-slate-300 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                        {hasNoPermissions && <div className="h-5 w-5" />}
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-slate-900">{groupName}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {perms.length > 0 && <span className="text-xs text-slate-500">{groupSelectedCount} capabilities</span>}
+                          {perms.length > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleGroup(groupName);
+                              }}
+                              className="p-1 hover:bg-slate-200 rounded transition-colors text-sm"
+                            >
+                              {isExpanded ? '^' : 'v'}
+                            </button>
+                          )}
+                        </div>
+                      </button>
+
+                      {isExpanded && perms.length > 0 && (
+                        <div className="bg-slate-50 border-t border-slate-100 p-3 space-y-2">
+                          {perms.map(permKey => (
+                            <label key={permKey} className="flex items-center gap-2.5 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={selectedPermissions[permKey] || false}
+                                onChange={() => togglePermission(permKey)}
+                                className="h-4 w-4 rounded border border-slate-300 cursor-pointer"
+                              />
+                              <span className="text-xs text-slate-600 group-hover:text-slate-900">
+                                {PERMISSION_LABELS[permKey] || permKey}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={onSend}
+              disabled={isLoading || !email}
+              className="flex-[1.35] h-11 gap-2"
+            >
+              {isLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />Sending...</>
+              ) : (
+                <>Send Invitation</>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1 h-11"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Team Invitations Tab ──────────────────────────────────────────────────────
 
 export function TeamInvitationsTab() {
@@ -239,11 +493,9 @@ export function TeamInvitationsTab() {
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('admin');
   const [email, setEmail] = useState('');
-  const [organizationName, setOrganizationName] = useState('');
-  const [organizationId, setOrganizationId] = useState('');
-  const [notes, setNotes] = useState('');
+  const [selectedPermissions, setSelectedPermissions] = useState<Record<string, boolean>>({});
+  const [permissionSearch, setPermissionSearch] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<TeamInvitation | null>(null);
   const [lastInvitationLink, setLastInvitationLink] = useState<string | null>(null);
@@ -264,10 +516,15 @@ export function TeamInvitationsTab() {
 
   const handleSendInvitation = async () => {
     if (!email) { toast.error('Please enter an email address'); return; }
-    if (isSuperAdmin && selectedRole === 'owner' && !organizationName.trim() && !organizationId.trim()) {
-      toast.error('Organization name or ID is required for owner invitations');
+    const selectedPerms = Object.entries(selectedPermissions)
+      .filter(([, enabled]) => enabled)
+      .map(([perm]) => perm);
+
+    if (selectedPerms.length === 0) {
+      toast.error('Please select at least one permission');
       return;
     }
+
     try {
       setFormLoading(true);
       setLastInvitationLink(null);
@@ -275,10 +532,7 @@ export function TeamInvitationsTab() {
         method: 'POST',
         body: JSON.stringify({
           email,
-          role: selectedRole,
-          organization_name: isSuperAdmin ? (organizationName.trim() || undefined) : undefined,
-          organization_id: isSuperAdmin ? (organizationId.trim() || undefined) : undefined,
-          notes: notes || undefined,
+          permissions: selectedPerms,
         }),
       });
 
@@ -291,8 +545,9 @@ export function TeamInvitationsTab() {
       } else {
         toast.error(data?.email_error || 'Invitation created, but the email could not be sent. Use the manual link below.');
       }
-      setEmail(''); setOrganizationName(''); setOrganizationId(''); setNotes('');
-      setSelectedRole('admin');
+      setEmail('');
+      setSelectedPermissions({});
+      setPermissionSearch('');
       // Keep form open if we have a link to show
       if (!data?.manual_link) setFormOpen(false);
       await fetchInvitations();
@@ -349,116 +604,79 @@ export function TeamInvitationsTab() {
             )}
           </div>
         </CardHeader>
+      </Card>
 
-        {formOpen && (
+      {/* Invite Dialog */}
+      <InviteFormDialog
+        isOpen={formOpen}
+        email={email}
+        setEmail={setEmail}
+        selectedPermissions={selectedPermissions}
+        setSelectedPermissions={setSelectedPermissions}
+        permissionSearch={permissionSearch}
+        setPermissionSearch={setPermissionSearch}
+        onSend={handleSendInvitation}
+        onCancel={() => {
+          setFormOpen(false);
+          setLastInvitationLink(null);
+          setEmail('');
+          setSelectedPermissions({});
+          setPermissionSearch('');
+        }}
+        isLoading={formLoading}
+      />
+
+      {/* Show last invitation link if available */}
+      {lastInvitationLink && (
+        <Card className="overflow-hidden bg-white border border-blue-200 bg-blue-50 shadow-sm">
           <CardContent className="pt-5 sm:pt-6">
-            <div className="space-y-4">
-              <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-800">
-                {tx('Payment links owned by your organization settle into its single shared wallet. Grant each member only the permissions they need.', '조직 소유 결제 링크의 정산금은 조직 공동 지갑 하나로 입금됩니다. 각 팀원에게 필요한 권한만 부여하세요.')}
-              </div>
-              <div>
-                <Label htmlFor="team-invitation-email" className="text-sm font-medium">{tx('Email Address', '이메일 주소')}</Label>
-                <Input
-                  id="team-invitation-email"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="team-invitation-role" className="text-sm font-medium">{tx('Role', '역할')}</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger id="team-invitation-role" className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
-                    {isSuperAdmin && <SelectItem value="owner">Owner (create organization)</SelectItem>}
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="developer">Developer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {isSuperAdmin && (
-                <>
-                  <div>
-                    <Label htmlFor="team-invitation-organization-name" className="text-sm font-medium">{tx('Organization Name (Optional)', '조직 이름 (선택 사항)')}</Label>
-                    <Input
-                      id="team-invitation-organization-name"
-                      placeholder="Acme Business Inc"
-                      value={organizationName}
-                      onChange={(e) => setOrganizationName(e.target.value)}
-                      className="mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="team-invitation-organization-id" className="text-sm font-medium">{tx('Organization ID (Optional)', '조직 ID (선택 사항)')}</Label>
-                    <Input
-                      id="team-invitation-organization-id"
-                      placeholder="acme-business"
-                      value={organizationId}
-                      onChange={(e) => setOrganizationId(e.target.value)}
-                      className="mt-1.5"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Owner invites require a name or ID.</p>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <Label className="text-sm font-medium">{tx('Notes (Optional)', '메모 (선택 사항)')}</Label>
-                <Input
-                  placeholder="Add notes for this invitation..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-[1fr_auto]">
-                <Button onClick={handleSendInvitation} disabled={formLoading} className="min-h-11 gap-2">
-                  {formLoading ? (
-                    <><Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />Sending...</>
-                  ) : (
-                    <><Mail className="h-4 w-4" />Send Invitation</>
-                  )}
-                </Button>
-                <Button variant="outline" className="min-h-11" onClick={() => { setFormOpen(false); setLastInvitationLink(null); }}>{tx('Cancel', '취소')}</Button>
-              </div>
-
-              {lastInvitationLink && (
-                <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 animate-fade-in-up">
-                  <div className="flex items-center gap-2 text-blue-800 font-semibold text-xs uppercase tracking-wider mb-2">
-                    <Check className="h-4 w-4" />
-                    Invitation Link Created
-                  </div>
-                  <p className="text-xs text-blue-700 mb-3">
-                    Copy and share this link manually if the invitation email was not received:
-                  </p>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Input readOnly value={lastInvitationLink} className="h-10 min-w-0 text-xs font-mono bg-white" />
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(lastInvitationLink);
-                        toast.success('Copied!');
-                      }}
-                      className="h-10 shrink-0"
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center gap-2 text-blue-800 font-semibold text-xs uppercase tracking-wider mb-3">
+              <Check className="h-4 w-4" />
+              Invitation Link Created
+            </div>
+            <p className="text-xs text-blue-700 mb-3">
+              Copy and share this link manually if the invitation email was not received:
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input readOnly value={lastInvitationLink} className="h-10 min-w-0 text-xs font-mono bg-white" />
+              <Button
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(lastInvitationLink);
+                  toast.success('Copied!');
+                }}
+                className="h-10 shrink-0"
+              >
+                Copy
+              </Button>
             </div>
           </CardContent>
-        )}
+        </Card>
+      )}
+
+      {/* Invite Card Header */}
+      <Card className="overflow-hidden bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="bg-slate-50/70 pb-4 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <UserPlus className="h-4 w-4" />
+              </span>
+              <span>
+                {tx('Invite a team member', '팀원 초대')}
+                <span className="block text-xs font-normal text-slate-500 mt-0.5">
+                  {tx('Give a trusted teammate access to the shared organization wallet.', '신뢰할 수 있는 팀원에게 조직 공동 지갑 접근 권한을 부여하세요.')}
+                </span>
+              </span>
+            </CardTitle>
+            {!formOpen && (
+              <Button size="sm" onClick={() => setFormOpen(true)} className="h-10 gap-2 shrink-0">
+                <UserPlus className="h-3.5 w-3.5" />
+                New Invitation
+              </Button>
+            )}
+          </div>
+        </CardHeader>
       </Card>
 
       {/* Invitations List */}
