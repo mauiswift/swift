@@ -6,11 +6,10 @@ services:
     dockerfilePath: Dockerfile
     plan: starter
     autoDeploy: true
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
-      - key: VITE_API_URL
-        value: https://swiftpay-api.onrender.com
 
   - type: web
     name: swiftpay-api
