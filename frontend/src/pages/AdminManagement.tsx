@@ -45,6 +45,7 @@ export default function AdminManagement() {
   const canApproveTopups = Boolean(user?.permissions?.can_approve_topups);
   const canViewReports = Boolean(user?.permissions?.can_view_reports);
   const canManageBot = Boolean(user?.permissions?.can_manage_bot);
+  const canManageTossAccounts = Boolean(user?.permissions?.can_manage_toss_accounts);
 
   // Tab access control - Banking System
   const canAccessDashboard = isSuperAdmin;
@@ -59,6 +60,7 @@ export default function AdminManagement() {
   const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
   const canAccessPlatformSettings = isSuperAdmin && (canManagePayments || canManageWallet);
   const canAccessGovernance = isSuperAdmin;
+  const canAccessTossAccountApprovals = isSuperAdmin && canManageTossAccounts;
 
   // Build tabs
   const tabs = buildAdminTabs({
@@ -73,6 +75,7 @@ export default function AdminManagement() {
     canAccessUserManagement,
     canAccessPlatformSettings,
     canAccessOperations,
+    canAccessTossAccountApprovals,
     canManageTeam,
     canAccessGovernance,
     isSuperAdmin,
@@ -166,6 +169,11 @@ export default function AdminManagement() {
           {/* Crypto Approvals Tab */}
           {selectedTab === 'crypto-approvals' && canAccessCryptoApprovals && (
             <CryptoApprovalsTab />
+          )}
+
+          {/* TOSS Account Approvals Tab */}
+          {selectedTab === 'toss-account-approvals' && canAccessTossAccountApprovals && (
+            <TossAccountApprovalsPanel />
           )}
 
           {/* Payment Channels Tab */}

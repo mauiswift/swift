@@ -31,6 +31,7 @@ export type AdminTab =
   | 'audit-logs'
   | 'platform-settings'
   | 'operations'
+  | 'toss-account-approvals'
   | 'test-data-cleanup';
 
 export interface AdminTabMeta {
@@ -57,6 +58,7 @@ export interface AdminTabAccess {
   canAccessWalletSettings: boolean;
   canAccessPlatformSettings: boolean;
   canAccessOperations: boolean;
+  canAccessTossAccountApprovals: boolean;
   canManageTeam: boolean;
   canAccessGovernance: boolean;
   isSuperAdmin: boolean;
@@ -126,6 +128,16 @@ export function buildAdminTabs(access: AdminTabAccess, merchantCount: number): A
       icon: Bitcoin,
       group: 'Financial Control',
       description: 'Review and approve USDT top-up requests.',
+    });
+  }
+
+  if (access.canAccessTossAccountApprovals) {
+    tabs.push({
+      id: 'toss-account-approvals',
+      label: 'TOSS Account Approvals',
+      icon: ShieldCheck,
+      group: 'Financial Control',
+      description: 'Manage and approve TOSS bank account applications.',
     });
   }
 
