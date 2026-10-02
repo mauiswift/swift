@@ -113,8 +113,32 @@ async def get_checkout_institutions_compat(
     db: AsyncSession = Depends(get_db),
 ):
     txn = await _get_checkout_transaction(identifier, db)
-    if (txn.currency or "").upper() != "PHP":
-        return {"success": True, "data": []}
+    transaction_currency = (txn.currency or "").upper()
+
+    # For non-PHP currencies, return multicurrency payment methods
+    if transaction_currency != "PHP":
+        multicurrency_institutions = [
+            {
+                "id": "QRPH",
+                "code": "QRPH",
+                "name": "QR Ph",
+                "logoUrl": "/logos/qrph.svg",
+                "enabled": True,
+                "loginMethod": "qr",
+            }
+        ]
+        # Add TOSS for KRW payments
+        if transaction_currency == "KRW":
+            multicurrency_institutions.append({
+                "id": "TOSS",
+                "code": "TOSS",
+                "name": "Toss Bank",
+                "logoUrl": "/logos/toss.svg",
+                "enabled": True,
+                "loginMethod": "redirect",
+            })
+        return {"success": True, "data": multicurrency_institutions}
+
     channels = await get_payment_channels(db)
     result = await SwiftPayService().get_collection_institutions()
     data = result.get("data") if result.get("success") else []
@@ -157,11 +181,20 @@ async def select_checkout_institution_compat(
     db: AsyncSession = Depends(get_db),
 ):
     txn = await _get_checkout_transaction(identifier, db)
-    if (txn.currency or "").upper() != "PHP":
-        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments")
+    transaction_currency = (txn.currency or "PHP").upper()
     institution_code = str(payload.get("institution_code") or "").strip().upper()
     if not institution_code:
         raise HTTPException(status_code=422, detail="Institution code is required")
+
+    # Check if this is a supported multicurrency combination
+    is_multicurrency_qrph = transaction_currency != "PHP" and institution_code == "QRPH"
+    is_multicurrency_toss = transaction_currency == "KRW" and institution_code == "TOSS"
+    is_supported_multicurrency = is_multicurrency_qrph or is_multicurrency_toss
+
+    # PHP-only check: only for non-supported multicurrency
+    if transaction_currency != "PHP" and not is_supported_multicurrency:
+        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments, QRPH for all currencies, and TOSS for KRW")
+
     channels = await get_payment_channels(db)
     if not php_checkout_institution_is_enabled(institution_code, channels):
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
@@ -169,7 +202,7 @@ async def select_checkout_institution_compat(
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
 
-    if institution_code not in {"GCASH", "QRPH", "ALIPAY"}:
+    if institution_code not in {"GCASH", "QRPH", "ALIPAY", "TOSS"}:
         live_institutions = await service.get_collection_institutions()
         live_matches = [
             item
