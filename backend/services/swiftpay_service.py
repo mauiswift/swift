@@ -751,9 +751,9 @@ class SwiftPayService:
         original_currency = (currency or "PHP").upper()
         php_amount = amount
         if original_currency != "PHP":
-            from services.magpie_qr_service import CurrencyConverter
+            from services.magpie_services import CurrencyConverter
 
-            php_amount = CurrencyConverter.convert(amount, original_currency, "PHP")
+            php_amount = await CurrencyConverter.convert_live(amount, original_currency, "PHP")
 
         url = f"{self.base_url}/api/bootstrap/qrph"
         # Type is a query parameter
