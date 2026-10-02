@@ -1634,7 +1634,6 @@ async def get_checkout_institutions(
 
         # For non-PHP currencies, return multicurrency payment methods (QRPH, etc.)
         if (txn.currency or "").upper() != "PHP":
-            channels = await get_payment_channels(db)
             multicurrency_institutions = [
                 {
                     "id": "QRPH",
@@ -1655,12 +1654,9 @@ async def get_checkout_institutions(
                     "enabled": True,
                     "loginMethod": "redirect",
                 })
-            # Filter by channel enablement
-            res_data = [
-                item for item in multicurrency_institutions
-                if php_checkout_institution_is_enabled(item.get("code", ""), channels)
-            ]
-            return {"success": True, "data": res_data}
+            # For multicurrency, we don't filter by PHP checkout institutions
+            # These are separate payment methods configured for specific currencies
+            return {"success": True, "data": multicurrency_institutions}
 
         res = await gateway.swift.get_collection_institutions()
         if not res.get("success"):
