@@ -1892,7 +1892,7 @@ async def select_checkout_institution(
                 except Exception as e:
                     logger.warning("Could not build TOSS deeplink: %s", e)
 
-        txn.payment_url = deep_link or qr_code or qr_content
+        txn.payment_url = toss_deep_link or deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.payment_method = institution_code
         provider_reference = qr_result.get("reference_no")
