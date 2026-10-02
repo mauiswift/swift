@@ -1734,8 +1734,10 @@ async def select_checkout_institution(
     amount_php = float(txn.amount or 0)
     institution_code = payload.institution_code.strip().upper()
     is_multicurrency_qrph = transaction_currency != "PHP" and institution_code == "QRPH"
-    if transaction_currency != "PHP" and not is_multicurrency_qrph:
-        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments, except QRPH multicurrency checkout")
+    is_multicurrency_toss = transaction_currency == "KRW" and institution_code == "TOSS"
+    is_supported_multicurrency = is_multicurrency_qrph or is_multicurrency_toss
+    if transaction_currency != "PHP" and not is_supported_multicurrency:
+        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments, QRPH for all currencies, and TOSS for KRW")
     if transaction_currency == "PHP" and amount_php < SWIFTPAY_MIN_PHP_AMOUNT:
         raise HTTPException(
             status_code=400,
