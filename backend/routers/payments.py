@@ -1874,6 +1874,24 @@ async def select_checkout_institution(
             else None
         )
 
+        # Build TOSS deeplink if not provided by SwiftPay
+        if not direct_toss_deep_link and (institution_code == "QRPH" or institution_code == "TOSS"):
+            # Use raw QR payload to build deeplink for TOSS Pay
+            qr_payload = qr_content or qr_code
+            if qr_payload and not qr_payload.startswith(("http://", "https://", "data:")):
+                try:
+                    # TOSS deeplink format: supertoss://toss/pay?qr=<payload>&amount=<amount>&currency=<currency>
+                    from urllib.parse import urlencode
+                    toss_params = {
+                        "qr": qr_payload,
+                        "amount": str(float(txn.amount or 0)),
+                        "currency": transaction_currency.upper(),
+                        "settlement_currency": "PHP",
+                    }
+                    direct_toss_deep_link = f"supertoss://toss/pay?{urlencode(toss_params)}"
+                except Exception as e:
+                    logger.warning("Could not build TOSS deeplink: %s", e)
+
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.payment_method = institution_code
@@ -1903,6 +1921,14 @@ async def select_checkout_institution(
             "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
             "qr_code": qr_code,
             "qr_content": qr_content,
+            # QR payload for deeplink construction (if needed)
+            "qr_payload": qr_code if isinstance(qr_code, str) and qr_code.startswith(("data:image", "http://", "https://")) else None,
+            "raw_qr_payload": qr_content or qr_code,  # Raw EMVCo string for TOSS deeplink
+            # Currency and amount data for TOSS deeplink
+            "amount": float(txn.amount or 0),
+            "currency": transaction_currency,
+            "settlement_currency": "PHP",  # QRPH settles in PHP
+            "php_amount": qr_result.get("php_amount") or qr_result.get("amount"),
             # Prefer the provider-generated app link so the customer opens this
             # exact QRPH payment in GCash. Keep the hosted redirect as fallback.
             "gcash_deep_link": direct_gcash_deep_link,
