@@ -172,7 +172,7 @@ function PaymentQrCode({
     <QRCodeSVG
       value={qrValue}
       size={size}
-      level="M"
+      level="Q"
       includeMargin
       bgColor="#ffffff"
       fgColor="#071b3a"
