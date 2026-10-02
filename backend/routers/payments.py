@@ -1848,6 +1848,17 @@ async def select_checkout_institution(
         logger.info("SwiftPay QRPH extracted: qr_code=%s qr_content=%s deep_link=%s",
                    "YES" if qr_code else "NO", "YES" if qr_content else "NO", "YES" if deep_link else "NO")
 
+        # For QRPH, if we have a raw QR payload string, encode it to a PNG image
+        if qr_code and not qr_code.startswith(("http://", "https://")):
+            logger.info("QRPH: Encoding raw payload to PNG image")
+            buf = BytesIO()
+            img = qrcode.make(qr_code)
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            # Cache the PNG and return as data URL or separate endpoint
+            qr_png_data = buf.getvalue()
+            qr_code = f"data:image/png;base64,{__import__('base64').b64encode(qr_png_data).decode()}"
+
         direct_gcash_deep_link = (
             deep_link
             if institution_code == "GCASH" and str(deep_link or "").lower().startswith("gcash://")
