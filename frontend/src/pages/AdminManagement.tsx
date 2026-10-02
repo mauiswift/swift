@@ -1,12 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
-import { client } from '@/lib/api';
 import { isSystemWalletAdmin } from '@/lib/permissions';
 import { AdminSidebar } from '@/components/admin/AdminManagementNavigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
 import { MerchantManagement } from '@/components/admin/MerchantManagement';
 import { BankingDashboard } from '@/components/admin/BankingDashboard';
 import { TransactionsTab } from '@/components/admin/TransactionsTab';
@@ -23,7 +20,6 @@ import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement'
 import TestDataCleanupTab from '@/components/admin/TestDataCleanupTab';
 import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagementTabs';
 import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
-import { toast } from 'sonner';
 
 type TabId = AdminTab;
 
@@ -34,7 +30,6 @@ export default function AdminManagement() {
   const requestedTab = searchParams.get('tab') as AdminTab | null;
 
   const [selectedTab, setSelectedTab] = useState<TabId>('dashboard');
-  const [error, setError] = useState('');
 
   // Permissions
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'Owner';
@@ -63,7 +58,7 @@ export default function AdminManagement() {
   const canAccessTossAccountApprovals = isSuperAdmin && canManageTossAccounts;
 
   // Build tabs
-  const tabs = buildAdminTabs({
+  const tabs = useMemo(() => buildAdminTabs({
     canAccessDashboard,
     canAccessMerchants,
     canAccessTransactions,
@@ -79,7 +74,23 @@ export default function AdminManagement() {
     canManageTeam,
     canAccessGovernance,
     isSuperAdmin,
-  }, 0);
+  }, 0), [
+    canAccessDashboard,
+    canAccessMerchants,
+    canAccessTransactions,
+    canAccessSettlements,
+    canAccessWalletControl,
+    canAccessCryptoApprovals,
+    canAccessPaymentChannels,
+    canAccessWalletSettings,
+    canAccessUserManagement,
+    canAccessPlatformSettings,
+    canAccessOperations,
+    canAccessTossAccountApprovals,
+    canManageTeam,
+    canAccessGovernance,
+    isSuperAdmin,
+  ]);
 
   // Set initial tab from URL or default
   useEffect(() => {
@@ -124,20 +135,6 @@ export default function AdminManagement() {
                   <span className="font-semibold text-slate-900">{selectedTabMeta.label}</span>
                 </div>
               </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <span className="flex-1">{error}</span>
-              <button
-                type="button"
-                onClick={() => setError('')}
-                className="shrink-0 hover:opacity-70"
-              >
-                ✕
-              </button>
             </div>
           )}
 
