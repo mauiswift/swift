@@ -22,35 +22,22 @@ async def assign_toss_account_to_transaction(
     pool_accounts = result.scalars().all()
     reference = str(txn.external_id or "").strip()
 
+    # Check if account already assigned to this transaction
     if txn.bank_account_number and txn.bank_account_reference == reference:
-        assigned = await db.scalar(
-            select(TossAccountPool).where(
-                TossAccountPool.account_number == txn.bank_account_number,
-                TossAccountPool.last_assigned_transaction_id == txn.id,
-            )
-        )
-        if assigned:
-            return {
-                "bank_name": assigned.bank_name,
-                "number": assigned.account_number,
-                "account_name": assigned.account_holder_name,
-            }
-
-    candidates = [
-        {
-            "bank_name": account.bank_name,
-            "number": account.account_number,
-            "account_name": account.account_holder_name,
-        }
-        for account in pool_accounts
-    ]
-    if txn.bank_account_number and txn.bank_account_reference == reference:
-        existing = next(
-            (candidate for candidate in candidates if candidate["number"] == txn.bank_account_number),
+        assigned = next(
+            (
+                {
+                    "bank_name": acc.bank_name,
+                    "number": acc.account_number,
+                    "account_name": acc.account_holder_name,
+                }
+                for acc in pool_accounts
+                if acc.account_number == txn.bank_account_number
+            ),
             None,
         )
-        if existing:
-            return existing
+        if assigned:
+            return assigned
 
     if not candidates:
         return None
@@ -92,5 +79,6 @@ async def assign_toss_account_to_transaction(
     txn.bank_account_number = account["number"]
     txn.bank_account_name = account["account_name"]
     txn.bank_account_reference = reference
+    await db.flush()
     await db.commit()
     return account

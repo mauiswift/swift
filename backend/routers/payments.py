@@ -1933,6 +1933,13 @@ async def select_checkout_institution(
         # provider's payment authorization target; no secret is exposed.
         txn.qr_code_url = redirect_url
         txn.transaction_type = "alipay_qr"
+    elif institution_code == "TOSS":
+        # For TOSS KRW payments, validate that virtual account was assigned
+        if not txn.bank_account_number:
+            raise HTTPException(
+                status_code=502,
+                detail="TOSS virtual account could not be assigned. Please try again or contact support.",
+            )
     txn.updated_at = datetime.now(timezone.utc)
     await db.commit()
 
