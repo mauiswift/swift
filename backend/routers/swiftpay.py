@@ -55,7 +55,7 @@ class SwiftPayQRRequest(BaseModel):
     amount: float = Field(..., gt=0)
     reference_no: str
     currency: str = "PHP"
-    qr_type: str = "P2P"
+    qr_type: str = "P2M"
 
 
 class SwiftPayQRResponse(BaseModel):
