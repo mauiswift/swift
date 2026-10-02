@@ -1800,11 +1800,6 @@ async def select_checkout_institution(
             reference_no=txn.external_id,
             currency=transaction_currency,
             qr_type="P2M",
-            details={
-                "description": txn.description or "",
-                "customer_name": txn.customer_name or "",
-                "customer_email": txn.customer_email or "",
-            },
         )
         if not qr_result.get("success"):
             raise HTTPException(status_code=502, detail=qr_result.get("error", "Could not create GCash QRPH checkout"))

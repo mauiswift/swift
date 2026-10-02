@@ -739,7 +739,6 @@ class SwiftPayService:
         reference_no: str,
         currency: str = "PHP",
         qr_type: str = "P2P",
-        details: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Generate QR PH payment (Step 5).
 
@@ -770,8 +769,6 @@ class SwiftPayService:
                 "x_amount": self._format_amount(php_amount),
                 "x_currency": "PHP",
             }
-            if details:
-                payload["details"] = json.dumps(details, separators=(",", ":"), ensure_ascii=False)
             payload["signature"] = self._sign_payload(payload)
 
             logger.info("SwiftPay generate_qrph %s reference=%s amount=%s currency=PHP (orig: %s %s)",
