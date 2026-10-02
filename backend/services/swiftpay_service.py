@@ -794,6 +794,7 @@ class SwiftPayService:
                     return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
 
                 data = resp.json() if text else {}
+                logger.info("SwiftPay QRPH response success: data=%s", data)
                 return {
                     "success": True,
                     "data": data,

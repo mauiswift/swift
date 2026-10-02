@@ -1807,6 +1807,9 @@ async def select_checkout_institution(
         qr_data = qr_result.get("data") or {}
         if not isinstance(qr_data, dict):
             raise HTTPException(status_code=502, detail="SwiftPay returned an invalid QRPH response")
+
+        logger.info("SwiftPay QRPH data keys: %s", list(qr_data.keys()))
+
         qr_code = (
             qr_data.get("qrCode")
             or qr_data.get("qr_code")
@@ -1836,6 +1839,9 @@ async def select_checkout_institution(
         )
         if not qr_code and not qr_content and not deep_link:
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
+
+        logger.info("SwiftPay QRPH extracted: qr_code=%s qr_content=%s deep_link=%s",
+                   "YES" if qr_code else "NO", "YES" if qr_content else "NO", "YES" if deep_link else "NO")
 
         direct_gcash_deep_link = (
             deep_link
