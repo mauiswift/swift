@@ -3,6 +3,9 @@ import asyncio
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
+from urllib.parse import parse_qs, urlparse
+
+import pytest
 
 os.environ["JWT_SECRET_KEY"] = "devsecret"
 os.environ["TELEGRAM_BOT_TOKEN"] = "123"
@@ -386,6 +389,115 @@ def test_krw_checkout_account_changes_between_payment_sessions():
     )
 
     assert first["number"] != second["number"]
+
+
+RAW_EMVCO_PAYLOAD = (
+    "00020101021226570013ph.ppmi.p2m0111QRPHTESTM00209SWIFTPAY52045999"
+    "5303608540810.005802PH5910Demo Store6007Quezon C62070503***6304ABCD"
+)
+
+
+@pytest.mark.parametrize(
+    ("currency", "amount"),
+    [
+        ("PHP", 500.0),
+        ("KRW", 50000.0),
+        ("CNY", 200.0),
+    ],
+)
+def test_qrph_institution_select_preserves_raw_emvco_payload_in_any_currency(monkeypatch, currency, amount):
+    """The QR Ph checkout flow must hand the browser the untouched EMVCo
+    string for every supported checkout currency, since that's the only
+    value the frontend (and TOSS) can scan as a real payment."""
+    from routers import payments as payments_router
+
+    captured_qrph_calls = []
+
+    class FakeSwiftPayService:
+        def is_configured(self):
+            return True
+
+        async def generate_qrph(self, **kwargs):
+            captured_qrph_calls.append(kwargs)
+            return {
+                "success": True,
+                "reference_no": kwargs["reference_no"],
+                "data": {"qrCode": RAW_EMVCO_PAYLOAD, "paymentId": "qrph-pay-1"},
+                "amount": 100.0,
+                "currency": "PHP",
+                "original_amount": kwargs["amount"],
+                "original_currency": kwargs["currency"],
+                "php_amount": 100.0,
+            }
+
+    monkeypatch.setattr(payments_router, "SwiftPayService", FakeSwiftPayService)
+
+    with TestClient(app) as client:
+        async def seed_transaction():
+            async for session in get_db():
+                txn = await TransactionsService(session).create_transaction(
+                    user_id="demo-user",
+                    transaction_type="payment_link",
+                    amount=amount,
+                    original_amount=amount,
+                    original_currency=currency,
+                    external_id=f"qrph-{currency.lower()}-{uuid.uuid4().hex[:8]}",
+                    description=f"{currency} QR Ph checkout",
+                    customer_name="Demo",
+                    customer_email="demo@example.com",
+                    payment_url=f"/checkout/qrph-{currency.lower()}",
+                    status="pending",
+                    currency=currency,
+                )
+                await session.commit()
+                return txn
+
+        txn = asyncio.run(seed_transaction())
+        response = client.post(
+            f"/api/v1/payments/checkout/{txn.external_id}/institution",
+            json={"institution_code": "QRPH"},
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is True
+
+        # The raw EMVCo string must survive untouched: no base64/PNG
+        # re-encoding, no truncation, no currency-specific mutation.
+        assert body["qr_code"] == RAW_EMVCO_PAYLOAD
+        assert body["raw_qr_payload"] == RAW_EMVCO_PAYLOAD
+        # qr_payload is only populated for already-hosted image URLs; a raw
+        # EMVCo string is not one, so the frontend must fall back to
+        # client-side rendering (QRCodeSVG) rather than an <img> tag.
+        assert body["qr_payload"] is None
+
+        assert body["currency"] == currency
+        assert body["settlement_currency"] == "PHP"
+
+        # Exactly one bootstrap call, always converting to PHP at the
+        # provider boundary regardless of the checkout's own currency.
+        assert len(captured_qrph_calls) == 1
+        assert captured_qrph_calls[0]["currency"] == currency
+        assert captured_qrph_calls[0]["qr_type"] == "P2M"
+
+        toss_deep_link = body["toss_deep_link"]
+        assert toss_deep_link is not None
+        parsed = urlparse(toss_deep_link)
+        assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == "supertoss://toss/pay"
+        params = parse_qs(parsed.query)
+        # The embedded QR payload is what TOSS actually scans; it must be
+        # the untouched raw EMVCo string, not a reformatted/re-encoded copy.
+        assert params["qr"] == [RAW_EMVCO_PAYLOAD]
+        assert params["currency"] == [currency]
+        assert params["settlement_currency"] == ["PHP"]
+
+        # What the frontend's GET /checkout/{identifier} actually serves
+        # (and what PaymentQrCode renders client-side) must match too. A
+        # fresh payment-link checkout spins up its own reusable attempt
+        # with a new external_id, so follow the one the endpoint returned.
+        checkout_response = client.get(f"/api/v1/payments/checkout/{body['external_id']}")
+        assert checkout_response.status_code == 200, checkout_response.text
+        assert checkout_response.json()["qr_code_url"] == RAW_EMVCO_PAYLOAD
 
 
 def test_legacy_gcash_redirect_uses_internal_swiftpay_gcash_page():
