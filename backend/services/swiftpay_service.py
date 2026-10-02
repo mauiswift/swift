@@ -765,13 +765,13 @@ class SwiftPayService:
             payload = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
-                "x_amount": self._format_amount(amount),
-                "x_currency": original_currency,
+                "x_amount": self._format_amount(php_amount),
+                "x_currency": "PHP",
             }
             payload["signature"] = self._sign_payload(payload)
 
-            logger.info("SwiftPay generate_qrph %s reference=%s amount=%s currency=%s",
-                       request_url, current_reference, payload.get("x_amount"), payload.get("x_currency"))
+            logger.info("SwiftPay generate_qrph %s reference=%s amount=%s currency=PHP (orig: %s %s)",
+                       request_url, current_reference, payload.get("x_amount"), php_amount, original_currency)
             try:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.post(request_url, json=payload)
