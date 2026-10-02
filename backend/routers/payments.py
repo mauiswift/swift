@@ -246,7 +246,7 @@ async def get_swiftpay_currency_quote(
         "quoted_currency": source_currency,
         "charged_amount": converted_amount,
         "charged_currency": currency,
-        "exchange_rate": converted_amount / amount_krw if amount_krw else None,
+        "exchange_rate": converted_amount / source_amount if source_amount else None,
         "inverse_rate": source_amount / converted_amount,
     }
 
@@ -1845,17 +1845,10 @@ async def select_checkout_institution(
         logger.info("SwiftPay QRPH extracted: qr_code=%s qr_content=%s deep_link=%s",
                    "YES" if qr_code else "NO", "YES" if qr_content else "NO", "YES" if deep_link else "NO")
 
-        # For QRPH, if we have a raw QR payload string, encode it to a PNG image
-        if qr_code and not qr_code.startswith(("http://", "https://")):
-            logger.info("QRPH: Encoding raw payload to PNG image")
-            buf = BytesIO()
-            img = qrcode.make(qr_code)
-            img.save(buf, format="PNG")
-            buf.seek(0)
-            # Cache the PNG and return as data URL or separate endpoint
-            qr_png_data = buf.getvalue()
-            qr_code = f"data:image/png;base64,{__import__('base64').b64encode(qr_png_data).decode()}"
-
+        # Keep the raw EMVCo payload intact: the frontend renders it client-side via
+        # QRCodeSVG for any non-http(s) value. Pre-encoding to a PNG data URL here would
+        # overwrite the real payload with a base64 blob the frontend can't recognize as
+        # an image, and it would re-encode that blob as a bogus QR code instead.
         direct_gcash_deep_link = (
             deep_link
             if institution_code == "GCASH" and str(deep_link or "").lower().startswith("gcash://")
@@ -1869,7 +1862,7 @@ async def select_checkout_institution(
         )
         direct_toss_deep_link = (
             deep_link
-            if institution_code == "QRPH" or institution_code == "TOSS"
+            if (institution_code == "QRPH" or institution_code == "TOSS")
             and str(deep_link or "").lower().startswith(("supertoss://", "toss://"))
             else None
         )
@@ -1892,7 +1885,7 @@ async def select_checkout_institution(
                 except Exception as e:
                     logger.warning("Could not build TOSS deeplink: %s", e)
 
-        txn.payment_url = toss_deep_link or deep_link or qr_code or qr_content
+        txn.payment_url = direct_toss_deep_link or deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.payment_method = institution_code
         provider_reference = qr_result.get("reference_no")

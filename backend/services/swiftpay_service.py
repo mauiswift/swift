@@ -738,7 +738,7 @@ class SwiftPayService:
         amount: float,
         reference_no: str,
         currency: str = "PHP",
-        qr_type: str = "P2P",
+        qr_type: str = "P2M",
     ) -> Dict[str, Any]:
         """Generate QR PH payment (Step 5).
 
