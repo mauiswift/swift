@@ -548,8 +548,11 @@ async def test_generate_qrph_converts_non_php_currency_to_php(monkeypatch):
     expected_php_amount = CurrencyConverter.convert(12500, "KRW", "PHP")
 
     assert result["success"] is True
-    assert captured_payload["x_currency"] == "PHP"
-    assert captured_payload["x_amount"] == svc._format_amount(expected_php_amount)
+    # FIX: SwiftPay requires amount and currency to match
+    # Send original currency (KRW) with original amount (12500), not PHP-converted
+    assert captured_payload["x_currency"] == "KRW", "Should send original currency to SwiftPay"
+    assert captured_payload["x_amount"] == svc._format_amount(12500), "Should send original amount (12500 KRW)"
+    # But response reports PHP equivalent for reference
     assert result["currency"] == "PHP"
     assert result["amount"] == expected_php_amount
     assert result["original_amount"] == 12500
