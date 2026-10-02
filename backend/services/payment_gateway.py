@@ -569,6 +569,8 @@ class PaymentGateway:
             transaction_type=transaction_type,
             amount=amount,
             currency=currency,
+            original_amount=amount,
+            original_currency=currency,
             external_id=reference_id,
             gateway_id=reference_id,
             description=description or "",
