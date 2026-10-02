@@ -22,6 +22,7 @@ DEFAULT_SWIFTPAY_BASE_URLS = {
 }
 LEGACY_SWIFTPAY_BASE_URLS = {
     "https://api.swiftpay.ph": "https://api.pay.live.swiftpay.ph",
+    "https://api.swiftpay.site": "https://api.pay.live.swiftpay.ph",
 }
 
 
