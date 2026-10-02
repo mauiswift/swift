@@ -763,11 +763,13 @@ class SwiftPayService:
         base_reference = (reference_no or "").strip() or f"swiftpay-qr-{uuid.uuid4().hex[:12]}"
         for attempt in range(1, 4):
             current_reference = base_reference if attempt == 1 else f"{base_reference}-{uuid.uuid4().hex[:6]}"
+            # SwiftPay QRPH accepts PHP, USD, EUR. Non-supported currencies converted to PHP
+            qrph_currency = original_currency if original_currency in {"PHP", "USD", "EUR"} else "PHP"
             payload = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
                 "x_amount": self._format_amount(php_amount),
-                "x_currency": "PHP",
+                "x_currency": qrph_currency,
             }
             payload["signature"] = self._sign_payload(payload)
 
