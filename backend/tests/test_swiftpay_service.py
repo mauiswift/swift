@@ -552,11 +552,12 @@ async def test_generate_qrph_converts_non_php_currency_to_php(monkeypatch):
     # Send PHP-converted amount with x_currency="PHP"
     assert captured_payload["x_currency"] == "PHP", "SwiftPay requires x_currency to be PHP (not KRW)"
     assert captured_payload["x_amount"] == svc._format_amount(expected_php_amount), f"Should send PHP amount {expected_php_amount}"
-    # But response reports both original and PHP for client tracking
-    assert result["currency"] == "PHP"
-    assert result["amount"] == expected_php_amount
-    assert result["original_amount"] == 12500
-    assert result["original_currency"] == "KRW"
+    # Response reflects what was sent to SwiftPay
+    assert result["currency"] == "PHP", "Response should show PHP (what we sent to SwiftPay)"
+    assert result["amount"] == expected_php_amount, f"Response should show PHP amount {expected_php_amount}"
+    # Plus original for tracking
+    assert result["original_amount"] == 12500, "Original amount for user reference"
+    assert result["original_currency"] == "KRW", "Original currency for user reference"
 
 
 @pytest.mark.asyncio
