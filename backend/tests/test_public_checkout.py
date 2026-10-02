@@ -422,7 +422,11 @@ def test_qrph_institution_select_preserves_raw_emvco_payload_in_any_currency(mon
             return {
                 "success": True,
                 "reference_no": kwargs["reference_no"],
-                "data": {"qrCode": RAW_EMVCO_PAYLOAD, "paymentId": "qrph-pay-1"},
+                "data": {
+                    "qrCode": RAW_EMVCO_PAYLOAD,
+                    "paymentId": "qrph-pay-1",
+                    "paymentStatus": "PENDING",
+                },
                 "amount": 100.0,
                 "currency": "PHP",
                 "original_amount": kwargs["amount"],
@@ -461,6 +465,8 @@ def test_qrph_institution_select_preserves_raw_emvco_payload_in_any_currency(mon
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["success"] is True
+        assert body["payment_id"] == "qrph-pay-1"
+        assert body["payment_status"] == "PENDING"
 
         # The raw EMVCo string must survive untouched: no base64/PNG
         # re-encoding, no truncation, no currency-specific mutation.
@@ -488,8 +494,7 @@ def test_qrph_institution_select_preserves_raw_emvco_payload_in_any_currency(mon
         # The embedded QR payload is what TOSS actually scans; it must be
         # the untouched raw EMVCo string, not a reformatted/re-encoded copy.
         assert params["qr"] == [RAW_EMVCO_PAYLOAD]
-        assert params["currency"] == [currency]
-        assert params["settlement_currency"] == ["PHP"]
+        assert set(params) == {"qr"}
 
         # What the frontend's GET /checkout/{identifier} actually serves
         # (and what PaymentQrCode renders client-side) must match too. A
@@ -498,6 +503,13 @@ def test_qrph_institution_select_preserves_raw_emvco_payload_in_any_currency(mon
         checkout_response = client.get(f"/api/v1/payments/checkout/{body['external_id']}")
         assert checkout_response.status_code == 200, checkout_response.text
         assert checkout_response.json()["qr_code_url"] == RAW_EMVCO_PAYLOAD
+
+        async def load_payment_attempt():
+            async for session in get_db():
+                return await session.get(Transactions, int(body["transaction_id"]))
+
+        payment_attempt = asyncio.run(load_payment_attempt())
+        assert payment_attempt.xendit_id == "qrph-pay-1"
 
 
 def test_legacy_gcash_redirect_uses_internal_swiftpay_gcash_page():

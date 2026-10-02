@@ -416,15 +416,12 @@ export default function Checkout() {
   const openTossPaymentApp = async () => {
     if (!txn?.qr_code_url) {
       setQrInstructionApp('toss');
-      await handleStartCheckout('QRPH');
+      await handleStartCheckout('QRPH', true);
       return;
     }
     const tossDeepLink = buildTossQrDeepLink({
       baseUrl: txn?.toss_deep_link,
       qrPayload: txn?.qr_code_url,
-      amount: txn?.amount,
-      currency: txn?.currency,
-      settlementCurrency: txn?.processing_currency,
     });
     setQrInstructionApp('toss');
     openMobileDeepLink({
@@ -745,13 +742,6 @@ export default function Checkout() {
   const manualDepositBankName = isKrw ? krwBankName : (txn.bank_name || DEFAULT_KRW_BANK_NAME);
   const manualDepositAccountNumber = isKrw ? krwAccountNumber : (txn.bank_account_number || '1908-1618-8260');
   const manualDepositAccountName = isKrw ? krwAccountName : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
-  const krwTransferQrValue = [
-    'SWIFTPAY-KRW-TRANSFER',
-    `BANK:${krwBankName}`,
-    `ACCOUNT:${krwAccountNumber}`,
-    `NAME:${krwAccountName}`,
-    `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
-  ].join('\n');
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
   const swiftpayVirtualAccountEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'virtual_account');
   const institutionCode = (institution: Institution) => String(institution.code || '').trim().toUpperCase();
@@ -773,7 +763,7 @@ export default function Checkout() {
     const query = phpBankSearch.trim().toLowerCase();
     return !query || `${bank.name} ${institutionCode(bank)}`.toLowerCase().includes(query);
   });
-  const handleStartCheckout = async (institutionCode?: string) => {
+  const handleStartCheckout = async (institutionCode?: string, launchTossAfterQr = false) => {
     const selectedInstitutionCode = institutionCode?.trim().toUpperCase() || '';
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
     let activeExternalId = openAmountRequestId || txn.external_id;
@@ -882,7 +872,20 @@ export default function Checkout() {
             navigate(`${alipayPageUrl.pathname}${alipayPageUrl.search}`);
             return;
           }
-          setShowQRPhModal(true);
+          if (launchTossAfterQr && selectedInstitutionCode === 'QRPH') {
+            const tossDeepLink = buildTossQrDeepLink({
+              baseUrl: response.data?.toss_deep_link,
+              qrPayload,
+            });
+            openMobileDeepLink({
+              url: tossDeepLink,
+              androidPackage: 'viva.republica.toss',
+              timeoutMs: 1600,
+              onFallback: () => setShowQRPhModal(true),
+            });
+          } else {
+            setShowQRPhModal(true);
+          }
           startPollingStatus(paymentAttemptId);
           return;
         }
@@ -1532,8 +1535,8 @@ export default function Checkout() {
                           className="h-14 w-20 border-0 bg-[#f7f8ff] p-1.5 shadow-none"
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold text-slate-900">Toss Pay</span>
-                          <span className="mt-0.5 block text-[11px] text-slate-500">토스페이에서 열기</span>
+                          <span className="block text-sm font-bold text-slate-900">QR Ph via Toss</span>
+                          <span className="mt-0.5 block text-[11px] text-slate-500">SwiftPay QR Ph 결제 QR을 생성해 Toss에서 스캔하세요.</span>
                         </span>
                         <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[#0064FF]" aria-hidden="true" />
                       </button>
@@ -1634,13 +1637,6 @@ export default function Checkout() {
                     </div>
                   )}
 
-                  <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
-                    <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
-                      <PaymentQrCode value={krwTransferQrValue} alt="KRW bank transfer details QR code" size={188} />
-                    </div>
-                    <p className="mt-4 text-xs font-bold text-slate-900">QR로 송금 정보 불러오기</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-700">계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.</p>
-                  </div>
                 </div>
               </div>
             )}

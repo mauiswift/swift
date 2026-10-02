@@ -1807,6 +1807,23 @@ async def select_checkout_institution(
         qr_data = qr_result.get("data") or {}
         if not isinstance(qr_data, dict):
             raise HTTPException(status_code=502, detail="SwiftPay returned an invalid QRPH response")
+        swiftpay_payment_id = (
+            qr_data.get("paymentId")
+            or qr_data.get("payment_id")
+            or qr_data.get("id")
+        )
+        if not swiftpay_payment_id:
+            raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payment ID")
+        swiftpay_payment_id = str(swiftpay_payment_id)
+        swiftpay_payment_status = str(
+            qr_data.get("paymentStatus") or qr_data.get("payment_status") or ""
+        ).strip().upper()
+        if swiftpay_payment_status != "PENDING":
+            status_label = swiftpay_payment_status or "unknown"
+            raise HTTPException(
+                status_code=502,
+                detail=f"SwiftPay QRPH order is not payable (status: {status_label})",
+            )
 
         logger.info("SwiftPay QRPH data keys: %s", list(qr_data.keys()))
 
@@ -1873,27 +1890,17 @@ async def select_checkout_institution(
             qr_payload = qr_content or qr_code
             if qr_payload and not qr_payload.startswith(("http://", "https://", "data:")):
                 try:
-                    # TOSS deeplink format: supertoss://toss/pay?qr=<payload>&amount=<amount>&currency=<currency>
+                    # QR Ph embeds its payable PHP amount in the EMVCo payload.
                     from urllib.parse import urlencode
-                    toss_params = {
-                        "qr": qr_payload,
-                        "amount": str(float(txn.amount or 0)),
-                        "currency": transaction_currency.upper(),
-                        "settlement_currency": "PHP",
-                    }
+                    toss_params = {"qr": qr_payload}
                     direct_toss_deep_link = f"supertoss://toss/pay?{urlencode(toss_params)}"
                 except Exception as e:
                     logger.warning("Could not build TOSS deeplink: %s", e)
 
         txn.payment_url = direct_toss_deep_link or deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
+        txn.xendit_id = swiftpay_payment_id
         txn.payment_method = institution_code
-        provider_reference = qr_result.get("reference_no")
-        if provider_reference and provider_reference != txn.external_id:
-            # A duplicate reference is retried with a provider-safe suffix.
-            # Keep the alias locally so the webhook can still resolve this
-            # payment back to the public checkout transaction.
-            txn.xendit_id = provider_reference
         txn.transaction_type = "alipay_qr" if institution_code == "ALIPAY" else "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
@@ -1911,6 +1918,8 @@ async def select_checkout_institution(
             "success": True,
             "transaction_id": txn.id,
             "external_id": txn.external_id,
+            "payment_id": swiftpay_payment_id,
+            "payment_status": swiftpay_payment_status,
             "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
             "qr_code": qr_code,
             "qr_content": qr_content,

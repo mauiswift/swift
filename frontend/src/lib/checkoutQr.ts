@@ -20,15 +20,9 @@ export const sanitizeCheckoutDeepLink = (value: unknown): string | null => {
 export const buildTossQrDeepLink = ({
   baseUrl,
   qrPayload,
-  amount,
-  currency,
-  settlementCurrency,
 }: {
   baseUrl?: unknown;
   qrPayload?: unknown;
-  amount?: unknown;
-  currency?: unknown;
-  settlementCurrency?: unknown;
 }): string => {
   const base = sanitizeCheckoutDeepLink(baseUrl) || 'supertoss://toss/pay';
   const qr = normalizeCheckoutQrValue(qrPayload);
@@ -37,15 +31,6 @@ export const buildTossQrDeepLink = ({
   try {
     const parsed = new URL(base);
     parsed.searchParams.set('qr', qr);
-    if (amount !== undefined && amount !== null && String(amount).trim()) {
-      parsed.searchParams.set('amount', String(amount));
-    }
-    if (currency !== undefined && currency !== null && String(currency).trim()) {
-      parsed.searchParams.set('currency', String(currency).toUpperCase());
-    }
-    if (settlementCurrency !== undefined && settlementCurrency !== null && String(settlementCurrency).trim()) {
-      parsed.searchParams.set('settlement_currency', String(settlementCurrency).toUpperCase());
-    }
     return parsed.toString();
   } catch {
     return base;

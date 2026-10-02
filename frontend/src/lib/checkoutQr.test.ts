@@ -25,20 +25,17 @@ test('sanitizeCheckoutDeepLink allows the existing Toss scheme', () => {
   assert.equal(sanitizeCheckoutDeepLink('supertoss://toss/pay'), 'supertoss://toss/pay');
 });
 
-test('buildTossQrDeepLink carries QRPH and multicurrency checkout data', () => {
+test('buildTossQrDeepLink carries the raw QR Ph payload without conflicting amount metadata', () => {
   const deepLink = new URL(buildTossQrDeepLink({
     qrPayload: '0002010102125303608540610.00',
-    amount: 12500,
-    currency: 'KRW',
-    settlementCurrency: 'PHP',
   }));
 
   assert.equal(deepLink.protocol, 'supertoss:');
   assert.equal(deepLink.pathname, '/pay');
   assert.equal(deepLink.searchParams.get('qr'), '0002010102125303608540610.00');
-  assert.equal(deepLink.searchParams.get('amount'), '12500');
-  assert.equal(deepLink.searchParams.get('currency'), 'KRW');
-  assert.equal(deepLink.searchParams.get('settlement_currency'), 'PHP');
+  assert.equal(deepLink.searchParams.has('amount'), false);
+  assert.equal(deepLink.searchParams.has('currency'), false);
+  assert.equal(deepLink.searchParams.has('settlement_currency'), false);
 });
 
 test('buildTossQrDeepLink preserves the existing bare deeplink without QR data', () => {
