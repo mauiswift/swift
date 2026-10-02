@@ -7,6 +7,7 @@ import sys
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,14 +81,18 @@ async def lifespan(app: FastAPI):
             from services.background_tasks import background_worker
             asyncio.create_task(background_worker.start_worker())
 
-            if settings.telegram_bot_token and "localhost" not in settings.backend_url:
+            backend_url = settings.backend_url.strip().rstrip("/")
+            parsed_backend_url = urlsplit(backend_url)
+            if settings.telegram_bot_token and parsed_backend_url.scheme == "https" and parsed_backend_url.hostname:
                 try:
                     from services.telegram_service import TelegramService
                     tg = TelegramService()
-                    webhook_url = f"{settings.backend_url.rstrip('/')}/api/v1/telegram/webhook"
+                    webhook_url = f"{backend_url}/api/v1/telegram/webhook"
                     asyncio.create_task(tg.set_webhook(webhook_url))
                 except Exception:
                     logger.exception("Failed to schedule Telegram webhook setup")
+            elif settings.telegram_bot_token:
+                logger.warning("Skipping Telegram webhook setup: backend URL must be a public HTTPS URL")
 
     except Exception as e:
         logger.error(f"FATAL_BOOT_FAILURE: {e}\n{traceback.format_exc()}")

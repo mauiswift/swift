@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from typing import Any, Dict, Optional
 
 import httpx
@@ -7,6 +8,25 @@ import httpx
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
+
+
+class _TelegramTokenRedactionFilter(logging.Filter):
+    """Redact Telegram bot tokens embedded in HTTP API request paths."""
+
+    _TOKEN_PATH = re.compile(r"(/bot)[^/?\s]+")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        redacted = self._TOKEN_PATH.sub(r"\1[REDACTED]", message)
+        if redacted != message:
+            record.msg = redacted
+            record.args = ()
+        return True
+
+
+_httpx_logger = logging.getLogger("httpx")
+if not any(isinstance(item, _TelegramTokenRedactionFilter) for item in _httpx_logger.filters):
+    _httpx_logger.addFilter(_TelegramTokenRedactionFilter())
 
 
 def _resolve_bot_token() -> str:

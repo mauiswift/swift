@@ -8,8 +8,11 @@ Tests cover:
 - User wallet conversions
 """
 
+import asyncio
+
 import pytest
 import pytest_asyncio
+import httpx
 from unittest.mock import AsyncMock
 from _pytest.monkeypatch import MonkeyPatch
 from datetime import datetime, timezone, timedelta
@@ -62,6 +65,62 @@ async def test_exchange_rate_service_get_rate(db_session):
         assert isinstance(rate, float)
     except RuntimeError:
         pytest.skip("Network unavailable for rate fetch")
+
+
+@pytest.mark.asyncio
+async def test_exchange_rate_pairs_share_one_provider_request(monkeypatch):
+    from services import exchange_rate_service
+
+    exchange_rate_service.clear_cache()
+    requests = []
+
+    class MockClient:
+        async def get(self, url):
+            requests.append(url)
+            await asyncio.sleep(0)
+            return httpx.Response(
+                200,
+                request=httpx.Request("GET", url),
+                json={"tether": {"php": 60, "usd": 1, "eur": 0.92, "krw": 1350, "cny": 7.2}},
+            )
+
+    monkeypatch.setattr(exchange_rate_service, "_get_http", lambda: MockClient())
+
+    rates = await asyncio.gather(*(exchange_rate_service.get_rate(f"USDT_{currency}") for currency in ("PHP", "USD", "EUR", "KRW", "CNY")))
+
+    assert rates == [60.0, 1.0, 0.92, 1350.0, 7.2]
+    assert len(requests) == 1
+    exchange_rate_service.clear_cache()
+
+
+@pytest.mark.asyncio
+async def test_exchange_rate_429_uses_cooldown_across_currency_pairs(monkeypatch):
+    from services import exchange_rate_service
+
+    exchange_rate_service.clear_cache()
+    requests = []
+
+    class MockClient:
+        async def get(self, url):
+            requests.append(url)
+            await asyncio.sleep(0)
+            return httpx.Response(
+                429,
+                request=httpx.Request("GET", url),
+                headers={"Retry-After": "120"},
+            )
+
+    monkeypatch.setattr(exchange_rate_service, "_get_http", lambda: MockClient())
+
+    rates = await asyncio.gather(
+        exchange_rate_service.get_rate("USDT_PHP"),
+        exchange_rate_service.get_rate("USDT_USD"),
+        exchange_rate_service.get_rate("USDT_KRW"),
+    )
+
+    assert rates == [58.0, 1.0, 1350.0]
+    assert len(requests) == 1
+    exchange_rate_service.clear_cache()
 
 
 @pytest.mark.asyncio

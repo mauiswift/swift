@@ -441,22 +441,23 @@ class Settings(BaseSettings):
             # In Lambda environment, return the API Gateway URL
             return os.environ.get(
                 "PYTHON_BACKEND_URL", f"https://{self.lambda_function_name}.execute-api.{self.aws_region}.amazonaws.com"
-            )
+            ).strip().rstrip("/")
         else:
             # 1. Explicit override (highest priority)
-            explicit_url = os.environ.get("PYTHON_BACKEND_URL", "")
+            explicit_url = os.environ.get("PYTHON_BACKEND_URL", "").strip().rstrip("/")
             if explicit_url:
                 return explicit_url
             # 2. Railway auto-provided public domain (set automatically by Railway)
             if self.railway_public_domain:
-                return f"https://{self.railway_public_domain}"
+                domain = self.railway_public_domain.strip().rstrip("/")
+                return domain if domain.startswith(("http://", "https://")) else f"https://{domain}"
             # 3. Render auto-provided public URL (set automatically by Render)
-            render_external_url = os.environ.get("RENDER_EXTERNAL_URL", "")
+            render_external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
             if render_external_url:
                 return render_external_url
-            render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "")
+            render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip().rstrip("/")
             if render_hostname:
-                return f"https://{render_hostname}"
+                return render_hostname if render_hostname.startswith(("http://", "https://")) else f"https://{render_hostname}"
             # 4. Fallback to local address
             display_host = "127.0.0.1" if self.host == "0.0.0.0" else self.host
             return f"http://{display_host}:{self.port}"

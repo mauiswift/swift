@@ -1,9 +1,4 @@
-"""Real-time exchange rate fetching service with history, analytics, and multi-pair support.
-
-Fetches live exchange rates from multiple providers (CoinGecko primary, Yahoo Finance fallback).
-Results are cached in-memory for CACHE_TTL_SECONDS to avoid hammering rate limits.
-Supports historical tracking, volatility analytics, and rate overrides.
-"""
+"""Real-time exchange rates with shared provider caching and multi-pair support."""
 
 import logging
 import time
@@ -34,6 +29,11 @@ FALLBACK_RATES: Dict[str, float] = {
 
 # In-memory cache: {currency_pair: (rate, fetched_at_unix_timestamp)}
 _cache: Dict[str, Tuple[float, float]] = {}
+_provider_rates: Dict[str, float] = {}
+_provider_fetched_at = 0.0
+_provider_retry_after = 0.0
+_provider_error = ""
+_provider_lock = asyncio.Lock()
 
 _http: Optional[httpx.AsyncClient] = None
 # Sentinel to detect when tests or runtime replace the fetch helper.
@@ -54,6 +54,67 @@ def _get_http() -> httpx.AsyncClient:
     if _http is None or _http.is_closed:
         _http = httpx.AsyncClient(timeout=10.0)
     return _http
+
+
+async def _get_tether_rates() -> Dict[str, float]:
+    """Fetch one shared CoinGecko quote map for every supported currency pair."""
+    global _provider_rates, _provider_fetched_at, _provider_retry_after, _provider_error
+
+    now = time.monotonic()
+    if _provider_rates and now - _provider_fetched_at < CACHE_TTL_SECONDS:
+        return dict(_provider_rates)
+    if now < _provider_retry_after:
+        if _provider_rates:
+            return dict(_provider_rates)
+        raise RuntimeError(_provider_error or "CoinGecko rate limit cooldown is active")
+
+    async with _provider_lock:
+        now = time.monotonic()
+        if _provider_rates and now - _provider_fetched_at < CACHE_TTL_SECONDS:
+            return dict(_provider_rates)
+        if now < _provider_retry_after:
+            if _provider_rates:
+                return dict(_provider_rates)
+            raise RuntimeError(_provider_error or "CoinGecko rate limit cooldown is active")
+
+        response = None
+        try:
+            response = await _get_http().get(COINGECKO_URL)
+            response.raise_for_status()
+            payload = response.json()
+            tether = payload.get("tether") if isinstance(payload, dict) else None
+            if not isinstance(tether, dict):
+                raise ValueError("CoinGecko response did not contain tether rates")
+
+            rates = {
+                str(currency).lower(): float(rate)
+                for currency, rate in tether.items()
+                if float(rate) > 0
+            }
+            if not rates:
+                raise ValueError("CoinGecko response contained no positive tether rates")
+
+            fetched_at = time.monotonic()
+            _provider_rates = rates
+            _provider_fetched_at = fetched_at
+            _provider_retry_after = 0.0
+            _provider_error = ""
+            for currency, rate in rates.items():
+                _cache[f"USDT_{currency.upper()}"] = (rate, fetched_at)
+            return dict(rates)
+        except Exception as exc:
+            cooldown = CACHE_TTL_SECONDS
+            if response is not None and response.status_code == 429:
+                try:
+                    cooldown = max(1.0, min(900.0, float(response.headers.get("Retry-After", cooldown))))
+                except (TypeError, ValueError):
+                    pass
+            _provider_retry_after = time.monotonic() + cooldown
+            _provider_error = str(exc)
+            if _provider_rates:
+                logger.warning("Live CoinGecko rates unavailable; using cached provider quotes: %s", exc)
+                return dict(_provider_rates)
+            raise
 
 
 async def fetch_live_usdt_php_rate() -> float:
@@ -154,21 +215,19 @@ async def get_rate(currency_pair: str) -> float:
                 logger.debug(f"Returning cached {normalized_pair} rate (post-lock): {cached_rate:.4f}")
                 return cached_rate
         try:
-            resp = await _get_http().get(COINGECKO_URL)
-            resp.raise_for_status()
-            data = resp.json()
+            tether_rates = await _get_tether_rates()
 
             from_curr, to_curr = normalized_pair.split("_", 1)
             if from_curr == "USDT":
-                rate = float(data["tether"][to_curr.lower()])
+                rate = float(tether_rates[to_curr.lower()])
             elif from_curr == to_curr:
                 rate = 1.0
             elif from_curr in {"USD", "EUR", "GBP", "SGD"} and to_curr == "PHP":
-                rate = float(data["tether"]["php"])
+                rate = float(tether_rates["php"])
             elif from_curr in {"USD", "USDT"} and to_curr == "KRW":
-                rate = float(data["tether"]["krw"])
+                rate = float(tether_rates["krw"])
             elif from_curr == "PHP" and to_curr in {"USD", "EUR", "GBP", "SGD"}:
-                rate = 1.0 / float(data["tether"]["php"])
+                rate = 1.0 / float(tether_rates["php"])
             else:
                 raise ValueError(f"Unsupported currency pair: {normalized_pair}")
 
@@ -202,22 +261,16 @@ async def get_all_supported_rates() -> Dict[str, float]:
     Returns:
         Dict mapping currency_pair to rate (e.g., {"USDT_PHP": 56.75, "USDT_USD": 1.0})
     """
-    logger.info("Fetching all supported rates from CoinGecko")
+    logger.info("Fetching all supported rates from shared CoinGecko cache")
     fallback_rates = FALLBACK_RATES.copy()
     try:
-        resp = await _get_http().get(COINGECKO_URL)
-        resp.raise_for_status()
-        data = resp.json()
-        
+        tether_rates = await _get_tether_rates()
         rates = {}
-        tether_rates = data.get("tether", {})
-        
         # Build USDT pairs
         for currency, rate in tether_rates.items():
             currency_upper = currency.upper()
             pair = f"USDT_{currency_upper}"
             rates[pair] = float(rate)
-            _cache[pair] = (float(rate), time.monotonic())
         
         logger.info(f"Cached {len(rates)} currency pairs")
         return rates
@@ -265,6 +318,12 @@ def get_cache_status_for_pair(currency_pair: str) -> Tuple[float, bool]:
 
 def clear_cache() -> None:
     """Clear the in-memory cache (for testing)."""
-    global _cache
+    global _cache, _provider_rates, _provider_fetched_at, _provider_retry_after, _provider_error, _provider_lock, _locks
     _cache.clear()
+    _provider_rates.clear()
+    _provider_fetched_at = 0.0
+    _provider_retry_after = 0.0
+    _provider_error = ""
+    _provider_lock = asyncio.Lock()
+    _locks.clear()
     logger.info("Exchange rate cache cleared")
