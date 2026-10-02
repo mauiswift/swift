@@ -1796,7 +1796,7 @@ async def select_checkout_institution(
 
     if institution_code in {"GCASH", "QRPH", "ALIPAY"}:
         qr_result = await service.generate_qrph(
-            amount=float(txn.amount),
+            amount=float(txn.original_amount or txn.amount),
             reference_no=txn.external_id,
             currency=transaction_currency,
             qr_type="P2M",
