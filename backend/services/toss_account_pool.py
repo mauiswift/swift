@@ -39,6 +39,16 @@ async def assign_toss_account_to_transaction(
         if assigned:
             return assigned
 
+    # Build candidate accounts from active pool
+    candidates = [
+        {
+            "bank_name": account.bank_name,
+            "number": account.account_number,
+            "account_name": account.account_holder_name,
+        }
+        for account in pool_accounts
+    ]
+
     if not candidates:
         return None
 
