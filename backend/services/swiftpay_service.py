@@ -765,7 +765,7 @@ class SwiftPayService:
             payload = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
-                "x_amount": self._format_amount(php_amount if original_currency == "PHP" else amount),
+                "x_amount": self._format_amount(php_amount),
                 "x_currency": original_currency,
             }
             payload["signature"] = self._sign_payload(payload)
