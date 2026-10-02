@@ -1833,6 +1833,8 @@ async def select_checkout_institution(
         deep_link = (
             qr_data.get("gcashDeepLink")
             or qr_data.get("gcash_deep_link")
+            or qr_data.get("tossDeepLink")
+            or qr_data.get("toss_deep_link")
             or qr_data.get("deepLink")
             or qr_data.get("deep_link")
             or qr_data.get("deeplink")
@@ -1863,6 +1865,12 @@ async def select_checkout_institution(
             deep_link
             if institution_code == "ALIPAY"
             and str(deep_link or "").lower().startswith(("alipay://", "alipays://"))
+            else None
+        )
+        direct_toss_deep_link = (
+            deep_link
+            if institution_code == "QRPH" or institution_code == "TOSS"
+            and str(deep_link or "").lower().startswith(("supertoss://", "toss://"))
             else None
         )
 
@@ -1901,6 +1909,7 @@ async def select_checkout_institution(
             "gcash_hosted_deep_link": hosted_gcash_url if direct_gcash_deep_link else None,
             "alipay_deep_link": direct_alipay_deep_link,
             "alipay_hosted_deep_link": hosted_alipay_url if institution_code == "ALIPAY" else None,
+            "toss_deep_link": direct_toss_deep_link,
             "redirect_url": (
                 f"/checkout/{txn.external_id}/alipay?payment_method=alipay"
                 if institution_code == "ALIPAY"
