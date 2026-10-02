@@ -741,11 +741,9 @@ class SwiftPayService:
     ) -> Dict[str, Any]:
         """Generate QR PH payment (Step 5).
 
-        QRPH (the underlying EMVCo rail) only settles in PHP, so non-PHP
-        currencies are converted to PHP before submission. The response still
-        reports the original amount/currency alongside the PHP amount that
-        was actually encoded in the QR, so callers (e.g. multicurrency
-        checkout flows) can display both.
+        Supports multicurrency payments by sending the original currency to SwiftPay API.
+        Non-PHP amounts are also converted to PHP for reference in the response.
+        The response reports both the original amount/currency and PHP equivalent.
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
@@ -767,8 +765,8 @@ class SwiftPayService:
             payload = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
-                "x_amount": self._format_amount(php_amount),
-                "x_currency": "PHP",
+                "x_amount": self._format_amount(php_amount if original_currency == "PHP" else amount),
+                "x_currency": original_currency,
             }
             payload["signature"] = self._sign_payload(payload)
 
@@ -798,10 +796,11 @@ class SwiftPayService:
                     "success": True,
                     "data": data,
                     "reference_no": current_reference,
-                    "amount": php_amount,
-                    "currency": "PHP",
+                    "amount": amount,
+                    "currency": original_currency,
                     "original_amount": amount,
                     "original_currency": original_currency,
+                    "php_amount": php_amount,
                 }
             except Exception as exc:
                 logger.exception("SwiftPay generate_qrph exception")
