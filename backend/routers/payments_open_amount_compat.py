@@ -240,10 +240,34 @@ async def select_checkout_institution_compat(
         data = qr_result.get("data") or {}
         qr_code = data.get("qrCode") or data.get("qr_code") or data.get("qrImage") or data.get("qr_image")
         qr_content = data.get("qrContent") or data.get("qr_content") or data.get("payload")
-        deep_link = data.get("gcashDeepLink") or data.get("gcash_deep_link") or data.get("deepLink")
+        deep_link = (
+            data.get("gcashDeepLink") or data.get("gcash_deep_link") or
+            data.get("tossDeepLink") or data.get("toss_deep_link") or
+            data.get("deepLink") or data.get("deep_link")
+        )
         if not qr_code and not qr_content and not deep_link:
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
-        txn.payment_url = deep_link or qr_code or qr_content
+
+        # Build TOSS deeplink if not provided by SwiftPay
+        toss_deep_link = None
+        if (institution_code == "QRPH" or institution_code == "TOSS") and not deep_link:
+            qr_payload = qr_content or qr_code
+            if qr_payload and not qr_payload.startswith(("http://", "https://", "data:")):
+                try:
+                    from urllib.parse import urlencode
+                    toss_params = {
+                        "qr": qr_payload,
+                        "amount": str(float(txn.amount or 0)),
+                        "currency": transaction_currency.upper(),
+                        "settlement_currency": "PHP",
+                    }
+                    toss_deep_link = f"supertoss://toss/pay?{urlencode(toss_params)}"
+                except Exception:
+                    pass
+        elif deep_link and str(deep_link or "").lower().startswith(("supertoss://", "toss://")):
+            toss_deep_link = deep_link
+
+        txn.payment_url = toss_deep_link or deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.payment_method = institution_code
         txn.transaction_type = "alipay_qr" if institution_code == "ALIPAY" else "swiftpay_qr"
@@ -257,7 +281,12 @@ async def select_checkout_institution_compat(
             "payment_method": "alipay" if institution_code == "ALIPAY" else ("gcash" if institution_code == "GCASH" else "qrph"),
             "qr_code": qr_code,
             "qr_content": qr_content,
+            "raw_qr_payload": qr_content or qr_code,
+            "amount": float(txn.amount or 0),
+            "currency": transaction_currency,
+            "settlement_currency": "PHP",
             "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
+            "toss_deep_link": toss_deep_link,
             "alipay_hosted_deep_link": (
                 f"/checkout/{txn.external_id}/alipay?payment_method=alipay"
                 if institution_code == "ALIPAY" else None
