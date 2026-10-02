@@ -232,7 +232,7 @@ async def select_checkout_institution_compat(
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
-            currency="PHP",
+            currency=transaction_currency,
             qr_type="P2M",
         )
         if not qr_result.get("success"):
@@ -277,7 +277,7 @@ async def select_checkout_institution_compat(
             "customer_name": txn.customer_name or "",
             "customer_email": txn.customer_email or "",
         },
-        currency="PHP",
+        currency=transaction_currency,
         generate_customer_redirect_url=True,
         institution_code=institution_code,
     )

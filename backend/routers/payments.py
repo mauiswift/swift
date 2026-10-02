@@ -1899,7 +1899,7 @@ async def select_checkout_institution(
             "customer_name": txn.customer_name or "",
             "customer_email": txn.customer_email or "",
         },
-        currency="PHP",
+        currency=transaction_currency,
         generate_customer_redirect_url=True,
         institution_code=institution_code,
     )
