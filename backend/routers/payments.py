@@ -1645,6 +1645,16 @@ async def get_checkout_institutions(
                     "loginMethod": "qr",
                 }
             ]
+            # Add TOSS for KRW payments
+            if (txn.currency or "").upper() == "KRW":
+                multicurrency_institutions.append({
+                    "id": "TOSS",
+                    "code": "TOSS",
+                    "name": "Toss Bank",
+                    "logoUrl": "/logos/toss.svg",
+                    "enabled": True,
+                    "loginMethod": "redirect",
+                })
             # Filter by channel enablement
             res_data = [
                 item for item in multicurrency_institutions
