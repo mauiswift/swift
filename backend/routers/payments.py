@@ -1632,8 +1632,25 @@ async def get_checkout_institutions(
             # Optionally return specific Magpie wallet info here if needed
             return {"success": True, "data": []}
 
+        # For non-PHP currencies, return multicurrency payment methods (QRPH, etc.)
         if (txn.currency or "").upper() != "PHP":
-            return {"success": True, "data": []}
+            channels = await get_payment_channels(db)
+            multicurrency_institutions = [
+                {
+                    "id": "QRPH",
+                    "code": "QRPH",
+                    "name": "QR Ph",
+                    "logoUrl": "/logos/qrph.svg",
+                    "enabled": True,
+                    "loginMethod": "qr",
+                }
+            ]
+            # Filter by channel enablement
+            res_data = [
+                item for item in multicurrency_institutions
+                if php_checkout_institution_is_enabled(item.get("code", ""), channels)
+            ]
+            return {"success": True, "data": res_data}
 
         res = await gateway.swift.get_collection_institutions()
         if not res.get("success"):
