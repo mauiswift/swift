@@ -342,7 +342,7 @@ export default function AccountSecure() {
                 {/* Link Button */}
                 {telegramBotName && !linking ? (
                   <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
-                    <TelegramLoginWidget botName={telegramBotName} onAuth={handleTelegramLink} />
+                    <TelegramLoginWidget botName={telegramBotName} onAuth={handleTelegramLink} showUserPhoto={false} />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">Continue with Telegram</p>
                       <p className="mt-0.5 text-xs leading-relaxed text-slate-500">A Telegram window will open to verify your account.</p>

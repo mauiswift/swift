@@ -390,7 +390,7 @@ export function useDashboardData() {
   const fetchData = useCallback(async (days: RangeKey) => {
     if (!user || isSuperAdmin) return false;
     try {
-      const [statsRes, phpRes, usdtRes, krwRes, cnyRes] = await Promise.all([
+      const [statsRes, phpRes, usdtRes, krwRes] = await Promise.all([
         client.apiCall.invoke({
           url: `/api/v1/xend/dashboard-stats?days=${days}&currency=${collectionCurrency}`,
           method: 'GET',
@@ -399,10 +399,9 @@ export function useDashboardData() {
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=KRW', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=CNY', method: 'GET', data: {} }),
       ]);
 
-      const balanceResponses = [phpRes, usdtRes, krwRes, cnyRes];
+      const balanceResponses = [phpRes, usdtRes, krwRes];
       if (!statsRes.ok || !statsRes.data?.payments || balanceResponses.some((res) => !res.ok || !res.data)) {
         setDataError(true);
         return false;
@@ -429,7 +428,6 @@ export function useDashboardData() {
       addBal('PHP', phpRes);
       addBal('USDT', usdtRes);
       addBal('KRW', krwRes);
-      addBal('CNY', cnyRes);
       setBalances(balanceMap);
       setDataError(false);
       return true;
@@ -555,8 +553,8 @@ export function useDashboardData() {
     ? { Executed: '실행됨', Pending: '대기 중', Rejected: '거부됨', Expired: '만료됨' }
     : { Executed: 'Executed', Pending: 'Pending', Rejected: 'Rejected', Expired: 'Expired' };
   const currencyNames = language === 'ko'
-    ? { KRW: '원화', PHP: '페소', CNY: '위안화', USDT: '테더' }
-    : { KRW: 'KRW wallet', PHP: 'PHP wallet', CNY: 'CNY wallet', USDT: 'USDT wallet' };
+    ? { KRW: '원화', PHP: '페소', USDT: '테더' }
+    : { KRW: 'KRW wallet', PHP: 'PHP wallet', USDT: 'USDT wallet' };
 
   const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
     || (user as { name?: string } | null)?.name

@@ -36,7 +36,6 @@ interface AdminNotification {
 const currencyFlags: Record<string, string> = {
   PHP: '🇵🇭',
   KRW: '🇰🇷',
-  CNY: '🇨🇳',
 };
 
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────

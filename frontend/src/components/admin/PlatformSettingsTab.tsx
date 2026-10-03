@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 export function PlatformSettingsTab() {
   const [settings, setSettings] = useState({
-    collectionCurrencies: 'PHP, USDT, KRW, CNY',
+    collectionCurrencies: 'PHP, USDT, KRW',
     systemFeePercent: '0.4',
     additionalFeePercent: '0',
     totalFeePercent: '0.5',

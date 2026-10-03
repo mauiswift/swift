@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 export function WalletSettingsTab() {
   const [settings, setSettings] = useState({
-    depositCurrencies: 'PHP, USDT, KRW, CNY',
+    depositCurrencies: 'PHP, USDT, KRW',
     maxDepositAmount: '1000000',
     minDepositAmount: '100',
     depositFeePercent: '2.5',
@@ -55,9 +55,9 @@ export function WalletSettingsTab() {
             <Input
               value={settings.depositCurrencies}
               onChange={(e) => setSettings({ ...settings, depositCurrencies: e.target.value })}
-              placeholder="PHP, USDT, KRW, CNY"
+              placeholder="PHP, USDT, KRW"
             />
-            <p className="mt-1 text-xs text-slate-500">e.g., PHP, USDT, KRW, CNY</p>
+            <p className="mt-1 text-xs text-slate-500">e.g., PHP, USDT, KRW</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

@@ -21,7 +21,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
       }
     },
   );
-  const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
+  const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>(['PHP', 'USDT', 'KRW']);
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();

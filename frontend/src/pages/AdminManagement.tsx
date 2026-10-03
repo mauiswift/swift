@@ -24,7 +24,7 @@ import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
 type TabId = AdminTab;
 
 export default function AdminManagement() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin: isPlatformSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab') as AdminTab | null;
@@ -32,8 +32,8 @@ export default function AdminManagement() {
   const [selectedTab, setSelectedTab] = useState<TabId>('dashboard');
 
   // Permissions
-  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'Owner';
   const canManageTeam = Boolean(user?.permissions?.can_manage_team);
+  const canAccessAdminManagement = isPlatformSuperAdmin || canManageTeam;
   const canManagePayments = Boolean(user?.permissions?.can_manage_payments);
   const canManageWallet = Boolean(user?.permissions?.can_manage_wallet);
   const canManageDisbursements = Boolean(user?.permissions?.can_manage_disbursements);
@@ -43,19 +43,19 @@ export default function AdminManagement() {
   const canManageTossAccounts = Boolean(user?.permissions?.can_manage_toss_accounts);
 
   // Tab access control - Banking System
-  const canAccessDashboard = isSuperAdmin;
-  const canAccessMerchants = isSuperAdmin && canManageTeam;
-  const canAccessTransactions = isSuperAdmin && (canManagePayments || canViewReports);
-  const canAccessSettlements = isSuperAdmin && canManageDisbursements;
-  const canAccessWalletControl = isSystemWalletAdmin(user?.id) && isSuperAdmin && canManageWallet;
-  const canAccessCryptoApprovals = isSystemWalletAdmin(user?.id) && isSuperAdmin && canApproveTopups;
-  const canAccessPaymentChannels = isSuperAdmin && (canManagePayments || canManageDisbursements);
-  const canAccessWalletSettings = isSuperAdmin && canManageWallet;
-  const canAccessUserManagement = isSuperAdmin;
-  const canAccessOperations = isSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
-  const canAccessPlatformSettings = isSuperAdmin && (canManagePayments || canManageWallet);
-  const canAccessGovernance = isSuperAdmin;
-  const canAccessTossAccountApprovals = isSuperAdmin && canManageTossAccounts;
+  const canAccessDashboard = isPlatformSuperAdmin;
+  const canAccessMerchants = isPlatformSuperAdmin && canManageTeam;
+  const canAccessTransactions = isPlatformSuperAdmin && (canManagePayments || canViewReports);
+  const canAccessSettlements = isPlatformSuperAdmin && canManageDisbursements;
+  const canAccessWalletControl = isSystemWalletAdmin(user?.id) && isPlatformSuperAdmin && canManageWallet;
+  const canAccessCryptoApprovals = isSystemWalletAdmin(user?.id) && isPlatformSuperAdmin && canApproveTopups;
+  const canAccessPaymentChannels = isPlatformSuperAdmin && (canManagePayments || canManageDisbursements);
+  const canAccessWalletSettings = isPlatformSuperAdmin && canManageWallet;
+  const canAccessUserManagement = isPlatformSuperAdmin;
+  const canAccessOperations = isPlatformSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
+  const canAccessPlatformSettings = isPlatformSuperAdmin && (canManagePayments || canManageWallet);
+  const canAccessGovernance = isPlatformSuperAdmin;
+  const canAccessTossAccountApprovals = isPlatformSuperAdmin && canManageTossAccounts;
 
   // Build tabs
   const tabs = useMemo(() => buildAdminTabs({
@@ -73,7 +73,7 @@ export default function AdminManagement() {
     canAccessTossAccountApprovals,
     canManageTeam,
     canAccessGovernance,
-    isSuperAdmin,
+    isSuperAdmin: isPlatformSuperAdmin,
   }, 0), [
     canAccessDashboard,
     canAccessMerchants,
@@ -89,7 +89,7 @@ export default function AdminManagement() {
     canAccessTossAccountApprovals,
     canManageTeam,
     canAccessGovernance,
-    isSuperAdmin,
+    isPlatformSuperAdmin,
   ]);
 
   // Set initial tab from URL or default
@@ -101,14 +101,14 @@ export default function AdminManagement() {
     }
   }, [requestedTab, tabs]);
 
-  // Redirect if user is not super admin
+  // Redirect if the user should not access admin management at all.
   useEffect(() => {
-    if (!isSuperAdmin) {
-      navigate('/');
+    if (!canAccessAdminManagement) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [isSuperAdmin, navigate]);
+  }, [canAccessAdminManagement, navigate]);
 
-  if (!isSuperAdmin) {
+  if (!canAccessAdminManagement) {
     return null;
   }
 

@@ -20,6 +20,7 @@ import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { DashboardPanel, DashboardStatCard, DashboardWorkspaceActions, DailyVolumeChart, LiveExchangeRatesPool } from './shared';
+import PhilippinesMerchantDashboard from './merchant/PhilippinesMerchantDashboard';
 
 interface DashboardStats {
   days: number;
@@ -82,7 +83,6 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
   const desktopCurrencies = [
     { code: 'KRW', flag: '🇰🇷', bg: 'bg-amber-500/10 text-amber-600', border: 'border-amber-200' },
     { code: 'PHP', flag: '🇵🇭', bg: 'bg-blue-500/10 text-blue-600', border: 'border-blue-200' },
-    { code: 'CNY', flag: '🇨🇳', bg: 'bg-red-500/10 text-red-600', border: 'border-red-200' },
     { code: 'USDT', flag: '🪙', bg: 'bg-emerald-500/10 text-emerald-600', border: 'border-emerald-200' },
   ];
 
@@ -170,7 +170,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
                 key={code}
                 className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(15,23,42,0.1)]"
               >
-                <div className={`absolute inset-x-0 top-0 h-1 ${code === 'KRW' ? 'bg-amber-400' : code === 'PHP' ? 'bg-blue-500' : code === 'CNY' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className={`absolute inset-x-0 top-0 h-1 ${code === 'KRW' ? 'bg-amber-400' : code === 'PHP' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                 <div className="mb-5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {code === 'USDT' ? (
@@ -210,6 +210,16 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
         </div>
 
         <DashboardWorkspaceActions actions={dashboardActions} />
+
+        <PhilippinesMerchantDashboard
+          stats={stats}
+          balances={balances}
+          connected={connected}
+          loading={loading || initialLoading}
+          dataError={dataError}
+          ui={ui}
+          rangeDays={range}
+        />
 
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">
           <div>

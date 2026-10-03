@@ -66,6 +66,24 @@ export default function Login() {
   const configuredGoogleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
   const [googleClientId, setGoogleClientId] = useState(configuredGoogleClientId || '');
   const verificationRequired = Boolean(turnstileSiteKey && !turnstileToken);
+  const stateFrom = typeof location.state?.from === 'string' ? location.state.from : null;
+  const redirectPath = stateFrom && stateFrom.startsWith('/') && !stateFrom.startsWith('/login')
+    ? stateFrom
+    : '/dashboard';
+  const demoEnabled = import.meta.env.DEV || new URLSearchParams(location.search).has('demo');
+  const demoRoles = demoEnabled ? [
+    { id: 'finance', label: 'Finance Officer', email: 'maria.cruz@swiftpay.ph', password: 'SwiftPH#2026!' },
+    { id: 'merchant', label: 'Merchant Admin', email: 'jose.reyes@merchant.ph', password: 'MerchantPOS@26' },
+    { id: 'compliance', label: 'Compliance', email: 'ana.santos@swiftpay.ph', password: 'KYBcompliance#1' },
+    { id: 'super', label: 'Super Admin', email: 'admin@swiftpay.ph', password: 'SwiftAdmin#Root' },
+  ] : [];
+
+  const applyDemoCredentials = (demo: { email: string; password: string }) => {
+    setLocalError(null);
+    setEmail(demo.email);
+    setPassword(demo.password);
+    setStep('password');
+  };
 
   const handleTurnstileSuccess = (token: string) => {
     setTurnstileError(false);
@@ -154,7 +172,7 @@ export default function Login() {
     return () => { cancelled = true; };
   }, [configuredTelegramBot]);
 
-  if (user) return <Navigate to={user.must_change_password ? '/change-password' : '/dashboard'} replace />;
+  if (user) return <Navigate to={user.must_change_password ? '/change-password' : redirectPath} replace />;
 
   const handleEmailStep = (e: FormEvent) => {
     e.preventDefault();
@@ -172,7 +190,7 @@ export default function Login() {
     setLocalError(null);
     try {
       await authApi.loginWithPasskey();
-      window.location.assign('/dashboard');
+      window.location.assign(redirectPath);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : (isKorean ? '패스키 로그인에 실패했습니다.' : 'Passkey login failed'));
     } finally {
@@ -213,6 +231,73 @@ export default function Login() {
           --text-200: #666666;
           --border-color: #e2e2e2;
           --link-color: #5b6ea3;
+        }
+
+        .ak-demo-box {
+          margin-top: 16px;
+          padding: 14px;
+          border: 1px solid var(--border-color);
+          border-radius: 14px;
+          background: linear-gradient(180deg, rgba(91, 110, 163, 0.08), rgba(255, 255, 255, 0.85));
+        }
+
+        .ak-demo-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .ak-demo-title {
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--text-200);
+        }
+
+        .ak-demo-pill {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          border-radius: 999px;
+          padding: 4px 10px;
+          border: 1px solid rgba(91, 110, 163, 0.35);
+          color: rgba(91, 110, 163, 0.95);
+          background: rgba(91, 110, 163, 0.08);
+        }
+
+        .ak-demo-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .ak-demo-btn {
+          min-height: 44px;
+          border-radius: 12px;
+          border: 1px solid rgba(226, 226, 226, 0.9);
+          background: #ffffff;
+          color: #1a1a1a;
+          font-weight: 700;
+          font-size: 13px;
+          letter-spacing: -0.01em;
+          transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+          box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+        }
+
+        .ak-demo-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 16px 28px rgba(15, 23, 42, 0.10);
+          border-color: rgba(91, 110, 163, 0.55);
+        }
+
+        .ak-demo-note {
+          margin: 10px 0 0;
+          font-size: 12px;
+          color: rgba(102, 102, 102, 0.95);
         }
 
         .ak-page {
@@ -383,29 +468,27 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           flex-wrap: wrap;
-          gap: 12px;
+          gap: 10px;
           margin-top: 16px;
           width: 100%;
         }
 
         .ak-login-methods .ak-btn-secondary {
           margin-top: 0;
-          width: 112px;
-          min-height: 52px;
         }
 
         .ak-google-login,
         .ak-telegram-login {
           display: flex;
-          flex: 0 0 112px;
-          width: 112px;
+          flex: 0 0 52px;
+          width: 52px;
           height: 52px;
           align-items: center;
           justify-content: center;
-          gap: 10px;
-          padding: 6px 12px;
+          gap: 0;
+          padding: 0;
           border: 1px solid var(--border-color);
-          border-radius: 10px;
+          border-radius: 999px;
           background: #fff;
           color: #1a1a1a;
           transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
@@ -437,12 +520,17 @@ export default function Login() {
           height: 40px;
         }
 
+        .ak-passkey-login {
+          flex: 0 0 52px;
+          width: 52px;
+          height: 52px;
+          padding: 0;
+          border-radius: 999px;
+          min-height: 52px;
+        }
+
         .ak-method-label {
-          display: inline;
-          font-size: 12px;
-          font-weight: 700;
-          line-height: 1;
-          white-space: nowrap;
+          display: none;
         }
 
         .ak-btn-secondary:hover,
@@ -902,19 +990,40 @@ export default function Login() {
                   >
                     {t('login_button')}
                   </button>
+
+                  {demoEnabled && (
+                    <div className="ak-demo-box" aria-label="Demo credentials">
+                      <div className="ak-demo-header">
+                        <span className="ak-demo-title">Demo roles</span>
+                        <span className="ak-demo-pill">DEV</span>
+                      </div>
+                      <div className="ak-demo-grid">
+                        {demoRoles.map((demo) => (
+                          <button
+                            key={demo.id}
+                            type="button"
+                            className="ak-demo-btn"
+                            onClick={() => applyDemoCredentials(demo)}
+                          >
+                            {demo.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="ak-demo-note">Autofills email + password for demos.</p>
+                    </div>
+                  )}
                 </form>
 
                 <div className="ak-login-methods" aria-label={isKorean ? '다른 로그인 방법' : 'Other sign-in methods'}>
                   {googleClientId && (
                     <div className="ak-google-login" aria-label="Continue with Google" title="Continue with Google">
                       <div ref={googleButtonRef} />
-                      <span className="ak-method-label">{isKorean ? 'Google' : 'Google'}</span>
                     </div>
                   )}
 
                   <button
                     type="button"
-                    className="ak-btn-secondary"
+                    className="ak-btn-secondary ak-passkey-login"
                     onClick={handlePasskeyLogin}
                     disabled={passkeyLoading}
                     aria-label={isKorean ? '패스키로 로그인' : 'Sign in with passkey'}
@@ -923,21 +1032,21 @@ export default function Login() {
                     <span className="ak-passkey-icon" aria-hidden="true">
                       <Fingerprint size={19} strokeWidth={2} />
                     </span>
-                  <span className="ak-method-label">
-                      {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키' : 'Passkey')}
-                    </span>
                   </button>
 
                   {telegramBotUsername && (
-                    <div className="ak-telegram-login" title={t('sign_in_with_telegram')}>
+                    <div className="ak-telegram-login" aria-label={t('sign_in_with_telegram')} title={t('sign_in_with_telegram')}>
                       <TelegramLoginWidget
                         botName={telegramBotUsername}
+                        uiSize="sm"
+                        title={t('sign_in_with_telegram')}
+                        ariaLabel={t('sign_in_with_telegram')}
+                        showUserPhoto={false}
                         onAuth={async (telegramUser) => {
                           setLocalError(null);
                           await loginWithTelegram(telegramUser, turnstileToken);
                         }}
                       />
-                      <span className="ak-method-label">Telegram</span>
                     </div>
                   )}
                 </div>
@@ -1015,3 +1124,4 @@ export default function Login() {
     </>
   );
 }
+

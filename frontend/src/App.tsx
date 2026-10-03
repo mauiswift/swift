@@ -44,6 +44,7 @@ const Pricing = React.lazy(() => import('./pages/Pricing'));
 const Features = React.lazy(() => import('./pages/Features'));
 const CollectionRates = React.lazy(() => import('./pages/CollectionRates'));
 const Register = React.lazy(() => import('./pages/Register'));
+const OnboardingWizard = React.lazy(() => import('./pages/OnboardingWizard'));
 const AcceptInvitation = React.lazy(() => import('./pages/AcceptInvitation'));
 const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 const AuthError = React.lazy(() => import('./pages/AuthError'));
@@ -190,6 +191,7 @@ function AuthAwareContent() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />
       <Route path="/register" element={<Register />} />
+      <Route path="/onboarding" element={<OnboardingWizard />} />
       <Route path="/sign-up-now" element={<Register />} />
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
       <Route path="/pricing" element={<Pricing />} />

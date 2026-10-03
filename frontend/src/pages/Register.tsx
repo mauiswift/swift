@@ -382,6 +382,7 @@ export default function Register() {
                   <div className="mt-4">
                     <TelegramLoginWidget
                       botName={telegramBotUsername}
+                      showUserPhoto={false}
                       onAuth={async (telegramUser) => {
                         setForm((current) => ({
                           ...current,
@@ -446,6 +447,14 @@ export default function Register() {
                 </>
               )}
             </button>
+
+            <div className="mt-4 rounded-[22px] border border-[#e9d7c9] bg-white px-5 py-4 text-center shadow-sm">
+              <p className="text-[13px] font-semibold text-[#1a1a1a]">Need a full KYB/KYC wizard?</p>
+              <p className="mt-1 text-[13px] text-[#535353]">Use the 5-step onboarding flow with directors, documents, and bank linking.</p>
+              <Link to="/onboarding" className="mt-3 inline-flex items-center justify-center rounded-full bg-[#0f172a] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#1f2937]">
+                Open onboarding wizard
+              </Link>
+            </div>
 
             <div className="mt-8 text-center text-[15px] text-[#535353] font-medium">
               Already have an account?{' '}

@@ -54,7 +54,6 @@ type DashboardMobileProps = {
 const currencyList = [
   { code: 'KRW', flag: '🇰🇷' },
   { code: 'PHP', flag: '🇵🇭' },
-  { code: 'CNY', flag: '🇨🇳' },
   { code: 'USDT', flag: '🪙' },
 ];
 
