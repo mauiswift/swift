@@ -47,6 +47,7 @@ import {
   normalizeCheckoutQrValue,
   resolveCheckoutQrPanelMode,
   sanitizeCheckoutDeepLink,
+  sanitizeTossDeepLink,
 } from '@/lib/checkoutQr';
 import { openMobileDeepLink } from '@/lib/deeplinks';
 import {
@@ -717,9 +718,12 @@ export default function Checkout() {
   const checkoutText = (english: string, korean: string) => (
     isKoreanCheckout ? korean : english
   );
-  const isManualDeposit = currencyCapabilities.manualDeposit;
-  const hasQR = (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
-  const hasQrPayload = !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
+  const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
+  const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
+  const usesHighValuePhpQr = isHighValuePhp;
+  const isManualDeposit = currencyCapabilities.manualDeposit || isHighValuePhp;
+  const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
+  const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
   const qrPanelMode = resolveCheckoutQrPanelMode({
     hasQR,
     hasQrPayload,
@@ -739,9 +743,21 @@ export default function Checkout() {
     : normalizeKrwBankName(txn.bank_name || DEFAULT_KRW_BANK_NAME);
   const krwAccountNumber = isSecurityBankName(txn.bank_name) ? '1908-1618-8260' : (txn.bank_account_number || '1908-1618-8260');
   const krwAccountName = isSecurityBankName(txn.bank_name) ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
-  const manualDepositBankName = isKrw ? krwBankName : (txn.bank_name || DEFAULT_KRW_BANK_NAME);
-  const manualDepositAccountNumber = isKrw ? krwAccountNumber : (txn.bank_account_number || '1908-1618-8260');
-  const manualDepositAccountName = isKrw ? krwAccountName : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
+  const manualDepositBankName = isKrw ? krwBankName : (isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || DEFAULT_KRW_BANK_NAME));
+  const manualDepositAccountNumber = isKrw ? krwAccountNumber : (isHighValuePhp ? '0000068888173' : (txn.bank_account_number || '1908-1618-8260'));
+  const manualDepositAccountName = isKrw ? krwAccountName : (isHighValuePhp ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.'));
+  const krwTransferQrValue = [
+    'SWIFTPAY-KRW-TRANSFER',
+    `BANK:${krwBankName}`,
+    `ACCOUNT:${krwAccountNumber}`,
+    `NAME:${krwAccountName}`,
+    `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
+  ].join('\n');
+  const tossDeepLink = sanitizeTossDeepLink(txn.toss_deep_link) || 'supertoss://toss/pay';
+  const openTossApp = () => {
+    window.location.assign(tossDeepLink);
+  };
+  const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
   const swiftpayVirtualAccountEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'virtual_account');
   const institutionCode = (institution: Institution) => String(institution.code || '').trim().toUpperCase();
@@ -1637,6 +1653,27 @@ export default function Checkout() {
                     </div>
                   )}
 
+                  <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
+                    <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
+                      {isHighValuePhp ? (
+                        <img src="/images/qrph_high_value.jpg" alt="QRPh payment code" className="w-full rounded-lg object-contain" />
+                      ) : (
+                        <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                      )}
+                    </div>
+                    <p className="mt-4 text-xs font-bold text-slate-900">{isHighValuePhp ? 'Scan with a QRPh-enabled banking app' : 'QR로 송금 정보 불러오기'}</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-700">{isHighValuePhp ? 'Verify the bank details and send the exact amount shown above.' : '계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.'}</p>
+                    {!isHighValuePhp && (
+                      <button
+                        type="button"
+                        onClick={openTossApp}
+                        className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0064FF] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0052d6]"
+                      >
+                        <Smartphone className="h-4 w-4" aria-hidden="true" />
+                        {checkoutText('Open Toss app', '토스 앱 열기')}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1817,6 +1854,61 @@ export default function Checkout() {
                   </div>
                 ) : visibleInstitutions.length > 0 ? (
                   <div className="space-y-6">
+                    {isKrw ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextParams = new URLSearchParams(searchParams);
+                            nextParams.set('payment_method', 'bank_transfer');
+                            navigate(`/checkout/${encodeURIComponent(checkoutId || txn.external_id)}?${nextParams.toString()}`);
+                          }}
+                          className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                            <Landmark className="h-7 w-7 text-[#1475d1]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-base font-semibold text-slate-900">{checkoutText('Manual bank transfer', '수동 은행 송금')}</p>
+                            <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Transfer KRW to the account shown on the next step.', '다음 단계에 표시되는 계좌로 KRW를 송금하세요.')}</p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />
+                        </button>
+                      </div>
+                    ) : isPhp && (
+                      <div className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+                        <div className="bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] px-5 py-5 text-white sm:px-6">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
+                                {checkoutText('PHP checkout', 'PHP 결제')}
+                              </p>
+                              <h3 className="mt-1 text-lg font-semibold">
+                                {checkoutText('Choose how you want to pay', '결제 방법을 선택하세요')}
+                              </h3>
+                              <p className="mt-1 text-xs leading-5 text-blue-100">
+                                {checkoutText('Use QRPH, GCash, or a local bank such as BDO, BPI, Landbank, or RCBC.', 'QRPH, GCash 또는 BDO, BPI, Landbank, RCBC 같은 현지 은행을 이용하세요.')}
+                              </p>
+                            </div>
+                            <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-blue-200" aria-hidden="true" />
+                          </div>
+                        </div>
+                        <div className="grid gap-2 p-3 text-[11px] font-medium text-slate-600 sm:grid-cols-3 sm:p-4">
+                          <div className="rounded-xl bg-blue-50 px-3 py-2.5 text-center">
+                            <QrCode className="mx-auto mb-1 h-4 w-4 text-blue-700" aria-hidden="true" />
+                            {checkoutText('QRPH payments', 'QRPH 결제')}
+                          </div>
+                          <div className="rounded-xl bg-orange-50 px-3 py-2.5 text-center">
+                            <Smartphone className="mx-auto mb-1 h-4 w-4 text-orange-600" aria-hidden="true" />
+                            {checkoutText('GCash wallet', 'GCash 지갑')}
+                          </div>
+                          <div className="rounded-xl bg-slate-100 px-3 py-2.5 text-center">
+                            <Building2 className="mx-auto mb-1 h-4 w-4 text-slate-600" aria-hidden="true" />
+                            {checkoutText('Bank redirect', '은행 결제')}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {/* QRPH first for PHP checkout */}
                     {qrphInstitutions.length > 0 && (
                       <div className="space-y-4">
@@ -1978,6 +2070,14 @@ export default function Checkout() {
                             </span>
                           </div>
                           <p className="text-[13px] text-blue-100">{checkoutText('Scan this code with any QRPH-compatible bank or e-wallet app.', 'QRPH를 지원하는 은행 또는 전자지갑 앱으로 이 코드를 스캔하세요.')}</p>
+                          <button
+                            type="button"
+                            onClick={openTossApp}
+                            className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20"
+                          >
+                            <Smartphone className="h-4 w-4" aria-hidden="true" />
+                            {checkoutText('Open Toss app to scan', '토스 앱에서 스캔하기')}
+                          </button>
                         </div>
                         <div className="space-y-5 p-6">
                           <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-2">

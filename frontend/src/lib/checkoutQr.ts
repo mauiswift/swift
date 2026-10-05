@@ -49,6 +49,12 @@ export const sanitizeAlipayAppDeepLink = (value: unknown): string | null => {
   return /^(?:alipays|alipay):\/\//i.test(trimmed) ? trimmed : null;
 };
 
+export const sanitizeTossDeepLink = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const trimmed = value.trim();
+  return /^supertoss:\/\/toss\/pay(?:[/?#]|$)/i.test(trimmed) ? trimmed : null;
+};
+
 export const resolveCheckoutQrPanelMode = ({
   hasQR,
   hasQrPayload,

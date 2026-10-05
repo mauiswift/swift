@@ -28,6 +28,7 @@ COPY frontend/ .
 RUN pnpm build
 
 # ── Stage 2: Python backend ──────────────────────────────────────────────────
+ARG PY_BASE_IMAGE
 FROM ${PY_BASE_IMAGE}
 
 WORKDIR /app/backend
