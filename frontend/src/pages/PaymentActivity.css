@@ -137,6 +137,119 @@
   grid-template-columns: minmax(0, 1fr) auto auto auto;
 }
 
+.backoffice-theme .payment-workspace [class*="bg-amber-"],
+.backoffice-theme .payment-workspace [class*="bg-blue-"],
+.backoffice-theme .payment-workspace [class*="bg-cyan-"],
+.backoffice-theme .payment-workspace [class*="bg-emerald-"],
+.backoffice-theme .payment-workspace [class*="bg-green-"],
+.backoffice-theme .payment-workspace [class*="bg-indigo-"],
+.backoffice-theme .payment-workspace [class*="bg-lime-"],
+.backoffice-theme .payment-workspace [class*="bg-orange-"],
+.backoffice-theme .payment-workspace [class*="bg-pink-"],
+.backoffice-theme .payment-workspace [class*="bg-purple-"],
+.backoffice-theme .payment-workspace [class*="bg-red-"],
+.backoffice-theme .payment-workspace [class*="bg-rose-"],
+.backoffice-theme .payment-workspace [class*="bg-teal-"],
+.backoffice-theme .payment-workspace [class*="bg-violet-"],
+.backoffice-theme .payment-workspace [class*="bg-yellow-"] {
+  background-color: rgba(255, 255, 255, 0.045) !important;
+  background-image: none !important;
+}
+
+.backoffice-theme .payment-workspace [class*="bg-amber-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-blue-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-cyan-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-emerald-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-green-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-indigo-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-lime-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-orange-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-pink-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-purple-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-red-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-rose-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-teal-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-violet-"][class*="text-white"],
+.backoffice-theme .payment-workspace [class*="bg-yellow-"][class*="text-white"] {
+  background-color: #047857 !important;
+}
+
+.backoffice-theme .payment-workspace [class*="bg-[#FF6B00]"],
+.backoffice-theme .payment-workspace [class*="bg-[#E66000]"] {
+  background-color: #047857 !important;
+}
+
+.backoffice-theme .payment-workspace {
+  --activity-accent: 52 211 153;
+}
+
+.backoffice-theme .payment-workspace [class*="text-amber-"],
+.backoffice-theme .payment-workspace [class*="text-yellow-"] {
+  color: #fcd34d !important;
+}
+
+.backoffice-theme .payment-workspace [class*="text-blue-"],
+.backoffice-theme .payment-workspace [class*="text-cyan-"] {
+  color: #7dd3fc !important;
+}
+
+.backoffice-theme .payment-workspace [class*="text-emerald-"],
+.backoffice-theme .payment-workspace [class*="text-green-"],
+.backoffice-theme .payment-workspace [class*="text-teal-"] {
+  color: #6ee7b7 !important;
+}
+
+.backoffice-theme .payment-workspace [class*="text-indigo-"],
+.backoffice-theme .payment-workspace [class*="text-violet-"] {
+  color: #a5b4fc !important;
+}
+
+.backoffice-theme .payment-workspace [class*="text-purple-"] {
+  color: #d8b4fe !important;
+}
+
+.backoffice-theme .payment-workspace [class*="text-red-"],
+.backoffice-theme .payment-workspace [class*="text-rose-"],
+.backoffice-theme .payment-workspace [class*="text-pink-"] {
+  color: #fda4af !important;
+}
+
+.backoffice-theme .payment-workspace [class*="text-orange-"],
+.backoffice-theme .payment-workspace [class*="text-lime-"] {
+  color: #a7f3d0 !important;
+}
+
+.backoffice-theme .payment-workspace [class*="border-amber-"],
+.backoffice-theme .payment-workspace [class*="border-blue-"],
+.backoffice-theme .payment-workspace [class*="border-cyan-"],
+.backoffice-theme .payment-workspace [class*="border-emerald-"],
+.backoffice-theme .payment-workspace [class*="border-green-"],
+.backoffice-theme .payment-workspace [class*="border-indigo-"],
+.backoffice-theme .payment-workspace [class*="border-lime-"],
+.backoffice-theme .payment-workspace [class*="border-orange-"],
+.backoffice-theme .payment-workspace [class*="border-pink-"],
+.backoffice-theme .payment-workspace [class*="border-purple-"],
+.backoffice-theme .payment-workspace [class*="border-red-"],
+.backoffice-theme .payment-workspace [class*="border-rose-"],
+.backoffice-theme .payment-workspace [class*="border-teal-"],
+.backoffice-theme .payment-workspace [class*="border-violet-"],
+.backoffice-theme .payment-workspace [class*="border-yellow-"] {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.backoffice-theme .payment-workspace table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.backoffice-theme .payment-workspace [class*="hover:text-blue-"]:hover,
+.backoffice-theme .payment-workspace [class*="hover:text-cyan-"]:hover,
+.backoffice-theme .payment-workspace [class*="hover:text-orange-"]:hover,
+.backoffice-theme .payment-workspace [class*="hover:text-rose-"]:hover,
+.backoffice-theme .payment-workspace [class*="hover:text-red-"]:hover,
+.backoffice-theme .payment-workspace [class*="hover:text-[#FF6B00]"]:hover {
+  color: #a7f3d0 !important;
+}
+
 @media (max-width: 639px) {
   .payment-workspace__history .wallet-transaction-header {
     display: none;
