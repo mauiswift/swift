@@ -5,6 +5,126 @@ import pytest
 from services.usdt_trade_service import UsdtTradeService
 
 
+@pytest.mark.parametrize(
+    ("from_currency", "to_currency", "expected"),
+    [
+        ("PHP", "USDT", ("PHP", "USD")),
+        ("USDT", "PHP", ("USD", "PHP")),
+        ("KRW", "USDT", ("KRW", "USD")),
+    ],
+)
+def test_supported_usdt_conversion_pairs(from_currency, to_currency, expected):
+    from routers.wallet import _validate_usdt_conversion_pair
+
+    assert _validate_usdt_conversion_pair(from_currency, to_currency) == expected
+
+
+def test_krw_usdt_conversion_is_internal_without_coinsph():
+    service = UsdtTradeService(UnconfiguredCoins())
+
+    assert service.provider_name("KRW", "USDT") == "internal"
+
+
+def test_usdt_cannot_be_sold_for_krw():
+    from fastapi import HTTPException
+
+    from routers.wallet import _validate_usdt_conversion_pair
+
+    with pytest.raises(HTTPException, match="PHP-only"):
+        _validate_usdt_conversion_pair("USDT", "KRW")
+
+
+@pytest.mark.asyncio
+async def test_krw_usdt_purchase_settles_as_internal_wallet_conversion(monkeypatch):
+    import routers.auth as auth_router
+    import routers.wallet as wallet_router
+
+    class ConversionDb:
+        trade = None
+        commits = 0
+
+        async def scalar(self, _statement):
+            return None
+
+        def add(self, trade):
+            self.trade = trade
+
+        async def flush(self):
+            self.trade.id = 42
+
+        async def commit(self):
+            self.commits += 1
+
+        async def rollback(self):
+            raise AssertionError("A valid internal KRW purchase should not roll back")
+
+    class WalletService:
+        async def get_or_create_wallet(self, _user_id, currency, lock=False):
+            assert lock is True
+            return SimpleNamespace(id=7, currency=currency, balance=100_000, available_balance=100_000)
+
+    class CurrencyServiceStub:
+        def __init__(self, _db):
+            pass
+
+        async def get_conversion_quote(self, **_kwargs):
+            return {
+                "to_amount": 7.2,
+                "rate": 0.00072,
+                "fee_rate": 0.01,
+                "conversion_fee_amount": 0.08,
+            }
+
+        async def convert_currency(self, **kwargs):
+            assert kwargs["from_wallet"].currency == "KRW"
+            assert kwargs["to_wallet"].currency == "USD"
+            return SimpleNamespace(
+                to_amount=7.2,
+                rate_applied=0.00072,
+                conversion_fee_amount=0.08,
+                conversion_fee_rate=0.01,
+                reference_id="conversion-42",
+            )
+
+    class InternalOnlyTradeService:
+        def provider_name(self, _from_currency, _to_currency):
+            return "internal"
+
+        def require_real_provider(self, *_args):
+            raise AssertionError("KRW-to-USDT must not require an external provider")
+
+    async def verify_passkey(*_args):
+        return None
+
+    db = ConversionDb()
+    monkeypatch.setattr(auth_router, "verify_transaction_passkey", verify_passkey)
+    monkeypatch.setattr(wallet_router, "WalletsService", lambda _db: WalletService())
+    monkeypatch.setattr(wallet_router, "CurrencyService", CurrencyServiceStub)
+    monkeypatch.setattr(wallet_router, "UsdtTradeService", InternalOnlyTradeService)
+
+    result = await wallet_router.convert_wallet_balance(
+        request=wallet_router.WalletConversionRequest(
+            from_currency="KRW",
+            to_currency="USDT",
+            from_amount=10_000,
+            passkey_credential={"id": "test"},
+            idempotency_key="krw-usdt-test-1",
+        ),
+        http_request=None,
+        current_user=SimpleNamespace(id="user-1"),
+        db=db,
+    )
+
+    assert result["success"] is True
+    assert result["provider"] == "internal"
+    assert result["to_currency"] == "USDT"
+    assert result["to_amount"] == 7.2
+    assert db.trade.source_currency == "KRW"
+    assert db.trade.target_currency == "USD"
+    assert db.trade.status == "settled"
+    assert db.commits == 1
+
+
 class FakeDb:
     def __init__(self, trade, deposit_address=None):
         self.trade = trade

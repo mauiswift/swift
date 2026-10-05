@@ -209,19 +209,19 @@ const getAvailableBalance = (wallet: WalletBalanceSnapshot | null) => {
 type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance' | 'pending_balance'>;
 
 const getUsdtConversionSummary = (
-  _collectionCurrency: string,
+  collectionCurrency: string,
   phpBalance: WalletBalanceSnapshot | null,
   collectionBalance: WalletBalanceSnapshot | null,
-  usdtPhpRate: number | null,
+  usdtRate: number | null,
   requestedUsdtAmount: number,
   conversionFeeRate = 0.01,
   minimumPurchase = 0,
 ) => {
-  const sourceCurrency = 'PHP';
-  const sourceWallet = phpBalance;
+  const sourceCurrency = collectionCurrency === 'KRW' ? 'KRW' : 'PHP';
+  const sourceWallet = sourceCurrency === 'KRW' ? collectionBalance : phpBalance;
   const availableSource = getAvailableBalance(sourceWallet);
   const retainedBalance = 0;
-  const conversionRate = usdtPhpRate;
+  const conversionRate = usdtRate;
   const convertibleSource = Math.max(availableSource - retainedBalance, 0);
   const safeRequestedAmount = Number.isFinite(requestedUsdtAmount) ? requestedUsdtAmount : 0;
   const requiredSource = conversionRate && safeRequestedAmount > 0
@@ -252,7 +252,7 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, feeRate =
     ? `1 USDT = ${formatWalletCurrency(displayRate, sourceCurrency)}`
     : isKorean ? '사용할 수 없음' : 'Unavailable';
   const feeAmountLabel = isKorean ? `환전 금액의 ${(feeRate * 100).toFixed(2)}%` : `${(feeRate * 100).toFixed(2)}% of converted value`;
-  const minimumLabel = mode === 'buy' ? '100 USDT' : isKorean ? '최소 금액 없음' : 'No minimum';
+  const minimumLabel = isKorean ? '최소 금액 없음' : 'No minimum';
   const reserveLabel = showReserve && PHP_USDT_RESERVE > 0
     ? isKorean ? `지갑에 ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)}을(를) 유지하세요` : `Keep ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)} in your wallet`
     : isKorean ? '추가 보유금 없음' : 'No additional reserve';
@@ -489,6 +489,7 @@ export default function WalletPage({
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
+  const canBuyUsdtFromCollection = ['PHP', 'KRW'].includes(selectedCollectionCurrency);
   const canTradeUsdtForPhp = selectedCollectionCurrency === 'PHP';
   const tx = (en: string, ko: string, zh?: string) => (language === 'zh' ? (zh ?? en) : language === 'en' ? en : ko);
   const sharedWalletIsPrimary = Boolean(
@@ -614,11 +615,12 @@ export default function WalletPage({
   }, [collectionBalance, phpBalance, selectedCollectionCurrency, usdtBalance]);
 
   const openBuyUsdt = () => {
-    if (!canTradeUsdtForPhp) {
-      toast.error(isKoreanWallet ? 'USDT 거래는 PHP 지갑에서만 사용할 수 있습니다.' : 'USDT trading is available from the PHP wallet only.');
+    if (!canBuyUsdtFromCollection) {
+      toast.error(isKoreanWallet ? 'USDT 구매는 PHP 또는 KRW 지갑에서 사용할 수 있습니다.' : 'USDT purchases are available from PHP or KRW wallets.');
       return;
     }
     if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
+    if (!ensureWalletIsOperational(selectedCollectionCurrency, 'Buying USDT')) return;
     setWalletAction('buy');
   };
 
@@ -626,6 +628,7 @@ export default function WalletPage({
     if (!user) return;
     try {
       const selectedCurrency = selectedCollectionCurrency;
+      const buySourceCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
       const institutionCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
       const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes, organizationWalletRes, organizationUsdtWalletRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
@@ -640,7 +643,7 @@ export default function WalletPage({
         client.apiCall.invoke({
           url: '/api/v1/wallet/quote',
           method: 'POST',
-          data: { from_currency: 'PHP', to_currency: 'USDT', from_amount: 1 },
+          data: { from_currency: buySourceCurrency, to_currency: 'USDT', from_amount: 1 },
         }),
         client.apiCall.invoke({
           url: '/api/v1/wallet/quote',
@@ -1338,6 +1341,7 @@ export default function WalletPage({
                 availableBalance={getWalletBalanceValue(usdtBalance, 'available_balance')}
                 pendingBalance={getWalletBalanceValue(usdtBalance, 'pending_balance')}
                 canTrade={canTradeUsdtForPhp}
+                canBuy={canBuyUsdtFromCollection}
                 buyLoading={buyUsdtLoading}
                 fundingLoading={fundingUsdtLoading}
                 onBuy={openBuyUsdt}
@@ -1434,6 +1438,7 @@ export default function WalletPage({
               availableBalance={getWalletBalanceValue(usdtBalance, 'available_balance')}
               pendingBalance={getWalletBalanceValue(usdtBalance, 'pending_balance')}
               canTrade={canTradeUsdtForPhp}
+              canBuy={canBuyUsdtFromCollection}
               buyLoading={buyUsdtLoading}
               fundingLoading={fundingUsdtLoading}
               onBuy={openBuyUsdt}
@@ -1564,6 +1569,15 @@ export default function WalletPage({
                   {isKoreanWallet
                     ? `구매할 USDT 금액을 선택하세요. ${formatWalletCurrency(sourceReserve, conversionSourceCurrency)}를 ${conversionSourceCurrency} 지갑에 남겨 두세요.`
                     : `Choose how much USDT you want to buy. Keep ${formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your ${conversionSourceCurrency} wallet.`}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {conversionSourceCurrency === 'KRW'
+                      ? (isKoreanWallet
+                        ? 'KRW에서 USDT로의 환전은 표시된 환율을 사용해 지갑 내부에서 처리됩니다.'
+                        : 'KRW to USDT is an internal wallet conversion at the displayed exchange rate.')
+                      : (isKoreanWallet
+                        ? 'PHP에서 USDT 구매는 Coins.ph를 통해 처리됩니다.'
+                        : 'PHP to USDT purchases are processed through Coins.ph.')}
                   </p>
                 </div>
                 <ExchangeRulesTable

@@ -5,7 +5,7 @@ from core.database import Base
 
 
 class UsdtTrade(Base):
-    """Durable record of a PHP/USDT trade with an external provider."""
+    """Durable audit record for provider-backed and internal USDT wallet trades."""
 
     __tablename__ = "usdt_trades"
     __table_args__ = (

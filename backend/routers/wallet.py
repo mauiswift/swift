@@ -150,6 +150,24 @@ def _require_wallet_adjustment_permission(user: UserResponse, amount: float) -> 
 		raise HTTPException(status_code=403, detail=f"{permission} permission required.")
 
 
+def _validate_usdt_conversion_pair(from_currency: str, to_currency: str) -> tuple[str, str]:
+	"""Allow provider-backed PHP trades and internal KRW-to-USDT purchases only."""
+	normalized_from = "USD" if from_currency.strip().upper() == "USDT" else from_currency.strip().upper()
+	normalized_to = "USD" if to_currency.strip().upper() == "USDT" else to_currency.strip().upper()
+	if "USD" in {normalized_from, normalized_to} and (
+		(normalized_from, normalized_to) not in {
+			("PHP", "USD"),
+			("USD", "PHP"),
+			("KRW", "USD"),
+		}
+	):
+		raise HTTPException(
+			status_code=400,
+			detail="USDT purchases support PHP provider settlement or internal KRW-to-USDT conversion; USDT sales are PHP-only",
+		)
+	return normalized_from, normalized_to
+
+
 PUBLIC_ADMIN_WALLET_CURRENCIES = ("PHP", "USDT", "CNY", "KRW")
 INTERNAL_ADMIN_WALLET_CURRENCIES = ("PHP", "USD", "CNY", "KRW")
 
@@ -687,10 +705,7 @@ async def convert_wallet_balance(
 		from routers.auth import verify_transaction_passkey
 		await verify_transaction_passkey(request.passkey_credential or {}, "usdt_trade", http_request, current_user, db)
 
-	normalized_from = "USD" if from_currency == "USDT" else from_currency
-	normalized_to = "USD" if to_currency == "USDT" else to_currency
-	if "USD" in {normalized_from, normalized_to} and {normalized_from, normalized_to} != {"PHP", "USD"}:
-		raise HTTPException(status_code=400, detail="USDT buy and sell are available against PHP only")
+	normalized_from, normalized_to = _validate_usdt_conversion_pair(from_currency, to_currency)
 	if normalized_from == normalized_to:
 		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
 
@@ -698,7 +713,7 @@ async def convert_wallet_balance(
 	service = WalletsService(db)
 	trade_service = UsdtTradeService()
 	provider_name = trade_service.provider_name(normalized_from, normalized_to)
-	if "USDT" in {from_currency, to_currency}:
+	if "USDT" in {from_currency, to_currency} and {normalized_from, normalized_to} == {"PHP", "USD"}:
 		try:
 			provider_name = trade_service.require_real_provider(normalized_from, normalized_to)
 		except RuntimeError as exc:
@@ -1151,10 +1166,7 @@ async def quote_wallet_conversion(
 	"""Return a directional wallet conversion quote without changing balances."""
 	from_currency = request.from_currency.strip().upper()
 	to_currency = request.to_currency.strip().upper()
-	normalized_from = "USD" if from_currency == "USDT" else from_currency
-	normalized_to = "USD" if to_currency == "USDT" else to_currency
-	if "USD" in {normalized_from, normalized_to} and {normalized_from, normalized_to} != {"PHP", "USD"}:
-		raise HTTPException(status_code=400, detail="USDT buy and sell are available against PHP only")
+	normalized_from, normalized_to = _validate_usdt_conversion_pair(from_currency, to_currency)
 	if not math.isfinite(request.from_amount) or request.from_amount <= 0:
 		raise HTTPException(status_code=400, detail="Conversion amount must be a positive finite number")
 	try:

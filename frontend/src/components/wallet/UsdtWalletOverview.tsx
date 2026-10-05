@@ -67,6 +67,7 @@ type UsdtWalletOverviewProps = {
   availableBalance: number;
   pendingBalance: number;
   canTrade: boolean;
+  canBuy: boolean;
   buyLoading: boolean;
   fundingLoading: boolean;
   onBuy: () => void;
@@ -91,6 +92,7 @@ export default function UsdtWalletOverview({
   availableBalance,
   pendingBalance,
   canTrade,
+  canBuy,
   buyLoading,
   fundingLoading,
   onBuy,
@@ -124,7 +126,7 @@ export default function UsdtWalletOverview({
             <span className="font-semibold text-emerald-800">{shownAvailable}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" onClick={onBuy} disabled={!canTrade || unavailable} className="h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
+            <Button type="button" onClick={onBuy} disabled={!canBuy || unavailable} className="h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
               <TrendingUp className="mr-2 h-4 w-4" />{isKorean ? '구매' : 'Buy'}
             </Button>
             <Button type="button" variant="outline" onClick={onSell} disabled={!canTrade || unavailable} className="h-11 rounded-xl border-orange-300 text-orange-900 hover:bg-orange-50">
@@ -175,7 +177,7 @@ export default function UsdtWalletOverview({
           <p className="text-xs text-slate-500">{isKorean ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
         </div>
         <div className="mt-4 grid min-h-[44px] grid-cols-4 gap-2">
-          <BuyUsdtButton compact loading={buyLoading} funding={fundingLoading} onClick={onBuy} disabled={!canTrade} />
+          <BuyUsdtButton compact loading={buyLoading} funding={fundingLoading} onClick={onBuy} disabled={!canBuy} />
           <button type="button" title="Sell USDT" aria-label="Sell USDT" onClick={onSell} disabled={!canTrade} className="inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50">
             <PaymentBrandLogo brand="USDT" size="sm" className="h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
             <span className="text-[10px] font-bold">SELL</span>
