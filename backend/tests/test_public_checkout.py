@@ -58,6 +58,8 @@ def test_public_transaction_lookup_returns_transaction():
         status_response = client.get(f"/api/v1/payments/checkout/{txn.external_id}/status")
         assert status_response.status_code == 200
         assert status_response.json()["payment_method"] == "GCASH"
+        assert status_response.json()["payment_received"] is False
+        assert status_response.json()["payment_status"] == "pending"
 
 
 def test_public_transaction_exposes_received_payment_status_before_approval():
@@ -88,6 +90,17 @@ def test_public_transaction_exposes_received_payment_status_before_approval():
         assert payload["status"] == "pending"
         assert payload["payment_status"] == "paid"
         assert payload["approval_status"] == "pending"
+
+        checkout_response = client.get(
+            f"/api/v1/payments/checkout/{txn.external_id}/status"
+        )
+        assert checkout_response.status_code == 200
+        checkout_payload = checkout_response.json()
+        assert checkout_payload["status"] == "pending"
+        assert checkout_payload["payment_status"] == "paid"
+        assert checkout_payload["payment_received"] is True
+        assert checkout_payload["approval_status"] == "pending"
+        assert checkout_payload["paid_at"] is not None
 
 
 def test_checkout_institution_allows_php_above_50000():

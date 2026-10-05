@@ -69,6 +69,10 @@ interface Transaction {
   original_amount?: number;
   original_currency?: string;
   status: string;
+  payment_status?: string;
+  payment_received?: boolean;
+  approval_status?: string | null;
+  paid_at?: string | null;
   description: string;
   customer_name: string;
   payment_url: string;
@@ -369,14 +373,32 @@ export default function Checkout() {
       try {
         const response = await client.get(`/api/v1/payments/checkout/${extId}/status`);
         const status = String(response.data?.status || '').toLowerCase();
-        if (status === 'paid' || status === 'completed' || status === 'executed') {
+        const paymentReceived = Boolean(response.data?.payment_received)
+          || Boolean(response.data?.paid_at)
+          || ['paid', 'completed', 'complete', 'executed', 'settled'].includes(
+            String(response.data?.payment_status || status).toLowerCase(),
+          );
+        if (paymentReceived) {
           setTxn(prev => prev ? {
             ...prev,
-            status: 'paid',
+            status,
+            payment_status: response.data?.payment_status || status,
+            payment_received: true,
+            approval_status: response.data?.approval_status ?? prev.approval_status,
+            paid_at: response.data?.paid_at ?? prev.paid_at,
             payment_method: response.data?.payment_method || prev.payment_method,
           } : null);
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          toast.success('Payment confirmed!');
+          if (
+            response.data?.approval_status === 'pending'
+            || (status === 'pending' && !response.data?.approval_status)
+          ) {
+            toast.success('Payment received and awaiting approval.');
+          } else if (response.data?.approval_status === 'rejected') {
+            toast.error('Payment received, but approval was rejected. Contact the merchant.');
+          } else {
+            toast.success('Payment confirmed!');
+          }
         } else if (status === 'expired' || status === 'cancelled' || status === 'failed') {
           setTxn(prev => prev ? {
             ...prev,
@@ -482,10 +504,10 @@ export default function Checkout() {
   }, [checkoutId, searchParams]);
 
   useEffect(() => {
-    if (txn?.status === 'pending' && txn.external_id) {
+    if (txn?.status === 'pending' && !txn.payment_received && !txn.paid_at && txn.external_id) {
       startPollingStatus(txn.external_id);
     }
-  }, [txn?.status, txn?.external_id]);
+  }, [txn?.status, txn?.payment_received, txn?.paid_at, txn?.external_id]);
 
   useEffect(() => {
     if (!txn) return;
@@ -612,9 +634,22 @@ export default function Checkout() {
     );
   }
 
-  const isPaid = txn?.status === 'paid';
+  const hasSuccessfulPaymentStatus = ['paid', 'completed', 'complete', 'executed', 'settled'].includes(
+    String(txn?.status || '').toLowerCase(),
+  );
+  const isPaymentReceived = Boolean(txn?.payment_received)
+    || Boolean(txn?.paid_at)
+    || hasSuccessfulPaymentStatus;
+  const approvalStatus = String(txn?.approval_status || '').toLowerCase();
+  const isPaid = hasSuccessfulPaymentStatus
+    && approvalStatus !== 'pending'
+    && approvalStatus !== 'rejected';
+  const isAwaitingApproval = isPaymentReceived
+    && (approvalStatus === 'pending' || (!approvalStatus && txn?.status === 'pending'));
+  const isApprovalRejected = isPaymentReceived && approvalStatus === 'rejected';
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
-  const isPending = ['pending', 'created'].includes(String(txn?.status || '').trim().toLowerCase());
+  const isPending = ['pending', 'created'].includes(String(txn?.status || '').trim().toLowerCase())
+    && !isPaymentReceived;
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
   const statusPaymentMethod = txn.payment_method || searchParams.get('payment_method');
   const statusPaymentMethodBrand = statusPaymentMethod
@@ -1353,8 +1388,40 @@ export default function Checkout() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:grid-cols-5 lg:items-start lg:gap-10">
           {/* Left Column: Payment Details & Methods */}
           <div className="space-y-5 md:col-span-2 md:space-y-7 lg:col-span-3">
+            {isAwaitingApproval && (
+              <div role="status" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 shadow-sm">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
+                <div>
+                  <h2 className="font-semibold">
+                    {checkoutText('Payment received — awaiting approval', '결제가 접수되었습니다 — 승인 대기 중')}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-emerald-900">
+                    {checkoutText(
+                      'The payment provider confirmed receipt. SwiftPay is reviewing it before the merchant wallet is credited. You do not need to pay again.',
+                      '결제 서비스에서 입금을 확인했습니다. 가맹점 지갑에 반영되기 전에 SwiftPay가 검토합니다. 다시 결제하지 않으셔도 됩니다.',
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+            {isApprovalRejected && (
+              <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
+                <div>
+                  <h2 className="font-semibold">
+                    {checkoutText('Payment received — approval was rejected', '결제가 접수되었으나 승인이 거부되었습니다')}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-amber-900">
+                    {checkoutText(
+                      'The payment provider confirmed receipt, but SwiftPay did not approve it. Contact the merchant for assistance; do not pay again.',
+                      '결제 서비스에서 입금을 확인했지만 SwiftPay가 승인하지 않았습니다. 다시 결제하지 말고 가맹점에 문의하세요.',
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
             {/* Amount Card */}
-            {!isPaid && !isExpired && !isManualDeposit && (
+            {!isPaymentReceived && !isExpired && !isManualDeposit && (
               <div className="checkout-amount-card rounded-3xl p-6 text-white sm:p-8">
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/65">{checkoutText('Amount to pay', '결제 금액')}</p>

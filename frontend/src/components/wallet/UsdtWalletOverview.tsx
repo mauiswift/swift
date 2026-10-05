@@ -145,49 +145,73 @@ export default function UsdtWalletOverview({
   }
 
   return (
-    <Card className="card-3d overflow-hidden border border-blue-200/50 bg-gradient-to-br from-white to-blue-50/30 ring-1 ring-blue-100/50 transition-all hover:shadow-lg">
-      <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
-      <CardContent className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-700">{title}</span>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f2a5f]/10 p-2">
+    <Card className="card-3d relative isolate overflow-hidden border border-slate-700 bg-[#0f172a] text-white shadow-xl shadow-slate-950/15 ring-1 ring-emerald-400/10">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500" />
+      <div className="pointer-events-none absolute -right-20 -top-24 -z-10 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
+      <CardContent className="p-5 sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">{title}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                TRC-20
+              </span>
+            </div>
+            {hasOrganizationWallet && organizationName && (
+              <p className="mt-1.5 truncate text-xs text-slate-400">{organizationName}</p>
+            )}
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10">
             <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" />
           </div>
         </div>
-        {hasOrganizationWallet && organizationName && (
-          <p className="mb-2 truncate text-xs text-slate-500">{organizationName}</p>
-        )}
-        <p className="text-3xl font-semibold text-foreground">
-          {loading ? <span className="inline-block h-10 w-32 animate-pulse rounded-lg bg-slate-100" /> : shownBalance}
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-            <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{shownAvailable}</p>
+
+        <div className="mt-7">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+            {isKorean ? '총 잔액' : 'Total balance'}
+          </p>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+            {loading ? <span className="inline-block h-12 w-40 animate-pulse rounded-lg bg-slate-700" /> : shownBalance}
+          </p>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-emerald-400/15 bg-emerald-400/[0.07] px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">
+              {isKorean ? '사용 가능' : 'Available'}
+            </p>
+            <p className="mt-1 truncate text-base font-semibold text-emerald-50">{shownAvailable}</p>
           </div>
-          <div className="rounded-lg bg-amber-50 px-2.5 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-            <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{shownPending}</p>
+          <div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.06] px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+              {isKorean ? '보류 중' : 'Pending'}
+            </p>
+            <p className="mt-1 truncate text-base font-semibold text-amber-50">{shownPending}</p>
           </div>
         </div>
-        {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
-          <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />VIP
-        </div>}
-        <div className="mt-3">
-          <p className="text-xs text-slate-500">{isKorean ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
+
+        <div className="mt-4 flex min-h-6 items-center justify-between gap-3">
+          {vipGold ? (
+            <span className="vip-gold-card inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
+              <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />VIP
+            </span>
+          ) : <span />}
+          <p className="text-xs text-slate-400">{isKorean ? 'TRC-20 네트워크' : 'USDT · TRC-20 network'}</p>
         </div>
-        <div className="mt-4 grid min-h-[44px] grid-cols-4 gap-2">
-          <BuyUsdtButton compact loading={buyLoading} funding={fundingLoading} onClick={onBuy} disabled={!canBuy} />
-          <button type="button" title="Sell USDT" aria-label="Sell USDT" onClick={onSell} disabled={!canTrade} className="inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50">
-            <PaymentBrandLogo brand="USDT" size="sm" className="h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
-            <span className="text-[10px] font-bold">SELL</span>
-          </button>
-          <button type="button" title="Send USDT" aria-label="Send USDT" onClick={onSend} className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm shadow-sky-600/20 transition-all hover:bg-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2">
-            <Send className="h-4 w-4" />
-          </button>
-          <button type="button" title="Receive USDT" aria-label="Receive USDT" data-guide-target="wallet-usdt-receive" onClick={onReceive} className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
-            <ArrowDownToLine className="h-4 w-4" />
-          </button>
+
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <BuyUsdtButton loading={buyLoading} funding={fundingLoading} onClick={onBuy} disabled={!canBuy || unavailable} />
+          <Button type="button" variant="outline" onClick={onSell} disabled={!canTrade || unavailable} className="h-11 rounded-xl border-slate-600 bg-slate-800 text-white hover:border-amber-300/60 hover:bg-slate-700 hover:text-white disabled:opacity-50">
+            <PaymentBrandLogo brand="USDT" size="sm" className="mr-2 h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
+            {isKorean ? '판매' : 'Sell'}
+          </Button>
+          <Button type="button" onClick={onSend} disabled={unavailable} className="h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50">
+            <Send className="mr-2 h-4 w-4" />{isKorean ? '보내기' : 'Send'}
+          </Button>
+          <Button type="button" onClick={onReceive} disabled={unavailable} data-guide-target="wallet-usdt-receive" className="h-11 rounded-xl bg-slate-700 text-white hover:bg-slate-600 disabled:opacity-50">
+            <ArrowDownToLine className="mr-2 h-4 w-4" />{isKorean ? '받기' : 'Receive'}
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -32,7 +32,12 @@ from services.magpie_services import CurrencyConverter, MagpieService
 from services.payment_gateway import gateway
 from services.toss_account_pool import assign_toss_account_to_transaction
 from services.paymentwall_service import PaymentwallService
-from services.transactions import TransactionsService, publish_payment_link_created
+from services.transactions import (
+    TransactionsService,
+    get_payment_status,
+    is_payment_received,
+    publish_payment_link_created,
+)
 from services.webhook_event_log import record_verified_payment_webhook
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
@@ -1534,6 +1539,10 @@ async def get_checkout_payment(
             "processing_amount": float(txn.amount),
             "processing_currency": txn.currency or "PHP",
             "status": txn.status,
+            "payment_status": get_payment_status(txn),
+            "payment_received": is_payment_received(txn),
+            "approval_status": txn.approval_status,
+            "paid_at": serialize_utc_datetime(txn.paid_at),
             "description": txn.description or "",
             "payment_url": txn.payment_url or "",
             "qr_code_url": txn.qr_code_url or "",
@@ -1595,7 +1604,7 @@ async def get_checkout_status(
                     (
                         linked_txn
                         for linked_txn in linked_transactions
-                        if str(linked_txn.status or "").lower() in {"paid", "completed", "executed"}
+                        if is_payment_received(linked_txn)
                     ),
                     None,
                 )
@@ -1614,6 +1623,10 @@ async def get_checkout_status(
         display_currency = txn.original_currency or txn.currency or "PHP"
         return {
             "status": status_txn.status,
+            "payment_status": get_payment_status(status_txn),
+            "payment_received": is_payment_received(status_txn),
+            "approval_status": status_txn.approval_status,
+            "paid_at": serialize_utc_datetime(status_txn.paid_at),
             "payment_method": status_txn.payment_method or txn.payment_method,
             "amount": display_amount,
             "currency": display_currency,
