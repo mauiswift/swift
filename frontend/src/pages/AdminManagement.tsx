@@ -40,7 +40,6 @@ export default function AdminManagement() {
   const canApproveTopups = Boolean(user?.permissions?.can_approve_topups);
   const canViewReports = Boolean(user?.permissions?.can_view_reports);
   const canManageBot = Boolean(user?.permissions?.can_manage_bot);
-  const canManageTossAccounts = Boolean(user?.permissions?.can_manage_toss_accounts);
 
   // Tab access control - Banking System
   const canAccessDashboard = isPlatformSuperAdmin;
@@ -55,7 +54,7 @@ export default function AdminManagement() {
   const canAccessOperations = isPlatformSuperAdmin && (canManagePayments || canManageDisbursements || canApproveTopups || canViewReports || canManageBot);
   const canAccessPlatformSettings = isPlatformSuperAdmin && (canManagePayments || canManageWallet);
   const canAccessGovernance = isPlatformSuperAdmin;
-  const canAccessTossAccountApprovals = isPlatformSuperAdmin && canManageTossAccounts;
+  const canAccessTossAccountApprovals = isPlatformSuperAdmin && canManageWallet;
 
   // Build tabs
   const tabs = useMemo(() => buildAdminTabs({
@@ -214,7 +213,7 @@ export default function AdminManagement() {
           )}
 
           {/* Test Data Cleanup Tab */}
-          {selectedTab === 'test-data-cleanup' && isSuperAdmin && (
+          {selectedTab === 'test-data-cleanup' && isPlatformSuperAdmin && (
             <TestDataCleanupTab />
           )}
         </div>

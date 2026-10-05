@@ -1119,9 +1119,9 @@ export default function Login() {
           <Link to="/terms-of-service" className="ak-footer-item">{t('terms_of_use')}</Link>
           <Link to="/privacy-policy" className="ak-footer-item">{t('privacy_policy')}</Link>
           <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-item">{t('contact_us')}</a>
+          <Link to="/admin-demo" className="ak-footer-item">Preview admin demo</Link>
         </footer>
       </div>
     </>
   );
 }
-

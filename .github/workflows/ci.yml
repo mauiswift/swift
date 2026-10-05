@@ -50,6 +50,14 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Lint frontend
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: Type-check frontend
+        working-directory: frontend
+        run: pnpm typecheck
+
       - name: Build frontend
         working-directory: frontend
         run: pnpm build
@@ -66,9 +74,10 @@ jobs:
           TELEGRAM_ADMIN_IDS: 123456
         run: |
           mkdir -p reports
-          python -m pytest backend/tests -q --junitxml=reports/junit-python.xml || true
+          python -m pytest backend/tests -q --junitxml=reports/junit-python.xml
 
       - name: Upload pytest report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report

@@ -69,40 +69,37 @@ def test_turnstile_default_allowlist_includes_current_frontend_host():
     assert {"swiftpay.site", "kr.swiftpay.site"} <= allowed_hostnames
 
 
-def test_production_settings_auto_generate_missing_jwt_secret(monkeypatch):
+def test_production_settings_reject_missing_jwt_secret(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:token")
 
     settings = Settings()
-    settings.validate_for_startup()
 
-    assert settings.jwt_secret_key
-    assert len(settings.jwt_secret_key) >= 32
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY must be configured"):
+        settings.validate_for_startup()
 
 
-def test_production_settings_auto_generate_short_jwt_secret(monkeypatch):
+def test_production_settings_reject_short_jwt_secret(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
     monkeypatch.setenv("JWT_SECRET_KEY", "too-short")
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:token")
 
     settings = Settings()
-    settings.validate_for_startup()
 
-    assert settings.jwt_secret_key
-    assert len(settings.jwt_secret_key) >= 32
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY must be configured"):
+        settings.validate_for_startup()
 
 
 def test_production_startup_allows_missing_telegram_token(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./paybot.db")
-    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.setenv("JWT_SECRET_KEY", "stable-production-signing-key-32-chars-minimum")
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
 
     settings = Settings()
     settings.validate_for_startup()
 
-    assert settings.jwt_secret_key
-    assert len(settings.jwt_secret_key) >= 32
+    assert settings.jwt_secret_key == "stable-production-signing-key-32-chars-minimum"

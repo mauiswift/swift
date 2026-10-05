@@ -54,8 +54,6 @@ export interface AdminTabAccess {
   canAccessPaymentChannels: boolean;
   canAccessWalletSettings: boolean;
   canAccessUserManagement: boolean;
-  canAccessPaymentChannels: boolean;
-  canAccessWalletSettings: boolean;
   canAccessPlatformSettings: boolean;
   canAccessOperations: boolean;
   canAccessTossAccountApprovals: boolean;

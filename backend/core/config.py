@@ -375,24 +375,6 @@ class Settings(BaseSettings):
                 object.__setattr__(self, field, val.strip())
         return self
 
-    @model_validator(mode="after")
-    def generate_jwt_secret_if_missing(self) -> "Settings":
-        """Auto-generate a random JWT secret when the configured value is missing or too short.
-
-        Some deployment platforms create a fresh container on each deploy and do not persist a
-        manually configured secret until after the first successful boot. A generated fallback keeps
-        the app online and logs a clear warning that a real secret should be set in the deployment
-        environment.
-        """
-        if not self.jwt_secret_key or len(self.jwt_secret_key) < 32:
-            self.jwt_secret_key = secrets.token_hex(32)
-            logger.warning(
-                "JWT_SECRET_KEY is missing or too short. A temporary random secret has been "
-                "generated for this deployment. Set a real secret in the environment to keep "
-                "JWT tokens stable across restarts."
-            )
-        return self
-
     def validate_for_startup(self) -> "Settings":
         """Validate that startup prerequisites are present before the app boots."""
         env_name = (self.environment or "").strip().lower()
@@ -408,10 +390,14 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL must be set before startup.")
 
         if not self.jwt_secret_key or len(self.jwt_secret_key) < 32:
+            if is_production:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be configured with at least 32 characters in production. "
+                    "Use a stable secret shared by all application instances."
+                )
             self.jwt_secret_key = secrets.token_hex(32)
             logger.warning(
-                "JWT_SECRET_KEY was missing or too short; a new 32-byte secret has been generated "
-                "for this startup. Set a stable secret in production to avoid token invalidation."
+                "JWT_SECRET_KEY is missing or too short; generated an ephemeral non-production key."
             )
 
         if is_production:

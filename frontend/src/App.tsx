@@ -25,6 +25,7 @@ import HomePage from './pages/Index';
 
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
 const Login = React.lazy(() => import('./pages/Login'));
+const AdminBackofficeDemo = React.lazy(() => import('./pages/AdminBackofficeDemo'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
@@ -187,6 +188,7 @@ function AuthAwareContent() {
       <Route path="/policies" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/terms" element={<Navigate to="/terms-of-service" replace />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/admin-demo/*" element={<AdminBackofficeDemo />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />
