@@ -91,6 +91,8 @@ export default function LiveDashboard() {
       if (!statsRes.ok || !statsRes.data?.payments) {
         throw new Error(statsRes.data?.detail || 'Unable to load dashboard statistics');
       }
+      if (!txRes.ok) throw new Error(txRes.data?.detail || 'Unable to load recent transactions');
+      if (!Array.isArray(txRes.data?.items)) throw new Error('The recent transactions response is invalid');
       setStats(statsRes.data as StatsResponse);
       setRecent(Array.isArray(txRes.data?.items) ? txRes.data.items : []);
     } catch (err) {

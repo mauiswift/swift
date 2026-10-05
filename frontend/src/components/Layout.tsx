@@ -73,6 +73,7 @@ export default function Layout({ children }: LayoutProps) {
   });
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const { isVipGold } = useVipGoldStatus(user?.id);
+
   const [currencySaving, setCurrencySaving] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);

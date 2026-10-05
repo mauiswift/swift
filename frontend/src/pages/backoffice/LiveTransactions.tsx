@@ -95,6 +95,7 @@ export default function LiveTransactions() {
         skip: page * PAGE_SIZE,
       });
       if (!res.ok) throw new Error(res.data?.detail || 'Unable to load transactions');
+      if (!Array.isArray(res.data?.items)) throw new Error('The transactions response is invalid');
       setItems(Array.isArray(res.data?.items) ? res.data.items : []);
       setTotal(Number(res.data?.total) || 0);
     } catch (err) {

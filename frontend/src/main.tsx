@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import './styles/dashboard-enhancements.css';
+import './styles/backoffice-theme.css';
 
 // Global error handler for dynamic import failures
 window.addEventListener('error', (event) => {
