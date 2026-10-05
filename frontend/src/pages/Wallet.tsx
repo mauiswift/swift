@@ -877,6 +877,16 @@ export default function WalletPage({
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
 
+      if (response.data.pending === true) {
+        const reference = response.data.reference_id ? ` (${response.data.reference_id})` : '';
+        toast.success(isKoreanWallet
+          ? `USDT 구매 요청이 관리자 승인 대기 중입니다. 승인 전까지 PHP는 차감되지 않습니다.${reference}`
+          : `USDT purchase request submitted for admin approval. PHP will not be deducted unless approved.${reference}`);
+        setWalletAction(null);
+        buyTradeKeyRef.current = null;
+        return;
+      }
+
       const receivedUsdt = Number(response.data.provider_amount ?? response.data.to_amount);
       const receivedLabel = Number.isFinite(receivedUsdt) && receivedUsdt > 0
         ? fmtUsd(receivedUsdt)
@@ -1576,8 +1586,8 @@ export default function WalletPage({
                         ? 'KRW에서 USDT로의 환전은 표시된 환율을 사용해 지갑 내부에서 처리됩니다.'
                         : 'KRW to USDT is an internal wallet conversion at the displayed exchange rate.')
                       : (isKoreanWallet
-                        ? 'PHP에서 USDT 구매는 Coins.ph를 통해 처리됩니다.'
-                        : 'PHP to USDT purchases are processed through Coins.ph.')}
+                        ? 'PHP 구매 요청은 관리자 승인 후 Coins.ph에서 실행됩니다. 승인 전에는 PHP가 차감되지 않습니다. 실행되면 USDT가 SwiftPay USDT 입금 주소로 전송됩니다.'
+                        : 'PHP purchase requests require admin approval before Coins.ph execution. PHP is not deducted unless approved. Purchased USDT is then sent to your SwiftPay USDT deposit address.')}
                   </p>
                 </div>
                 <ExchangeRulesTable
@@ -1637,7 +1647,11 @@ export default function WalletPage({
                   funding={fundingUsdtLoading}
                   disabled={!conversionRate || Number(buyUsdtAmount) <= 0 || !Number.isFinite(Number(buyUsdtAmount))}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
-                  label={canConvertToUsdt ? (isKoreanWallet ? 'USDT 구매' : 'Buy USDT') : (isKoreanWallet ? '입금' : 'Deposit')}
+                  label={canConvertToUsdt
+                    ? (conversionSourceCurrency === 'PHP'
+                      ? (isKoreanWallet ? '승인 요청 제출' : 'Submit for approval')
+                      : (isKoreanWallet ? 'USDT 구매' : 'Buy USDT'))
+                    : (isKoreanWallet ? '입금' : 'Deposit')}
                 />
               </div>
             ) : walletAction === 'sell' ? (

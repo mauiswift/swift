@@ -357,44 +357,50 @@ export default function Banking() {
   );
   return (
     <Layout>
-      <div className="page-enter mx-auto w-full max-w-5xl">
+      <div className="page-enter mx-auto w-full max-w-6xl space-y-6">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
-          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+          <button type="button" className="text-slate-400 transition-colors hover:text-slate-200" onClick={() => navigate('/settings')}>Settings</button>
           <span className="text-slate-300">/</span>
           <span className="text-slate-600 font-semibold">Banking</span>
         </div>
 
         {/* Title */}
-        <div className="flex items-center gap-5 mb-12">
+        <div className="flex items-center gap-4">
           <button
+            type="button"
             onClick={() => navigate('/settings')}
-            className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+            aria-label="Back to settings"
+            className="app-touch-target rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Banking</h1>
+          <div>
+            <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900">Banking</h1>
+            <p className="mt-1 text-sm text-slate-500">Manage KRW settlement details, deposit accounts, and payment availability.</p>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-200 mb-10">
-          <span className="inline-block text-[13px] font-semibold text-slate-900 pb-4 border-b-2 border-[#FF6B00] -mb-[2px]">
+        <div className="border-b border-slate-200">
+          <span className="inline-block border-b-2 border-emerald-500 pb-3 text-[13px] font-semibold text-slate-900">
             Settlement account
           </span>
         </div>
 
-        <div className="app-panel max-w-3xl p-5 sm:p-8">
-          <div className="flex items-center justify-between gap-4 mb-10">
-            <p className="text-[14px] text-slate-500 font-medium m-0">
-              Review all the critical details of your settlement account.
-            </p>
+        <div className="app-panel p-5 sm:p-7">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Settlement account</h2>
+              <p className="mt-1 text-sm text-slate-500">Review the KRW account used for settlement.</p>
+            </div>
             <Button type="button" variant="outline" onClick={() => setSettlementEditing(value => !value)} className="shrink-0 gap-2">
               <PenLine size={15} /> {settlementEditing ? 'Cancel' : 'Edit account'}
             </Button>
           </div>
 
           {settlementEditing && (
-            <div className="mb-8 grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5 sm:grid-cols-2">
+            <div className="mb-6 grid gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:grid-cols-2 sm:p-5">
               <div>
                 <Label htmlFor="settlement-bank-name">Korean bank</Label>
                 <div className="mt-1.5 flex items-center gap-3">
@@ -427,7 +433,7 @@ export default function Banking() {
               <div><Label htmlFor="settlement-account-number">Account number</Label><Input id="settlement-account-number" inputMode="numeric" autoComplete="off" value={settlementForm.bank_account_number} onChange={event => setSettlementForm(current => ({ ...current, bank_account_number: event.target.value }))} placeholder="Enter account number" className="mt-1.5 bg-white" /></div>
               <div><Label htmlFor="settlement-account-name">Account holder name</Label><Input id="settlement-account-name" value={settlementForm.bank_account_name} onChange={event => setSettlementForm(current => ({ ...current, bank_account_name: event.target.value }))} placeholder="Name registered with the bank" className="mt-1.5 bg-white" /></div>
               <div><Label htmlFor="settlement-bank-address">Bank address (optional)</Label><Input id="settlement-bank-address" value={settlementForm.bank_address} onChange={event => setSettlementForm(current => ({ ...current, bank_address: event.target.value }))} placeholder="Bank branch or address" className="mt-1.5 bg-white" /></div>
-              <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100 pt-4"><p className="text-xs text-blue-800">Settlement currency: <strong>KRW</strong>.</p><Button type="button" onClick={saveSettlement} disabled={settlementSaving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{settlementSaving ? 'Saving...' : 'Save settlement account'}</Button></div>
+              <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4"><p className="text-xs text-slate-500">Settlement currency: <strong className="text-slate-200">KRW</strong>.</p><Button type="button" onClick={saveSettlement} disabled={settlementSaving}>{settlementSaving ? 'Saving...' : 'Save settlement account'}</Button></div>
             </div>
           )}
 
@@ -469,8 +475,8 @@ export default function Banking() {
         </div>
 
         {user?.permissions?.is_super_admin && (
-          <div className="app-panel max-w-3xl p-5 sm:p-8 mt-6">
-            <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="app-panel p-5 sm:p-7">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-[16px] font-semibold text-slate-900">TOSS Bank manual deposit account</h2>
                 <p className="text-[13px] text-slate-500 mt-1">
@@ -484,12 +490,12 @@ export default function Banking() {
             ) : (
               <div className="space-y-4">
                 {tossAccounts.map((account, index) => (
-                  <div key={`${account.value}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-2">
+                  <div key={`${account.value}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:grid-cols-2">
                     <div><Label>Account number</Label><Input value={account.account_number} onChange={event => updateTossAccount(index, 'account_number', event.target.value)} className="mt-1.5" /></div>
                     <div><Label>Account holder</Label><Input value={account.account_name} onChange={event => updateTossAccount(index, 'account_name', event.target.value)} className="mt-1.5" /></div>
                   </div>
                 ))}
-                <Button type="button" onClick={saveTossAccounts} disabled={tossAccountsSaving || !tossAccounts.length} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
+                <Button type="button" onClick={saveTossAccounts} disabled={tossAccountsSaving || !tossAccounts.length}>
                   {tossAccountsSaving ? 'Saving...' : 'Save deposit account details'}
                 </Button>
               </div>
@@ -497,11 +503,11 @@ export default function Banking() {
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-[720px] shadow-sm mt-6">
-          <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="app-panel p-5 sm:p-7">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-lg">🇰🇷</div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 text-lg">🇰🇷</div>
                 <div>
                   <h2 className="text-[16px] font-semibold text-slate-900">Korea payment channels</h2>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">KRW checkout activation</p>
@@ -514,7 +520,6 @@ export default function Banking() {
             <Button
               onClick={savePaymentChannels}
               disabled={!channelEligible || channelLoading || channelSaving}
-              className="bg-[#FF6B00] hover:bg-[#E66000] text-white"
             >
               {channelSaving ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
               Save activation
@@ -531,12 +536,12 @@ export default function Banking() {
             </div>
           ) : (
             <>
-               <div className="mb-5 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+               <div className="mb-5 flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
                  <div>
-                   <p className="text-xs font-semibold text-blue-900">Available for KRW</p>
-                   <p className="mt-1 text-xs text-blue-700">Choose one or more payment channels.</p>
+                   <p className="text-xs font-semibold text-emerald-300">Available for KRW</p>
+                   <p className="mt-1 text-xs text-slate-400">Choose one or more payment channels.</p>
                  </div>
-                 <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">KRW</span>
+                 <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">KRW</span>
                </div>
                <div className="mb-4 flex justify-end">
                  <Button
@@ -550,7 +555,7 @@ export default function Banking() {
                </div>
                <div className="grid gap-3 sm:grid-cols-2">
                  {KOREA_CHANNELS.map((channel) => (
-                   <div key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:border-slate-300">
+                   <div key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-4 transition-colors hover:border-emerald-500/30">
                      <div className="flex min-w-0 items-center gap-3">
                        <PaymentBrandLogo
                         brand={channel.id === 'bank_transfer' ? 'Bank Transfer' : channel.label}
@@ -575,7 +580,7 @@ export default function Banking() {
           )}
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 sm:p-8 max-w-[720px] shadow-sm mt-6">
+        <div className="app-panel p-5 sm:p-7">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">

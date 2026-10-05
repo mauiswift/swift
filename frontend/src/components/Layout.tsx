@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { buildAdminNavigation, type AdminNavItem } from '@/lib/adminNavigation';
 import { BrandMark } from '@/components/BrandLogo';
 import { useVipGoldStatus } from '@/hooks/useVipGoldStatus';
+import PageTransition from '@/components/PageTransition';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -217,9 +218,10 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const renderNavItem = (item: AdminNavItem, onClose?: () => void, collapsed?: boolean) => {
-    const active = isActive(item.path.split('?')[0]);
-    const exactTabMatch = item.path.includes('?tab=')
-      ? `${location.pathname}${location.search}` === item.path
+    const [itemPath, itemQuery] = item.path.split('?');
+    const active = isActive(itemPath);
+    const exactTabMatch = itemQuery
+      ? location.pathname === itemPath && location.search === `?${itemQuery}`
       : active;
     const Icon = item.icon;
 
@@ -506,11 +508,11 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Main Content - Mobile Optimized Padding */}
         <main id="dashboard-main" tabIndex={-1} className="app-main">
-          <div key={location.pathname} className="app-content app-motion flex-1">
+          <PageTransition>
             <div className="print:hidden"><BroadcastBanner /></div>
             <div className="print:hidden"><WhatsNewBanner /></div>
             {children}
-          </div>
+          </PageTransition>
 
           <footer className="mx-auto mt-8 flex w-full min-w-0 max-w-7xl flex-col gap-3 border-t border-slate-200/80 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:mt-20 sm:flex-row sm:items-center sm:gap-12 sm:pb-12 sm:pt-8 print:hidden">
              <p className="text-[12px] text-slate-500 font-medium m-0">

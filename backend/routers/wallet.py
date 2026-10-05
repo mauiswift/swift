@@ -84,6 +84,27 @@ class WalletConversionRequest(BaseModel):
 	idempotency_key: Optional[str] = None
 
 
+def _pending_php_usdt_trade_response(
+	trade: UsdtTrade,
+	rate: Optional[float] = None,
+	fee_rate: float = 0,
+) -> Dict[str, Any]:
+	return {
+		"success": True,
+		"pending": True,
+		"status": trade.status,
+		"from_currency": public_currency(trade.source_currency),
+		"to_currency": public_currency(trade.target_currency),
+		"from_amount": float(trade.requested_amount),
+		"to_amount": float(trade.quoted_amount or 0),
+		"rate": rate,
+		"fee_amount": float(trade.fee or 0),
+		"fee_rate": fee_rate,
+		"reference_id": f"usdt-trade-{trade.id}",
+		"provider": trade.provider,
+	}
+
+
 class DenyUsdtSendRequest(BaseModel):
 	reason: str
 
@@ -758,6 +779,8 @@ async def convert_wallet_balance(
 					"provider_amount": float(trade.settled_amount or 0),
 					"execution_rate": None,
 				}
+			if trade.status == "pending_approval" and normalized_from == "PHP" and normalized_to == "USD":
+				return _pending_php_usdt_trade_response(trade)
 			if trade.status == "failed":
 				raise HTTPException(
 					status_code=409,
@@ -795,21 +818,13 @@ async def convert_wallet_balance(
 		# until a super admin has reviewed them.
 		if trade and normalized_from == "PHP" and normalized_to == "USD":
 			trade.status = "pending_approval"
+			trade.fee = quote.get("conversion_fee_amount", 0)
 			await db.commit()
-			return {
-				"success": True,
-				"pending": True,
-				"status": trade.status,
-				"from_currency": "PHP",
-				"to_currency": "USDT",
-				"from_amount": request.from_amount,
-				"to_amount": quote["to_amount"],
-				"rate": quote["rate"],
-				"fee_amount": quote.get("conversion_fee_amount", 0),
-				"fee_rate": quote.get("fee_rate", 0),
-				"reference_id": f"usdt-trade-{trade.id}",
-				"provider": provider_name,
-			}
+			return _pending_php_usdt_trade_response(
+				trade,
+				rate=quote["rate"],
+				fee_rate=quote.get("fee_rate", 0),
+			)
 
 		if trade and normalized_from == "USD" and normalized_to == "PHP":
 			reservation_reference = f"usdt-trade-{trade.id}"

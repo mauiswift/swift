@@ -125,6 +125,71 @@ async def test_krw_usdt_purchase_settles_as_internal_wallet_conversion(monkeypat
     assert db.commits == 1
 
 
+@pytest.mark.asyncio
+async def test_php_usdt_pending_approval_retry_returns_existing_request(monkeypatch):
+    import routers.auth as auth_router
+    import routers.wallet as wallet_router
+
+    trade = SimpleNamespace(
+        id=42,
+        user_id="user-1",
+        source_currency="PHP",
+        target_currency="USD",
+        requested_amount=500.0,
+        quoted_amount=8.5,
+        settled_amount=None,
+        fee=5.0,
+        provider="coins.ph",
+        status="pending_approval",
+    )
+
+    class PendingTradeDb:
+        async def scalar(self, _statement):
+            return trade
+
+    class CoinsTradeService:
+        def provider_name(self, _from_currency, _to_currency):
+            return "coins.ph"
+
+        def require_real_provider(self, _from_currency, _to_currency):
+            return "coins.ph"
+
+    async def verify_passkey(*_args):
+        return None
+
+    monkeypatch.setattr(auth_router, "verify_transaction_passkey", verify_passkey)
+    monkeypatch.setattr(wallet_router, "WalletsService", lambda _db: object())
+    monkeypatch.setattr(wallet_router, "UsdtTradeService", CoinsTradeService)
+
+    result = await wallet_router.convert_wallet_balance(
+        request=wallet_router.WalletConversionRequest(
+            from_currency="PHP",
+            to_currency="USDT",
+            from_amount=500,
+            passkey_credential={"id": "test"},
+            idempotency_key="php-usdt-retry-1",
+        ),
+        http_request=None,
+        current_user=SimpleNamespace(id="user-1"),
+        db=PendingTradeDb(),
+    )
+
+    assert result == {
+        "success": True,
+        "pending": True,
+        "status": "pending_approval",
+        "from_currency": "PHP",
+        "to_currency": "USDT",
+        "from_amount": 500.0,
+        "to_amount": 8.5,
+        "rate": None,
+        "fee_amount": 5.0,
+        "fee_rate": 0,
+        "reference_id": "usdt-trade-42",
+        "provider": "coins.ph",
+    }
+
+
 class FakeDb:
     def __init__(self, trade, deposit_address=None):
         self.trade = trade
