@@ -468,6 +468,7 @@ async def test_send_disbursement_reconciles_duplicate_reference_to_provider_reco
 @pytest.mark.asyncio
 async def test_generate_qrph_generates_php_payload(monkeypatch):
     svc = SwiftPayService()
+    svc.callback_url = "https://api.swiftpay.site/api/v1/webhooks/swiftpay"
     captured_payload = {}
 
     class CaptureClient:
@@ -490,6 +491,7 @@ async def test_generate_qrph_generates_php_payload(monkeypatch):
     assert result["success"] is True
     assert captured_payload["x_currency"] == "PHP"
     assert captured_payload["x_amount"] == "12500.00"
+    assert captured_payload["merchant_webhook_url"] == svc.callback_url
     assert captured_payload["signature"] == svc._sign_payload(captured_payload)
 
 

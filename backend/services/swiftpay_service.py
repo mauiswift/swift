@@ -770,6 +770,8 @@ class SwiftPayService:
                 "x_amount": self._format_amount(php_amount),
                 "x_currency": "PHP",
             }
+            if self.callback_url:
+                payload["merchant_webhook_url"] = self.callback_url
             payload["signature"] = self._sign_payload(payload)
 
             logger.info("SwiftPay generate_qrph %s reference=%s amount=%s currency=PHP (orig: %s %s)",
