@@ -25,7 +25,6 @@ export default function DashboardWrapper({ children }: DashboardWrapperProps) {
 
   useEffect(() => {
     const publicPrefixes = [
-      '/admin-demo',
       '/accept-invitation',
       '/api-docs',
       '/auth',

@@ -13,6 +13,7 @@ from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
 from services.magpie_service import CurrencyConverter
 from services.transactions import TransactionsService
+from services.webhook_event_log import record_verified_payment_webhook
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/paymentwall", tags=["paymentwall"])
@@ -120,4 +121,12 @@ async def paymentwall_pingback(request: Request, db: AsyncSession = Depends(get_
     else:
         updated = True
 
+    await record_verified_payment_webhook(
+        db,
+        provider="paymentwall",
+        transaction=transaction,
+        external_id=reference_id,
+        event_type=f"payment.pingback_{pingback_type}",
+        signature=str(parameters.get("sig") or ""),
+    )
     return {"success": updated, "received": True, "reference_id": reference_id}

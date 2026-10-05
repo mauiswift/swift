@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -15,10 +15,12 @@ from services.payment_processing import PaymentProcessor
 from services.swiftpay_service import SwiftPayService
 from services.checkout_urls import canonicalize_checkout_url
 from core.config import settings
-from services.transactions import TransactionsService
+from services.transactions import NON_CUSTOMER_PAYMENT_TYPES, TransactionsService, is_customer_payment
 from models.transactions import Transactions
 from models.disbursements import Disbursements
 from models.merchant_api_config import MerchantApiConfig
+from models.webhook_events import WebhookEvent
+from services.app_settings import get_enabled_collection_currencies, get_payment_channels
 
 from services.payment_gateway import gateway as payment_gateway
 
@@ -71,11 +73,19 @@ SUPPORTED_PAYMENT_METHODS = [
 
 
 @router.get("/payment-methods")
-async def get_supported_payment_methods():
+async def get_supported_payment_methods(
+    currency: str = Query("PHP", min_length=3, max_length=4),
+    db: AsyncSession = Depends(get_db),
+):
+    normalized_currency = currency.upper()
+    enabled_currencies = await get_enabled_collection_currencies(db)
+    if normalized_currency not in enabled_currencies:
+        raise HTTPException(status_code=400, detail="Collection currency is not enabled")
+    channels = await get_payment_channels(db)
     return {
         "success": True,
-        "source": "internal",
-        "payment_methods": SUPPORTED_PAYMENT_METHODS,
+        "source": "configuration",
+        "payment_methods": channels.get(normalized_currency, {}).get("checkout", []),
     }
 
 
@@ -128,16 +138,20 @@ async def get_dashboard_stats(
         currency = currency.upper()
 
     # ── Fetch transactions within window ──────────────────────────
-    # We exclude 'disbursement' type as those are handled by the disbursements query below
+    non_customer_types = tuple(value.lower() for value in NON_CUSTOMER_PAYMENT_TYPES)
     txn_result = await db.execute(
         select(Transactions).where(
             Transactions.user_id == user_id,
             Transactions.created_at >= since,
-            Transactions.transaction_type != "disbursement",
+            func.lower(Transactions.transaction_type).not_in(non_customer_types),
             Transactions.currency == currency,
         )
     )
-    txns = txn_result.scalars().all()
+    txns = [
+        txn
+        for txn in txn_result.scalars().all()
+        if is_customer_payment(txn)
+    ]
 
     # ── Fetch disbursements within window ─────────────────────────
     disb_result = await db.execute(
@@ -274,9 +288,185 @@ async def get_dashboard_stats(
         "currency": currency,
         "payments": {"total_amount": round(pmt_total_amount, 2), "total_count": pmt_total_count},
         "disbursements": {"total_amount": round(disb_total_amount, 2), "total_count": disb_total_count},
+        "payment_links": {
+            "total_count": sum(1 for txn in txns if (txn.transaction_type or "").strip().lower() == "payment_link"),
+        },
+        "otc_activity": {
+            "total_count": sum(
+                1
+                for txn in txns
+                if (txn.transaction_type or "").strip().lower() in {"otc", "over_the_counter"}
+                or (txn.payment_method or "").strip().lower() in {
+                    "cash",
+                    "otc",
+                    "over_the_counter",
+                    "7eleven",
+                    "7-eleven",
+                    "cebuana",
+                    "mlhuillier",
+                    "bayad_center",
+                }
+            ),
+        },
         "daily_volumes": daily_list,
         "payment_methods": payment_methods,
         "status_breakdown": status_breakdown,
+    }
+
+
+@router.get("/transactions/{transaction_id}/webhook-events")
+async def get_transaction_webhook_events(
+    transaction_id: int,
+    current_user: UserResponse = Depends(get_payment_user("payments:read")),
+    db: AsyncSession = Depends(get_db),
+):
+    user_ids = TransactionsService(db)._candidate_user_ids(str(current_user.id))
+    transaction = await db.scalar(
+        select(Transactions).where(
+            Transactions.id == transaction_id,
+            Transactions.user_id.in_(user_ids),
+        )
+    )
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    references = {
+        value.strip()
+        for value in (transaction.external_id, transaction.xendit_id, str(transaction.id))
+        if value and value.strip()
+    }
+    if not references:
+        return {"items": []}
+
+    result = await db.execute(
+        select(WebhookEvent)
+        .where(WebhookEvent.external_id.in_(references))
+        .order_by(WebhookEvent.created_at.desc())
+        .limit(50)
+    )
+    events = []
+    for event in result.scalars():
+        payload = event.payload if isinstance(event.payload, dict) else {}
+        if payload.get("transaction_id") not in (transaction.id, str(transaction.id)):
+            continue
+        events.append({
+            "id": event.id,
+            "provider": event.provider,
+            "event_type": event.event_type,
+            "status": event.status,
+            "signature_verified": payload.get("signature_verified") is True,
+            "signature_fingerprint": payload.get("signature_fingerprint"),
+            "transaction_status": payload.get("transaction_status"),
+            "created_at": event.created_at.isoformat() if event.created_at else None,
+            "processed_at": event.processed_at.isoformat() if event.processed_at else None,
+        })
+    return {"items": events}
+
+
+@router.get("/transactions")
+async def list_dashboard_transactions(
+    currency: str = Query(..., min_length=3, max_length=4),
+    status: Optional[str] = Query(None, max_length=32),
+    transaction_type: Optional[str] = Query(None, max_length=64),
+    search: Optional[str] = Query(None, max_length=200),
+    sort: str = Query("-created_at", max_length=32),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: UserResponse = Depends(get_payment_user("payments:read")),
+    db: AsyncSession = Depends(get_db),
+):
+    allowed_currencies = {"PHP", "CNY", "KRW", "USDT"}
+    normalized_currency = currency.upper()
+    if normalized_currency not in allowed_currencies:
+        raise HTTPException(status_code=400, detail="Unsupported currency")
+
+    allowed_statuses = {"paid", "pending", "processing", "failed", "rejected", "expired", "cancelled"}
+    normalized_status = (status or "").strip().lower()
+    if normalized_status and normalized_status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail="Unsupported transaction status")
+
+    allowed_types = {"invoice", "payment_link", "qr_code"}
+    normalized_type = (transaction_type or "").strip().lower()
+    if normalized_type and normalized_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Unsupported transaction type")
+
+    sort_field = sort[1:] if sort.startswith("-") else sort
+    sort_columns = {
+        "external_id": Transactions.external_id,
+        "customer": Transactions.customer_name,
+        "type": Transactions.transaction_type,
+        "method": Transactions.payment_method,
+        "amount": Transactions.amount,
+        "currency": Transactions.currency,
+        "status": Transactions.status,
+        "created_at": Transactions.created_at,
+        "paid_at": Transactions.paid_at,
+        "approval": Transactions.approval_status,
+    }
+    if sort_field not in sort_columns:
+        raise HTTPException(status_code=400, detail="Unsupported sort field")
+
+    user_ids = TransactionsService(db)._candidate_user_ids(str(current_user.id))
+    conditions = [
+        Transactions.user_id.in_(user_ids),
+        func.lower(Transactions.transaction_type).not_in(
+            tuple(value.lower() for value in NON_CUSTOMER_PAYMENT_TYPES)
+        ),
+        Transactions.external_id.is_not(None),
+        Transactions.amount > 0,
+        Transactions.currency == normalized_currency,
+    ]
+    conditions.append(
+        ~func.lower(Transactions.transaction_type).endswith("_fee", autoescape=True)
+    )
+    if normalized_status:
+        if normalized_status == "paid":
+            conditions.append(
+                or_(
+                    func.lower(Transactions.status).in_(("paid", "completed", "settled")),
+                    Transactions.paid_at.is_not(None),
+                )
+            )
+        elif normalized_status == "pending":
+            conditions.append(func.lower(Transactions.status).in_(("pending", "processing")))
+        elif normalized_status == "failed":
+            conditions.append(func.lower(Transactions.status).in_(("failed", "error", "declined")))
+        elif normalized_status == "cancelled":
+            conditions.append(func.lower(Transactions.status).in_(("cancelled", "canceled")))
+        else:
+            conditions.append(func.lower(Transactions.status) == normalized_status)
+    if normalized_type:
+        if normalized_type == "qr_code":
+            conditions.append(
+                func.lower(Transactions.transaction_type).in_(
+                    ("qr_code", "qrph_payment", "qr_code_payment", "alipay_qr", "wechat_qr")
+                )
+            )
+        else:
+            conditions.append(func.lower(Transactions.transaction_type) == normalized_type)
+    if search and search.strip():
+        term = search.strip().lower()
+        conditions.append(
+            or_(
+                func.lower(Transactions.external_id).contains(term, autoescape=True),
+                func.lower(Transactions.xendit_id).contains(term, autoescape=True),
+                func.lower(Transactions.customer_name).contains(term, autoescape=True),
+                func.lower(Transactions.customer_email).contains(term, autoescape=True),
+                func.lower(Transactions.description).contains(term, autoescape=True),
+            )
+        )
+
+    statement = select(Transactions).where(*conditions)
+    count_statement = select(func.count(Transactions.id)).where(*conditions)
+    total = int((await db.scalar(count_statement)) or 0)
+    column = sort_columns[sort_field]
+    order = column.desc() if sort.startswith("-") else column.asc()
+    result = await db.execute(statement.order_by(order, Transactions.id.desc()).offset(skip).limit(limit))
+    return {
+        "items": result.scalars().all(),
+        "total": total,
+        "skip": skip,
+        "limit": limit,
     }
 
 

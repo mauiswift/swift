@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, ExternalLink, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Copy, ExternalLink, Fingerprint, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -9,6 +9,7 @@ import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
+import CreateOrderModal from './CreateOrderModal';
 import {
   formatTransactionDate,
   getTransactionStatus,
@@ -22,6 +23,18 @@ type SortKey = 'external_id' | 'customer' | 'type' | 'method' | 'amount' | 'curr
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 20;
+
+interface WebhookEvent {
+  id: string;
+  provider: string;
+  event_type: string;
+  status: string;
+  signature_verified: boolean;
+  signature_fingerprint?: string | null;
+  transaction_status?: string | null;
+  created_at?: string | null;
+  processed_at?: string | null;
+}
 
 const STATUS_OPTIONS = ['paid', 'pending', 'processing', 'failed', 'rejected', 'expired', 'cancelled'];
 const TYPE_OPTIONS = [
@@ -43,21 +56,6 @@ const COLUMNS: { key: SortKey; label: string; align?: 'right' }[] = [
   { key: 'approval', label: 'Approval' },
 ];
 
-function sortValue(tx: TransactionRecord, key: SortKey): string | number {
-  switch (key) {
-    case 'external_id': return (tx.external_id || '').toLowerCase();
-    case 'customer': return (tx.customer_name || tx.customer_email || '').toLowerCase();
-    case 'type': return (tx.transaction_type || '').toLowerCase();
-    case 'method': return (tx.payment_method || '').toLowerCase();
-    case 'amount': return Number(tx.amount) || 0;
-    case 'currency': return (tx.currency || '').toLowerCase();
-    case 'status': return getTransactionStatus(tx);
-    case 'created_at': return tx.created_at ? Date.parse(tx.created_at) || 0 : 0;
-    case 'paid_at': return tx.paid_at ? Date.parse(tx.paid_at) || 0 : 0;
-    case 'approval': return (tx.approval_status || '').toLowerCase();
-  }
-}
-
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2 text-sm">
@@ -76,28 +74,37 @@ export default function LiveTransactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'created_at', dir: 'desc' });
   const [selected, setSelected] = useState<TransactionRecord | null>(null);
+  const [webhookEvents, setWebhookEvents] = useState<WebhookEvent[]>([]);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookError, setWebhookError] = useState('');
+  const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
     setError('');
     try {
-      const query: Record<string, string> = { currency: collectionCurrency.toUpperCase() };
-      if (statusFilter !== 'all') query.status = statusFilter;
-      if (typeFilter !== 'all') query.transaction_type = typeFilter;
-      const res = await client.entities.transactions.query({
-        query,
-        sort: '-created_at',
-        limit: PAGE_SIZE,
-        skip: page * PAGE_SIZE,
+      const params = new URLSearchParams({
+        currency: collectionCurrency.toUpperCase(),
+        skip: String(page * PAGE_SIZE),
+        limit: String(PAGE_SIZE),
+        sort: `${sort.dir === 'desc' ? '-' : ''}${sort.key}`,
       });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to load transactions');
-      if (!Array.isArray(res.data?.items)) throw new Error('The transactions response is invalid');
-      setItems(Array.isArray(res.data?.items) ? res.data.items : []);
-      setTotal(Number(res.data?.total) || 0);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (typeFilter !== 'all') params.set('transaction_type', typeFilter);
+      if (searchQuery) params.set('search', searchQuery);
+      const res = await client.get(`/api/v1/xend/transactions?${params.toString()}`);
+      const body = res.data && typeof res.data === 'object'
+        ? res.data as { items?: unknown; total?: number; detail?: string }
+        : {};
+      if (!res.ok) throw new Error(body.detail || 'Unable to load transactions');
+      if (!Array.isArray(body.items)) throw new Error('The transactions response is invalid');
+      setItems(body.items as TransactionRecord[]);
+      setTotal(Number(body.total) || 0);
     } catch (err) {
       setItems([]);
       setTotal(0);
@@ -105,7 +112,7 @@ export default function LiveTransactions() {
     } finally {
       setLoading(false);
     }
-  }, [user, page, statusFilter, typeFilter, collectionCurrency]);
+  }, [user, page, statusFilter, typeFilter, collectionCurrency, searchQuery, sort]);
 
   const { connected } = usePaymentEvents({ enabled: !!user, onStatusChange: load, pollInterval: 10000 });
 
@@ -118,19 +125,42 @@ export default function LiveTransactions() {
     setPage(0);
   }, [collectionCurrency, statusFilter, typeFilter]);
 
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const filtered = term
-      ? items.filter((tx) => [tx.external_id, tx.description, tx.customer_name, tx.customer_email, tx.xendit_id]
-          .some((value) => value?.toLowerCase().includes(term)))
-      : items;
-    const factor = sort.dir === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      const left = sortValue(a, sort.key);
-      const right = sortValue(b, sort.key);
-      return (left < right ? -1 : left > right ? 1 : 0) * factor;
-    });
-  }, [items, search, sort]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPage(0);
+      setSearchQuery(search.trim());
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    let active = true;
+    if (!selected) {
+      setWebhookEvents([]);
+      setWebhookError('');
+      return;
+    }
+    const loadWebhookEvents = async () => {
+      setWebhookLoading(true);
+      setWebhookError('');
+      try {
+        const response = await client.get(`/api/v1/xend/transactions/${selected.id}/webhook-events`);
+        const body = response.data && typeof response.data === 'object'
+          ? response.data as { items?: unknown; detail?: string }
+          : {};
+        if (!response.ok || !Array.isArray(body.items)) {
+          throw new Error(body.detail || 'Unable to load verified webhook events.');
+        }
+        if (active) setWebhookEvents(body.items as WebhookEvent[]);
+      } catch (err) {
+        if (active) setWebhookError(err instanceof Error ? err.message : 'Unable to load verified webhook events.');
+      } finally {
+        if (active) setWebhookLoading(false);
+      }
+    };
+    void loadWebhookEvents();
+    return () => { active = false; };
+  }, [selected]);
 
   const toggleSort = (key: SortKey) =>
     setSort((current) => (current.key === key ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
@@ -165,9 +195,9 @@ export default function LiveTransactions() {
             <button type="button" onClick={() => void load()} aria-label="Refresh" className="rounded-lg border border-white/[0.08] p-2 text-slate-300 hover:text-white">
               <RefreshCw size={14} />
             </button>
-            <Link to="/pay-by-link/new" className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-[#06140e] hover:bg-emerald-300">
+            <button type="button" onClick={() => setCreateOrderOpen(true)} className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-[#06140e] hover:bg-emerald-300">
               <Plus size={15} /> Create order
-            </Link>
+            </button>
           </div>
         </header>
 
@@ -177,7 +207,7 @@ export default function LiveTransactions() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search this page by order, customer, description…"
+              placeholder="Search all orders by ID, customer, email, or description…"
               aria-label="Search transactions"
               className={`${fieldClass} w-full pl-9`}
             />
@@ -215,8 +245,8 @@ export default function LiveTransactions() {
             </thead>
             <tbody className="divide-y divide-white/[0.05]">
               {loading && <tr><td colSpan={COLUMNS.length} className="py-12 text-center text-slate-500">Loading…</td></tr>}
-              {!loading && rows.length === 0 && <tr><td colSpan={COLUMNS.length} className="py-12 text-center text-slate-500">No transactions match your filters.</td></tr>}
-              {!loading && rows.map((tx) => {
+              {!loading && items.length === 0 && <tr><td colSpan={COLUMNS.length} className="py-12 text-center text-slate-500">No transactions match your filters.</td></tr>}
+              {!loading && items.map((tx) => {
                 const status = getTransactionStatus(tx);
                 return (
                   <tr
@@ -294,8 +324,46 @@ export default function LiveTransactions() {
                 </a>
               )}
             </div>
+            <section aria-labelledby="webhook-events-title" className="mt-7 border-t border-white/[0.07] pt-5">
+              <div className="flex items-center gap-2">
+                <Fingerprint size={16} className="text-emerald-300" />
+                <h3 id="webhook-events-title" className="text-sm font-semibold text-white">Webhook and signature events</h3>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Only provider-verified events are shown. Raw signatures and signing secrets are never exposed in the browser.</p>
+              {webhookLoading && <p className="mt-4 text-sm text-slate-500">Loading verified events…</p>}
+              {webhookError && <p role="alert" className="mt-4 rounded-lg border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{webhookError}</p>}
+              {!webhookLoading && !webhookError && webhookEvents.length === 0 && (
+                <p className="mt-4 text-sm text-slate-500">No verified provider webhook events have been recorded for this order.</p>
+              )}
+              <ol className="mt-4 space-y-3">
+                {webhookEvents.map((event) => (
+                  <li key={event.id} className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-medium capitalize text-slate-200">{event.provider} · {event.event_type.replace(/\./g, ' ')}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">{formatTransactionDate(event.processed_at || event.created_at)}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-300/10 px-2 py-1 text-[10px] font-medium text-emerald-200">
+                        <CheckCircle2 size={11} /> Verified
+                      </span>
+                    </div>
+                    {event.transaction_status && <p className="mt-2 text-xs text-slate-400">Recorded status: <span className="capitalize text-slate-200">{event.transaction_status}</span></p>}
+                    {event.signature_fingerprint && (
+                      <p className="mt-2 break-all font-mono text-[10px] text-slate-500">Signature fingerprint · SHA-256 · {event.signature_fingerprint}</p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </section>
           </aside>
         </div>
+      )}
+      {createOrderOpen && (
+        <CreateOrderModal
+          currency={collectionCurrency}
+          onClose={() => setCreateOrderOpen(false)}
+          onCreated={() => { void load(); }}
+        />
       )}
     </Layout>
   );

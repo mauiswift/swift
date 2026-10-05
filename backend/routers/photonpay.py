@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from services.photonpay_service import PhotonPayService
 from services.transactions import TransactionsService
+from services.webhook_event_log import record_verified_payment_webhook
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/photonpay", tags=["photonpay"])
@@ -51,4 +52,12 @@ async def photonpay_webhook(request: Request, db: AsyncSession = Depends(get_db)
         updated = await transactions.mark_as_expired(transaction)
     else:
         updated = True
+    await record_verified_payment_webhook(
+        db,
+        provider="photonpay",
+        transaction=transaction,
+        external_id=reference_id,
+        event_type=f"payment.{status or 'unknown'}",
+        signature=signature,
+    )
     return {"success": updated, "received": True, "reference_id": reference_id, "status": status}

@@ -33,6 +33,7 @@ from services.payment_gateway import gateway
 from services.toss_account_pool import assign_toss_account_to_transaction
 from services.paymentwall_service import PaymentwallService
 from services.transactions import TransactionsService, publish_payment_link_created
+from services.webhook_event_log import record_verified_payment_webhook
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
 from services.checkout_urls import build_checkout_url, checkout_host
@@ -901,11 +902,11 @@ async def _mark_transaction_webhook_status(
     provider_reference: Optional[str] = None,
     status: str,
     amount: Optional[float] = None,
-) -> bool:
+) -> Optional[Transactions]:
     """Persist a payment notification status back to the matching transaction row."""
     if not external_id:
         logger.warning("Webhook status ignored because no external_id was provided")
-        return False
+        return None
 
     stmt = (
         select(Transactions)
@@ -917,7 +918,7 @@ async def _mark_transaction_webhook_status(
     txn = result.scalars().first()
     if not txn:
         logger.warning("Webhook status update skipped: no transaction matched external_id=%s", external_id)
-        return False
+        return None
 
     if provider_reference:
         txn.xendit_id = provider_reference
@@ -932,13 +933,13 @@ async def _mark_transaction_webhook_status(
         finalized = await TransactionsService(db).mark_as_paid(txn, gateway_label="Payment gateway")
         if not finalized:
             logger.error("Payment webhook could not finalize transaction %s", txn.id)
-            return False
+            return None
     else:
         txn.status = status
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(txn)
-    return True
+    return txn
 
 
 @router.post("/create-legacy-qr")
@@ -1124,7 +1125,7 @@ async def notify_alipay(request: Request, db: AsyncSession = Depends(get_db)):
     data = dict(form)
     ok = await alipay.verify_notify(data)
     if not ok:
-        logger.warning("Alipay notify failed verification: %s", data)
+        logger.warning("Alipay notify signature verification failed")
         return JSONResponse({"success": False, "error": "signature verification failed"})
 
     trade_status = (data.get("trade_status") or "").upper()
@@ -1144,13 +1145,22 @@ async def notify_alipay(request: Request, db: AsyncSession = Depends(get_db)):
     else:
         db_status = "pending"
 
-    await _mark_transaction_webhook_status(
+    txn = await _mark_transaction_webhook_status(
         db,
         external_id=external_id,
         provider_reference=provider_reference,
         status=db_status,
         amount=amount,
     )
+    if txn:
+        await record_verified_payment_webhook(
+            db,
+            provider="alipay",
+            transaction=txn,
+            external_id=external_id,
+            event_type=f"payment.{db_status}",
+            signature=str(data.get("sign") or ""),
+        )
 
     return JSONResponse({"success": True, "status": db_status})
 
@@ -1183,13 +1193,22 @@ async def notify_wechat(request: Request, db: AsyncSession = Depends(get_db)):
     else:
         db_status = "pending"
 
-    await _mark_transaction_webhook_status(
+    txn = await _mark_transaction_webhook_status(
         db,
         external_id=external_id,
         provider_reference=provider_reference,
         status=db_status,
         amount=amount,
     )
+    if txn:
+        await record_verified_payment_webhook(
+            db,
+            provider="wechat",
+            transaction=txn,
+            external_id=external_id,
+            event_type=f"payment.{db_status}",
+            signature=str(payload.get("sign") or ""),
+        )
 
     return StreamingResponse(content=b"<xml><return_code>SUCCESS</return_code></xml>", media_type="application/xml")
 

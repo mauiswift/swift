@@ -70,21 +70,6 @@ export default function Login() {
   const redirectPath = stateFrom && stateFrom.startsWith('/') && !stateFrom.startsWith('/login')
     ? stateFrom
     : '/dashboard';
-  const demoEnabled = import.meta.env.DEV || new URLSearchParams(location.search).has('demo');
-  const demoRoles = demoEnabled ? [
-    { id: 'finance', label: 'Finance Officer', email: 'maria.cruz@swiftpay.ph', password: 'SwiftPH#2026!' },
-    { id: 'merchant', label: 'Merchant Admin', email: 'jose.reyes@merchant.ph', password: 'MerchantPOS@26' },
-    { id: 'compliance', label: 'Compliance', email: 'ana.santos@swiftpay.ph', password: 'KYBcompliance#1' },
-    { id: 'super', label: 'Super Admin', email: 'admin@swiftpay.ph', password: 'SwiftAdmin#Root' },
-  ] : [];
-
-  const applyDemoCredentials = (demo: { email: string; password: string }) => {
-    setLocalError(null);
-    setEmail(demo.email);
-    setPassword(demo.password);
-    setStep('password');
-  };
-
   const handleTurnstileSuccess = (token: string) => {
     setTurnstileError(false);
     setTurnstileToken(token);
@@ -942,9 +927,10 @@ export default function Login() {
                     {isKorean ? '인증된 계정만 로그인할 수 있습니다. 보안 검증이 활성화된 경우 화면의 안내를 따라주세요.' : 'Only verified accounts can sign in. If security validation is enabled, follow the on-screen prompt.'}
                   </p>
                   <ul className="ak-side-list" aria-label={isKorean ? '주요 기능' : 'Highlights'}>
-                    <li>{isKorean ? '지갑, 정산, 승인 흐름을 한 곳에서 관리' : 'Manage wallets, settlements, and approvals in one place'}</li>
-                    <li>{isKorean ? 'KRW 가상계좌 신청 검토 및 계정 풀 관리' : 'Review KRW virtual account applications and manage the pool'}</li>
-                    <li>{isKorean ? '감사 추적 가능한 트랜잭션 모니터링' : 'Track transactions with audit-ready visibility'}</li>
+                    <li>{isKorean ? '역할 계층: 플랫폼 소유자, 조직 관리자, 매니저, 운영자, 조회 전용' : 'Role hierarchy: platform owner, organization admin, manager, operator, and viewer'}</li>
+                    <li>{isKorean ? '개발자 역할은 금융 권한과 분리된 통합 설정을 관리' : 'Developer access is separated from financial controls'}</li>
+                    <li>{isKorean ? '서명 검증된 결제 제공업체 웹훅 및 트랜잭션 이력' : 'Provider-signed payment webhooks and transaction history'}</li>
+                    <li>{isKorean ? '지갑, 정산, 승인 흐름을 권한별로 관리' : 'Permission-scoped wallet, settlement, and approval workflows'}</li>
                   </ul>
                 </div>
                 <a className="ak-side-support" href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
@@ -991,27 +977,6 @@ export default function Login() {
                     {t('login_button')}
                   </button>
 
-                  {demoEnabled && (
-                    <div className="ak-demo-box" aria-label="Demo credentials">
-                      <div className="ak-demo-header">
-                        <span className="ak-demo-title">Demo roles</span>
-                        <span className="ak-demo-pill">DEV</span>
-                      </div>
-                      <div className="ak-demo-grid">
-                        {demoRoles.map((demo) => (
-                          <button
-                            key={demo.id}
-                            type="button"
-                            className="ak-demo-btn"
-                            onClick={() => applyDemoCredentials(demo)}
-                          >
-                            {demo.label}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="ak-demo-note">Autofills email + password for demos.</p>
-                    </div>
-                  )}
                 </form>
 
                 <div className="ak-login-methods" aria-label={isKorean ? '다른 로그인 방법' : 'Other sign-in methods'}>
@@ -1119,7 +1084,6 @@ export default function Login() {
           <Link to="/terms-of-service" className="ak-footer-item">{t('terms_of_use')}</Link>
           <Link to="/privacy-policy" className="ak-footer-item">{t('privacy_policy')}</Link>
           <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-item">{t('contact_us')}</a>
-          <Link to="/admin-demo" className="ak-footer-item">Preview admin demo</Link>
         </footer>
       </div>
     </>

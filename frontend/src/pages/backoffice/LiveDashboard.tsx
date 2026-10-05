@@ -4,13 +4,12 @@ import {
   Activity,
   ArrowRight,
   Banknote,
-  CheckCircle2,
-  Clock3,
   CreditCard,
+  Link2,
   RefreshCw,
   Send,
   ShieldCheck,
-  XCircle,
+  Store,
 } from 'lucide-react';
 import {
   CartesianGrid,
@@ -42,6 +41,8 @@ import { StatusPill } from './StatusPill';
 interface StatsResponse {
   payments: { total_amount: number; total_count: number };
   disbursements: { total_amount: number; total_count: number };
+  payment_links: { total_count: number };
+  otc_activity: { total_count: number };
   daily_volumes: { date: string; day: string; payments: number; disbursements: number }[];
   payment_methods: { name: string; count: number; amount: number }[];
   status_breakdown: { status: string; payment_count: number; payment_amount: number }[];
@@ -75,26 +76,30 @@ export default function LiveDashboard() {
     if (!user) return;
     setError('');
     try {
+      const recentParams = new URLSearchParams({
+        currency: collectionCurrency.toUpperCase(),
+        limit: '8',
+        skip: '0',
+        sort: '-created_at',
+      });
       const [statsRes, txRes] = await Promise.all([
         client.apiCall.invoke({
           url: `/api/v1/xend/dashboard-stats?days=${days}&currency=${collectionCurrency}`,
           method: 'GET',
           data: {},
         }),
-        client.entities.transactions.query({
-          query: { currency: collectionCurrency.toUpperCase() },
-          sort: '-created_at',
-          limit: 8,
-          skip: 0,
-        }),
+        client.get(`/api/v1/xend/transactions?${recentParams.toString()}`),
       ]);
       if (!statsRes.ok || !statsRes.data?.payments) {
         throw new Error(statsRes.data?.detail || 'Unable to load dashboard statistics');
       }
-      if (!txRes.ok) throw new Error(txRes.data?.detail || 'Unable to load recent transactions');
-      if (!Array.isArray(txRes.data?.items)) throw new Error('The recent transactions response is invalid');
+      const recentBody = txRes.data && typeof txRes.data === 'object'
+        ? txRes.data as { items?: unknown; detail?: string }
+        : {};
+      if (!txRes.ok) throw new Error(recentBody.detail || 'Unable to load recent transactions');
+      if (!Array.isArray(recentBody.items)) throw new Error('The recent transactions response is invalid');
       setStats(statsRes.data as StatsResponse);
-      setRecent(Array.isArray(txRes.data?.items) ? txRes.data.items : []);
+      setRecent(recentBody.items as TransactionRecord[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load dashboard');
     } finally {
@@ -106,7 +111,12 @@ export default function LiveDashboard() {
     const started = performance.now();
     try {
       const res = await fetch('/api/v1/health', { cache: 'no-store' });
-      setHealth({ ok: res.ok, latencyMs: Math.round(performance.now() - started) });
+      if (!res.ok) {
+        setHealth({ ok: false, latencyMs: Math.round(performance.now() - started) });
+        return;
+      }
+      const body = await res.json() as { status?: string };
+      setHealth({ ok: body.status === 'healthy', latencyMs: Math.round(performance.now() - started) });
     } catch {
       setHealth({ ok: false, latencyMs: null });
     }
@@ -134,16 +144,14 @@ export default function LiveDashboard() {
   const kpis = useMemo(() => {
     const bucket = (name: string) => stats?.status_breakdown.find((row) => row.status === name);
     const executed = toNumber(bucket('Executed')?.payment_count);
-    const pending = toNumber(bucket('Pending')?.payment_count);
-    const rejected = toNumber(bucket('Rejected')?.payment_count) + toNumber(bucket('Expired')?.payment_count);
     const totalCount = toNumber(stats?.payments.total_count);
     const successRate = totalCount > 0 ? (executed / totalCount) * 100 : 0;
     return [
       { label: 'Transaction volume', value: money(toNumber(stats?.payments.total_amount)), sub: `${totalCount} payments`, icon: Banknote, accent: 'text-emerald-300 bg-emerald-300/10' },
       { label: 'Disbursements', value: money(toNumber(stats?.disbursements.total_amount)), sub: `${toNumber(stats?.disbursements.total_count)} payouts`, icon: Send, accent: 'text-sky-300 bg-sky-300/10' },
-      { label: 'Executed payments', value: String(executed), sub: 'Paid / settled', icon: CheckCircle2, accent: 'text-teal-300 bg-teal-300/10' },
-      { label: 'Pending payments', value: String(pending), sub: 'Awaiting payment', icon: Clock3, accent: 'text-amber-300 bg-amber-300/10' },
-      { label: 'Failed / expired', value: String(rejected), sub: 'Rejected, cancelled or expired', icon: XCircle, accent: 'text-rose-300 bg-rose-300/10' },
+      { label: 'Payment links', value: String(toNumber(stats?.payment_links?.total_count)), sub: `Last ${days} days`, icon: Link2, accent: 'text-violet-300 bg-violet-300/10' },
+      { label: 'OTC activity', value: String(toNumber(stats?.otc_activity?.total_count)), sub: 'Cash and over-the-counter orders', icon: Store, accent: 'text-amber-300 bg-amber-300/10' },
+      { label: 'Transactions', value: String(totalCount), sub: `Last ${days} days`, icon: CreditCard, accent: 'text-teal-300 bg-teal-300/10' },
       { label: 'Success rate', value: totalCount > 0 ? `${successRate.toFixed(1)}%` : '—', sub: `Last ${days} days`, icon: ShieldCheck, accent: 'text-lime-300 bg-lime-300/10' },
       {
         label: 'API health',
@@ -152,7 +160,7 @@ export default function LiveDashboard() {
         icon: Activity,
         accent: health && !health.ok ? 'text-rose-300 bg-rose-300/10' : 'text-cyan-300 bg-cyan-300/10',
       },
-      { label: 'Live updates', value: connected ? 'Connected' : 'Polling', sub: 'Payment event stream', icon: CreditCard, accent: 'text-green-300 bg-green-300/10' },
+      { label: 'Payment events', value: connected ? 'Connected' : 'Polling', sub: 'Realtime event stream', icon: Activity, accent: 'text-green-300 bg-green-300/10' },
     ];
   }, [stats, health, connected, days, money]);
 

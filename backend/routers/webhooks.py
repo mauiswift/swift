@@ -22,6 +22,7 @@ from services.system_earnings import credit_system_earnings
 from services.swiftpay_service import SwiftPayService
 from services.payment_webhook_validation import payload_value as _payload_value
 from services.payment_webhook_validation import validate_payment_amount as _validate_payment_amount
+from services.webhook_event_log import record_verified_payment_webhook
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
@@ -132,6 +133,14 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await db.commit()
                     else:
                         logger.warning("Ignoring stale SwiftPay status %s for received transaction %s", internal_status, txn.id)
+                await record_verified_payment_webhook(
+                    db,
+                    provider="swiftpay",
+                    transaction=txn,
+                    external_id=str(reference_no or payment_id or ""),
+                    event_type=f"payment.{internal_status or 'unknown'}",
+                    signature=signature,
+                )
             logger.info(f"SwiftPay: Updated transaction {reference_no or payment_id} to {internal_status}")
 
             disbursement = await db.scalar(
@@ -273,6 +282,14 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                         await db.commit()
                     else:
                         logger.warning("Ignoring stale Magpie status %s for received transaction %s", internal_status, txn.id)
+                await record_verified_payment_webhook(
+                    db,
+                    provider="magpie",
+                    transaction=txn,
+                    external_id=str(order_id or transaction_id or ""),
+                    event_type=f"payment.{internal_status or 'unknown'}",
+                    signature=signature,
+                )
                 logger.info("Magpie: Updated transaction %s to %s", order_id or transaction_id, internal_status)
         
         return {"success": True, "received": True, "order_id": order_id or transaction_id}

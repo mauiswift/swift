@@ -20,6 +20,7 @@ from services.transactions import TransactionsService
 from services.payment_webhook_validation import validate_payment_amount
 from services.url_shortener import URLShortenerService
 from services.checkout_urls import build_checkout_url
+from services.webhook_event_log import record_verified_payment_webhook
 from models.disbursements import Disbursements
 
 logger = logging.getLogger(__name__)
@@ -576,7 +577,7 @@ async def swiftpay_webhook(
         raise HTTPException(status_code=400, detail="missing signature")
 
     if not service.verify_signature(payload, signature_value):
-        logger.warning("SwiftPay webhook: signature verification failed. payload=%s signature=%s", payload, signature_value)
+        logger.warning("SwiftPay webhook: signature verification failed")
         raise HTTPException(status_code=400, detail="invalid signature")
 
     reference_no = payload.get("x_reference_no") or x_reference_no or ""
@@ -639,6 +640,14 @@ async def swiftpay_webhook(
     else:
         logger.info("⏳ SwiftPay webhook: transaction %s status unchanged (non-terminal: %s)", txn.id, payment_status or payload.get("x_disbursement_status"))
 
+    await record_verified_payment_webhook(
+        db,
+        provider="swiftpay",
+        transaction=txn,
+        external_id=str(reference_no or payment_id or ""),
+        event_type=f"payment.{payment_status.lower() or 'unknown'}",
+        signature=signature_value,
+    )
     return {"success": True, "transaction_id": txn.id, "status": txn.status}
 
 

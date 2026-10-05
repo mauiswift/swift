@@ -498,7 +498,7 @@ class SwiftPayService:
             message.encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
-        logger.debug("SwiftPay verify_signature computed=%s received=%s message=%s", expected, signature, message)
+        logger.debug("SwiftPay webhook signature verification completed")
         return hmac.compare_digest(expected, signature)
 
     async def get_institutions(self, currency: Optional[str] = None) -> Dict[str, Any]:
