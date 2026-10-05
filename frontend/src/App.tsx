@@ -62,6 +62,8 @@ const TopupRequestsPage = React.lazy(() => import('./pages/TopupRequestsPage'));
 const SuperAdminPaymentApproval = React.lazy(() => import('./pages/payment-approvals'));
 const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'));
 const Transactions = React.lazy(() => import('./pages/Transactions'));
+const LiveDashboard = React.lazy(() => import('./pages/backoffice/LiveDashboard'));
+const LiveTransactions = React.lazy(() => import('./pages/backoffice/LiveTransactions'));
 const PaymentDetails = React.lazy(() => import('./pages/PaymentDetails'));
 const DisbursementDetails = React.lazy(() => import('./pages/DisbursementDetails'));
 const BatchDisbursement = React.lazy(() => import('./pages/BatchDisbursement'));
@@ -215,7 +217,8 @@ function AuthAwareContent() {
       <Route path="/mini-app" element={<MiniApp />} />
 
       {/* ─── Dashboard Protected Routes ─── */}
-      <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
+      <Route path="/dashboard" element={<ProtectedAdminRoute><LiveDashboard /></ProtectedAdminRoute>} />
+      <Route path="/dashboard/classic" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute permission="can_manage_wallet"><Wallet /></ProtectedAdminRoute>} />
       <Route path="/cryptocurrency" element={<ProtectedAdminRoute permission="can_manage_wallet"><Cryptocurrency cryptoOnly /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<RequireSuperAdmin><Approvals /></RequireSuperAdmin>} />
@@ -229,7 +232,8 @@ function AuthAwareContent() {
       <Route path="/payments" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/payments/:id" element={<ProtectedAdminRoute permission={["can_manage_payments", "can_manage_wallet"]}><PaymentDetails /></ProtectedAdminRoute>} />
       <Route path="/payments/:id/contract" element={<RequireSuperAdmin><PaymentContract /></RequireSuperAdmin>} />
-      <Route path="/transactions" element={<ProtectedAdminRoute permission="can_manage_transactions"><Transactions /></ProtectedAdminRoute>} />
+      <Route path="/transactions" element={<ProtectedAdminRoute permission="can_manage_transactions"><LiveTransactions /></ProtectedAdminRoute>} />
+      <Route path="/transactions/classic" element={<ProtectedAdminRoute permission="can_manage_transactions"><Transactions /></ProtectedAdminRoute>} />
       <Route path="/disbursements/:id" element={<ProtectedAdminRoute permission="can_manage_disbursements"><DisbursementDetails /></ProtectedAdminRoute>} />
       <Route path="/disbursements/batch/new" element={<ProtectedAdminRoute permission="can_manage_disbursements"><BatchDisbursement /></ProtectedAdminRoute>} />
       <Route path="/disbursements/single/new" element={<ProtectedAdminRoute permission="can_manage_disbursements"><SendSingleDisbursement /></ProtectedAdminRoute>} />
