@@ -33,6 +33,11 @@ export const clearStoredToken = () => {
   localStorage.removeItem('token');
 };
 
+export const getAuthHeader = (): Record<string, string> => {
+  const t = getStoredToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
 const base64UrlToBytes = (value: string) => {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((value.length + 3) % 4);
   return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
@@ -114,7 +119,7 @@ export const authApi = {
       const response = await fetch('/api/v1/auth/me', {
         method: 'GET',
         headers: {
-          Authorization: 'Bearer ' + token,
+          ...getAuthHeader(),
         },
         signal: controller.signal,
       });
@@ -294,7 +299,7 @@ export const authApi = {
     }
     try {
       const optionsResponse = await fetch('/api/v1/auth/passkey/registration-options', {
-        headers: { Authorization: 'Bearer ' + (getStoredToken() || '') },
+        headers: { ...getAuthHeader() },
       });
       if (!optionsResponse.ok) {
         const data = await optionsResponse.json().catch(() => ({}));
@@ -307,7 +312,7 @@ export const authApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + (getStoredToken() || ''),
+          ...getAuthHeader(),
         },
         body: JSON.stringify({ credential: serializeCredential(credential) }),
       });
@@ -324,7 +329,7 @@ export const authApi = {
     }
     const token = getStoredToken();
     const optionsResponse = await fetch(`/api/v1/auth/passkey/transaction-options?purpose=${purpose}`, {
-      headers: { Authorization: 'Bearer ' + (token || '') },
+      headers: { ...getAuthHeader() },
     });
     if (!optionsResponse.ok) {
       const data = await optionsResponse.json().catch(() => ({}));
@@ -341,7 +346,7 @@ export const authApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + (getStoredToken() || ''),
+        ...getAuthHeader(),
       },
       body: JSON.stringify({ purpose: 'withdrawal' }),
     });

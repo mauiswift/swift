@@ -63,14 +63,14 @@ export default function CollectionWalletOverview({
             </div>
             <span className="rounded-lg bg-blue-100 p-2 text-blue-700"><Landmark className="h-4 w-4" /></span>
           </div>
-          <p className="text-3xl font-bold tracking-tight text-slate-950">{shownBalance}</p>
+          <p className="wallet-balance-amount text-3xl font-bold tracking-tight text-slate-950 font-numeric">{shownBalance}</p>
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>{isKorean ? '사용 가능' : 'Available'}</span>
-            <span className="font-semibold text-emerald-800">{shownAvailable}</span>
+            <span className="font-semibold text-emerald-800 font-numeric">{shownAvailable}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>{isKorean ? '보류 중' : 'Pending'}</span>
-            <span className="font-semibold text-amber-800">{shownPending}</span>
+            <span className="font-semibold text-amber-800 font-numeric">{shownPending}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" onClick={onDeposit} disabled={!showActions || unavailable} className="h-11 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
@@ -98,17 +98,17 @@ export default function CollectionWalletOverview({
         {hasOrganizationWallet && organizationName && (
           <p className="mb-2 truncate text-xs text-slate-500">{organizationName}</p>
         )}
-        <p className="text-3xl font-semibold text-foreground">
+        <p className="wallet-balance-amount text-3xl font-semibold text-foreground font-numeric">
           {loading ? <span className="inline-block h-10 w-32 animate-pulse rounded-lg bg-slate-100" /> : shownBalance}
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
-            <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{shownAvailable}</p>
+            <p className="mt-0.5 truncate text-xs font-bold text-emerald-900 font-numeric">{shownAvailable}</p>
           </div>
           <div className="rounded-lg bg-amber-50 px-2.5 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
-            <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{shownPending}</p>
+            <p className="mt-0.5 truncate text-xs font-bold text-amber-900 font-numeric">{shownPending}</p>
           </div>
         </div>
         {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
@@ -117,7 +117,7 @@ export default function CollectionWalletOverview({
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-slate-500">{currencyName}</p>
           {pendingBalance > 0 && !unavailable && (
-            <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-600">
+            <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-600 font-numeric">
               {isKorean ? '처리 중' : 'Pending'}: {money(pendingBalance, currency)}
             </span>
           )}
@@ -128,8 +128,8 @@ export default function CollectionWalletOverview({
               <Button type="button" size="icon" title={`Deposit ${currency}`} aria-label={`Deposit ${currency}`} onClick={onDeposit} disabled={unavailable} className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-[#2563eb] bg-[#3B82F6] text-white shadow-sm shadow-[#3B82F6]/20 transition-all hover:bg-[#2563eb] focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:ring-offset-2">
                 <ArrowDownToLine className="h-4 w-4 text-white" />
               </Button>
-              <Button type="button" size="icon" title={`Withdraw ${currency}`} aria-label={`Withdraw ${currency}`} onClick={onWithdraw} disabled={unavailable} className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-amber-600 bg-amber-500 text-black shadow-sm shadow-amber-500/20 transition-all hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
-                <ArrowUpFromLine className="h-4 w-4 text-black" />
+              <Button type="button" size="icon" title={`Withdraw ${currency}`} aria-label={`Withdraw ${currency}`} onClick={onWithdraw} disabled={unavailable} className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-amber-600 bg-amber-500 text-white shadow-sm shadow-amber-500/20 transition-all hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
+                <ArrowUpFromLine className="h-4 w-4 text-white" />
               </Button>
             </>
           )}

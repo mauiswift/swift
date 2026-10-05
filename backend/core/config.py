@@ -477,7 +477,12 @@ class Settings(BaseSettings):
             value = os.environ[env_var_name]
             # Cache the value in instance dict to avoid repeated lookups
             self.__dict__[name] = value
-            logger.debug(f"Read dynamic attribute {name} from environment variable {env_var_name}")
+            # Dynamic env-var reads are supported for backward compatibility but discouraged.
+            logger.warning(
+                "Dynamic Settings access for '%s' (env var %s) is discouraged — add an explicit field to Settings instead",
+                name,
+                env_var_name,
+            )
             return value
 
         # If not found, raise AttributeError to maintain normal Python behavior

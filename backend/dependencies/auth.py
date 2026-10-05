@@ -174,7 +174,9 @@ async def _resolve_user_by_api_key(
             continue
         try:
             decrypted = decrypt_text(encrypted_value)
-        except Exception:
+        except Exception as exc:
+            # Debug-level log to aid diagnosing decryption failures without exposing secrets
+            logger.debug("Failed to decrypt API config value for candidate id=%s: %s", getattr(item, 'id', '<unknown>'), exc)
             continue
         if decrypted == key_value:
             matched_key = item
@@ -198,7 +200,8 @@ async def _resolve_user_by_api_key(
     if isinstance(scope_value, str) and scope_value.startswith(key_prefix):
         try:
             scopes_raw = decrypt_text(scope_value)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to decrypt API key scopes for user_id=%s: %s", getattr(matched_key, 'user_id', '<unknown>'), exc)
             scopes_raw = ""
     elif isinstance(scope_value, str):
         scopes_raw = scope_value

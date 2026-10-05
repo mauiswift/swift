@@ -277,17 +277,17 @@ export function WalletControlTab() {
                         </span>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
-                        <p className="font-bold text-slate-900">
+                        <p className="font-bold text-slate-900 font-numeric tabular-nums">
                           {wallet.balance.toLocaleString()}
                         </p>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
-                        <p className="font-medium text-emerald-600">
+                        <p className="font-medium text-emerald-600 font-numeric tabular-nums">
                           {wallet.availableBalance.toLocaleString()}
                         </p>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right">
-                        <p className="font-medium text-amber-600">
+                        <p className="font-medium text-amber-600 font-numeric tabular-nums">
                           {wallet.pendingBalance.toLocaleString()}
                         </p>
                       </TableCell>

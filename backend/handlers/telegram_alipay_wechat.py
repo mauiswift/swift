@@ -1,12 +1,6 @@
-"""
-Updated Alipay & WeChat Pay handlers for Telegram bot using Magpie.im QR API.
-Replaces deprecated PhotonPay integration with modern Magpie QR service.
-"""
-
-# This is a patch module that replaces the old /alipay and /wechat handlers
-# in backend/routers/telegram.py
-
+import html
 import logging
+import math
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,18 +64,19 @@ async def handle_alipay_command(
     
     try:
         amount = float(parts[1])
-        if amount <= 0:
+        if not math.isfinite(amount) or amount <= 0:
             await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
         
         description = parts[2] if len(parts) > 2 else "Alipay payment"
-        
+        safe_description = html.escape(description)
+
         result = await _create_gateway_qr(db, chat_id, username, "alipay", amount, description)
         if not result.get("success"):
             await tg.send_message(
                 chat_id,
-                f"❌ Failed to create Alipay payment:\n{result.get('error', 'Unknown error')}"
+                f"❌ Failed to create Alipay payment:\n{html.escape(str(result.get('error', 'Unknown error')))}"
             )
             logger.error(f"Alipay QR creation failed: {result.get('error')}")
             await _safe_log(db, chat_id, username, text)
@@ -94,8 +89,8 @@ async def handle_alipay_command(
             f"✅ <b>Alipay Payment Ready!</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"💰 <b>Amount:</b> ₱{amount:,.2f} PHP\n"
-            f"📝 <b>Description:</b> {description}\n"
-            f"🆔 <b>Reference:</b> <code>{reference_id}</code>\n\n"
+            f"📝 <b>Description:</b> {safe_description}\n"
+            f"🆔 <b>Reference:</b> <code>{html.escape(str(reference_id))}</code>\n\n"
             f"📱 <b>How to pay:</b>\n"
             f"1. Tap the QR code link below\n"
             f"2. Open with Alipay app\n"
@@ -150,18 +145,19 @@ async def handle_wechat_command(
     
     try:
         amount = float(parts[1])
-        if amount <= 0:
+        if not math.isfinite(amount) or amount <= 0:
             await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
         
         description = parts[2] if len(parts) > 2 else "WeChat Pay"
-        
+        safe_description = html.escape(description)
+
         result = await _create_gateway_qr(db, chat_id, username, "wechat", amount, description)
         if not result.get("success"):
             await tg.send_message(
                 chat_id,
-                f"❌ Failed to create WeChat payment:\n{result.get('error', 'Unknown error')}"
+                f"❌ Failed to create WeChat payment:\n{html.escape(str(result.get('error', 'Unknown error')))}"
             )
             logger.error(f"WeChat QR creation failed: {result.get('error')}")
             await _safe_log(db, chat_id, username, text)
@@ -174,8 +170,8 @@ async def handle_wechat_command(
             f"✅ <b>WeChat Pay Ready!</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"💰 <b>Amount:</b> ₱{amount:,.2f} PHP\n"
-            f"📝 <b>Description:</b> {description}\n"
-            f"🆔 <b>Reference:</b> <code>{reference_id}</code>\n\n"
+            f"📝 <b>Description:</b> {safe_description}\n"
+            f"🆔 <b>Reference:</b> <code>{html.escape(str(reference_id))}</code>\n\n"
             f"📱 <b>How to pay:</b>\n"
             f"1. Open WeChat on your phone\n"
             f"2. Tap the QR code link or scan manually\n"

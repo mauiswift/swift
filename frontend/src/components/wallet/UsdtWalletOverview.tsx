@@ -120,10 +120,10 @@ export default function UsdtWalletOverview({
             </div>
             <PaymentBrandLogo brand="USDT" size="sm" className="h-8 w-8 shrink-0 border-0 bg-transparent p-0 shadow-none" />
           </div>
-          <p className="text-3xl font-bold tracking-tight text-slate-950">{shownBalance}</p>
+          <p className="wallet-balance-amount text-3xl font-bold tracking-tight text-slate-950 font-numeric">{shownBalance}</p>
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>{isKorean ? '사용 가능' : 'Available'}</span>
-            <span className="font-semibold text-emerald-800">{shownAvailable}</span>
+            <span className="font-semibold text-emerald-800 font-numeric">{shownAvailable}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" onClick={onBuy} disabled={!canBuy || unavailable} className="h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
@@ -171,7 +171,7 @@ export default function UsdtWalletOverview({
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
             {isKorean ? '총 잔액' : 'Total balance'}
           </p>
-          <p className="mt-1 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-white sm:text-5xl font-numeric">
             {loading ? <span className="inline-block h-12 w-40 animate-pulse rounded-lg bg-slate-700" /> : shownBalance}
           </p>
         </div>
@@ -181,13 +181,13 @@ export default function UsdtWalletOverview({
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">
               {isKorean ? '사용 가능' : 'Available'}
             </p>
-            <p className="mt-1 truncate text-base font-semibold text-emerald-50">{shownAvailable}</p>
+            <p className="mt-1 truncate text-base font-semibold text-emerald-50 font-numeric">{shownAvailable}</p>
           </div>
           <div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.06] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200">
               {isKorean ? '보류 중' : 'Pending'}
             </p>
-            <p className="mt-1 truncate text-base font-semibold text-amber-50">{shownPending}</p>
+            <p className="mt-1 truncate text-base font-semibold text-amber-50 font-numeric">{shownPending}</p>
           </div>
         </div>
 

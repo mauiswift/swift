@@ -28,7 +28,7 @@ export default function BankLogo({ name, code, className, size = 'md' }: BankLog
   if (logo && !logoFailed) {
     return (
       <span
-        className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5', sizeClasses[size], className)}
+        className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/90 bg-white p-1.5 shadow-sm transition-all', sizeClasses[size], className)}
         role="img"
         aria-label={`${displayName} logo`}
         title={displayName}
@@ -36,7 +36,7 @@ export default function BankLogo({ name, code, className, size = 'md' }: BankLog
         <img
           src={logo}
           alt=""
-          className="h-full w-full object-contain"
+          className="h-full w-full object-contain transition-opacity duration-200"
           onError={() => setLogoFailed(true)}
         />
       </span>
@@ -45,14 +45,14 @@ export default function BankLogo({ name, code, className, size = 'md' }: BankLog
 
   return (
     <span
-      className={cn('inline-flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 text-slate-800', sizeClasses[size], className)}
+      className={cn('inline-flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 text-slate-800 shadow-sm transition-all', sizeClasses[size], className)}
       style={{ backgroundColor: getBankBrandColor(displayName, code) }}
       role="img"
       aria-label={`${displayName} icon`}
       title={displayName}
     >
-      <Building2 className="h-4 w-4 opacity-70" aria-hidden="true" />
-      <span className="max-w-full truncate px-0.5 text-[9px] font-bold leading-none tracking-tight">
+      <Building2 className="h-4 w-4 opacity-75" aria-hidden="true" />
+      <span className="max-w-full truncate px-0.5 text-[9px] font-extrabold uppercase leading-none tracking-tight">
         {getBankInitials(displayName, code)}
       </span>
     </span>

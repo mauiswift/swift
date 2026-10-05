@@ -105,8 +105,10 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['DM Sans', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['DM Sans', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['DM Sans', 'Inter', 'Noto Sans KR', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['DM Sans', 'Inter', 'Noto Sans KR', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        numeric: ['DM Sans', 'Inter', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',

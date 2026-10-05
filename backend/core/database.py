@@ -229,7 +229,7 @@ class DatabaseManager:
             logger.info(f"🔧 Table structure repair completed in {time.time() - repair_start:.4f}s")
 
         except Exception as e:
-            logger.error(f"Failed to repair existing tables: {e}")
+            logger.exception("Failed to repair existing tables")
 
     def _escape_identifier(self, identifier: str, identifier_type: str = "identifier") -> str:
         """Validate and escape SQL identifier to prevent SQL injection."""
@@ -297,7 +297,7 @@ class DatabaseManager:
                 logger.debug(f"Table {table_name} structure is up to date")
 
         except Exception as e:
-            logger.warning(f"Failed to repair table {table_name}: {e}")
+            logger.exception("Failed to repair table %s", table_name)
 
     async def _add_missing_columns(self, table_name: str, missing_columns: list):
         """Batch add missing fields to improve efficiency.
@@ -322,7 +322,7 @@ class DatabaseManager:
             logger.info(f"Successfully added {len(missing_columns)} columns to table {table_name}")
 
         except Exception as e:
-            logger.error(f"Failed to add columns to table {table_name}: {e}")
+            logger.exception("Failed to add columns to table %s", table_name)
 
     async def _get_table_columns(self, table_name: str):
         """Get existing table column information"""
@@ -363,7 +363,7 @@ class DatabaseManager:
                         columns.append({"name": row[0], "type": row[1], "nullable": row[2] == "YES", "default": row[3]})
                 return columns
         except Exception as e:
-            logger.error(f"Failed to get columns for table {table_name}: {e}")
+            logger.exception("Failed to get columns for table %s", table_name)
             return []
 
     def _get_model_columns(self, table_name: str):
@@ -397,7 +397,7 @@ class DatabaseManager:
 
             return columns
         except Exception as e:
-            logger.error(f"Failed to get model columns for table {table_name}: {e}")
+            logger.exception("Failed to get model columns for table %s", table_name)
             return []
 
     def _map_sqlalchemy_type(self, sqlalchemy_type):

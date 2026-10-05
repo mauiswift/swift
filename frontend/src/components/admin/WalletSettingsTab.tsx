@@ -71,6 +71,7 @@ export function WalletSettingsTab() {
                 onChange={(e) =>
                   setSettings({ ...settings, minDepositAmount: e.target.value })
                 }
+                className="font-numeric"
               />
             </div>
             <div>
@@ -83,6 +84,7 @@ export function WalletSettingsTab() {
                 onChange={(e) =>
                   setSettings({ ...settings, maxDepositAmount: e.target.value })
                 }
+                className="font-numeric"
               />
             </div>
           </div>
@@ -102,6 +104,7 @@ export function WalletSettingsTab() {
                   onChange={(e) =>
                     setSettings({ ...settings, depositFeePercent: e.target.value })
                   }
+                  className="font-numeric"
                 />
               </div>
               <div>
@@ -115,6 +118,7 @@ export function WalletSettingsTab() {
                   onChange={(e) =>
                     setSettings({ ...settings, withdrawalFeePercent: e.target.value })
                   }
+                  className="font-numeric"
                 />
               </div>
               <div>
@@ -128,6 +132,7 @@ export function WalletSettingsTab() {
                   onChange={(e) =>
                     setSettings({ ...settings, settlementFeePercent: e.target.value })
                   }
+                  className="font-numeric"
                 />
               </div>
             </div>

@@ -60,8 +60,8 @@ export default function KrwWithdrawalPanel({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label className="mb-2 block text-xs font-semibold text-slate-700">{isKorean ? '금액 (KRW)' : 'Amount (KRW)'}</Label>
-              <Input type="number" min="1" step="0.01" placeholder="0.00" value={amount} onChange={event => onAmountChange(event.target.value)} className="bg-slate-50 border-slate-200 text-foreground" />
-              <p className="mt-2 text-xs font-medium text-slate-600">{isKorean ? '사용 가능 잔액' : 'Available balance'}: <span className="text-blue-700">{fmtCurrency(availableBalance, 'KRW')}</span></p>
+              <Input type="number" min="1" step="0.01" placeholder="0.00" value={amount} onChange={event => onAmountChange(event.target.value)} className="bg-slate-50 border-slate-200 text-foreground font-numeric" />
+              <p className="mt-2 text-xs font-medium text-slate-600">{isKorean ? '사용 가능 잔액' : 'Available balance'}: <span className="font-semibold font-numeric text-blue-700">{fmtCurrency(availableBalance, 'KRW')}</span></p>
             </div>
             <div>
               <Label className="mb-2 block text-xs font-semibold text-slate-700">{isKorean ? '은행' : 'Bank'}</Label>
@@ -76,7 +76,7 @@ export default function KrwWithdrawalPanel({
             </div>
             <div>
               <Label className="mb-2 block text-xs font-semibold text-slate-700">{isKorean ? '계좌번호' : 'Account number'}</Label>
-              <Input placeholder={isKorean ? '계좌번호 입력' : 'Enter account number'} value={accountNumber} onChange={event => onAccountNumberChange(event.target.value)} className="bg-slate-50 border-slate-200 text-foreground" />
+              <Input placeholder={isKorean ? '계좌번호 입력' : 'Enter account number'} value={accountNumber} onChange={event => onAccountNumberChange(event.target.value)} className="bg-slate-50 border-slate-200 text-foreground banking-account-num" />
             </div>
             <div>
               <Label className="mb-2 block text-xs font-semibold text-slate-700">{isKorean ? '예금주' : 'Account holder name'}</Label>
@@ -87,8 +87,8 @@ export default function KrwWithdrawalPanel({
               <Input placeholder={isKorean ? '추가 안내 사항' : 'Additional instructions'} value={note} onChange={event => onNoteChange(event.target.value)} className="bg-slate-50 border-slate-200 text-foreground" />
             </div>
           </div>
-          <Button type="button" onClick={onSubmit} disabled={loading || !amount || !selectedBank || !accountNumber || !accountName} className="h-10 w-full bg-gradient-to-r from-blue-600 to-blue-700 font-semibold text-black shadow-lg shadow-blue-600/20 transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50" data-wallet-dark-action="true">
-            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin text-black" />{isKorean ? '요청 제출 중...' : 'Submitting request...'}</> : <><ArrowUpFromLine className="mr-2 h-4 w-4 text-black" />{submitLabel}</>}
+          <Button type="button" onClick={onSubmit} disabled={loading || !amount || !selectedBank || !accountNumber || !accountName} className="h-10 w-full bg-gradient-to-r from-blue-600 to-blue-700 font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50" data-wallet-dark-action="true">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />{isKorean ? '요청 제출 중...' : 'Submitting request...'}</> : <><ArrowUpFromLine className="mr-2 h-4 w-4 text-white" />{submitLabel}</>}
           </Button>
         </CardContent>
       </Card>

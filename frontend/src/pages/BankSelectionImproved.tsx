@@ -223,23 +223,23 @@ const BankCard: React.FC<BankCardProps> = ({ bank, selected, onSelect }) => {
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-2 mt-3 text-xs sm:text-sm">
+          <div className="grid grid-cols-2 gap-2 mt-3 text-xs sm:text-sm font-numeric">
             <div>
               <span className="text-gray-600">Processing</span>
-              <p className="font-medium text-gray-900">{bank.processingTime}</p>
+              <p className="font-semibold text-gray-900">{bank.processingTime}</p>
             </div>
             <div>
               <span className="text-gray-600">Daily Limit</span>
-              <p className="font-medium text-gray-900">{bank.transferLimit}</p>
+              <p className="font-semibold text-gray-900">{bank.transferLimit}</p>
             </div>
             <div>
               <span className="text-gray-600">Min Amount</span>
-              <p className="font-medium text-gray-900">₱{bank.minAmount}</p>
+              <p className="font-semibold text-gray-900">₱{bank.minAmount.toLocaleString()}</p>
             </div>
             <div>
               <span className="text-gray-600">Fee</span>
-              <p className="font-medium text-green-600">
-                {bank.fees === 0 ? 'Free' : `₱${bank.fees}`}
+              <p className="font-semibold text-green-600">
+                {bank.fees === 0 ? 'Free' : `₱${bank.fees.toLocaleString()}`}
               </p>
             </div>
           </div>

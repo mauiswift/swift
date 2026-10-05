@@ -2397,3 +2397,43 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
     transition: none;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Standardized Financial Typography & Normalized Banking / Wallet Utilities
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .font-numeric {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-display-xl {
+    @apply text-4xl sm:text-5xl font-bold tracking-tight leading-none;
+  }
+  .text-display-lg {
+    @apply text-3xl sm:text-4xl font-bold tracking-tight;
+  }
+  .text-heading-lg {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+  .text-heading-md {
+    @apply text-lg font-semibold tracking-tight text-slate-900;
+  }
+  .text-heading-sm {
+    @apply text-sm font-semibold tracking-tight text-slate-900;
+  }
+  .text-label-sm {
+    @apply text-xs font-medium uppercase tracking-wider text-slate-500;
+  }
+  .text-value-lg {
+    @apply text-2xl font-bold tracking-tight font-numeric;
+  }
+  .wallet-balance-amount {
+    @apply font-bold tracking-tight font-numeric text-slate-950;
+  }
+  .banking-account-num {
+    @apply font-mono text-sm tracking-wider font-numeric;
+  }
+}
+

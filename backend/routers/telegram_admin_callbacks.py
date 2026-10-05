@@ -62,6 +62,11 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
     if not callback_id:
         return {"ok": False}
 
+    str_user_id = str(user_id or "").strip()
+    if not str_user_id or str_user_id == "None":
+        await telegram_service.answer_callback_query(callback_id, "❌ Invalid user identity")
+        return {"ok": False}
+
     parts = callback_data.split(":", 1)
     if len(parts) != 2:
         await telegram_service.answer_callback_query(callback_id, "Invalid approval action")
@@ -70,7 +75,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
     action, resource_id = parts
     is_payment_action = action in {"approve_payment", "reject_payment"}
     is_designated_payment_approver = (
-        is_payment_action and str(user_id) == SYSTEM_WALLET_ADMIN_TELEGRAM_ID
+        is_payment_action and bool(SYSTEM_WALLET_ADMIN_TELEGRAM_ID.strip()) and str_user_id == SYSTEM_WALLET_ADMIN_TELEGRAM_ID.strip()
     )
     if is_payment_action and not is_designated_payment_approver:
         await telegram_service.answer_callback_query(
@@ -79,10 +84,10 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
         )
         return {"ok": False}
 
-    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str_user_id))
     is_bot_owner = (
         bool(str(settings.telegram_bot_owner_id or "").strip())
-        and str(user_id) == str(settings.telegram_bot_owner_id).strip()
+        and str_user_id == str(settings.telegram_bot_owner_id).strip()
     )
     if (
         (not admin or not admin.is_super_admin)
@@ -92,13 +97,13 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
         await telegram_service.answer_callback_query(callback_id, "❌ You are not authorized to approve requests")
         return {"ok": False}
 
-    admin_id = str(user_id)
+    admin_id = str_user_id
     admin_name = (admin.name if admin else None) or (
         "Designated payment approver" if is_designated_payment_approver else "Bot owner"
     )
     admin_user = UserResponse(
         id=admin_id,
-        email=f"telegram:{user_id}",
+        email=f"telegram:{str_user_id}",
         name=admin_name,
         role="admin",
         permissions=UserPermissions(

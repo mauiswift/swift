@@ -53,7 +53,8 @@ async def lifespan(app: FastAPI):
         else:
             logger.error(f"BOOT: Static directory NOT FOUND at {_STATIC}")
     except Exception as e:
-        logger.error(f"BOOT: Error checking static assets: {e}")
+        # Include full traceback for easier diagnosis of startup asset issues
+        logger.exception("BOOT: Error checking static assets")
 
     try:
         # Initialize Core Services
@@ -94,8 +95,9 @@ async def lifespan(app: FastAPI):
             elif settings.telegram_bot_token:
                 logger.warning("Skipping Telegram webhook setup: backend URL must be a public HTTPS URL")
 
-    except Exception as e:
-        logger.error(f"FATAL_BOOT_FAILURE: {e}\n{traceback.format_exc()}")
+    except Exception:
+        # Use logger.exception to capture stacktrace; re-raise to fail fast on fatal boot errors
+        logger.exception("FATAL_BOOT_FAILURE during application startup")
         raise
 
     yield

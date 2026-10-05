@@ -84,15 +84,15 @@ function StatCard({
   colorScheme: keyof typeof STAT_CARD_COLORS;
 }) {
   return (
-    <Card className={`border ${STAT_CARD_COLORS[colorScheme]}`}>
-      <CardContent className="p-6">
+    <Card className={`border shadow-sm transition-all hover:shadow ${STAT_CARD_COLORS[colorScheme]}`}>
+      <CardContent className="p-5 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-600">{label}</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">{label}</p>
+            <p className="mt-2 text-2xl font-bold font-numeric tracking-tight text-slate-900">{value}</p>
             {subtext && <p className="mt-1 text-xs text-slate-500">{subtext}</p>}
           </div>
-          <div className="h-10 w-10 rounded-lg bg-white p-2 opacity-70">
+          <div className="h-10 w-10 shrink-0 rounded-xl border border-slate-200/60 bg-white/80 p-2 shadow-xs">
             {Icon}
           </div>
         </div>
