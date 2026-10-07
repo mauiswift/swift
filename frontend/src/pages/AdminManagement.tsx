@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +23,25 @@ import { buildAdminTabs, type AdminTab } from '@/components/admin/adminManagemen
 import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
 
 type TabId = AdminTab;
+
+const adminTabContent: Record<AdminTab, ReactNode> = {
+  dashboard: <BankingDashboard />,
+  merchants: <MerchantManagement />,
+  transactions: <TransactionsTab />,
+  settlements: <SettlementsTab />,
+  'wallet-control': <WalletControlTab />,
+  'crypto-approvals': <CryptoApprovalsTab />,
+  'payment-channels': <PaymentChannelsTab />,
+  'wallet-settings': <WalletSettingsTab />,
+  users: <UsersTab />,
+  'team-invitations': <TeamInvitationsTab />,
+  'team-members': <TeamMembersTab />,
+  'audit-logs': <AuditLogsTab />,
+  'platform-settings': <PlatformSettingsTab />,
+  operations: <OperationsTab />,
+  'toss-account-approvals': <TossAccountApprovalsPanel />,
+  'test-data-cleanup': <TestDataCleanupTab />,
+};
 
 export default function AdminManagement() {
   const { user, isSuperAdmin: isPlatformSuperAdmin } = useAuth();
@@ -137,85 +157,7 @@ export default function AdminManagement() {
             </div>
           )}
 
-          {/* Dashboard Tab */}
-          {selectedTab === 'dashboard' && canAccessDashboard && (
-            <BankingDashboard />
-          )}
-
-          {/* Merchants Tab */}
-          {selectedTab === 'merchants' && canAccessMerchants && (
-            <MerchantManagement />
-          )}
-
-          {/* Transactions Tab */}
-          {selectedTab === 'transactions' && canAccessTransactions && (
-            <TransactionsTab />
-          )}
-
-          {/* Settlements Tab */}
-          {selectedTab === 'settlements' && canAccessSettlements && (
-            <SettlementsTab />
-          )}
-
-          {/* Wallet Control Tab */}
-          {selectedTab === 'wallet-control' && canAccessWalletControl && (
-            <WalletControlTab />
-          )}
-
-          {/* Crypto Approvals Tab */}
-          {selectedTab === 'crypto-approvals' && canAccessCryptoApprovals && (
-            <CryptoApprovalsTab />
-          )}
-
-          {/* TOSS Account Approvals Tab */}
-          {selectedTab === 'toss-account-approvals' && canAccessTossAccountApprovals && (
-            <TossAccountApprovalsPanel />
-          )}
-
-          {/* Payment Channels Tab */}
-          {selectedTab === 'payment-channels' && canAccessPaymentChannels && (
-            <PaymentChannelsTab />
-          )}
-
-          {/* Wallet Settings Tab */}
-          {selectedTab === 'wallet-settings' && canAccessWalletSettings && (
-            <WalletSettingsTab />
-          )}
-
-          {/* User Management Tab */}
-          {selectedTab === 'users' && canAccessUserManagement && (
-            <UsersTab />
-          )}
-
-          {/* Team Invitations Tab */}
-          {selectedTab === 'team-invitations' && canManageTeam && (
-            <TeamInvitationsTab />
-          )}
-
-          {/* Team Members Tab */}
-          {selectedTab === 'team-members' && canManageTeam && (
-            <TeamMembersTab />
-          )}
-
-          {/* Audit Logs Tab */}
-          {selectedTab === 'audit-logs' && canAccessGovernance && (
-            <AuditLogsTab />
-          )}
-
-          {/* Platform Settings Tab */}
-          {selectedTab === 'platform-settings' && canAccessPlatformSettings && (
-            <PlatformSettingsTab />
-          )}
-
-          {/* Operations Tab */}
-          {selectedTab === 'operations' && canAccessOperations && (
-            <OperationsTab />
-          )}
-
-          {/* Test Data Cleanup Tab */}
-          {selectedTab === 'test-data-cleanup' && isPlatformSuperAdmin && (
-            <TestDataCleanupTab />
-          )}
+          {selectedTabMeta && adminTabContent[selectedTab]}
         </div>
       </div>
     </Layout>
