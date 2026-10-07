@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
+import { openReceiptFile as openReceiptFileInPopup } from '@/lib/openReceiptFile';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, Search } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
@@ -89,30 +90,11 @@ export default function BankDepositsPage() {
     setActionLoading(null);
   };
 
-  const openReceiptFile = async (fileId: string) => {
-    const newWindow = window.open('', '_blank');
-    if (!newWindow) {
-      setError('Popup blocked. Please allow popups and try again.');
-      return;
-    }
-
-    newWindow.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading receipt...</p>');
-    try {
-      const endpoint = fileId.startsWith('private-receipt:') || fileId.startsWith('/uploads/')
-        ? `/api/v1/receipts/${encodeURIComponent(fileId)}`
-        : `/api/v1/telegram/file/${encodeURIComponent(fileId)}`;
-      const res = await client.fetch(endpoint);
-      if (!res.ok) {
-        throw new Error(`Failed to load receipt (${res.status})`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      newWindow.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (err: any) {
-      newWindow.close();
-      setError(err?.message || 'Unable to open receipt.');
-    }
+  const openReceiptFile = (fileId: string) => {
+    setError('');
+    void openReceiptFileInPopup(fileId).catch((error: unknown) => {
+      setError(error instanceof Error ? error.message : 'Unable to open receipt.');
+    });
   };
 
   const pending_count = requests.filter(r => r.status === 'pending').length;
