@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -45,6 +46,7 @@ def _request(path: str, body: bytes, headers: dict[str, str] | None = None) -> R
 
 class _SwiftPayVerifier:
     def verify_signature(self, payload, signature):
+        assert isinstance(payload, dict)
         return signature == "valid-test-signature"
 
 
@@ -137,12 +139,154 @@ async def test_swiftpay_webhook_rejects_unsigned_payload(monkeypatch):
 @pytest.mark.asyncio
 async def test_swiftpay_webhook_accepts_verified_payload(monkeypatch):
     monkeypatch.setattr(webhooks, "SwiftPayService", _SwiftPayVerifier)
+
+    class FakeTransactionsService:
+        def __init__(self, db):
+            self.db = db
+
+        async def find_by_external_or_gateway_id(self, identifier):
+            assert identifier == "signed-reference"
+            return None
+
+    class FakeDatabase:
+        async def scalar(self, query):
+            assert query is not None
+            return None
+
+    monkeypatch.setattr(webhooks, "TransactionsService", FakeTransactionsService)
+    payload = {
+        "x_reference_no": "signed-reference",
+        "x_payment_status": "PENDING",
+        "signature": "valid-test-signature",
+    }
     response = await webhooks.swiftpay_webhook(
-        _request("/webhooks/swiftpay", b'{"signature":"valid-test-signature"}'),
-        object(),
+        _request("/webhooks/swiftpay", json.dumps(payload).encode()),
+        FakeDatabase(),
     )
 
     assert response["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_swiftpay_webhook_uses_only_signed_fields(monkeypatch):
+    monkeypatch.setattr(webhooks, "SwiftPayService", _SwiftPayVerifier)
+    transaction = SimpleNamespace(id=1, amount=100, currency="PHP", xendit_id=None)
+    lookups = []
+    paid_transactions = []
+
+    class FakeTransactionsService:
+        def __init__(self, db):
+            self.db = db
+
+        async def find_by_external_or_gateway_id(self, identifier):
+            lookups.append(identifier)
+            return transaction if identifier == "signed-reference" else None
+
+        async def mark_as_paid(self, txn, gateway_label):
+            paid_transactions.append((txn, gateway_label))
+
+    class FakeDatabase:
+        async def scalar(self, query):
+            assert query is not None
+            return None
+
+    recorded_webhooks = []
+
+    async def record_webhook(db, **kwargs):
+        recorded_webhooks.append((db, kwargs))
+        return None
+
+    monkeypatch.setattr(webhooks, "TransactionsService", FakeTransactionsService)
+    monkeypatch.setattr(webhooks, "record_verified_payment_webhook", record_webhook)
+    payload = {
+        "x_reference_no": "signed-reference",
+        "x_payment_status": "EXECUTED",
+        "x_amount": "100.00",
+        "x_currency": "PHP",
+        "reference_no": "attacker-reference",
+        "status": "FAILED",
+        "amount": "900.00",
+        "signature": "valid-test-signature",
+    }
+
+    response = await webhooks.swiftpay_webhook(
+        _request("/webhooks/swiftpay", json.dumps(payload).encode()),
+        FakeDatabase(),
+    )
+
+    assert response["success"] is True
+    assert lookups == ["signed-reference"]
+    assert paid_transactions == [(transaction, "SwiftPay")]
+    assert len(recorded_webhooks) == 1
+
+
+@pytest.mark.asyncio
+async def test_swiftpay_webhook_rejects_unsigned_reference_alias(monkeypatch):
+    monkeypatch.setattr(webhooks, "SwiftPayService", _SwiftPayVerifier)
+    payload = {
+        "x_payment_status": "EXECUTED",
+        "reference_no": "unsigned-reference",
+        "status": "EXECUTED",
+        "amount": "100.00",
+        "signature": "valid-test-signature",
+    }
+
+    with pytest.raises(HTTPException) as error:
+        await webhooks.swiftpay_webhook(
+            _request("/webhooks/swiftpay", json.dumps(payload).encode()),
+            object(),
+        )
+
+    assert error.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_swiftpay_webhook_rejects_unsigned_status_alias(monkeypatch):
+    monkeypatch.setattr(webhooks, "SwiftPayService", _SwiftPayVerifier)
+    payload = {
+        "x_reference_no": "signed-reference",
+        "status": "EXECUTED",
+        "amount": "100.00",
+        "signature": "valid-test-signature",
+    }
+
+    with pytest.raises(HTTPException, match="Missing signed payment status") as error:
+        await webhooks.swiftpay_webhook(
+            _request("/webhooks/swiftpay", json.dumps(payload).encode()),
+            object(),
+        )
+
+    assert error.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_swiftpay_webhook_rejects_unsigned_amount_alias(monkeypatch):
+    monkeypatch.setattr(webhooks, "SwiftPayService", _SwiftPayVerifier)
+    transaction = SimpleNamespace(id=1, amount=100, currency="PHP", xendit_id=None)
+
+    class FakeTransactionsService:
+        def __init__(self, db):
+            self.db = db
+
+        async def find_by_external_or_gateway_id(self, identifier):
+            assert identifier == "signed-reference"
+            return transaction
+
+    monkeypatch.setattr(webhooks, "TransactionsService", FakeTransactionsService)
+    payload = {
+        "x_reference_no": "signed-reference",
+        "x_payment_status": "EXECUTED",
+        "amount": "100.00",
+        "signature": "valid-test-signature",
+    }
+
+    with pytest.raises(HTTPException, match="Missing SwiftPay payment amount") as error:
+        await webhooks.swiftpay_webhook(
+            _request("/webhooks/swiftpay", json.dumps(payload).encode()),
+            object(),
+        )
+
+    assert error.value.status_code == 400
 
 
 @pytest.mark.asyncio

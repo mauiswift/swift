@@ -67,28 +67,29 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         if not signature or not service.verify_signature(payload, signature):
             raise HTTPException(status_code=400, detail="Invalid or missing SwiftPay webhook signature")
         
-        reference_no = _payload_value(
-            payload,
-            "x_reference_no",
-            "reference_no",
-            "referenceNo",
-            "merchant_reference",
-            "merchantReferenceNo",
+        signed_payload = {
+            key: value
+            for key, value in payload.items()
+            if key.startswith("x_") and value not in (None, "")
+        }
+        reference_no = str(payload.get("x_reference_no") or "")
+        payment_status = str(
+            payload.get("x_payment_status") or payload.get("x_disbursement_status") or ""
         )
-        status = _payload_value(
-            payload,
-            "x_payment_status",
-            "status",
-            "payment_status",
-            "paymentStatus",
-            "payment_state",
-            "paymentState",
-            "result",
-        )
-        payment_id = _payload_value(payload, "x_payment_id", "payment_id", "paymentId", "id")
-        amount = _payload_value(payload, "amount", "paid_amount", "paidAmount")
+        payment_id = str(payload.get("x_payment_id") or "")
+        amount = payload.get("x_amount", "")
+
+        if not reference_no and not payment_id:
+            raise HTTPException(status_code=400, detail="Missing signed reference_no or payment_id")
+        if not payment_status:
+            raise HTTPException(status_code=400, detail="Missing signed payment status")
         
-        logger.info(f"SwiftPay webhook: reference_no={reference_no}, status={status}, amount={amount}")
+        logger.info(
+            "SwiftPay webhook: reference_no=%s, status=%s, amount=%s",
+            reference_no,
+            payment_status,
+            amount,
+        )
         
         # Map SwiftPay status to our internal status
         status_map = {
@@ -107,7 +108,7 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
             "rejected": "failed",
         }
         
-        normalized_status = str(status).strip().lower()
+        normalized_status = payment_status.strip().lower()
         internal_status = status_map.get(normalized_status, normalized_status)
         
         # Update transaction status
@@ -121,7 +122,7 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         break
             if txn:
                 if internal_status in {"completed", "paid"}:
-                    _validate_payment_amount(payload, txn, "SwiftPay")
+                    _validate_payment_amount(signed_payload, txn, "SwiftPay")
                     await txn_service.mark_as_paid(txn, gateway_label="SwiftPay")
                 elif internal_status == "expired":
                     if is_payment_received(txn):

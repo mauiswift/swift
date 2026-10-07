@@ -131,6 +131,13 @@ async def get_admin_user(current_user: UserResponse = Depends(get_current_user))
     return current_user
 
 
+async def get_super_admin_user(current_user: UserResponse = Depends(get_current_user)) -> UserResponse:
+    """Dependency to ensure the current user has platform super-admin permissions."""
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
+    return current_user
+
+
 async def get_current_user_id(current_user: UserResponse = Depends(get_current_user)) -> str:
     """Dependency to get the current user's ID string."""
     return str(current_user.id)
